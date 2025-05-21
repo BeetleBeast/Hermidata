@@ -15,14 +15,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("Pagetitle").textContent = currentTab.title || "Untitled Page";
     document.getElementById("title").value = trimTitle(currentTab.title) || "";
     document.getElementById("Type").value = Type[0] || "";
-    document.getElementById("chapter").value = currentTab.Chapter || "NO URL Or NO chapter Number";
+    document.getElementById("chapter").value = currentTab.Chapter || "";
     document.getElementById("url").value = currentTab.url || "NO URL";
     document.getElementById("status").value = statusList[1] || "";
     document.getElementById("date").value = getCurrentDate() || "";
     document.getElementById("tags").value = "";
     document.getElementById("notes").value = "";
     
-    document.getElementById("save").addEventListener("click", saveSheet );
+    document.getElementById("save").addEventListener("click", () => {
+        saveSheet()
+        window.close()
+    });
     document.getElementById("openSettings").addEventListener("click", () => {
         chrome.runtime.openOptionsPage();
     });

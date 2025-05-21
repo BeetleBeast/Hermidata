@@ -76,10 +76,8 @@ function shouldReplaceOrBlock(newEntry, existingRows) {
         if (chapterChanged) {
             return { action: "replace", rowIndex: i + 2 }; // +2 = row index in Google Sheets (1-based + header)
         } else if (date > oldDate) {
-            alert("Entry already exists with the same chapter, but newer date.");
             return { action: "alert" };
         } else {
-            alert("Exact same entry already exists.");
             return { action: "skip" };
         }
         }
@@ -91,7 +89,7 @@ function extractSpreadsheetId(url) {
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
     return match ? match[1] : null;
 }
-function writeToSheet(token, dataArray, arguments) {
+function writeToSheet(token, dataArray, params) {
     readSheet(token, (rows) => {
         const decision = shouldReplaceOrBlock(dataArray, rows);
 
@@ -118,7 +116,6 @@ function appendRow(token, dataArray) {
         })
         .then(res => res.json())
         .then(data => console.log("Row appended:", data))
-        .then(user => { chrome.storage.local.set({ userEmail: user.email })})
         .catch(err => console.error("Append error:", err));
     });
 }
@@ -137,7 +134,6 @@ function updateRow(token, rowIndex, dataArray) {
         })
         .then(res => res.json())
         .then(data => console.log("Row updated:", data))
-        .then(user => { chrome.storage.local.set({ userEmail: user.email })})
         .catch(err => console.error("Update error:", err));
     });
 }
