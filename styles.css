@@ -1,0 +1,66 @@
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td, th {
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #ccc;
+    padding: 0;
+}
+td {
+    width: fit-content;
+    field-sizing:content;
+}
+th {
+    background-color: #f6f6f6;
+    font-weight: bold;
+    max-width: 100vw;
+    padding: 8px;
+}
+input {
+    width:inherit;
+    height: inherit;
+}
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+input:not(#url) {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0px;
+    font-size: 14px;
+    text-align: center;
+    width: fit-content;
+    field-sizing:content;
+}
+#url {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0px;
+    font-size: 14px;
+    text-align: center;
+}
+
+#openSettings {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+}
+
+#openSettings .icon {
+    width: 24px;
+    height: 24px;
+    opacity: 0.8;
+}
+
+#openSettings:hover .icon {
+    opacity: 1;
+}

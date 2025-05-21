@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermidata</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <button id="openSettings" type="button" >
+        <img src="assets/settings_24Dark.png" alt="0" class="icon"/>
+    </button>
+    <h2 id="Pagetitle">Loading...</h2>
+    <div id="ParentPreview">
+        <table>
+        <thead>
+            <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Chapter</th>
+            <th>URL</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Tags</th>
+            <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Example row -->
+            <tr>
+                <td><input id="title" type="text" placeholder="Title" /></td>
+                <td><select id="Type" type="text" title="Type" ></select></td>
+                <td><input id="chapter" type="number" placeholder="Chapter" /></td>
+                <td><input id="url" type="url" placeholder="URL" /></td>
+                <td><select id="status" type="text" title="Status"></select></td>
+                <td><input id="date" type="text" placeholder="dd/mm/yyyy" /></td>
+                <td><input id="tags" type="text" placeholder="Tags" /></td>
+                <td><input id="notes" type="text" placeholder="Notes" /></td>
+            </tr>
+        </tbody>
+        </table>
+    </div>
+  <div class="buttons" id="Btn-Parent">
+    <button id="save">Save</button>
+  </div>
+
+  <button id="openFullPage" class="fullpage-btn">Open Full Page</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>
