@@ -144,6 +144,29 @@ function getCurrentDate() {
     const year = now.getFullYear();
     return `${day}/${month}/${year}`;
 }
+function parseMangaFireUrl(url) {
+    try {
+        const parts = new URL(url).pathname.split('/');
+
+        const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : null;
+        const chapter = parts.includes('chapter-71') ? '71' : parts[parts.length - 1].replace('chapter-', '');
+
+        const title = titleSlug
+            .split('.')[0]             // remove mangafire’s ID code (.yvov1)
+            .slice(0, -1)             // Remove the extra character just before the dot
+            .replace(/-/g, ' ')        // hyphens to spaces
+            .replace(/\b\w/g, c => c.toUpperCase()); // capitalize words
+
+        return {
+            title,
+            chapter
+        };
+    } catch (err) {
+        console.error("Invalid URL", err);
+        return { title: "Unknown", chapter: "0" };
+    }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: "Hermidata",
@@ -158,19 +181,23 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             const Settings = result.Settings
             let argument;
             // Send tab info to your saving logic
-            let title = tab.title;
-            let url = tab.url;
-            let chapter = Settings.DefaultChoiceText_Menu.chapter;
-            let date = getCurrentDate(); // yyyy-mm-dd
-            let type = Settings.DefaultChoiceText_Menu.Type;
-            let status = Settings.DefaultChoiceText_Menu.status;
-            let tags = Settings.DefaultChoiceText_Menu.tags;
-            let notes = Settings.DefaultChoiceText_Menu.notes;
-            const data = [title, type, chapter, url, status, date, tags, notes];
-            getToken((token) => {
-                writeToSheet(token, data, argument);
-            });
-        });
+            fetch(info.linkUrl, { method: "HEAD" })
+            .then(response => {
+                const finalUrl = response.url;
+                let { title, chapter } = parseMangaFireUrl(finalUrl);
+                let url = finalUrl;
+                let date = getCurrentDate(); // yyyy-mm-dd
+                let type = Settings.DefaultChoiceText_Menu.Type;
+                let status = Settings.DefaultChoiceText_Menu.status;
+                let tags = Settings.DefaultChoiceText_Menu.tags;
+                let notes = Settings.DefaultChoiceText_Menu.notes;
+                const data = [title, type, chapter, url, status, date, tags, notes];
+                getToken((token) => {
+                    writeToSheet(token, data, argument);
+                });
+            })
+            .catch(err => console.error("Failed to resolve redirect:", err));
+        })
     }
 });
 // Example usage from popup

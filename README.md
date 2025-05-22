@@ -29,6 +29,8 @@
 - ✅ Minimal and responsive UI
 - ✅ Popup and full-page entry view
 - ✅ Datalist autocomplete for `Type` and `Status` fields
+- ✅ even works for sites that uses redirects
+- ✅ has dark mode
 
 ---
 
@@ -81,7 +83,6 @@
 
 ## 🧪 To-Do
 
-- [ ] add context-Menu short-cut for better usability
 - [ ] Export/import backup options
 - [ ] Track reading history or stats
 - [ ] Keyboard shortcuts for quick-save
