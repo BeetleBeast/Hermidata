@@ -85,7 +85,6 @@
 
 - [ ] Export/import backup options
 - [ ] Track reading history or stats
-- [ ] Keyboard shortcuts for quick-save
 - [ ] add a setting to (dis)-able context-menu 
 
 ---
@@ -93,5 +92,8 @@
 ## 🕶️ Reminder
 
 👉 Make **Dark Mode** Prittier with better colors
+🔐 Auth Status Display
+- Show currently logged-in account (email) in the popup or settings.
+- Include “Sign out” or “Change account” options.
 
 ---
