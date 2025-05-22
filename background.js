@@ -137,12 +137,47 @@ function updateRow(token, rowIndex, dataArray) {
         .catch(err => console.error("Update error:", err));
     });
 }
-
+function getCurrentDate() {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+    const year = now.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+        id: "Hermidata",
+        title: "Save to Hermidata",
+        contexts: ["link"] // Or "all", "selection", "link", etc.
+    });
+});
+// Context-Menu Listener
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === "Hermidata") {
+        chrome.storage.sync.get([ "Settings" ], (result) => {
+            const Settings = result.Settings
+            let argument;
+            // Send tab info to your saving logic
+            let title = tab.title;
+            let url = tab.url;
+            let chapter = Settings.DefaultChoiceText_Menu.chapter;
+            let date = getCurrentDate(); // yyyy-mm-dd
+            let type = Settings.DefaultChoiceText_Menu.Type;
+            let status = Settings.DefaultChoiceText_Menu.status;
+            let tags = Settings.DefaultChoiceText_Menu.tags;
+            let notes = Settings.DefaultChoiceText_Menu.notes;
+            const data = [title, type, chapter, url, status, date, tags, notes];
+            getToken((token) => {
+                writeToSheet(token, data, argument);
+            });
+        });
+    }
+});
 // Example usage from popup
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "SAVE_NOVEL") {
         getToken((token) => {
-        writeToSheet(token, msg.data, msg.arguments);
+            writeToSheet(token, msg.data, msg.arguments);
         });
     }
 });

@@ -81,15 +81,16 @@
 
 ## 🧪 To-Do
 
-- [ ] ✅ Add support for **dark mode** toggle in popup and settings
+- [ ] add context-Menu short-cut for better usability
 - [ ] Export/import backup options
 - [ ] Track reading history or stats
 - [ ] Keyboard shortcuts for quick-save
+- [ ] add a setting to (dis)-able context-menu 
 
 ---
 
 ## 🕶️ Reminder
 
-👉 Don’t forget to **add dark mode functionality** for better readability and accessibility in future updates.
+👉 Make **Dark Mode** Prittier with better colors
 
 ---

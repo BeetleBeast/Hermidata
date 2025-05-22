@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hermidata Settings</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
         body {
         font-family: sans-serif;
@@ -24,10 +25,56 @@
 
     <label for="spreadsheetUrl">Google Spreadsheet URL:</label>
     <input type="text" id="spreadsheetUrl" placeholder="Paste Google Sheet URL" />
-
-    <button id="save">Save</button>
-
+    <button id="save" type="button">Save</button>
     <p id="status" style="color: green;"></p>
+    <br>
+    <button title="DarkMode" type="button" id="theme-toggle" aria-label="Toggle dark mode">Toggle Mode</button>
+    <br>
+    <br>
+    <table>change Default Input
+        <thead>
+            <tr>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Tags</th>
+            <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Example row -->
+            <tr>
+                <td><select id="Type" type="text" title="Type" ></select></td>
+                <td><select id="Status" type="text" title="Status"></select></td>
+                <td><input id="tags" type="text" placeholder="Tags" /></td>
+                <td><input id="notes" type="text" placeholder="Notes" /></td>
+            </tr>
+        </tbody>
+    </table>
+    <button id="saveDefaultInput" type="button">Save</button>
+    <p id="statusSaveDefaultInput" style="color: green;"></p>
+        <br>
+    <table>change Default Text-Menu Input
+        <thead>
+            <tr>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Tags</th>
+            <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Example row -->
+            <tr>
+                <td><select id="TypeTextMenu" type="text" title="Type" ></select></td>
+                <td><select id="StatusTextMenu" type="text" title="Status"></select></td>
+                <td><input id="tagsTextMenu" type="text" placeholder="Tags" /></td>
+                <td><input id="notesTextMenu" type="text" placeholder="Notes" /></td>
+            </tr>
+        </tbody>
+    </table>
+    <button id="saveDefaultInputTextMenu" type="button">Save</button>
+    <p id="statusSaveDefaultInputInputTextMenu" style="color: green;"></p>
+
 
     <script src="settings.js"></script>
 </body>

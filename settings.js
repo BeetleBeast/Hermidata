@@ -1,15 +1,69 @@
+const browserAPI = typeof browser !== "undefined" ? browser : chrome;
+let TYPE_OPTIONS = ["Manga", "Novel", "Anime", "TV-series"];
+let STATUS_OPTIONS = ["Finished", "Viewing", "Dropped", "Planned"];
+
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("spreadsheetUrl");
     const status = document.getElementById("status");
+    const status_Input = document.getElementById('statusSaveDefaultInput');
+    const statusTextMenu = document.getElementById('statusSaveDefaultInputInputTextMenu');
+    const toggleBtn = document.getElementById('theme-toggle');
+    const elements = {
+        input: {
+            Type: document.getElementById("Type"),
+            Status: document.getElementById("Status"),
+            tags: document.getElementById("tags"),
+            notes: document.getElementById("notes"),
+            saveButton: document.getElementById("saveDefaultInput")
+        },
+        menu: {
+            Type: document.getElementById("TypeTextMenu"),
+            Status: document.getElementById("StatusTextMenu"),
+            tags: document.getElementById("tagsTextMenu"),
+            notes: document.getElementById("notesTextMenu"),
+            saveButton: document.getElementById("saveDefaultInputTextMenu")
+        }
+    };
+    // Populate dropdowns
+    populateSelect(elements.input.Status, STATUS_OPTIONS);
+    populateSelect(elements.menu.Status, STATUS_OPTIONS );
+    populateSelect(elements.input.Type, TYPE_OPTIONS);
+    populateSelect(elements.menu.Type, TYPE_OPTIONS);
 
-    // Load saved value
+    // Load spreadsheetUrl value
     chrome.storage.sync.get(["spreadsheetUrl"], (result) => {
         if (result.spreadsheetUrl) {
         input.value = result.spreadsheetUrl;
         }
     });
+    // load table input
+    chrome.storage.sync.get([ "Settings" ], (result) => {
+        if (!result.Settings) {
+            let Settings = {
+                DefaultChoice : {
+                    Type : 'Manga',
+                    chapter : '0',
+                    status : 'Viewing',
+                    tags : '',
+                    notes : ''
+                },
+                DefaultChoiceText_Menu : {
+                    Type : 'Manga',
+                    chapter : '0',
+                    status : 'Planned',
+                    tags : '',
+                    notes : ''
+                }
+            }
+            setValuesToElements(elements.input, Settings.DefaultChoice);
+            setValuesToElements(elements.menu, Settings.DefaultChoiceText_Menu);
+        }
+        setValuesToElements(elements.input, result.Settings.DefaultChoice);
+        setValuesToElements(elements.menu, result.Settings.DefaultChoiceText_Menu);
+        
+    })
 
-    // Save new value
+    // Save spreadsheetUrl value
     document.getElementById("save").addEventListener("click", () => {
         const url = input.value.trim();
         chrome.storage.sync.set({ spreadsheetUrl: url }, () => {
@@ -17,4 +71,72 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => status.textContent = "", 2000);
         });
     });
+    // Save table Menu
+    elements.menu.saveButton.addEventListener("click", () => {
+        const values = getValuesFromElements(elements.menu);
+        saveSettings("DefaultChoiceText_Menu", values, statusTextMenu);
+    });
+
+    // Save table Input
+    elements.input.saveButton.addEventListener("click", () => {
+        const values = getValuesFromElements(elements.input);
+        saveSettings("DefaultChoice", values, status_Input);
+    });
+    // load & save theme
+    browserAPI.storage.sync.get(['theme'], (result) => {
+        let theme = result.theme;
+        if (!theme) {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            browserAPI.storage.sync.set({ theme });
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        toggleBtn.addEventListener('click', () => {
+            theme = theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            browserAPI.storage.sync.set({ theme });
+        })
+    });
 });
+
+// Helper to populate a <select> with options
+function populateSelect(selectEl, options) {
+    selectEl.innerHTML = "";
+    options.forEach(value => {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = value;
+        selectEl.appendChild(opt);
+    });
+}
+// Read input values from current UI
+function getValuesFromElements(group, data = null) {
+    return {
+        Type: data ? data?.Type : group.Type?.value,
+        chapter: data ? data?.chapter : "0",
+        status: data ? data?.status : group.Status?.value,
+        tags: data ? data?.tags : (group.tags?.value || ""),
+        notes: data ? data?.notes : (group.notes?.value || "")
+    };
+}
+// Helper: write settings to inputs
+function setValuesToElements(group, data) {
+    if (!group || !data) return;
+    if (group.Type) group.Type.value = data.Type;
+    if (group.chapter) group.chapter.value = data.chapter;
+    if (group.Status) group.Status.value = data.status;
+    if (group.tags) group.tags.value = data.tags;
+    if (group.notes) group.notes.value = data.notes;
+}
+function saveSettings(sectionKey, values, statusElement) {
+chrome.storage.sync.get(["Settings"], (result) => {
+    const updatedSettings = {
+        ...result.Settings,
+        [sectionKey]: values
+    };
+    chrome.storage.sync.set({ Settings: updatedSettings }, () => {
+        statusElement.textContent = "Saved!";
+        setTimeout(() => statusElement.textContent = "", 2000);
+    });
+});
+}

@@ -5,6 +5,7 @@ let GoogleSheetURL;
 let tagList = [];
 let Type = ["Manga", "Novel", "Anime", "TV-series"];
 let statusList = ["Finished", "Viewing", "Dropped", "Planned"];
+const Tetsting = true;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
@@ -22,16 +23,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("tags").value = "";
     document.getElementById("notes").value = "";
     
-    document.getElementById("save").addEventListener("click", () => {
-        saveSheet()
-        window.close()
-    });
+    document.getElementById("save").addEventListener("click", () => saveSheet());
     document.getElementById("openSettings").addEventListener("click", () => {
         chrome.runtime.openOptionsPage();
     });
     document.getElementById("openFullPage").addEventListener("click", () => {
         browserAPI.tabs.create({ url: GoogleSheetURL });
     });
+    browserAPI.storage.sync.get(['theme'], (result) => {
+        let theme = result.theme;
+        if (!theme) {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            browserAPI.storage.sync.set({ theme });
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        document.getElementById('Settings_IMG').src = theme === 'dark' ?  'assets/settings_24.png' : 'assets/settings_24Dark.png';
+    });
+
+
 });
 
 // Get active tab info
@@ -109,5 +118,6 @@ function saveSheet() {
             
         }
     });
-    
+
+    if(!Tetsting) window.close()
 }
