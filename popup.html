@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<main id="body">
     <button id="openSettings" type="button" >
         <img alt="0" class="icon" id="Settings_IMG"/>
     </button>
@@ -40,12 +41,19 @@
         </tbody>
         </table>
     </div>
-  <div class="buttons" id="Btn-Parent">
-    <button id="save">Save</button>
-  </div>
+    <div class="buttons" id="Btn-Parent">
+        <button id="save">Save</button>
+    </div>
+</main>
+    <div id="spreadsheetPrompt">
+        <label for="sheetUrlInput">Enter Spreadsheet URL:</label>
+        <input type="text" id="sheetUrlInput" />
+        <button id="saveSheetUrlBtn">Save</button>
+    </div>
 
-  <button id="openFullPage" class="fullpage-btn">Open Full Page</button>
 
-  <script src="popup.js"></script>
+    <button id="openFullPage" class="fullpage-btn">Open Selected Spreadsheet</button>
+
+    <script src="popup.js"></script>
 </body>
 </html>

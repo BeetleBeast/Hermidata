@@ -25,13 +25,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     document.getElementById("save").addEventListener("click", () => saveSheet());
     document.getElementById("openSettings").addEventListener("click", () => {
-        chrome.runtime.openOptionsPage();
+        browserAPI.runtime.openOptionsPage();
     });
     document.getElementById("openFullPage").addEventListener("click", () => {
         browserAPI.tabs.create({ url: GoogleSheetURL });
     });
     browserAPI.storage.sync.get(['theme'], (result) => {
-        let theme = result.theme;
+        let theme = result?.theme;
         if (!theme) {
             theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             browserAPI.storage.sync.set({ theme });
@@ -57,19 +57,30 @@ function getCurrentTab() {
 }
 // Get GoogleSheet URL
 function getGoogleSheetURL() {
-    return new Promise((resolve) => {
-        // Load saved value
-        chrome.storage.sync.get(["spreadsheetUrl"], (result) => {
-            if (result.spreadsheetUrl) {
-                resolve(result.spreadsheetUrl);
-            } else {
-                alert("No speadsheet saved inside settings");
-                const url = prompt("Put Here the URL of Chosen Spreadsheet").trim();
-                chrome.storage.sync.set({ spreadsheetUrl: url });
-                resolve(url);
-            }
+    return new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get(["spreadsheetUrl"], (result) => {
+            let url = result?.spreadsheetUrl?.trim();
+            if (url && isValidGoogleSheetUrl(url)) return resolve(url);
+            return sheetUrlInput(resolve, reject);
         });
-    })
+    });
+}
+function sheetUrlInput(resolve, reject) {
+    document.getElementById("spreadsheetPrompt").style.display = "block";
+    document.getElementById('body').style.display = 'none';
+    const saveBtn = document.getElementById("saveSheetUrlBtn");
+    saveBtn.onclick = () => {
+        const url = document.getElementById("sheetUrlInput").value.trim();
+        if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
+        browserAPI.storage.sync.set({ spreadsheetUrl: url }, () => {
+            document.getElementById("spreadsheetPrompt").style.display = "none";
+            document.getElementById('body').style.display = 'block';
+            return resolve(url)
+        });
+    };
+}
+function isValidGoogleSheetUrl(url) {
+    return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
 }
 function trimTitle(title) {
     return title.replace(/chapter.*$/i, "").replace(/[-–—|:]?\s*$/, "").trim();

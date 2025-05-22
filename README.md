@@ -86,7 +86,7 @@
 - [ ] Export/import backup options
 - [ ] Track reading history or stats
 - [ ] add a setting to (dis)-able context-menu
-- [ ] FireFox compatible
+- [ ] FireFox compatible ( make styles also compatible)
 
 ---
 

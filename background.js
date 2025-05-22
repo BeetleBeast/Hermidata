@@ -11,20 +11,20 @@ function getToken(callback) {
         const redirectUri = chrome.identity.getRedirectURL();
         console.log(redirectUri)
         const scope = 'https://www.googleapis.com/auth/spreadsheets';
-        const loginHint = items.userEmail ? `&login_hint=${items.userEmail}` : "";
+        const loginHintParam = items.userEmail ? `&login_hint=${encodeURIComponent(items.userEmail)}` : "";
         const authUrl =
             `https://accounts.google.com/o/oauth2/auth` +
             `?client_id=${clientId}` +
             `&response_type=token` +
             `&redirect_uri=${encodeURIComponent(redirectUri)}` +
             `&scope=${encodeURIComponent(scope)}` + 
-            loginHint;
+            loginHintParam;
 
         chrome.identity.launchWebAuthFlow(
             { url: authUrl, interactive: true },
             (redirectUrl) => {
-            if (chrome.runtime.lastError) {
-                console.error('Auth failed:', chrome.runtime.lastError.message);
+            if (chrome.runtime.lastError || !redirectUrl) {
+                console.error('Auth failed:', chrome.runtime.lastError.message || 'No redirect URL returned');
                 return;
             }
 
@@ -34,12 +34,24 @@ function getToken(callback) {
             const expiresIn = parseInt(params.get("expires_in"), 10) * 1000; // ms
             const expiry = Date.now() + expiresIn;
 
-            chrome.storage.local.set({
+            if (!token) {
+                console.error("Access token not found in redirect URL");
+                return;
+            }
+
+            // Extract the email if possible via API or save if known
+            const updatedStorage = {
                 googleAccessToken: token,
-                googleTokenExpiry: expiry,
-                userEmail: loginHint
+                googleTokenExpiry: expiry
+            };
+
+            if (items.userEmail) {
+                updatedStorage.userEmail = items.userEmail;
+            }
+
+            chrome.storage.local.set(updatedStorage, () => {
+                callback(token);
             });
-            callback(token);
         });
     });
 }

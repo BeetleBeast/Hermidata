@@ -17,7 +17,8 @@ body {
 table {
     width: 100%;
     border-collapse: collapse;
-    background-color: var(--bg-color)
+    background-color: var(--bg-color);
+    table-layout: auto;
 }
 
 td, th {
@@ -27,7 +28,7 @@ td, th {
     padding: 0;
 }
 td {
-    width: fit-content;
+    width: max-content;
     field-sizing:content;
 }
 th {
@@ -37,23 +38,16 @@ th {
     max-width: 100vw;
     padding: 8px;
 }
-input, select{
-    width:inherit;
-    height: inherit;
-    color: var(--Text-color);
-    background-color: var(--bg-color);
-    
-}
-
-
-input:not(#url) {
+input:not(#url),select:not(#url) {
     width: 100%;
     box-sizing: border-box;
     padding: 0px;
     font-size: 14px;
     text-align: center;
-    width: fit-content;
     field-sizing:content;
+    height: inherit;
+    color: var(--Text-color);
+    background-color: var(--bg-color);
 }
 #url {
     max-width: 100%;
@@ -62,6 +56,8 @@ input:not(#url) {
     padding: 0px;
     font-size: 14px;
     text-align: center;
+    color: var(--Text-color);
+    background-color: var(--bg-color);
 }
 
 #openSettings {
@@ -82,4 +78,14 @@ input:not(#url) {
 
 #openSettings:hover .icon {
     opacity: 1;
+}
+
+#spreadsheetPrompt {
+    display:none;
+}
+
+#status, 
+#statusSaveDefaultInput,
+#statusSaveDefaultInputInputTextMenu {
+    color: green;
 }
