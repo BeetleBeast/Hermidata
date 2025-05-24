@@ -56,7 +56,7 @@ function getToken(callback) {
     });
 }
 function updateIcon() {
-    if (!currentTab || !currentTab.id) {
+    if (!currentTab?.id) {
         console.warn("No currentTab or tab id available");
         return;
     }
@@ -310,45 +310,45 @@ function parseMangaFireUrl(url) {
     }
 }
 function searchBookmarks(query) {
-    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.search) {
+    if (typeof browser !== "undefined" && browser.bookmarks?.search) {
         return browser.bookmarks.search(query);
     }
     return new Promise((resolve, reject) => {
         chrome.bookmarks.search(query, (results) => {
-        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError));
         else resolve(results);
         });
     });
 }
 function updateBookmark(id, changes) {
-    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.update) {
+    if (typeof browser !== "undefined" && browser.bookmarks?.update) {
         return browser.bookmarks.update(id, changes);
     }
     return new Promise((resolve, reject) => {
         chrome.bookmarks.update(id, changes, (result) => {
-        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError));
         else resolve(result);
         });
     });
 }
 function createBookmark(bookmarkObj) {
-    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.create) {
+    if (typeof browser !== "undefined" && browser.bookmarks?.create) {
         return browser.bookmarks.create(bookmarkObj);
     }
     return new Promise((resolve, reject) => {
         chrome.bookmarks.create(bookmarkObj, (result) => {
-        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError));
         else resolve(result);
         });
     });
 }
 function getBookmarkChildren(parentId = "1") {
-    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.getChildren) {
+    if (typeof browser !== "undefined" && browser.bookmarks?.getChildren) {
         return browser.bookmarks.getChildren(parentId);
     }
     return new Promise((resolve, reject) => {
         chrome.bookmarks.getChildren(parentId, (children) => {
-        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError));
         else resolve(children);
         });
     });
