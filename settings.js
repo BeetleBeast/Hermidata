@@ -4,7 +4,7 @@ let STATUS_OPTIONS = ["Finished", "Viewing", "Dropped", "Planned"];
 
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("spreadsheetUrl");
-    const status = document.getElementById("status");
+    const status = document.getElementById("statusSheetURL");
     const status_Input = document.getElementById('statusSaveDefaultInput');
     const statusTextMenu = document.getElementById('statusSaveDefaultInputInputTextMenu');
     const toggleBtn = document.getElementById('theme-toggle');

@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("date").value = getCurrentDate() || "";
     document.getElementById("tags").value = "";
     document.getElementById("notes").value = "";
+    FixTableSize()
     
     document.getElementById("save").addEventListener("click", () => saveSheet());
     document.getElementById("openSettings").addEventListener("click", () => {
@@ -110,7 +111,6 @@ function populateStatus() {
         folderSelect.appendChild(option);
     });
 }
-
 function saveSheet() {
     const title = document.getElementById("title").value;
     const Type = document.getElementById("Type").value;
@@ -131,4 +131,58 @@ function saveSheet() {
     });
 
     if(!Tetsting) window.close()
+}
+function FixTableSize() {
+    const inputs = document.querySelectorAll('input.autoInput');
+    inputs.forEach(input => {
+        const td = input.closest('td');
+        const table = input.closest('table');
+        const columnIndex = td?.cellIndex ?? -1;
+        const th = table?.querySelectorAll('th')[columnIndex];
+        if (!th) return;
+
+        const measureText = (text, inputEl) => {
+            const span = document.createElement('span');
+            span.style.position = 'absolute';
+            span.style.visibility = 'hidden';
+            span.style.whiteSpace = 'pre';
+            span.style.font = getComputedStyle(inputEl).font;
+            span.textContent = text || '';
+            document.body.appendChild(span);
+            const width = span.offsetWidth;
+            span.remove();
+            return width;
+        };
+        const resize = () => {
+            const value = input.value;
+            if (!value) {
+                input.style.width = '50px'; // empty = no width
+                return;
+            }
+            const textWidth = measureText(value, input);
+            const parent = document.getElementById('ParentPreview');
+            const parentMaxWidth = 6000; // same as your CSS
+            const parentStyle = getComputedStyle(parent);
+            const parentPadding = parseFloat(parentStyle.paddingLeft) + parseFloat(parentStyle.paddingRight);
+            // Actual usable space in the parent
+            const maxContainerWidth = (document.body.offsetWidth, parentMaxWidth) - parentPadding;
+            // Get all first-row cells and subtract other columns' widths
+            const row = table.rows[0];
+            const cells = row.cells;
+            let otherColsWidth = 0;
+            for (let i = 0; i < cells.length; i++) {
+                if (i !== columnIndex) {
+                    otherColsWidth += cells[i].offsetWidth;
+                }
+            }
+            // Remaining space available for this input
+            const availableWidth = Math.max(0, maxContainerWidth - otherColsWidth - 16); // 16px safety
+            // Clamp final width
+            const clampedWidth = Math.min(textWidth + 12, availableWidth, 310); // 300 = hard cap for runaway growth
+            input.style.width = `${clampedWidth}px`;
+        };
+        // Defer initial call to allow proper layout
+        requestAnimationFrame(() => resize());
+            input.addEventListener('input', resize);
+    })
 }

@@ -160,12 +160,12 @@ function parseMangaFireUrl(url) {
     try {
         const parts = new URL(url).pathname.split('/');
 
-        const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : null;
-        const chapter = parts.includes('chapter-71') ? '71' : parts[parts.length - 1].replace('chapter-', '');
+        const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2];
+        const chapter = parts.includes('chapter') ?  parts[parts.length - 1].replace('chapter-', '') : '0';
 
         const title = titleSlug
             .split('.')[0]             // remove mangafire’s ID code (.yvov1)
-            .slice(0, -1)             // Remove the extra character just before the dot
+            .replace(/(.)\1$/, '$1')   // Rem last char if 2 to last is the same
             .replace(/-/g, ' ')        // hyphens to spaces
             .replace(/\b\w/g, c => c.toUpperCase()); // capitalize words
 

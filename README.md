@@ -73,8 +73,6 @@
 
 ## ⚠️ Notes
 
-- Uses `chrome.identity.getAuthToken()` for secure OAuth2 access
-- No sensitive keys (`client_secret`) are stored
 - Sheet URL is extracted to get the `spreadsheetId`
 - Entries are added via Google Sheets `append` endpoint
 - Requires interactive sign-in (OAuth) the first time
@@ -86,15 +84,14 @@
 - [ ] Export/import backup options
 - [ ] Track reading history or stats
 - [ ] add a setting to (dis)-able context-menu
-- [ ] FireFox compatible ( make styles also compatible)
 
 ---
 
 ## 🕶️ Reminder
 
-👉 Make **Dark Mode** Prittier with better colors
+👉 Make **Dark Mode** Prittier with better buttons colors
 🔐 Auth Status Display
 - Show currently logged-in account (email) in the popup or settings.
 - Include “Sign out” or “Change account” options.
-
+- make the butns better
 ---
