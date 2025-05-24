@@ -6,6 +6,7 @@
     "manifest_version": 3,
     "permissions": [
         "contextMenus",
+        "bookmarks",
         "activeTab",
         "identity",
         "storage",

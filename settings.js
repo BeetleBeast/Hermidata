@@ -38,26 +38,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     // load table input
     chrome.storage.sync.get([ "Settings" ], (result) => {
-        if (!result.Settings) {
-            let Settings = {
-                DefaultChoice : {
-                    Type : 'Manga',
-                    chapter : '0',
-                    status : 'Viewing',
-                    tags : '',
-                    notes : ''
-                },
-                DefaultChoiceText_Menu : {
-                    Type : 'Manga',
-                    chapter : '0',
-                    status : 'Planned',
-                    tags : '',
-                    notes : ''
-                }
-            }
+        ensureSettingsUpToDate((Settings) => {
             setValuesToElements(elements.input, Settings.DefaultChoice);
             setValuesToElements(elements.menu, Settings.DefaultChoiceText_Menu);
-        }
+        });
         setValuesToElements(elements.input, result.Settings.DefaultChoice);
         setValuesToElements(elements.menu, result.Settings.DefaultChoiceText_Menu);
         
@@ -98,6 +82,135 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     });
 });
+function getDefaultSettings() {
+    return {
+        DefaultChoice : {
+            Type : 'Manga',
+            chapter : '0',
+            status : 'Viewing',
+            tags : '',
+            notes : ''
+        },
+        DefaultChoiceText_Menu : {
+            Type : 'Manga',
+            chapter : '0',
+            status : 'Planned',
+            tags : '',
+            notes : ''
+        },
+        TYPE_OPTIONS : ["Manga", "Novel", "Anime", "TV-series"],
+        STATUS_OPTIONS : ["Finished", "Viewing", "Dropped", "Planned"],
+        // Mapping folders by Type + Status
+        FolderMapping: {
+            Manga: {
+                Finished: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Manga/Finished"
+                    },
+                Viewing: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading"
+                    },
+                Dropped: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Manga/Abandond"
+                    },
+                Planned: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch"
+                    }
+                },
+            Novels: {
+                Finished: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Novels/Finished"
+                    },
+                Viewing: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Novels/Currently - Reading"
+                    },
+                Dropped: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Novels/Abandond"
+                    },
+                Planned: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Novels/Planned"
+                    },
+                },
+            Anime: {
+                Finished: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Anime/Finished"
+                },
+                Viewing: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Anime/Currently - Reading"
+                    },
+                Dropped: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Anime/Abandond"
+                    },
+                Planned: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/Anime/Planned"
+                    },
+                },
+            'TV-Series': {
+                Finished: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/TV-Series/Finished"
+                    },
+                Viewing: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/TV-Series/Currently - Reading"
+                    },
+                Dropped: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/TV-Series/Abandond"
+                    },
+                Planned: {
+                    root: "menu________",
+                    path: "Manga - Anime - Novels - TV-Series/TV-Series/Planned"
+                },
+            },
+            // Add more as needed
+        }
+    };
+}
+function ensureSettingsUpToDate(callback) {
+    chrome.storage.sync.get(["Settings"], (result) => {
+        const storedSettings = result.Settings || {};
+        const defaultSettings = getDefaultSettings();
+
+        let updated = false;
+
+        function deepMerge(target, source) {
+            for (const key in source) {
+                if (!(key in target)) {
+                    target[key] = source[key];
+                    updated = true;
+                } else if (
+                    typeof target[key] === "object" &&
+                    typeof source[key] === "object"
+                ) {
+                    deepMerge(target[key], source[key]);
+                }
+            }
+        }
+
+        deepMerge(storedSettings, defaultSettings);
+
+        if (updated) {
+            chrome.storage.sync.set({ Settings: storedSettings }, () => {
+                console.log("Settings updated with missing defaults.");
+                callback(storedSettings);
+            });
+        } else {
+            callback(storedSettings);
+        }
+    });
+}
 
 // Helper to populate a <select> with options
 function populateSelect(selectEl, options) {

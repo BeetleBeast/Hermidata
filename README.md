@@ -31,6 +31,8 @@
 - ✅ Datalist autocomplete for `Type` and `Status` fields
 - ✅ even works for sites that uses redirects
 - ✅ has dark mode
+- ✅ adds also a bookmark
+ - ✅ can edit the path of the bookmark in settings
 
 ---
 
@@ -84,6 +86,7 @@
 - [ ] Export/import backup options
 - [ ] Track reading history or stats
 - [ ] add a setting to (dis)-able context-menu
+- [ ] add a way to edit the path of the bookmark in settings
 
 ---
 
@@ -94,4 +97,5 @@
 - Show currently logged-in account (email) in the popup or settings.
 - Include “Sign out” or “Change account” options.
 - make the butns better
+- remake settings page
 ---

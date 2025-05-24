@@ -55,6 +55,46 @@ function getToken(callback) {
         });
     });
 }
+function updateIcon() {
+    if (!currentTab || !currentTab.id) {
+        console.warn("No currentTab or tab id available");
+        return;
+    }
+
+    const api = window.browser || window.chrome;
+    const actionApi = api.action || api.browserAction;
+
+    const iconPath = currentBookmark 
+        ? { 48: "assets/icon_red48.png" }
+        : { 48: "assets/icon48.png" };
+
+    // Set icon
+    actionApi.setIcon({
+        path: iconPath,
+        tabId: currentTab.id
+    }, () => {
+        if (api.runtime.lastError) {
+            console.warn("setIcon error:", api.runtime.lastError.message);
+        }
+    });
+
+    // Set title/tooltip
+    actionApi.setTitle({
+        title: currentBookmark ? 'Unbookmark it!' : 'Bookmark it!',
+        tabId: currentTab.id
+    }, () => {
+        if (api.runtime.lastError) {
+            console.warn("setTitle error:", api.runtime.lastError.message);
+        }
+    });
+}
+
+
+/**
+ * This function reads the google sheet and throws it back inside callback.
+ * @param {number} token - The parameter for the authorization 
+ * @returns {number} The callback for the result
+ */
 function readSheet(token, callback) {
     chrome.storage.sync.get(["spreadsheetUrl"], (result) => {
         const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
@@ -97,9 +137,23 @@ function shouldReplaceOrBlock(newEntry, existingRows) {
 
     return { action: "append" };
 }
+async function replaceBookmark(dataArray, allBookmarks, rowIndex) {
+    const oldBookmark = allBookmarks[rowIndex - 2];
+    if (oldBookmark) {
+        const [title, type, chapter, url, status, date, tags, notes] = dataArray;
+        const bookmarkTitle = `${title} - Chapter ${chapter}`;
+        const updated = await updateBookmark(oldBookmark.id, {title:bookmarkTitle});
+        console.log("Updated bookmark", updated);
+    } else {
+        addBookmark(dataArray);
+    }
+}
 function extractSpreadsheetId(url) {
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
     return match ? match[1] : null;
+}
+function extractTitleFromBookmark(title) {
+    return title.split(" - Chapter ")[0].trim();
 }
 function writeToSheet(token, dataArray, params) {
     readSheet(token, (rows) => {
@@ -113,6 +167,27 @@ function writeToSheet(token, dataArray, params) {
         console.log("Skipping entry.");
         }
     });
+}
+async function writeToBookmarks(dataArray) {
+    const bookmarks = await searchBookmarks({});
+    const rows = bookmarks
+        .filter(b => b.url)
+        .map(b => [
+            extractTitleFromBookmark(b.title), // Approximate title
+            "", "",                            // Skip type & chapter if needed
+            b.url,
+            "", "", "", ""                     // Fill missing fields
+        ]);
+
+    const decision = shouldReplaceOrBlock(dataArray, rows);
+
+    if (decision.action === "append") {
+        addBookmark(dataArray);
+    } else if (decision.action === "replace") {
+        replaceBookmark(dataArray, bookmarks, decision.rowIndex);
+    } else {
+        console.log("Skipping bookmark entry.");
+    }
 }
 function appendRow(token, dataArray) {
     chrome.storage.sync.get(["spreadsheetUrl"], (result) => {
@@ -149,6 +224,62 @@ function updateRow(token, rowIndex, dataArray) {
         .catch(err => console.error("Update error:", err));
     });
 }
+async function createNestedFolders(pathSegments, rootTitle, callback, parentId = null, index = 0) {
+    if (index >= pathSegments.length) {
+        callback(parentId); // Finished creating nested folders
+        return;
+    }
+    const actualParentId = parentId || rootTitle;
+
+    try {
+        const children = await getBookmarkChildren(actualParentId);
+        if (!children) {
+            console.error(`No children found for parentId ${actualParentId}`);
+            callback(null);
+            return;
+        }
+        let folder = children.find(child => !child.url && child.title === pathSegments[index]);
+        if (folder) {
+            createNestedFolders(pathSegments, rootTitle, callback, folder.id, index + 1);
+        } else {
+            const newFolder = await createBookmark({parentId: actualParentId, title: pathSegments[index]});
+            createNestedFolders(pathSegments, rootTitle, callback, newFolder.id, index + 1);
+        }
+    } catch (err) {
+        console.error("Error in createNestedFolders:", err);
+        callback(null);
+    }
+}
+/**
+ * This function creates a bookmark.
+ * @param {text} title - 
+ * @param {text} url - 
+ * @param {text} type - 
+ * @param {text} status - 
+ * @param {object} settings - 
+ */
+async function addBookmark([title, type, chapter, url, status, date, tags, notes]) {
+    const settings = await new Promise((resolve) => {
+        chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
+    });
+
+    const folderInfo = settings?.FolderMapping?.[type]?.[status];
+    if (!folderInfo?.path) {
+        console.warn("Folder mapping not found for", type, status);
+        return;
+    }
+
+    const pathSegments = folderInfo.path.split("/");
+    const finalFolderId = await new Promise((resolve) => {
+        createNestedFolders(pathSegments, folderInfo.root, resolve);
+    });
+    const bookmarkTitle = `${title} - Chapter ${chapter}`;
+    await createBookmark({ // NEW create
+        parentId: finalFolderId,
+        title: bookmarkTitle,
+        url
+    });
+}
 function getCurrentDate() {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -178,6 +309,63 @@ function parseMangaFireUrl(url) {
         return { title: "Unknown", chapter: "0" };
     }
 }
+function searchBookmarks(query) {
+    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.search) {
+        return browser.bookmarks.search(query);
+    }
+    return new Promise((resolve, reject) => {
+        chrome.bookmarks.search(query, (results) => {
+        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        else resolve(results);
+        });
+    });
+}
+function updateBookmark(id, changes) {
+    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.update) {
+        return browser.bookmarks.update(id, changes);
+    }
+    return new Promise((resolve, reject) => {
+        chrome.bookmarks.update(id, changes, (result) => {
+        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        else resolve(result);
+        });
+    });
+}
+function createBookmark(bookmarkObj) {
+    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.create) {
+        return browser.bookmarks.create(bookmarkObj);
+    }
+    return new Promise((resolve, reject) => {
+        chrome.bookmarks.create(bookmarkObj, (result) => {
+        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        else resolve(result);
+        });
+    });
+}
+function getBookmarkChildren(parentId = "1") {
+    if (typeof browser !== "undefined" && browser.bookmarks && browser.bookmarks.getChildren) {
+        return browser.bookmarks.getChildren(parentId);
+    }
+    return new Promise((resolve, reject) => {
+        chrome.bookmarks.getChildren(parentId, (children) => {
+        if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+        else resolve(children);
+        });
+    });
+}
+function updateCurrentBookmarkAndIcon() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        currentTab = tabs[0];
+        if (!currentTab) return;
+
+        chrome.bookmarks.search({ url: currentTab.url }, (results) => {
+            currentBookmark = results.length > 0 ? results[0] : null;
+            updateIcon();
+        });
+    });
+}
+
+
 
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
@@ -206,17 +394,37 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
                 const data = [title, type, chapter, url, status, date, tags, notes];
                 getToken((token) => {
                     writeToSheet(token, data, argument);
+                    writeToBookmarks(data);
                 });
             })
             .catch(err => console.error("Failed to resolve redirect:", err));
         })
     }
 });
+
+let currentBookmark = null;
+let currentTab = null;
+
+chrome.runtime.onStartup.addListener(() => {
+    updateCurrentBookmarkAndIcon();
+});
+
+chrome.tabs.onActivated.addListener(() => {
+    updateCurrentBookmarkAndIcon();
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (tab.active && changeInfo.url) {
+        updateCurrentBookmarkAndIcon();
+    }
+});
+
 // Example usage from popup
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "SAVE_NOVEL") {
         getToken((token) => {
             writeToSheet(token, msg.data, msg.arguments);
+            writeToBookmarks(msg.data);
         });
     }
 });

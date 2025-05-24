@@ -156,12 +156,12 @@ function FixTableSize() {
         const resize = () => {
             const value = input.value;
             if (!value) {
-                input.style.width = '50px'; // empty = no width
+                input.style.width = '42px'; // empty = no width
                 return;
             }
             const textWidth = measureText(value, input);
             const parent = document.getElementById('ParentPreview');
-            const parentMaxWidth = 6000; // same as your CSS
+            const parentMaxWidth = 10000; // same as your CSS
             const parentStyle = getComputedStyle(parent);
             const parentPadding = parseFloat(parentStyle.paddingLeft) + parseFloat(parentStyle.paddingRight);
             // Actual usable space in the parent
@@ -176,9 +176,9 @@ function FixTableSize() {
                 }
             }
             // Remaining space available for this input
-            const availableWidth = Math.max(0, maxContainerWidth - otherColsWidth - 16); // 16px safety
+            const availableWidth = (0, maxContainerWidth - otherColsWidth - 200); // 16px safety
             // Clamp final width
-            const clampedWidth = Math.min(textWidth + 12, availableWidth, 310); // 300 = hard cap for runaway growth
+            const clampedWidth = Math.min(textWidth + 12, availableWidth, 300); // 300 = hard cap for runaway growth
             input.style.width = `${clampedWidth}px`;
         };
         // Defer initial call to allow proper layout

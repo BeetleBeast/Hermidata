@@ -42,8 +42,8 @@ th {
 input[type=number],
 input[type=number]::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     -moz-appearance: textfield;
-    appearance: textfield;
 }
 input.autoInput,
 select.autoInput {
