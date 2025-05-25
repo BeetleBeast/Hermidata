@@ -61,10 +61,10 @@ function updateIcon() {
         return;
     }
 
-    const api = window.browser || window.chrome;
+    const api = typeof browser !== "undefined" ? browser : chrome;
     const actionApi = api.action || api.browserAction;
 
-    const iconPath = currentBookmark 
+    const iconPath = currentBookmark
         ? { 48: "assets/icon_red48.png" }
         : { 48: "assets/icon48.png" };
 
@@ -126,7 +126,7 @@ function shouldReplaceOrBlock(newEntry, existingRows) {
 
         if (isSame) {
         if (chapterChanged) {
-            return { action: "replace", rowIndex: i + 2 }; // +2 = row index in Google Sheets (1-based + header)
+            return { action: "replace", rowIndex: i + 2 };
         } else if (date > oldDate) {
             return { action: "alert" };
         } else {
@@ -155,7 +155,7 @@ function extractSpreadsheetId(url) {
 function extractTitleFromBookmark(title) {
     return title.split(" - Chapter ")[0].trim();
 }
-function writeToSheet(token, dataArray, params) {
+function writeToSheet(token, dataArray) {
     readSheet(token, (rows) => {
         const decision = shouldReplaceOrBlock(dataArray, rows);
 
@@ -173,14 +173,12 @@ async function writeToBookmarks(dataArray) {
     const rows = bookmarks
         .filter(b => b.url)
         .map(b => [
-            extractTitleFromBookmark(b.title), // Approximate title
-            "", "",                            // Skip type & chapter if needed
+            extractTitleFromBookmark(b.title), 
+            "", "",                            
             b.url,
-            "", "", "", ""                     // Fill missing fields
+            "", "", "", ""                     
         ]);
-
     const decision = shouldReplaceOrBlock(dataArray, rows);
-
     if (decision.action === "append") {
         addBookmark(dataArray);
     } else if (decision.action === "replace") {
@@ -226,7 +224,7 @@ function updateRow(token, rowIndex, dataArray) {
 }
 async function createNestedFolders(pathSegments, rootTitle, callback, parentId = null, index = 0) {
     if (index >= pathSegments.length) {
-        callback(parentId); // Finished creating nested folders
+        callback(parentId);
         return;
     }
     const actualParentId = parentId || rootTitle;
@@ -250,14 +248,6 @@ async function createNestedFolders(pathSegments, rootTitle, callback, parentId =
         callback(null);
     }
 }
-/**
- * This function creates a bookmark.
- * @param {text} title - 
- * @param {text} url - 
- * @param {text} type - 
- * @param {text} status - 
- * @param {object} settings - 
- */
 async function addBookmark([title, type, chapter, url, status, date, tags, notes]) {
     const settings = await new Promise((resolve) => {
         chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
@@ -274,7 +264,7 @@ async function addBookmark([title, type, chapter, url, status, date, tags, notes
         createNestedFolders(pathSegments, folderInfo.root, resolve);
     });
     const bookmarkTitle = `${title} - Chapter ${chapter}`;
-    await createBookmark({ // NEW create
+    await createBookmark({
         parentId: finalFolderId,
         title: bookmarkTitle,
         url
@@ -283,7 +273,7 @@ async function addBookmark([title, type, chapter, url, status, date, tags, notes
 function getCurrentDate() {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+    const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     return `${day}/${month}/${year}`;
 }
@@ -295,8 +285,8 @@ function parseMangaFireUrl(url) {
         const chapter = parts.includes('chapter') ?  parts[parts.length - 1].replace('chapter-', '') : '0';
 
         const title = titleSlug
-            .split('.')[0]             // remove mangafire’s ID code (.yvov1)
-            .replace(/(.)\1$/, '$1')   // Rem last char if 2 to last is the same
+            .split('.')[0]             // remove Site's ID code (.yvov1)
+            .replace(/(.)\1$/, '$1')   // Remove last char if second to last is the same
             .replace(/-/g, ' ')        // hyphens to spaces
             .replace(/\b\w/g, c => c.toUpperCase()); // capitalize words
 
@@ -371,14 +361,14 @@ chrome.storage.sync.get([ "Settings" ], (result) => {
             chrome.contextMenus.create({
                 id: "Hermidata",
                 title: "Save to Hermidata",
-                contexts: ["link"] // Or "all", "selection", "link", etc.
+                contexts: ["link"]
             });
         });
         // Context-Menu Listener
         chrome.contextMenus.onClicked.addListener((info, tab) => {
             if (info.menuItemId === "Hermidata") {
                 const Settings = result.Settings
-                let args;
+
                 // Send tab info to your saving logic
                 fetch(info.linkUrl, { method: "HEAD" })
                 .then(response => {
@@ -392,7 +382,7 @@ chrome.storage.sync.get([ "Settings" ], (result) => {
                     let notes = Settings.DefaultChoiceText_Menu.notes;
                     const data = [title, type, chapter, url, status, date, tags, notes];
                     getToken((token) => {
-                        writeToSheet(token, data, args);
+                        writeToSheet(token, data);
                         writeToBookmarks(data);
                     });
                 })
@@ -414,8 +404,13 @@ chrome.tabs.onActivated.addListener(() => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (tab.active && changeInfo.url) {
-        updateCurrentBookmarkAndIcon();
+    if (changeInfo.status === 'complete') {
+        // Only update if this tab is active in the current window
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            if (tabs.length && tabs[0].id === tabId) {
+                updateCurrentBookmarkAndIcon();
+            }
+        });
     }
 });
 
@@ -423,7 +418,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "SAVE_NOVEL") {
         getToken((token) => {
-            writeToSheet(token, msg.data, msg.args);
+            writeToSheet(token, msg.data);
             writeToBookmarks(msg.data);
         });
     }

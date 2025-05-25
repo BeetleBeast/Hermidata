@@ -44,7 +44,13 @@
         }
     },
     "web_accessible_resources": [{
-        "resources": ["icons/*.png","settings/*.png"],
+        "resources": [
+            "icon/*.png",
+            "settings/*.png",
+            "assets/icon_red48.png",
+            "assets/settings_24.png",
+            "assets/settings_24Dark.png"
+    ],
         "matches": ["<all_urls>"]
     }],
     "options_page": "settings.html"

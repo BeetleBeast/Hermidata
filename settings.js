@@ -28,7 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // load & save theme
     setTheme() 
     // load settings
-    ensureSettingsUpToDate((settings) => buildFolderMappingForm(settings));
+    ensureSettingsUpToDate((settings) => {
+        buildFolderMappingForm(settings);
+        document.getElementById("AllowContextMenu").checked = !!settings.AllowContextMenu;
+    });
     // Save spreadsheetUrl value
     document.getElementById("save").addEventListener("click", () => {
         chrome.storage.sync.set({ spreadsheetUrl: input }, () => {
@@ -49,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("ResetAuth").addEventListener("click", ResetLoginAuth);
     document.getElementById("exportBtn").addEventListener("click", exportSettings);
     document.getElementById("importBtn").addEventListener("change", importSettings);
-    document.getElementById("AllowContextMenu").addEventListener("change", Settings);
+    document.getElementById("AllowContextMenu").addEventListener("change", AllowContextMenu);
     document.getElementById("saveFolderMapping").addEventListener("click", saveSettingsFolderPath);
 });
 function getDefaultSettings() {
@@ -70,7 +73,6 @@ function getDefaultSettings() {
         },
         TYPE_OPTIONS : ["Manga", "Novel", "Anime", "TV-series"],
         STATUS_OPTIONS : ["Finished", "Viewing", "Dropped", "Planned"],
-        // Mapping folders by Type + Status
         FolderMapping: {
             Manga: {
                 Finished: {
@@ -144,7 +146,6 @@ function getDefaultSettings() {
                     path: "Manga - Anime - Novels - TV-Series/TV-Series/Planned"
                 },
             },
-            // Add more as needed
         },
         AllowContextMenu : true,
     };
@@ -167,7 +168,6 @@ function LoadAndPopulate(elements) {
         ensureSettingsUpToDate((Settings) => {
             setValuesToElements(elements.input, Settings.DefaultChoice);
             setValuesToElements(elements.menu, Settings.DefaultChoiceText_Menu);
-            document.getElementById("AllowContextMenu").checked = !!Settings.AllowContextMenu;
         });
         setValuesToElements(elements.input, result.Settings.DefaultChoice);
         setValuesToElements(elements.menu, result.Settings.DefaultChoiceText_Menu);
@@ -272,44 +272,33 @@ function ResetLoginAuth() {
         console.log("OAuth credentials cleared");
     });
 }
-// Export as JSON
 // Export Settings as JSON
 function exportSettings() {
-    // Ensure settings are up to date first
+    // Ensure settings are up to date
     ensureSettingsUpToDate((updatedSettings) => {
         const json = JSON.stringify(updatedSettings, null, 2);
         const blob = new Blob([json], { type: "application/json" });
         const url = URL.createObjectURL(blob);
-
-        // Create and click the download link
         const a = document.createElement("a");
+        
         a.href = url;
         a.download = "bookmark_plus_export.json";
-        document.body.appendChild(a);  // Required for Firefox
+        document.body.appendChild(a);
         a.click();
-
-        // Clean up
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
 }
 function importSettings(event) {
     const file = event.target.files[0];
-    if (!file) {
-        alert("No file selected.");
-        return;
-    }
-
+    if (!file) return
     const reader = new FileReader();
     reader.onload = function (e) {
         try {
             const importedData = JSON.parse(e.target.result);
 
             // Optional validation
-            if (!importedData.FolderMapping || !importedData.DefaultChoiceText_Menu) {
-                alert("Invalid settings file.");
-                return;
-            }
+            if (!importedData.FolderMapping || !importedData.DefaultChoiceText_Menu) return
 
             chrome.storage.sync.set({ Settings: importedData }, () => {
                 alert("Settings imported successfully!");
@@ -319,12 +308,10 @@ function importSettings(event) {
             alert("Invalid JSON format.");
         }
     };
-
     reader.readAsText(file);
 }
-function Settings(event) {
+function AllowContextMenu(event) {
     const isChecked = event.target.checked;
-    // Ensure settings are up to date first
     ensureSettingsUpToDate((updatedSettings) => {
         updatedSettings.AllowContextMenu = isChecked;
 
@@ -336,7 +323,7 @@ function Settings(event) {
 
 function buildFolderMappingForm(settings) {
     const container = document.getElementById("folderMappingContainer");
-    container.innerHTML = ""; // clear previous
+    container.innerHTML = "";
 
     const mapping = settings.FolderMapping;
     for (const type in mapping) {
@@ -368,7 +355,7 @@ function saveSettingsFolderPath() {
             const status = input.dataset.status;
             const newPath = input.value.trim();
 
-            if (!type || !status) return; // skip invalid inputs
+            if (!type || !status) return;
 
             if (!settings.FolderMapping[type]) settings.FolderMapping[type] = {};
             if (!settings.FolderMapping[type][status]) settings.FolderMapping[type][status] = {};

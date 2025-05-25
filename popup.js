@@ -2,9 +2,10 @@ const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 
 let currentTab;
 let GoogleSheetURL;
-let tagList = [];
 let Type = ["Manga", "Novel", "Anime", "TV-series"];
 let statusList = ["Finished", "Viewing", "Dropped", "Planned"];
+
+// FIXME: remove this when in prod
 const Tetsting = true;
 
 // On popup load
