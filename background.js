@@ -365,42 +365,42 @@ function updateCurrentBookmarkAndIcon() {
     });
 }
 
-
-
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.contextMenus.create({
-        id: "Hermidata",
-        title: "Save to Hermidata",
-        contexts: ["link"] // Or "all", "selection", "link", etc.
-    });
-});
-// Context-Menu Listener
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId === "Hermidata") {
-        chrome.storage.sync.get([ "Settings" ], (result) => {
-            const Settings = result.Settings
-            let argument;
-            // Send tab info to your saving logic
-            fetch(info.linkUrl, { method: "HEAD" })
-            .then(response => {
-                const finalUrl = response.url;
-                let { title, chapter } = parseMangaFireUrl(finalUrl);
-                let url = finalUrl;
-                let date = getCurrentDate(); // yyyy-mm-dd
-                let type = Settings.DefaultChoiceText_Menu.Type;
-                let status = Settings.DefaultChoiceText_Menu.status;
-                let tags = Settings.DefaultChoiceText_Menu.tags;
-                let notes = Settings.DefaultChoiceText_Menu.notes;
-                const data = [title, type, chapter, url, status, date, tags, notes];
-                getToken((token) => {
-                    writeToSheet(token, data, argument);
-                    writeToBookmarks(data);
-                });
-            })
-            .catch(err => console.error("Failed to resolve redirect:", err));
-        })
+chrome.storage.sync.get([ "Settings" ], (result) => {
+    if (result.AllowContextMenu) {
+        chrome.runtime.onInstalled.addListener(() => {
+            chrome.contextMenus.create({
+                id: "Hermidata",
+                title: "Save to Hermidata",
+                contexts: ["link"] // Or "all", "selection", "link", etc.
+            });
+        });
+        // Context-Menu Listener
+        chrome.contextMenus.onClicked.addListener((info, tab) => {
+            if (info.menuItemId === "Hermidata") {
+                const Settings = result.Settings
+                let args;
+                // Send tab info to your saving logic
+                fetch(info.linkUrl, { method: "HEAD" })
+                .then(response => {
+                    const finalUrl = response.url;
+                    let { title, chapter } = parseMangaFireUrl(finalUrl);
+                    let url = finalUrl;
+                    let date = getCurrentDate(); // yyyy-mm-dd
+                    let type = Settings.DefaultChoiceText_Menu.Type;
+                    let status = Settings.DefaultChoiceText_Menu.status;
+                    let tags = Settings.DefaultChoiceText_Menu.tags;
+                    let notes = Settings.DefaultChoiceText_Menu.notes;
+                    const data = [title, type, chapter, url, status, date, tags, notes];
+                    getToken((token) => {
+                        writeToSheet(token, data, args);
+                        writeToBookmarks(data);
+                    });
+                })
+                .catch(err => console.error("Failed to resolve redirect:", err));
+            }
+        });
     }
-});
+})
 
 let currentBookmark = null;
 let currentTab = null;
@@ -423,7 +423,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "SAVE_NOVEL") {
         getToken((token) => {
-            writeToSheet(token, msg.data, msg.arguments);
+            writeToSheet(token, msg.data, msg.args);
             writeToBookmarks(msg.data);
         });
     }

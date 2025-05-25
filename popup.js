@@ -120,14 +120,13 @@ function saveSheet() {
     const date = document.getElementById("date").value;
     const tags = document.getElementById("tags").value || "";
     const notes = document.getElementById("notes").value || "";
+    const args = '';
 
 
     browserAPI.runtime.sendMessage({
         type: "SAVE_NOVEL",
         data: [title, Type, Chapter, url, status, date, tags, notes],
-        arguments: {
-            
-        }
+        args
     });
 
     if(!Tetsting) window.close()

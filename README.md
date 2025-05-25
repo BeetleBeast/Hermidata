@@ -30,10 +30,15 @@
 - ✅ Popup and full-page entry view
 - ✅ Datalist autocomplete for `Type` and `Status` fields
 - ✅ even works for sites that uses redirects
-- ✅ has dark mode
 - ✅ adds also a bookmark
- - ✅ can edit the path of the bookmark in settings
-
+- ✅ Added Settings
+  - can set the Spreadsheet URL
+  - has dark mode Toggle
+  - can edit the default type, statusn Tags & Notes
+  - Export/import Settings option.
+  - setting to disable context-menu.
+  - can edit the path of the bookmark in settings
+  - Includes “Sign out” option.
 ---
 
 ## 🛠️ How It Works
@@ -44,6 +49,7 @@
 4. Edit or complete the fields if needed.
 5. Click **Save**.
 6. Data is written to your linked Google Spreadsheet via the Google Sheets API.
+7. It also makes a bookmark.
 
 ---
 
@@ -83,19 +89,13 @@
 
 ## 🧪 To-Do
 
-- [ ] Export/import backup options
 - [ ] Track reading history or stats
-- [ ] add a setting to (dis)-able context-menu
-- [ ] add a way to edit the path of the bookmark in settings
 
 ---
 
 ## 🕶️ Reminder
 
-👉 Make **Dark Mode** Prittier with better buttons colors
-🔐 Auth Status Display
-- Show currently logged-in account (email) in the popup or settings.
-- Include “Sign out” or “Change account” options.
-- make the butns better
+👉 Make **Dark Mode** Prettier with better buttons colors
+- make the buttons better
 - remake settings page
 ---

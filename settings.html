@@ -11,7 +11,7 @@
         padding: 20px;
         }
         input {
-        width: 100%;
+        width: fit-content;
         padding: 8px;
         margin: 10px 0;
         }
@@ -74,6 +74,21 @@
     </table>
     <button id="saveDefaultInputTextMenu" type="button">Save</button>
     <p id="statusSaveDefaultInputInputTextMenu"></p>
+    <br>
+    <br>
+    <button type="button" id="exportBtn">Export Settings as JSON</button>
+    <input type="file" accept=".json" placeholder="select Settings json" id="importBtn"></input>
+    <br>
+    <br>
+    <label for="AllowContextMenu">Allow context menu</label>
+    <input type="checkbox" id="AllowContextMenu" title="Allow context menu" checked>
+    <br>
+    <div id="folderMappingContainer"></div>
+    <button id="saveFolderMapping">Save Folder Mapping</button>
+    <br>
+    <br>
+    <br>
+    <button type="button" id="ResetAuth">Log-out</button>
 
 
     <script src="settings.js"></script>
