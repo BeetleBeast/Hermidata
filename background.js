@@ -55,36 +55,46 @@ function getToken(callback) {
         });
     });
 }
-function updateIcon() {
-    if (!currentTab?.id) {
-        console.warn("No currentTab or tab id available");
-        return;
-    }
-
+function updateIcon(Url = null) {
     const api = typeof browser !== "undefined" ? browser : chrome;
     const actionApi = api.action || api.browserAction;
 
+    if (Url) {
+        chrome.tabs.query({active : true}, (tabs) => {
+            const matchedTab = tabs.find(t => t.url === Url);
+            if (!matchedTab) {
+                console.warn("No tab found with matching URL");
+                return;
+            }
+            setIconAndTitle(actionApi, matchedTab.id);
+        });
+    } else if (currentTab?.id) {
+        setIconAndTitle(actionApi, currentTab.id);
+    } else {
+        console.warn("No valid tab to set icon");
+    }
+}
+
+function setIconAndTitle(actionApi, tabId) {
     const iconPath = currentBookmark
         ? { 48: "assets/icon_red48.png" }
         : { 48: "assets/icon48.png" };
 
-    // Set icon
     actionApi.setIcon({
         path: iconPath,
-        tabId: currentTab.id
+        tabId: tabId
     }, () => {
-        if (api.runtime.lastError) {
-            console.warn("setIcon error:", api.runtime.lastError.message);
+        if (chrome.runtime.lastError) {
+            console.warn("setIcon error:", chrome.runtime.lastError.message);
         }
     });
 
-    // Set title/tooltip
     actionApi.setTitle({
         title: currentBookmark ? 'Unbookmark it!' : 'Bookmark it!',
-        tabId: currentTab.id
+        tabId: tabId
     }, () => {
-        if (api.runtime.lastError) {
-            console.warn("setTitle error:", api.runtime.lastError.message);
+        if (chrome.runtime.lastError) {
+            console.warn("setTitle error:", chrome.runtime.lastError.message);
         }
     });
 }
@@ -115,38 +125,80 @@ function readSheet(token, callback) {
         .catch(err => console.error("Error reading sheet:", err));
     });
 }
-function shouldReplaceOrBlock(newEntry, existingRows) {
+function shouldReplaceOrBlock(newEntry, existingRows, isSheet = true) {
     const [title, type, chapter, url, status, date, tags, notes] = newEntry;
+    let oldTitle, oldType, oldChapter, oldUrl, oldStatus, oldDate, oldTags, oldNotes, id;
 
     for (let i = 0; i < existingRows.length; i++) {
-        const [oldTitle, oldType, oldChapter, oldUrl, oldStatus, oldDate] = existingRows[i];
+        if (isSheet) {
+            [oldTitle, oldType, oldChapter, oldUrl, oldStatus, oldDate, oldTags, oldNotes] = existingRows[i];
+        } else {
+            ({ title: oldTitle, type: oldType, chapter: oldChapter, url: oldUrl, status: oldStatus, date: oldDate, id } = existingRows[i]);
+        }
+            
+        const SameTrimedTitle = title.trim().toLowerCase() === oldTitle.trim().toLowerCase();
 
-        const isSame = url === oldUrl || title.trim().toLowerCase() === oldTitle.trim().toLowerCase();
-        const chapterChanged = chapter !== oldChapter;
+        const { title: OldTitleParsed, chapter: oldChapterParsed } = parseMangaFireUrl(oldUrl);
+        const  { title: TitleParsed, chapter: ChapterParsed } = parseMangaFireUrl(url);
+        
+        const SameTitle = OldTitleParsed === TitleParsed;
+        const isSame = isSheet ? SameTrimedTitle : SameTitle;
 
         if (isSame) {
-        if (chapterChanged) {
-            return { action: "replace", rowIndex: i + 2 };
-        } else if (date > oldDate) {
-            return { action: "alert" };
-        } else {
-            return { action: "skip" };
-        }
+            const chapterChanged = chapter !== oldChapterParsed;
+            const chapterChangedURL = ChapterParsed !== oldChapterParsed;
+            if (chapterChanged) {
+                return { action: "replace", rowIndex: i + 2, replacedURL: oldUrl, replaceID: id };
+            } else if (date > oldDate && oldDate !== undefined) {
+                return { action: "alert" };
+            } else {
+                return { action: "skip" };
+            }
         }
     }
 
     return { action: "append" };
 }
-async function replaceBookmark(dataArray, allBookmarks, rowIndex) {
-    const oldBookmark = allBookmarks[rowIndex - 2];
-    if (oldBookmark) {
-        const [title, type, chapter, url, status, date, tags, notes] = dataArray;
-        const bookmarkTitle = `${title} - Chapter ${chapter}`;
-        const updated = await updateBookmark(oldBookmark.id, {title:bookmarkTitle});
+
+async function replaceBookmark(dataArray, decision) {
+    const { rowIndex, replacedURL: OldURL, replaceID: OldID } = decision;
+    const [title, type, chapter, url, status, date, tags, notes] = dataArray;
+    const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
+    
+    const settings = await new Promise((resolve) => {
+        chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
+    });
+
+    const folderInfo = settings?.FolderMapping?.[type]?.[status];
+    if (!folderInfo?.path) {
+        console.warn("Folder mapping not found for", type, status);
+        return;
+    }
+
+    const Browserroot = "Bookmarks";
+    const pathSegments = folderInfo.path.split('/').filter(Boolean);
+
+    const finalFolderId = await new Promise((resolve) => {
+        createNestedFolders(pathSegments, Browserroot, resolve);
+    });
+    const freshBookmarks = await searchValidBookmarks();
+    const bookmarkToUpdate = freshBookmarks.find(b => b.url === OldURL);
+    const bookmarkToUpdateTest = freshBookmarks.find(b => b.id === OldID);
+    if (bookmarkToUpdate && bookmarkToUpdateTest) {
+        // Move to new folder if needed
+        if (bookmarkToUpdate.parentId !== finalFolderId) {
+            await moveBookmark(bookmarkToUpdate.id, finalFolderId);
+            console.log("Moved bookmark to new folder");
+        }
+        const updated = await updateBookmark(bookmarkToUpdate.id, {title:bookmarkTitle, url: url});
+
         console.log("Updated bookmark", updated);
     } else {
+        console.warn("Old bookmark not found, adding new one.");
         addBookmark(dataArray);
     }
+    updateCurrentBookmarkAndIcon();
+    console.log('Change Icon');
 }
 function extractSpreadsheetId(url) {
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -157,7 +209,7 @@ function extractTitleFromBookmark(title) {
 }
 function writeToSheet(token, dataArray) {
     readSheet(token, (rows) => {
-        const decision = shouldReplaceOrBlock(dataArray, rows);
+        const decision = shouldReplaceOrBlock(dataArray, rows, true);
 
         if (decision.action === "append") {
         appendRow(token, dataArray);
@@ -169,20 +221,19 @@ function writeToSheet(token, dataArray) {
     });
 }
 async function writeToBookmarks(dataArray) {
-    const bookmarks = await searchBookmarks({});
+    const bookmarks = await searchValidBookmarks();
     const rows = bookmarks
         .filter(b => b.url)
-        .map(b => [
-            extractTitleFromBookmark(b.title), 
-            "", "",                            
-            b.url,
-            "", "", "", ""                     
-        ]);
-    const decision = shouldReplaceOrBlock(dataArray, rows);
+        .map(b => ({
+            title: extractTitleFromBookmark(b.title),
+            url: b.url,
+            id: b.id
+    }));
+    const decision = shouldReplaceOrBlock(dataArray, rows, false);
     if (decision.action === "append") {
         addBookmark(dataArray);
     } else if (decision.action === "replace") {
-        replaceBookmark(dataArray, bookmarks, decision.rowIndex);
+        replaceBookmark(dataArray, decision);
     } else {
         console.log("Skipping bookmark entry.");
     }
@@ -222,32 +273,54 @@ function updateRow(token, rowIndex, dataArray) {
         .catch(err => console.error("Update error:", err));
     });
 }
-async function createNestedFolders(pathSegments, rootTitle, callback, parentId = null, index = 0) {
-    if (index >= pathSegments.length) {
-        callback(parentId);
-        return;
+// Recursive helper to find a nested folder path
+async function findFolderPath(rootId, pathSegments, index = 0) {
+    const children = await getBookmarkChildren(rootId);
+    if (!children) return null;
+    
+    for (const child of children) {
+        if (!child.url && child.title === pathSegments[index]) {
+            if (index === pathSegments.length - 1) return child; // found full path
+            const result = await findFolderPath(child.id, pathSegments, index + 1);
+            if (result) return result;
+        }
     }
-    const actualParentId = parentId || rootTitle;
+    
+    return null;
+}
 
+// Create missing folders in the path
+async function createMissingFolders(baseId, pathSegments, index = 0) {
+    if (index >= pathSegments.length) return baseId;
+    
+    const children = await getBookmarkChildren(baseId);
+    let folder = children.find(child => !child.url && child.title === pathSegments[index]);
+    
+    if (!folder) {
+        folder = await createBookmark({ parentId: baseId, title: pathSegments[index] });
+    }
+    
+    return createMissingFolders(folder.id, pathSegments, index + 1);
+}
+// Main entry point
+async function createNestedFolders(pathSegments, rootTitle, callback) {
     try {
-        const children = await getBookmarkChildren(actualParentId);
-        if (!children) {
-            console.error(`No children found for parentId ${actualParentId}`);
-            callback(null);
+        const rootId = await getRootByTitle(rootTitle);
+
+        const existingFolder = await findFolderPath(rootId, pathSegments);
+        if (existingFolder) {
+            callback(existingFolder.id);
             return;
         }
-        let folder = children.find(child => !child.url && child.title === pathSegments[index]);
-        if (folder) {
-            createNestedFolders(pathSegments, rootTitle, callback, folder.id, index + 1);
-        } else {
-            const newFolder = await createBookmark({parentId: actualParentId, title: pathSegments[index]});
-            createNestedFolders(pathSegments, rootTitle, callback, newFolder.id, index + 1);
-        }
+
+        const createdFolderId = await createMissingFolders(rootId, pathSegments);
+        callback(createdFolderId);
     } catch (err) {
         console.error("Error in createNestedFolders:", err);
         callback(null);
     }
 }
+
 async function addBookmark([title, type, chapter, url, status, date, tags, notes]) {
     const settings = await new Promise((resolve) => {
         chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
@@ -258,17 +331,20 @@ async function addBookmark([title, type, chapter, url, status, date, tags, notes
         console.warn("Folder mapping not found for", type, status);
         return;
     }
-
-    const pathSegments = folderInfo.path.split("/");
+    const Browserroot = "Bookmarks";
+    const pathSegments = folderInfo.path.split('/').filter(Boolean);
     const finalFolderId = await new Promise((resolve) => {
-        createNestedFolders(pathSegments, folderInfo.root, resolve);
+        createNestedFolders(pathSegments, Browserroot, resolve);
     });
-    const bookmarkTitle = `${title} - Chapter ${chapter}`;
-    await createBookmark({
+    const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
+    const bookmark = await createBookmark({
         parentId: finalFolderId,
         title: bookmarkTitle,
         url
     });
+    console.log("Created bookmark", bookmark);
+    updateCurrentBookmarkAndIcon();
+    console.log('Change Icon');
 }
 function getCurrentDate() {
     const now = new Date();
@@ -279,14 +355,14 @@ function getCurrentDate() {
 }
 function parseMangaFireUrl(url) {
     try {
-        const parts = new URL(url).pathname.split('/');
-
-        const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2];
-        const chapter = parts.includes('chapter') ?  parts[parts.length - 1].replace('chapter-', '') : '0';
-
+        const parts = new URL(url).pathname.split('/').filter(Boolean);
+        const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
+        if (!titleSlug) return { title: "Unknown", chapter: "0" }
+        const chapter = parts[parts.length - 1].includes('chapter') ?  parts[parts.length - 1].replace('chapter-', '') : '0';
         const title = titleSlug
             .split('.')[0]             // remove Site's ID code (.yvov1)
             .replace(/(.)\1$/, '$1')   // Remove last char if second to last is the same
+            // .split('-')[0]             // remove possible advert's 
             .replace(/-/g, ' ')        // hyphens to spaces
             .replace(/\b\w/g, c => c.toUpperCase()); // capitalize words
 
@@ -298,6 +374,66 @@ function parseMangaFireUrl(url) {
         console.error("Invalid URL", err);
         return { title: "Unknown", chapter: "0" };
     }
+}
+/**
+ * Opera only: This function retrieves the ID of the "Trash" folder in bookmarks.
+ * @param {*} query 
+ * @returns {Promise<Array>} Returns a promise that resolves to an array of valid bookmarks.
+ */
+async function searchValidBookmarks(query = {}) {
+    const trashId = await getTrashFolderId();
+    const all = await searchBookmarks(query);
+
+    return all.filter(b => {
+        return b.url && b.parentId !== trashId && typeof b.parentId !== "undefined";
+    });
+}
+/**
+ *  This function retrieves the ID of the "Trash" folder in bookmarks.
+ *  It searches through the bookmark tree for nodes with titles like "bin", "trash", or "deleted".
+ * @returns {Promise<string|null>} Returns a promise that resolves to the ID of the "Trash" folder or null if not found.
+ */
+async function getTrashFolderId() {
+    return new Promise((resolve) => {
+        chrome.bookmarks.getTree((nodes) => {
+            const trashNode = 
+                findNodeByTitle(nodes[0], "trash") ||
+                findNodeByTitle(nodes[0], "Other bookmarks") ||
+                findNodeByTitle(nodes[0], "bin") ||
+                findNodeByTitle(nodes[0], "Bin") ||
+                findNodeByTitle(nodes[0], "deleted") ||
+                findNodeByTitle(nodes[0], "Deleted");
+            resolve(trashNode?.id || null);
+        });
+    });
+}
+// Helper function to find a node by title in the bookmark tree
+function findNodeByTitle(node, title) {
+    if (node.title === title) return node;
+    if (node.children) {
+        for (const child of node.children) {
+            const found = findNodeByTitle(child, title);
+            if (found) {
+                return found;
+            }
+        }
+    }
+    return null;
+}
+async function getRootByTitle(title) {
+    const trees = await new Promise((resolve) => chrome.bookmarks.getTree(resolve));
+    let rootidList = [];
+    const rootNode = trees[0];
+    rootidList.push(rootNode.id);
+
+    for (const child of rootNode.children || []) {
+        if (child.title === title && !child.url) {
+            rootidList.push(child.id)
+            return rootidList[rootidList.length - 1];
+        }
+    }
+    // const found = findNodeByTitle(rootNode, title);
+    return rootNode.id;
 }
 function searchBookmarks(query) {
     if (typeof browser !== "undefined" && browser.bookmarks?.search) {
@@ -321,6 +457,17 @@ function updateBookmark(id, changes) {
         });
     });
 }
+function moveBookmark(id, parentId) {
+    if (typeof browser !== "undefined" && browser.bookmarks?.move) {
+        return browser.bookmarks.move(id, { parentId });
+    }
+    return new Promise((resolve, reject) => {
+        chrome.bookmarks.move(id, { parentId }, (result) => {
+            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError));
+            else resolve(result);
+        });
+    });
+}
 function createBookmark(bookmarkObj) {
     if (typeof browser !== "undefined" && browser.bookmarks?.create) {
         return browser.bookmarks.create(bookmarkObj);
@@ -332,7 +479,7 @@ function createBookmark(bookmarkObj) {
         });
     });
 }
-function getBookmarkChildren(parentId = "1") {
+function getBookmarkChildren(parentId = "2") {
     if (typeof browser !== "undefined" && browser.bookmarks?.getChildren) {
         return browser.bookmarks.getChildren(parentId);
     }
@@ -343,32 +490,39 @@ function getBookmarkChildren(parentId = "1") {
         });
     });
 }
-function updateCurrentBookmarkAndIcon() {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+async function updateCurrentBookmarkAndIcon(Url) {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
         currentTab = tabs[0];
-        if (!currentTab) return;
+        if (!currentTab && Url == null) return;
 
-        chrome.bookmarks.search({ url: currentTab.url }, (results) => {
-            currentBookmark = results.length > 0 ? results[0] : null;
-            updateIcon();
-        });
+        let searchUrl = Url || currentTab.url;
+        const validBookmarks = await searchValidBookmarks({ url: searchUrl });
+        currentBookmark = validBookmarks.length > 0 ? validBookmarks[0] : null;
+        updateIcon(Url);
     });
 }
 
-chrome.storage.sync.get([ "Settings" ], (result) => {
-    if (result.AllowContextMenu) {
-        chrome.runtime.onInstalled.addListener(() => {
+let currentBookmark = null;
+let currentTab = null;
+
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.sync.get([ "Settings" ], (result) => {
+        const Settings = result.Settings;
+        if (Settings?.AllowContextMenu) {
             chrome.contextMenus.create({
                 id: "Hermidata",
                 title: "Save to Hermidata",
                 contexts: ["link"]
             });
-        });
-        // Context-Menu Listener
-        chrome.contextMenus.onClicked.addListener((info, tab) => {
-            if (info.menuItemId === "Hermidata") {
+        }
+    });
+});
+// Context-Menu Listener
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === "Hermidata") {
+        chrome.storage.sync.get([ "Settings" ], (result) => {
+            if (result.AllowContextMenu) {
                 const Settings = result.Settings
-
                 // Send tab info to your saving logic
                 fetch(info.linkUrl, { method: "HEAD" })
                 .then(response => {
@@ -384,17 +538,14 @@ chrome.storage.sync.get([ "Settings" ], (result) => {
                     getToken((token) => {
                         writeToSheet(token, data);
                         writeToBookmarks(data);
+                        updateCurrentBookmarkAndIcon(url)
                     });
                 })
                 .catch(err => console.error("Failed to resolve redirect:", err));
             }
         });
     }
-})
-
-let currentBookmark = null;
-let currentTab = null;
-
+});
 chrome.runtime.onStartup.addListener(() => {
     updateCurrentBookmarkAndIcon();
 });
@@ -414,12 +565,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
 });
 
-// Example usage from popup
+// usage from popup
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "SAVE_NOVEL") {
         getToken((token) => {
             writeToSheet(token, msg.data);
             writeToBookmarks(msg.data);
         });
+        updateCurrentBookmarkAndIcon(msg.data[3]);
     }
 });

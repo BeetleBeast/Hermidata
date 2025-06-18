@@ -90,7 +90,7 @@
 - [ ] Improve Settings page usability
 - [ ] Modernize UI buttons
 - [ ] Fix table rendering issues
-- [ ] Enable Chrome bookmark root folder handling
+
 
 ## Future Enhancements (If Desired)
 
