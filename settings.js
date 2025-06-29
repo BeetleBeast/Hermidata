@@ -76,73 +76,57 @@ function getDefaultSettings() {
         FolderMapping: {
             Manga: {
                 Finished: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Manga/Finished"
                     },
                 Viewing: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading"
                     },
                 Dropped: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Manga/Abandond"
                     },
                 Planned: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch"
                     }
                 },
             Novels: {
                 Finished: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Novels/Finished"
                     },
                 Viewing: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Novels/Currently - Reading"
                     },
                 Dropped: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Novels/Abandond"
                     },
                 Planned: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Novels/Planned"
                     },
                 },
             Anime: {
                 Finished: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Anime/Finished"
                 },
                 Viewing: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Anime/Currently - Reading"
                     },
                 Dropped: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Anime/Abandond"
                     },
                 Planned: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/Anime/Planned"
                     },
                 },
             'TV-Series': {
                 Finished: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/TV-Series/Finished"
                     },
                 Viewing: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/TV-Series/Currently - Reading"
                     },
                 Dropped: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/TV-Series/Abandond"
                     },
                 Planned: {
-                    root: "menu________",
                     path: "Manga - Anime - Novels - TV-Series/TV-Series/Planned"
                 },
             },
@@ -360,10 +344,7 @@ function saveSettingsFolderPath() {
             if (!settings.FolderMapping[type]) settings.FolderMapping[type] = {};
             if (!settings.FolderMapping[type][status]) settings.FolderMapping[type][status] = {};
 
-            // preserve root if already exists or set default if needed
-            if (!settings.FolderMapping[type][status].root) {
-                settings.FolderMapping[type][status].root = "menu________";
-            }
+            
 
             settings.FolderMapping[type][status].path = newPath;
         });

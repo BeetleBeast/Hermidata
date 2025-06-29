@@ -1,19 +1,51 @@
 :root {
-    --bg-color: #f9fafb;
-    --table-color: #f3f4f6;
-    --Text-color: #111827;
-    --Input-color: #fff;
+    --Btn: rgb(63, 76, 96);
+    --Btn_hover: rgb(34, 48, 89);
+    --Text-color: lightgray;
+    --bg-color: rgb(12, 17, 24);
+    --Input-color: rgb(40, 53, 75);
+    --table-color: var(----Input-color);
+
+    --old_Light_bg-color: #f9fafb;
+    --old_Light_table-color: #f3f4f6;
+    --old_Light_Text-color: #111827;
+    --old_Light_Input-color: #fff;
 }
 [data-theme="dark"] {
-    --bg-color: rgb(50,50,52);
+    --old_Dark_bg-color: rgb(50,50,52);
+    --old_Dark_table-color: #8f8f8f70;
+    --old_Dark_Input-color: rgb(72,72,72);
+
+    --Btn: rgb(63, 76, 96);
+    --Btn_hover: rgb(34, 48, 89);
     --Text-color: lightgray;
-    --table-color: #8f8f8f70;
-    --Input-color: rgb(72,72,72);
+    --bg-color: rgb(12, 17, 24);
+    --Input-color: rgb(40, 53, 75);
+    --table-color: var(----Input-color);
 }
 body {
     background-color: var(--bg-color);
     color: var(--Text-color);
     
+    margin-bottom: 15px;
+    margin-right: 5px;
+}
+.Btn {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.Btn:hover {
+    background-color: var(--Btn_hover);
+}
+.fullpage-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 0;
 }
 #ParentPreview{
     max-width: 10000px;

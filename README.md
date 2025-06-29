@@ -88,8 +88,7 @@
 ## 🧪 To-Do List
 
 - [ ] Improve Settings page usability
-- [ ] Modernize UI buttons
-- [ ] Fix table rendering issues
+- [ ] remove the dark setting option and just use the dark setting
 
 
 ## Future Enhancements (If Desired)

@@ -1,4 +1,3 @@
-
 function getToken(callback) {
     chrome.storage.local.get(["googleAccessToken", "googleTokenExpiry","userEmail"], (items) => {
         const now = Date.now();
@@ -55,6 +54,7 @@ function getToken(callback) {
         });
     });
 }
+// Update Icon
 function updateIcon(Url = null) {
     const api = typeof browser !== "undefined" ? browser : chrome;
     const actionApi = api.action || api.browserAction;
@@ -74,7 +74,7 @@ function updateIcon(Url = null) {
         console.warn("No valid tab to set icon");
     }
 }
-
+// Helper function to set icon and title
 function setIconAndTitle(actionApi, tabId) {
     const iconPath = currentBookmark
         ? { 48: "assets/icon_red48.png" }
@@ -90,7 +90,7 @@ function setIconAndTitle(actionApi, tabId) {
     });
 
     actionApi.setTitle({
-        title: currentBookmark ? 'Unbookmark it!' : 'Bookmark it!',
+        title: currentBookmark ? 'Already bookmarkt!' : 'Bookmark it!',
         tabId: tabId
     }, () => {
         if (chrome.runtime.lastError) {
@@ -98,32 +98,29 @@ function setIconAndTitle(actionApi, tabId) {
         }
     });
 }
-
-
-/**
- * This function reads the google sheet and throws it back inside callback.
- * @param {number} token - The parameter for the authorization 
- * @returns {number} The callback for the result
- */
-function readSheet(token, callback) {
-    chrome.storage.sync.get(["spreadsheetUrl"], (result) => {
-        const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
-        const range = "Sheet1!A2:H"; // Adjust if more columns are added
-
-        fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`, {
-            method: "GET",
-            headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            const rows = data.values || [];
-            callback(rows);
-        })
-        .catch(err => console.error("Error reading sheet:", err));
-    });
+// ==== Bookmarking Functions ====
+function extractTitleFromBookmark(title) {
+    return title.split(" - Chapter ")[0].trim();
+}
+async function writeToBookmarks(dataArray) {
+    const bookmarks = await searchValidBookmarks();
+    const rows = bookmarks
+    .filter(b => b.url)
+    .map(b => ({
+        title: extractTitleFromBookmark(b.title),
+        url: b.url,
+        id: b.id
+    }));
+    const decision = shouldReplaceOrBlock(dataArray, rows, false);
+    if (decision.action === "append") {
+        addBookmark(dataArray);
+        console.log("Added bookmark entry.");
+    } else if (decision.action === "replace") {
+        replaceBookmark(dataArray, decision);
+        console.log("Replaced bookmark entry.");
+    } else {
+        console.log("Skipping bookmark entry.");
+    }
 }
 function shouldReplaceOrBlock(newEntry, existingRows, isSheet = true) {
     const [title, type, chapter, url, status, date, tags, notes] = newEntry;
@@ -159,7 +156,31 @@ function shouldReplaceOrBlock(newEntry, existingRows, isSheet = true) {
 
     return { action: "append" };
 }
+async function addBookmark([title, type, chapter, url, status, date, tags, notes]) {
+    const settings = await new Promise((resolve) => {
+        chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
+    });
 
+    const folderInfo = settings?.FolderMapping?.[type]?.[status];
+    if (!folderInfo?.path) {
+        console.warn("Folder mapping not found for", type, status);
+        return;
+    }
+    const Browserroot = "Bookmarks";
+    const pathSegments = folderInfo.path.split('/').filter(Boolean);
+    const finalFolderId = await new Promise((resolve) => {
+        createNestedFolders(pathSegments, Browserroot, resolve);
+    });
+    const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
+    const bookmark = await createBookmark({
+        parentId: finalFolderId,
+        title: bookmarkTitle,
+        url
+    });
+    console.log("Created bookmark", bookmark);
+    updateCurrentBookmarkAndIcon();
+    console.log('Change Icon');
+}
 async function replaceBookmark(dataArray, decision) {
     const { rowIndex, replacedURL: OldURL, replaceID: OldID } = decision;
     const [title, type, chapter, url, status, date, tags, notes] = dataArray;
@@ -200,12 +221,10 @@ async function replaceBookmark(dataArray, decision) {
     updateCurrentBookmarkAndIcon();
     console.log('Change Icon');
 }
+// ==== Sheet Functions ====
 function extractSpreadsheetId(url) {
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
     return match ? match[1] : null;
-}
-function extractTitleFromBookmark(title) {
-    return title.split(" - Chapter ")[0].trim();
 }
 function writeToSheet(token, dataArray) {
     readSheet(token, (rows) => {
@@ -220,23 +239,30 @@ function writeToSheet(token, dataArray) {
         }
     });
 }
-async function writeToBookmarks(dataArray) {
-    const bookmarks = await searchValidBookmarks();
-    const rows = bookmarks
-        .filter(b => b.url)
-        .map(b => ({
-            title: extractTitleFromBookmark(b.title),
-            url: b.url,
-            id: b.id
-    }));
-    const decision = shouldReplaceOrBlock(dataArray, rows, false);
-    if (decision.action === "append") {
-        addBookmark(dataArray);
-    } else if (decision.action === "replace") {
-        replaceBookmark(dataArray, decision);
-    } else {
-        console.log("Skipping bookmark entry.");
-    }
+/**
+ * This function reads the google sheet and throws it back inside callback.
+ * @param {number} token - The parameter for the authorization 
+ * @returns {number} The callback for the result
+ */
+function readSheet(token, callback) {
+    chrome.storage.sync.get(["spreadsheetUrl"], (result) => {
+        const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
+        const range = "Sheet1!A2:H"; // Adjust if more columns are added
+
+        fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`, {
+            method: "GET",
+            headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const rows = data.values || [];
+            callback(rows);
+        })
+        .catch(err => console.error("Error reading sheet:", err));
+    });
 }
 function appendRow(token, dataArray) {
     chrome.storage.sync.get(["spreadsheetUrl"], (result) => {
@@ -273,6 +299,7 @@ function updateRow(token, rowIndex, dataArray) {
         .catch(err => console.error("Update error:", err));
     });
 }
+// === Helpers ===
 // Recursive helper to find a nested folder path
 async function findFolderPath(rootId, pathSegments, index = 0) {
     const children = await getBookmarkChildren(rootId);
@@ -288,7 +315,6 @@ async function findFolderPath(rootId, pathSegments, index = 0) {
     
     return null;
 }
-
 // Create missing folders in the path
 async function createMissingFolders(baseId, pathSegments, index = 0) {
     if (index >= pathSegments.length) return baseId;
@@ -319,32 +345,6 @@ async function createNestedFolders(pathSegments, rootTitle, callback) {
         console.error("Error in createNestedFolders:", err);
         callback(null);
     }
-}
-
-async function addBookmark([title, type, chapter, url, status, date, tags, notes]) {
-    const settings = await new Promise((resolve) => {
-        chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
-    });
-
-    const folderInfo = settings?.FolderMapping?.[type]?.[status];
-    if (!folderInfo?.path) {
-        console.warn("Folder mapping not found for", type, status);
-        return;
-    }
-    const Browserroot = "Bookmarks";
-    const pathSegments = folderInfo.path.split('/').filter(Boolean);
-    const finalFolderId = await new Promise((resolve) => {
-        createNestedFolders(pathSegments, Browserroot, resolve);
-    });
-    const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
-    const bookmark = await createBookmark({
-        parentId: finalFolderId,
-        title: bookmarkTitle,
-        url
-    });
-    console.log("Created bookmark", bookmark);
-    updateCurrentBookmarkAndIcon();
-    console.log('Change Icon');
 }
 function getCurrentDate() {
     const now = new Date();
@@ -432,7 +432,6 @@ async function getRootByTitle(title) {
             return rootidList[rootidList.length - 1];
         }
     }
-    // const found = findNodeByTitle(rootNode, title);
     return rootNode.id;
 }
 function searchBookmarks(query) {

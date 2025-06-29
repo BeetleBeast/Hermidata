@@ -28,7 +28,7 @@
         </thead>
         <tbody>
             <tr>
-                <td><input id="title" class="autoInput" type="text" placeholder="Title" /></td>
+                <td><input id="title" class="autoInput" type="text" spellcheck="false" placeholder="Title" /></td>
                 <td><select id="Type" class="autoInput" type="text" title="Type" ></select></td>
                 <td><input id="chapter" class="autoInput" type="number" placeholder="Chapter" /></td>
                 <td><input id="url" type="url" placeholder="URL" /></td>
@@ -41,17 +41,17 @@
         </table>
     </div>
     <div class="buttons" id="Btn-Parent">
-        <button type="button" id="save">Save</button>
+        <button type="button" class="Btn" id="save">Save</button>
     </div>
 </main>
     <div id="spreadsheetPrompt">
         <label for="sheetUrlInput">Enter Spreadsheet URL:</label>
         <input type="text" id="sheetUrlInput" />
-        <button type="button" id="saveSheetUrlBtn">Save</button>
+        <button type="button" id="saveSheetUrlBtn" class="Btn">Save</button>
     </div>
 
 
-    <button type="button" id="openFullPage" class="fullpage-btn">Open Selected Spreadsheet</button>
+    <button type="button" id="openFullPage" class="fullpage-btn Btn">Open Selected Spreadsheet</button>
 
     <script src="popup.js"></script>
 </body>
