@@ -1,23 +1,7 @@
 :root {
     --Btn: rgb(63, 76, 96);
     --Btn_hover: rgb(34, 48, 89);
-    --Text-color: lightgray;
-    --bg-color: rgb(12, 17, 24);
-    --Input-color: rgb(40, 53, 75);
-    --table-color: var(----Input-color);
-
-    --old_Light_bg-color: #f9fafb;
-    --old_Light_table-color: #f3f4f6;
-    --old_Light_Text-color: #111827;
-    --old_Light_Input-color: #fff;
-}
-[data-theme="dark"] {
-    --old_Dark_bg-color: rgb(50,50,52);
-    --old_Dark_table-color: #8f8f8f70;
-    --old_Dark_Input-color: rgb(72,72,72);
-
-    --Btn: rgb(63, 76, 96);
-    --Btn_hover: rgb(34, 48, 89);
+    --Btn_active: rgb(15, 34, 94);
     --Text-color: lightgray;
     --bg-color: rgb(12, 17, 24);
     --Input-color: rgb(40, 53, 75);
@@ -41,6 +25,10 @@ body {
 }
 .Btn:hover {
     background-color: var(--Btn_hover);
+}
+.Btn:active {
+    background-color: var(--Btn_active);
+    transition: none;
 }
 .fullpage-btn {
     position: absolute;

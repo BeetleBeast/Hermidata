@@ -25,8 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     // Load & populate page inputs and tables
     LoadAndPopulate(elements);
-    // load & save theme
-    setTheme() 
     // load settings
     ensureSettingsUpToDate((settings) => {
         buildFolderMappingForm(settings);
@@ -88,7 +86,7 @@ function getDefaultSettings() {
                     path: "Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch"
                     }
                 },
-            Novels: {
+            Novel: {
                 Finished: {
                     path: "Manga - Anime - Novels - TV-Series/Novels/Finished"
                     },
@@ -157,22 +155,6 @@ function LoadAndPopulate(elements) {
         setValuesToElements(elements.menu, result.Settings.DefaultChoiceText_Menu);
         
     })
-}
-function setTheme() {
-    browserAPI.storage.sync.get(['theme'], (result) => {
-        let theme = result.theme;
-        if (!theme) {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-            browserAPI.storage.sync.set({ theme });
-        }
-        document.documentElement.setAttribute('data-theme', theme);
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-            theme = theme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', theme);
-            browserAPI.storage.sync.set({ theme });
-        })
-    });
 }
 function ensureSettingsUpToDate(callback) {
     chrome.storage.sync.get(["Settings"], (result) => {

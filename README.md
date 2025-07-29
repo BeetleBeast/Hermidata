@@ -88,8 +88,6 @@
 ## 🧪 To-Do List
 
 - [ ] Improve Settings page usability
-- [ ] remove the dark setting option and just use the dark setting
-
 
 ## Future Enhancements (If Desired)
 

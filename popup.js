@@ -6,7 +6,7 @@ let Type = ["Manga", "Novel", "Anime", "TV-series"];
 let statusList = ["Finished", "Viewing", "Dropped", "Planned"];
 
 // FIXME: remove this when in prod
-const Tetsting = true;
+const Testing = true;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
@@ -32,17 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("openFullPage").addEventListener("click", () => {
         browserAPI.tabs.create({ url: GoogleSheetURL });
     });
-    browserAPI.storage.sync.get(['theme'], (result) => {
-        let theme = result?.theme;
-        if (!theme) {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            browserAPI.storage.sync.set({ theme });
-        }
-        document.documentElement.setAttribute('data-theme', theme);
-        document.getElementById('Settings_IMG').src = theme === 'dark' ?  'assets/settings_24.png' : 'assets/settings_24Dark.png';
-    });
-
-
 });
 
 // Get active tab info
@@ -85,7 +74,8 @@ function isValidGoogleSheetUrl(url) {
     return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
 }
 function trimTitle(title) {
-    return title.replace(/chapter.*$/i, "").replace(/[-–—|:]?\s*$/, "").trim();
+    const tempTitle = title.replace(/chapter.*$/i, "").replace(/[-–—|:]?\s*$/, "").trim();
+    return tempTitle === '' ? title : tempTitle;
 }
 function getCurrentDate() {
     const now = new Date();
@@ -130,7 +120,7 @@ function saveSheet() {
         args
     });
 
-    if(!Tetsting) window.close()
+    if(!Testing) setTimeout( () => window.close(), 400);
 }
 function FixTableSize() {
     const inputs = document.querySelectorAll('input.autoInput');
