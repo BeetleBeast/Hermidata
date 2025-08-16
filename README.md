@@ -88,6 +88,7 @@
 ## 🧪 To-Do List
 
 - [ ] Improve Settings page usability
+- [ ] auto detect type and set to novel / manga based on url
 
 ## Future Enhancements (If Desired)
 

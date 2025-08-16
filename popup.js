@@ -5,8 +5,7 @@ let GoogleSheetURL;
 let Type = ["Manga", "Novel", "Anime", "TV-series"];
 let statusList = ["Finished", "Viewing", "Dropped", "Planned"];
 
-// FIXME: remove this when in prod
-const Testing = true;
+const Testing = false;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
@@ -39,8 +38,22 @@ function getCurrentTab() {
     return new Promise((resolve) => {
         browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const tab = tabs[0];
+
+            // Regex to find the first number (optionally after "chapter", "chap", "ch")
+            const chapterNumberRegex = /(?:chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
+
+            // create chapter based on URL
             const parts = tab?.url?.split("/") || [];
-            tab.Chapter = parts.at(-1).match(/[\d.]+/)?.[0] || "";
+            const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0]
+            // create chapter based on title
+            const titleParts = tab?.title?.split(/[-–—|:]/).map(p => p.trim());
+            const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
+            // create chapter based on title regex
+            const chapterPartV3 = (titleParts
+            .find(p => chapterNumberRegex.test(p)) || ""
+            ).replace(/([A-Z])/gi, '').trim();
+            // If no chapter found, use empty string
+            tab.Chapter = chapterPartV2 || chapterPartV1 || chapterPartV3 || "";
             resolve(tab);
         });
         
@@ -58,7 +71,7 @@ function getGoogleSheetURL() {
 }
 function sheetUrlInput(resolve, reject) {
     document.getElementById("spreadsheetPrompt").style.display = "block";
-    document.getElementById('body').style.display = 'none';
+    // document.getElementById('body').style.display = 'none';
     const saveBtn = document.getElementById("saveSheetUrlBtn");
     saveBtn.onclick = () => {
         const url = document.getElementById("sheetUrlInput").value.trim();
@@ -74,8 +87,64 @@ function isValidGoogleSheetUrl(url) {
     return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
 }
 function trimTitle(title) {
-    const tempTitle = title.replace(/chapter.*$/i, "").replace(/[-–—|:]?\s*$/, "").trim();
-    return tempTitle === '' ? title : tempTitle;
+    if (!title) return "";
+
+    // Extract domain name from url
+    const siteMatch = currentTab.url.match(/:\/\/(?:www\.)?([^./]+)/i);
+    const siteName = siteMatch ? siteMatch[1].toLowerCase() : "";
+
+    // Split title by common separators
+    const parts = title.split(/[-–—|:]/).map(p => p.trim()).filter(Boolean);
+
+    // Regex patterns
+    const chapterRemoveRegex = /(\b\d{1,4}[A-Z]*\b\s*)?(\b(?:chapter|chap|ch)\b\.?\s*)(\b\d{1,4}[A-Z]*\b)?/gi;
+    const chapterRegex = /\b(?:chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
+    const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
+    const junkRegex = /\b(all page|novel bin|online)\b/i;
+    const mangaRegex = /\b\w*manga\w*\b|\bnovel\b|\banime\b|\btv-series\b/i;
+    const siteNameRegex = new RegExp(`\\b${siteName}\\b`, 'i');
+
+    // Remove junk and site name
+    let filtered;
+    filtered = parts
+        .filter(p => !readRegex.test(p))
+        .filter(p => !junkRegex.test(p))
+        .filter(p => !siteNameRegex.test(p))
+        .map(p => p.replace(mangaRegex, '').trim())
+        .map(p => p.replace('#', '').trim()) // remove any '#' characters
+        .filter(Boolean);
+
+    // Remove duplicates (case-insensitive)
+    filtered = filtered.filter((item, idx, arr) =>
+        arr.findIndex(i => i.toLowerCase() === item.toLowerCase()) === idx
+    );
+
+    // Extract main title (remove chapter info)
+    let [mainTitle,subTitle] = ['', ''];
+    let MakemTitle = (filter) => {
+        if (!filter.length) return ['', ''];
+
+        mainTitle = filter[0]
+        .replace(chapterRemoveRegex, '') // remove chapter info
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+        if(mainTitle === '' ) return MakemTitle(filter.slice(1));
+        
+        if (filter.length < 2) return [mainTitle, ''];
+        subTitle = filter[1]
+        .replace(chapterRegex, '');
+        if (subTitle === '' && filter.length == 2) return [mainTitle, ''];
+        if(subTitle === '' ) return [mainTitle,MakemTitle(filter.slice(1))];
+
+        return [mainTitle, subTitle];
+    }
+    [mainTitle,subTitle] = MakemTitle(filtered);
+    // Join and clean up
+    let result = mainTitle;
+    if (subTitle != "" && subTitle != undefined) {
+        result += ' - ' + subTitle.replace(chapterRegex, '').trim();
+    }
+    return result.trim() || title;
 }
 function getCurrentDate() {
     const now = new Date();

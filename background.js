@@ -166,7 +166,9 @@ async function addBookmark([title, type, chapter, url, status, date, tags, notes
         console.warn("Folder mapping not found for", type, status);
         return;
     }
-    const Browserroot = "Bookmarks";
+    const Browserroot = typeof browser !== "undefined" && navigator.userAgent.includes("Firefox")
+    ? "Bookmarks Menu"
+    : "Bookmarks";
     const pathSegments = folderInfo.path.split('/').filter(Boolean);
     const finalFolderId = await new Promise((resolve) => {
         createNestedFolders(pathSegments, Browserroot, resolve);
@@ -196,7 +198,9 @@ async function replaceBookmark(dataArray, decision) {
         return;
     }
 
-    const Browserroot = "Bookmarks";
+    const Browserroot = typeof browser !== "undefined" && navigator.userAgent.includes("Firefox")
+    ? "Bookmarks Menu"
+    : "Bookmarks";
     const pathSegments = folderInfo.path.split('/').filter(Boolean);
 
     const finalFolderId = await new Promise((resolve) => {
