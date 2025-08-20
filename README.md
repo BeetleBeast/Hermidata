@@ -95,3 +95,18 @@
 - [ ] Allow editing, adding, or removing values inside `TYPE_OPTIONS`, `STATUS_OPTIONS`, and `FolderMapping` in Settings
 
 ---
+
+
+problem is: type only the title and set chapter name into notes and no chapter number
+novel word is removed from names to agressievely
+
+example correct output should be:
+
+title: The Wandering Fairy [LitRPG World-Hopping]
+notes: Desert Fight
+chapter: 207
+
+but is now:
+
+title: Desert Fight - The Wandering Fairy [LitRPG World
+chapter: 207

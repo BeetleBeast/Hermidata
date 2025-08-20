@@ -11,7 +11,7 @@
     <button id="openSettings" type="button" >
         <img alt="0" class="icon" id="Settings_IMG" src='assets/settings_24.png'/>
     </button>
-    <h2 id="Pagetitle">Loading...</h2>
+    <h2 id="Pagetitle" data-name="Page_Title">Loading...</h2>
     <div id="ParentPreview">
         <table>
         <thead>
@@ -28,14 +28,14 @@
         </thead>
         <tbody>
             <tr>
-                <td><input id="title" class="autoInput" type="text" spellcheck="false" placeholder="Title" /></td>
-                <td><select id="Type" class="autoInput" type="text" title="Type" ></select></td>
-                <td><input id="chapter" class="autoInput" type="number" placeholder="Chapter" /></td>
-                <td><input id="url" type="url" placeholder="URL" /></td>
-                <td><select id="status" class="autoInput" type="text" title="Status"></select></td>
-                <td><input id="date" class="autoInput" type="text" placeholder="dd/mm/yyyy" /></td>
-                <td><input id="tags" class="autoInput" type="text" placeholder="Tags" /></td>
-                <td><input id="notes" class="autoInput" type="text" placeholder="Notes" /></td>
+                <td><input id="title" class="autoInput" data-name="Title"  type="text" spellcheck="false" placeholder="Title" /></td>
+                <td><select id="Type" class="autoInput" data-name="Type"  type="text" title="Type" ></select></td>
+                <td><input id="chapter" class="autoInput" data-name="Chapter"  type="number" placeholder="Chapter" /></td>
+                <td><input id="url" type="url"  data-name="Url" placeholder="URL" /></td>
+                <td><select id="status" class="autoInput" data-name="Status"  type="text" title="Status"></select></td>
+                <td><input id="date" class="autoInput" data-name="Date"  type="text" placeholder="dd/mm/yyyy" /></td>
+                <td><input id="tags" class="autoInput" data-name="Tag"  type="text" placeholder="Tags" /></td>
+                <td><input id="notes" class="autoInput" data-name="Notes"  type="text" placeholder="Notes" /></td>
             </tr>
         </tbody>
         </table>

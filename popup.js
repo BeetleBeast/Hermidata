@@ -1,74 +1,128 @@
 const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 
-let currentTab;
-let GoogleSheetURL;
+const HARDCAP_RUNAWAYGROWTH = 300;
+
 let Type = ["Manga", "Novel", "Anime", "TV-series"];
 let statusList = ["Finished", "Viewing", "Dropped", "Planned"];
+let Hermidata = {
+    Page_Title: '',
+    Title: '',
+    Type: Type[0],
+    Chapter: 0,
+    Url: '',
+    Status: statusList[1],
+    Date: '',
+    Tag: '',
+    Notes: '',
+    GoogleSheetURL: '',
+    Past : {} 
+}
 
 const Testing = false;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
-    currentTab = await getCurrentTab();
-    GoogleSheetURL = await getGoogleSheetURL();
+    Hermidata = await getCurrentTab();
+    Hermidata.Title = trimTitle(Hermidata.Page_Title);
+    Hermidata.GoogleSheetURL = await getGoogleSheetURL();
+    Hermidata.Date = getCurrentDate();
     populateType()
     populateStatus()
-    document.getElementById("Pagetitle").textContent = currentTab.title || "Untitled Page";
-    document.getElementById("title").value = trimTitle(currentTab.title) || "";
-    document.getElementById("Type").value = Type[0] || "";
-    document.getElementById("chapter").value = currentTab.Chapter || "";
-    document.getElementById("url").value = currentTab.url || "NO URL";
-    document.getElementById("status").value = statusList[1] || "";
-    document.getElementById("date").value = getCurrentDate() || "";
-    document.getElementById("tags").value = "";
-    document.getElementById("notes").value = "";
+    await getHermidata();
+    document.getElementById("Pagetitle").textContent = Hermidata.Page_Title;
+    document.getElementById("title").value =  Hermidata.Past.Title || Hermidata.Title;
+    document.getElementById("Type").value = Hermidata.Past.Type || Hermidata.Type;
+    document.getElementById("chapter").value = Hermidata.Chapter;
+    document.getElementById("url").value = Hermidata.Url;
+    document.getElementById("status").value =  Hermidata.Past.Status || Hermidata.Status;
+    document.getElementById("date").value = Hermidata.Date || "";
+    document.getElementById("tags").value =  Hermidata.Past.Tag || Hermidata.Tag;
+    document.getElementById("notes").value = Hermidata.Notes;
     FixTableSize()
     
     document.getElementById("save").addEventListener("click", () => saveSheet());
     document.getElementById("openSettings").addEventListener("click", () => {
-        browserAPI.runtime.openOptionsPage();
+        try {
+            browserAPI.runtime.openOptionsPage();
+        } catch (error) {
+            console.error('Extention error trying open extention settings: ',error)
+        }
     });
     document.getElementById("openFullPage").addEventListener("click", () => {
-        browserAPI.tabs.create({ url: GoogleSheetURL });
+        try {
+            browserAPI.tabs.create({ url: Hermidata.GoogleSheetURL });
+        } catch (error) {
+            console.error('Extention error trying to open new tab GoogleSheetURL: ',error)
+        }
     });
 });
 
 // Get active tab info
 function getCurrentTab() {
     return new Promise((resolve) => {
-        browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const tab = tabs[0];
-
-            // Regex to find the first number (optionally after "chapter", "chap", "ch")
-            const chapterNumberRegex = /(?:chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
-
-            // create chapter based on URL
-            const parts = tab?.url?.split("/") || [];
-            const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0]
-            // create chapter based on title
-            const titleParts = tab?.title?.split(/[-–—|:]/).map(p => p.trim());
-            const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
-            // create chapter based on title regex
-            const chapterPartV3 = (titleParts
-            .find(p => chapterNumberRegex.test(p)) || ""
-            ).replace(/([A-Z])/gi, '').trim();
-            // If no chapter found, use empty string
-            tab.Chapter = chapterPartV2 || chapterPartV1 || chapterPartV3 || "";
-            resolve(tab);
-        });
-        
+        try {
+            browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                const tab = tabs[0];
+    
+                // Regex to find the first number (optionally after "chapter", "chap", "ch")
+                const chapterNumberRegex = /(?:chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
+    
+                // create chapter based on URL
+                const parts = tab?.url?.split("/") || [];
+                const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0]
+                // create chapter based on title
+                const titleParts = tab?.title?.split(/[-–—|:]/).map(p => p.trim());
+                const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
+                // create chapter based on title regex
+                const chapterPartV3 = (titleParts
+                .find(p => chapterNumberRegex.test(p)) || ""
+                ).replace(/([A-Z])/gi, '').trim();
+                // If no chapter found, use empty string
+                Hermidata.Chapter = chapterPartV2 || chapterPartV1 || chapterPartV3 || "";
+                Hermidata.Page_Title = tab.title || "Untitled Page";
+                Hermidata.Url = tab.url || "NO URL";
+                resolve(Hermidata);
+            });
+        } catch (error) {
+            console.error('Extention error inside getCurrentTab: ',error)
+        }
     });
 }
 // Get GoogleSheet URL
 function getGoogleSheetURL() {
     return new Promise((resolve, reject) => {
-        browserAPI.storage.sync.get(["spreadsheetUrl"], (result) => {
-            let url = result?.spreadsheetUrl?.trim();
-            if (url && isValidGoogleSheetUrl(url)) return resolve(url);
-            return sheetUrlInput(resolve, reject);
-        });
+        try {
+            browserAPI.storage.sync.get(["spreadsheetUrl"], (result) => {
+                let url = result?.spreadsheetUrl?.trim();
+                if (url && isValidGoogleSheetUrl(url)) return resolve(url);
+                return sheetUrlInput(resolve, reject);
+            });
+        } catch (error) {
+            console.error('Extention error inside getGoogleSheetURL: ',error)
+        }
     });
 }
+async function setHermidata() {
+    try {
+        browserAPI.storage.sync.set({ Hermidata }, () => {
+            console.log("Hermidata saved:", Hermidata);
+        });
+    } catch (error) {
+        console.error('Extention error  inside setHermidata: ',error)
+    }
+}
+async function getHermidata() {
+    try {
+        browserAPI.storage.sync.get(["Hermidata"], (result) => {
+            if (result?.Hermidata) Hermidata.Past = result.Hermidata || {};
+            return Hermidata;
+        });
+    } catch (error) {
+        console.error('Extention error inside getHermidata: ',error)
+    }
+
+}
+
 function sheetUrlInput(resolve, reject) {
     document.getElementById("spreadsheetPrompt").style.display = "block";
     // document.getElementById('body').style.display = 'none';
@@ -76,11 +130,15 @@ function sheetUrlInput(resolve, reject) {
     saveBtn.onclick = () => {
         const url = document.getElementById("sheetUrlInput").value.trim();
         if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
-        browserAPI.storage.sync.set({ spreadsheetUrl: url }, () => {
-            document.getElementById("spreadsheetPrompt").style.display = "none";
-            document.getElementById('body').style.display = 'block';
-            return resolve(url)
-        });
+        try {
+            browserAPI.storage.sync.set({ spreadsheetUrl: url }, () => {
+                document.getElementById("spreadsheetPrompt").style.display = "none";
+                document.getElementById('body').style.display = 'block';
+                return resolve(url)
+            });
+        } catch (error) {
+            console.error('Extention error inside sheetUrlInput: ',error)
+        }
     };
 }
 function isValidGoogleSheetUrl(url) {
@@ -90,11 +148,11 @@ function trimTitle(title) {
     if (!title) return "";
 
     // Extract domain name from url
-    const siteMatch = currentTab.url.match(/:\/\/(?:www\.)?([^./]+)/i);
-    const siteName = siteMatch ? siteMatch[1].toLowerCase() : "";
+    const siteMatch = RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(Hermidata.Url);
+    const siteName = siteMatch ? siteMatch[1] : "";
 
     // Split title by common separators
-    const parts = title.split(/[-–—|:]/).map(p => p.trim()).filter(Boolean);
+    const parts = title.split(/ (?:(?:-+)|–|-|:|—|\||:) /g).map(p => p.trim()).filter(Boolean);
 
     // Regex patterns
     const chapterRemoveRegex = /(\b\d{1,4}[A-Z]*\b\s*)?(\b(?:chapter|chap|ch)\b\.?\s*)(\b\d{1,4}[A-Z]*\b)?/gi;
@@ -103,6 +161,12 @@ function trimTitle(title) {
     const junkRegex = /\b(all page|novel bin|online)\b/i;
     const mangaRegex = /\b\w*manga\w*\b|\bnovel\b|\banime\b|\btv-series\b/i;
     const siteNameRegex = new RegExp(`\\b${siteName}\\b`, 'i');
+    const flexibleSiteNameRegex = new RegExp(`\\b${siteName
+        .replace(/[-/\\^$*+?.()|[\]{}]/g, "").split("")
+        .map(ch => ch.replace(/\s+/, ""))
+        .map(ch => `${ch}[\\s._-]*`)
+        .join("")}\\b`, 'i');
+
 
     // Remove junk and site name
     let filtered;
@@ -110,9 +174,10 @@ function trimTitle(title) {
         .filter(p => !readRegex.test(p))
         .filter(p => !junkRegex.test(p))
         .filter(p => !siteNameRegex.test(p))
+        .filter(p => !flexibleSiteNameRegex.test(p))
         .map(p => p.replace(mangaRegex, '').trim())
         .map(p => p.replace('#', '').trim()) // remove any '#' characters
-        .filter(Boolean);
+        .filter(Boolean)
 
     // Remove duplicates (case-insensitive)
     filtered = filtered.filter((item, idx, arr) =>
@@ -120,31 +185,35 @@ function trimTitle(title) {
     );
 
     // Extract main title (remove chapter info)
-    let [mainTitle,subTitle] = ['', ''];
+    let [mainTitle] = [''];
     let MakemTitle = (filter) => {
-        if (!filter.length) return ['', ''];
+        if (!filter.length) return [''];
+        // if first el is chapter info place it at the end
+        if (filter[0].match(chapterRegex)) {
+            filter[filter.length] = filter[0];
+            filter.shift();
+        }
 
-        mainTitle = filter[0]
-        .replace(chapterRemoveRegex, '') // remove chapter info
+        mainTitle = filter[0] || ''
+        .replace(chapterRemoveRegex, '') // remove 'chapter' and any variation
         .replace(/\s{2,}/g, ' ')
         .trim();
         if(mainTitle === '' ) return MakemTitle(filter.slice(1));
         
-        if (filter.length < 2) return [mainTitle, ''];
-        subTitle = filter[1]
-        .replace(chapterRegex, '');
-        if (subTitle === '' && filter.length == 2) return [mainTitle, ''];
-        if(subTitle === '' ) return [mainTitle,MakemTitle(filter.slice(1))];
+        if (filter.length < 2) return [mainTitle];
+        let Chapter_Title = filter[1]
+        .replace(chapterRegex, '') // remove 'chapter' and any variation
+        .replace(/\b\d+(\.\d+)?\b/g, "") // remove numbers
+          .replace(/^[\s:;,\-–—|]+/, "") // remove leading punctuation + spaces
+        .trim();
 
-        return [mainTitle, subTitle];
+        if (Chapter_Title === '' && filter.length == 2) return [mainTitle];
+        if (Chapter_Title === '') return [mainTitle, ...MakemTitle(filter.slice(1))];
+        Hermidata.Notes = `Chapter Title: ${Chapter_Title}`;
+        return [mainTitle];
     }
-    [mainTitle,subTitle] = MakemTitle(filtered);
-    // Join and clean up
-    let result = mainTitle;
-    if (subTitle != "" && subTitle != undefined) {
-        result += ' - ' + subTitle.replace(chapterRegex, '').trim();
-    }
-    return result.trim() || title;
+    [mainTitle] = MakemTitle(filtered);
+    return mainTitle.trim() || title;
 }
 function getCurrentDate() {
     const now = new Date();
@@ -182,7 +251,19 @@ function saveSheet() {
     const notes = document.getElementById("notes").value || "";
     const args = '';
 
-
+    Object.keys(Hermidata).forEach((key) => {
+        switch (key) {
+            case 'Page_Title':
+            case 'Past':
+            case 'GoogleSheetURL':
+                break;
+            default:
+                Hermidata[key] = document.querySelector(`[name="${key}"]`).value || '';
+            break;
+        }
+    });
+    Hermidata.Past = {};
+    setHermidata();
     browserAPI.runtime.sendMessage({
         type: "SAVE_NOVEL",
         data: [title, Type, Chapter, url, status, date, tags, notes],
@@ -235,9 +316,9 @@ function FixTableSize() {
                 }
             }
             // Remaining space available for this input
-            const availableWidth = (0, maxContainerWidth - otherColsWidth - 200); // 16px safety
+            const availableWidth = maxContainerWidth - otherColsWidth - 200; // no clue what 200 is 
             // Clamp final width
-            const clampedWidth = Math.min(textWidth + 12, availableWidth, 300); // 300 = hard cap for runaway growth
+            const clampedWidth = Math.min(textWidth + 12, availableWidth, HARDCAP_RUNAWAYGROWTH);
             input.style.width = `${clampedWidth}px`;
         };
         // Defer initial call to allow proper layout
