@@ -267,6 +267,7 @@ function saveSheet() {
     const notes = document.getElementById("notes").value || "";
     const args = '';
 
+    let temp;
     Object.keys(Hermidata).forEach((key) => {
         switch (key) {
             case 'Page_Title':
@@ -274,7 +275,8 @@ function saveSheet() {
             case 'GoogleSheetURL':
                 break;
             default:
-                Hermidata[key] = document.querySelector(`[name="${key}"]`).value || '';
+                temp = document.querySelector(`[data-name="${key}"]`);
+                if (temp) Hermidata[key] = temp.value || '';
             break;
         }
     });

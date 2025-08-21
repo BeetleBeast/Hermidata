@@ -440,6 +440,7 @@ async function getRootByTitle(title) {
 }
 function searchBookmarks(query) {
     if (typeof browser !== "undefined" && browser.bookmarks?.search) {
+        console.log( 'search bookmarks',browser.bookmarks?.search)
         return browser.bookmarks.search(query);
     }
     return new Promise((resolve, reject) => {
