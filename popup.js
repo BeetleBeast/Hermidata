@@ -203,7 +203,7 @@ function trimTitle(title) {
     let MakemTitle = (filter) => {
         if (!filter.length) return [''];
         // if first el is chapter info place it at the end
-        if ((filtered[0].replace(/\s*(–|-|:|#|—|\|)\s*/g,' ').toLowerCase() === Url_filter)) {// fip the first to last
+        if ((filtered[0].replace(/\s*([–—-]|:|#|\|)\s*/g,' ').toLowerCase() === Url_filter)) {// fip the first to last
             filter[filter.length] = filter[0];
             filter.shift();
         }
