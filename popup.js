@@ -145,6 +145,15 @@ function isValidGoogleSheetUrl(url) {
     return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
 }
 function trimTitle(title) {
+    let cleanString = (str) => {
+    if (!str) return "";
+    return str
+        // Remove all control characters (C0 + C1), zero-width chars, and formatting chars
+        .replace(/[\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F]/g, '')
+        // Normalize multiple spaces to a single space
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
     if (!title) return "";
 
     // Extract domain name from url
@@ -152,9 +161,12 @@ function trimTitle(title) {
     const siteName = siteMatch ? siteMatch[1] : "";
 
     // Split title by common separators
-    const parts = title.split(/ (?:(?:-+)|–|-|:|—|\||:) /g).map(p => p.trim()).filter(Boolean);
+    let cleanstring = cleanString(title);
+    const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|\|) /g).map(p => p.trim()).filter(Boolean);
 
     // Regex patterns
+    const OLDREGEX1 = /chapter.*$/i;
+    const OLDREGEX2 = /[-–—|:]?\s*$/; 
     const chapterRemoveRegex = /(\b\d{1,4}[A-Z]*\b\s*)?(\b(?:chapter|chap|ch)\b\.?\s*)(\b\d{1,4}[A-Z]*\b)?/gi;
     const chapterRegex = /\b(?:chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
     const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
@@ -167,7 +179,6 @@ function trimTitle(title) {
         .map(ch => `${ch}[\\s._-]*`)
         .join("")}\\b`, 'i');
 
-
     // Remove junk and site name
     let filtered;
     filtered = parts
@@ -176,27 +187,30 @@ function trimTitle(title) {
         .filter(p => !siteNameRegex.test(p))
         .filter(p => !flexibleSiteNameRegex.test(p))
         .map(p => p.replace(mangaRegex, '').trim())
+        .map(p => p.replace(/^[\s:;,\-–—|]+/, "").trim()) // remove leading punctuation + spaces
         .map(p => p.replace('#', '').trim()) // remove any '#' characters
         .filter(Boolean)
 
-    // Remove duplicates (case-insensitive)
+    // Remove duplicates
     filtered = filtered.filter((item, idx, arr) =>
         arr.findIndex(i => i.toLowerCase() === item.toLowerCase()) === idx
     );
 
     // Extract main title (remove chapter info)
     let [mainTitle] = [''];
+    let Url_filter_parts = Hermidata.Url.split('/')
+    let Url_filter = Url_filter_parts[Url_filter_parts.length -1].replace(/-/g,' ').toLowerCase().trim();
     let MakemTitle = (filter) => {
         if (!filter.length) return [''];
         // if first el is chapter info place it at the end
-        if (filter[0].match(chapterRegex)) {
+        if ((filtered[0].replace(/\s*(–|-|:|#|—|\|)\s*/g,' ').toLowerCase() === Url_filter)) {// fip the first to last
             filter[filter.length] = filter[0];
             filter.shift();
         }
 
-        mainTitle = filter[0] || ''
-        .replace(chapterRemoveRegex, '') // remove 'chapter' and any variation
-        .replace(/\s{2,}/g, ' ')
+        mainTitle = filter[0]
+        .replace(chapterRemoveRegex, '').trim() // remove 'chapter' and any variation
+        .replace(/^[\s:;,\-–—|]+/, "") // remove leading punctuation + spaces
         .trim();
         if(mainTitle === '' ) return MakemTitle(filter.slice(1));
         
@@ -204,7 +218,7 @@ function trimTitle(title) {
         let Chapter_Title = filter[1]
         .replace(chapterRegex, '') // remove 'chapter' and any variation
         .replace(/\b\d+(\.\d+)?\b/g, "") // remove numbers
-          .replace(/^[\s:;,\-–—|]+/, "") // remove leading punctuation + spaces
+        .replace(/^[\s:;,\-–—|]+/, "") // remove leading punctuation + spaces
         .trim();
 
         if (Chapter_Title === '' && filter.length == 2) return [mainTitle];
