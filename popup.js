@@ -162,7 +162,7 @@ function trimTitle(title) {
 
     // Split title by common separators
     let cleanstring = cleanString(title);
-    const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|\|) /g).map(p => p.trim()).filter(Boolean);
+    const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|,|\|) /g).map(p => p.trim()).filter(Boolean);
 
     // Regex patterns
     const OLDREGEX1 = /chapter.*$/i;
@@ -197,36 +197,38 @@ function trimTitle(title) {
     );
 
     // Extract main title (remove chapter info)
-    let [mainTitle] = [''];
+    let mainTitle = '';
     let Url_filter_parts = Hermidata.Url.split('/')
     let Url_filter = Url_filter_parts[Url_filter_parts.length -1].replace(/-/g,' ').toLowerCase().trim();
     let MakemTitle = (filter) => {
         if (!filter.length) return [''];
         // if first el is chapter info place it at the end
-        if ((filtered[0].replace(/\s*([–—-]|:|#|\|)\s*/g,' ').toLowerCase() === Url_filter)) {// fip the first to last
+        if (filtered[0]?.replace(/\s*([–—-]|:|#|\|)\s*/g,' ').toLowerCase() === Url_filter) {// fip the first to last
             filter[filter.length] = filter[0];
             filter.shift();
         }
 
         mainTitle = filter[0]
         .replace(chapterRemoveRegex, '').trim() // remove 'chapter' and any variation
-        .replace(/^[\s:;,\-–—|]+/, "") // remove leading punctuation + spaces
+        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
+        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();
         if(mainTitle === '' ) return MakemTitle(filter.slice(1));
         
-        if (filter.length < 2) return [mainTitle];
+        if (filter.length < 2) return mainTitle;
         let Chapter_Title = filter[1]
-        .replace(chapterRegex, '') // remove 'chapter' and any variation
+        .replace(chapterRegex, '').trim() // remove 'chapter' and any variation
         .replace(/\b\d+(\.\d+)?\b/g, "") // remove numbers
-        .replace(/^[\s:;,\-–—|]+/, "") // remove leading punctuation + spaces
+        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
+        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();
 
-        if (Chapter_Title === '' && filter.length == 2) return [mainTitle];
+        if (Chapter_Title === '' && filter.length == 2) return mainTitle;
         if (Chapter_Title === '') return [mainTitle, ...MakemTitle(filter.slice(1))];
         Hermidata.Notes = `Chapter Title: ${Chapter_Title}`;
-        return [mainTitle];
+        return mainTitle;
     }
-    [mainTitle] = MakemTitle(filtered);
+    mainTitle = MakemTitle(filtered);
     return mainTitle.trim() || title;
 }
 function getCurrentDate() {
