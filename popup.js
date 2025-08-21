@@ -201,7 +201,7 @@ function trimTitle(title) {
     let Url_filter_parts = Hermidata.Url.split('/')
     let Url_filter = Url_filter_parts[Url_filter_parts.length -1].replace(/-/g,' ').toLowerCase().trim();
     let MakemTitle = (filter) => {
-        if (!filter.length) return [''];
+        if (!filter.length) return '';
         // if first el is chapter info place it at the end
         if (filtered[0]?.replace(/\s*([–—-]|:|#|\|)\s*/g,' ').toLowerCase() === Url_filter) {// fip the first to last
             filter[filter.length] = filter[0];
