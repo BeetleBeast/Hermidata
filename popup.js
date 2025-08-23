@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     Hermidata.Date = getCurrentDate();
     populateType()
     populateStatus()
-    await getHermidata();
+    Hermidata.Past = await getHermidata();
     document.getElementById("Pagetitle").textContent = Hermidata.Page_Title;
     document.getElementById("title").value =  Hermidata.Past.Title || Hermidata.Title;
     document.getElementById("Type").value = Hermidata.Past.Type || Hermidata.Type;
@@ -112,15 +112,15 @@ async function setHermidata() {
     }
 }
 async function getHermidata() {
-    try {
+    return new Promise((resolve, reject) => {
         browserAPI.storage.sync.get(["Hermidata"], (result) => {
-            if (result?.Hermidata) Hermidata.Past = result.Hermidata || {};
-            return Hermidata;
+            if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
+            resolve(result?.Hermidata || {});
         });
-    } catch (error) {
-        console.error('Extention error inside getHermidata: ',error)
-    }
-
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        return {};
+    })
 }
 
 function sheetUrlInput(resolve, reject) {
