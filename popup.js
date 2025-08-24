@@ -15,7 +15,8 @@ let Hermidata = {
     Tag: '',
     Notes: '',
     GoogleSheetURL: '',
-    Past : {} 
+    Past: {},
+    Hash: ''
 }
 
 const Testing = false;
@@ -103,7 +104,7 @@ function getGoogleSheetURL() {
     });
 }
 async function setHermidata() {
-    const key = makeHermidataKey(Hermidata);
+    const key = makeHermidataKey();
 
     // Fetch all saved data
     const result = await new Promise((resolve, reject) => {
@@ -129,7 +130,7 @@ async function setHermidata() {
 }
 
 async function getHermidata() {
-    const key = makeHermidataKey(Hermidata);
+    const key = makeHermidataKey();
     return new Promise((resolve, reject) => {
         browserAPI.storage.sync.get(["Hermidata"], (result) => {
             if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
@@ -143,16 +144,16 @@ async function getHermidata() {
     })
 }
 
-function makeHermidataKey(Hermidata) {
-    let TitleSlug = Hermidata.Page_Title.trim().toLowerCase();
-    
+function makeHermidataKey() {
+    let Page_TitleSlug = Hermidata.Page_Title.trim().toLowerCase();
+    let TitleSlug = Hermidata.Title.trim().toLowerCase();
     // Extract domain name from url
     const siteMatch = RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(Hermidata.Url);
     const siteName = siteMatch ? siteMatch[1] : "";
 
     let DomainSlug = siteName.trim().toLowerCase();
-    
-    return simpleHash(TitleSlug+DomainSlug );
+    if (!Hermidata.Hash || Hermidata.Hash === undefined) Hermidata.Hash = simpleHash(TitleSlug+DomainSlug );
+    return Hermidata.Hash || simpleHash(TitleSlug+DomainSlug );
 }
 
 function simpleHash(str) {
@@ -315,8 +316,9 @@ function saveSheet() {
     Object.keys(Hermidata).forEach((key) => {
         switch (key) {
             case 'Page_Title':
-            case 'Past':
             case 'GoogleSheetURL':
+            case 'Past':
+            case 'Hash':
                 break;
             default:
                 temp = document.querySelector(`[data-name="${key}"]`);
