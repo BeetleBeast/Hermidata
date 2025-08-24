@@ -144,7 +144,7 @@ async function getHermidata() {
 }
 
 function makeHermidataKey(Hermidata) {
-    let TitleSlug = Hermidata.Title.trim().toLowerCase();
+    let TitleSlug = Hermidata.Page_Title.trim().toLowerCase();
     
     // Extract domain name from url
     const siteMatch = RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(Hermidata.Url);
