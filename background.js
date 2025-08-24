@@ -438,12 +438,13 @@ async function getRootByTitle(title) {
     }
     return rootNode.id;
 }
-function searchBookmarks(query) {
+async function searchBookmarks(query) {
     if (typeof browser !== "undefined" && browser.bookmarks?.search) {
-        console.log( 'search bookmarks',browser.bookmarks?.search)
-        return browser.bookmarks.search(query);
+        const Results = await browser.bookmarks.search(query)
+        console.log( 'search bookmarks + querry',query, Results);
+        return Results;
     }
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
         chrome.bookmarks.search(query, (results) => {
         if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError));
         else resolve(results);
@@ -500,7 +501,7 @@ async function updateCurrentBookmarkAndIcon(Url) {
         if (!currentTab && Url == null) return;
 
         let searchUrl = Url || currentTab.url;
-        const validBookmarks = await searchValidBookmarks({ url: searchUrl });
+        const validBookmarks = await searchValidBookmarks(searchUrl);
         currentBookmark = validBookmarks.length > 0 ? validBookmarks[0] : null;
         updateIcon(Url);
     });

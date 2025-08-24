@@ -103,25 +103,69 @@ function getGoogleSheetURL() {
     });
 }
 async function setHermidata() {
-    try {
-        browserAPI.storage.sync.set({ Hermidata }, () => {
-            console.log("Hermidata saved:", Hermidata);
+    const key = makeHermidataKey(Hermidata);
+
+    // Fetch all saved data
+    const result = await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get(["Hermidata"], (result) => {
+        if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+        else resolve(result.Hermidata || {});
         });
-    } catch (error) {
-        console.error('Extention error  inside setHermidata: ',error)
-    }
+    });
+
+    // Merge/update
+    const updated = {
+        ...result,
+        [key]: Hermidata
+    };
+
+    // Save back
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.set({ Hermidata: updated }, () => {
+        if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+        else resolve();
+        });
+    });
 }
+
 async function getHermidata() {
+    const key = makeHermidataKey(Hermidata);
     return new Promise((resolve, reject) => {
         browserAPI.storage.sync.get(["Hermidata"], (result) => {
             if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
-            resolve(result?.Hermidata || {});
+            resolve(result?.Hermidata[key] || {});
+            console.log('Key',key,'\n','Hermidata',result?.Hermidata); // TODO TEMP
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise getHermidata: ',error);
+        console.log('Key',key,'\n','Hermidata',Hermidata);
         return {};
     })
 }
+
+function makeHermidataKey(Hermidata) {
+    let TitleSlug = Hermidata.Title.trim().toLowerCase();
+    
+    // Extract domain name from url
+    const siteMatch = RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(Hermidata.Url);
+    const siteName = siteMatch ? siteMatch[1] : "";
+
+    let DomainSlug = siteName.trim().toLowerCase();
+    
+    return simpleHash(TitleSlug+DomainSlug );
+}
+
+function simpleHash(str) {
+    let hash = 0, i, chr;
+    if (str.length === 0) return hash.toString();
+    for (i = 0; i < str.length; i++) {
+        chr = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash.toString();
+}
+
 
 function sheetUrlInput(resolve, reject) {
     document.getElementById("spreadsheetPrompt").style.display = "block";
