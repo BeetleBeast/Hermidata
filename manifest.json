@@ -2,7 +2,7 @@
     "name": "Hermidata",
     "author": "BeetleB",
     "description": "Organize your bookmarks more effectively using your google sheets",
-    "version": "0.11.3",
+    "version": "0.11.4",
     "manifest_version": 3,
     "permissions": [
         "contextMenus",
@@ -53,5 +53,9 @@
     ],
         "matches": ["<all_urls>"]
     }],
-    "options_page": "settings.html"
+    "options_page": "settings.html",
+    "options_ui": {
+        "page": "settings.html",
+        "open_in_tab": true
+    }
 }

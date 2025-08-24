@@ -569,6 +569,19 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         });
     }
 });
+// open settings fix bug from V
+chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason === "install") {
+        // Open settings on first install
+        chrome.runtime.openOptionsPage();
+    } else if (details.reason === "update") {
+        // Optional: open settings after an update
+        const thisVersion = chrome.runtime.getManifest().version;
+        console.log(`Updated to version ${thisVersion}`);
+        chrome.runtime.openOptionsPage();
+    }
+});
+
 
 // usage from popup
 chrome.runtime.onMessage.addListener((msg) => {
