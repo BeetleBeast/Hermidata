@@ -135,7 +135,6 @@ async function getHermidata() {
         browserAPI.storage.sync.get(["Hermidata"], (result) => {
             if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
             resolve(result?.Hermidata[key] || {});
-            console.log('Key',key,'\n','Hermidata',result?.Hermidata); // TODO TEMP
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise getHermidata: ',error);
@@ -145,7 +144,6 @@ async function getHermidata() {
 }
 
 function makeHermidataKey() {
-    let Page_TitleSlug = Hermidata.Page_Title.trim().toLowerCase();
     let TitleSlug = Hermidata.Title.trim().toLowerCase();
     // Extract domain name from url
     const siteMatch = RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(Hermidata.Url);

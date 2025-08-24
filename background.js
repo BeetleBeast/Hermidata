@@ -441,7 +441,6 @@ async function getRootByTitle(title) {
 async function searchBookmarks(query) {
     if (typeof browser !== "undefined" && browser.bookmarks?.search) {
         const Results = await browser.bookmarks.search(query)
-        console.log( 'search bookmarks + querry',query, Results);
         return Results;
     }
     return await new Promise((resolve, reject) => {
