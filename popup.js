@@ -207,6 +207,8 @@ function trimTitle(title) {
     let cleanstring = cleanString(title);
     const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|,|\|) /g).map(p => p.trim()).filter(Boolean);
 
+    // "Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road"
+
     // Regex patterns
     const OLDREGEX1 = /chapter.*$/i;
     const OLDREGEX2 = /[-–—|:]?\s*$/; 
@@ -223,8 +225,7 @@ function trimTitle(title) {
         .join("")}\\b`, 'i');
 
     // Remove junk and site name
-    let filtered;
-    filtered = parts
+    let filtered = parts
         .filter(p => !readRegex.test(p))
         .filter(p => !junkRegex.test(p))
         .filter(p => !siteNameRegex.test(p))
@@ -245,6 +246,14 @@ function trimTitle(title) {
     let Url_filter = Url_filter_parts[Url_filter_parts.length -1].replace(/-/g,' ').toLowerCase().trim();
     let MakemTitle = (filter) => {
         if (!filter.length) return '';
+        // Edge case: if first looks like "chapter info" but second looks like a real title → swap them
+        if (
+            filter.length > 1 &&
+            /^\s*(chapter|ch\.?)\s*\d+/i.test(filter[0]) && // first is chapter info
+            !/^\s*(chapter|ch\.?)\s*\d+/i.test(filter[1])   // second is NOT chapter info
+        ) {
+            [filter[0], filter[1]] = [filter[1], filter[0]]; // swap
+        }
         // if first el is chapter info place it at the end
         if (filtered[0]?.replace(/\s*([–—-]|:|#|\|)\s*/g,' ').toLowerCase() === Url_filter) {// fip the first to last
             filter[filter.length] = filter[0];
