@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("notes").value = Hermidata.Notes;
     FixTableSize()
     
-    document.getElementById("save").addEventListener("click", () => saveSheet());
+    document.getElementById("save").addEventListener("click", async () => await saveSheet());
     document.getElementById("openSettings").addEventListener("click", () => {
         try {
             browserAPI.runtime.openOptionsPage();
@@ -110,19 +110,16 @@ async function setHermidata() {
     const result = await new Promise((resolve, reject) => {
         browserAPI.storage.sync.get(["Hermidata"], (result) => {
         if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-        else resolve(result.Hermidata || {});
+        else resolve(result?.Hermidata || {});
         });
     });
 
-    // Merge/update
-    const updated = {
-        ...result,
-        [key]: Hermidata
-    };
+    // update current key
+    result[key] = Hermidata;
 
     // Save back
     await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set({ Hermidata: updated }, () => {
+        browserAPI.storage.sync.set({ Hermidata: result }, () => {
         if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
         else resolve();
         });
@@ -308,7 +305,7 @@ function populateStatus() {
         folderSelect.appendChild(option);
     });
 }
-function saveSheet() {
+async function saveSheet() {
     const title = document.getElementById("title").value;
     const Type = document.getElementById("Type").value;
     const Chapter = document.getElementById("chapter").value;
@@ -334,7 +331,7 @@ function saveSheet() {
         }
     });
     Hermidata.Past = {};
-    setHermidata();
+    await setHermidata();
     browserAPI.runtime.sendMessage({
         type: "SAVE_NOVEL",
         data: [title, Type, Chapter, url, status, date, tags, notes],
