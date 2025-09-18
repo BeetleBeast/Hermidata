@@ -106,20 +106,39 @@ function getGoogleSheetURL() {
 async function setHermidata() {
     const key = makeHermidataKey();
 
-    // Fetch all saved data
-    const result = await new Promise((resolve, reject) => {
+    // Check if old format exists
+    const oldData = await new Promise((resolve, reject) => {
         browserAPI.storage.sync.get(["Hermidata"], (result) => {
-        if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-        else resolve(result?.Hermidata || {});
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve(result?.Hermidata || null);
         });
     });
 
-    // update current key
-    result[key] = Hermidata;
+    // If old format exists, migrate each entry to top-level keys
+    if (oldData && typeof oldData === "object" && Object.keys(oldData).length > 0) {
+        let migrate = {};
+        for (const oldKey in oldData) {
+            migrate[oldKey] = oldData[oldKey];
+        }
+        // Remove the old Hermidata object
+        await new Promise((resolve, reject) => {
+            browserAPI.storage.sync.remove("Hermidata", () => {
+                if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+                else resolve();
+            });
+        });
+        // Save migrated entries as top-level keys
+        await new Promise((resolve, reject) => {
+            browserAPI.storage.sync.set(migrate, () => {
+                if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+                else resolve();
+            });
+        });
+    }
 
     // Save back
     await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set({ Hermidata: result }, () => {
+        browserAPI.storage.sync.set({ [key]: Hermidata }, () => {
         if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
         else resolve();
         });
@@ -129,9 +148,9 @@ async function setHermidata() {
 async function getHermidata() {
     const key = makeHermidataKey();
     return new Promise((resolve, reject) => {
-        browserAPI.storage.sync.get(["Hermidata"], (result) => {
+        browserAPI.storage.sync.get([key], (result) => {
             if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
-            resolve(result?.Hermidata[key] || {});
+            resolve(result?.Hermidata || {});
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise getHermidata: ',error);
