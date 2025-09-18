@@ -150,7 +150,7 @@ async function getHermidata() {
     return new Promise((resolve, reject) => {
         browserAPI.storage.sync.get([key], (result) => {
             if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
-            resolve(result?.Hermidata || {});
+            resolve(result?.[key] || {});
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise getHermidata: ',error);
