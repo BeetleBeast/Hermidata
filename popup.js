@@ -228,7 +228,7 @@ function trimTitle(title) {
     // Regex patterns
     const OLDREGEX1 = /chapter.*$/i;
     const OLDREGEX2 = /[-–—|:]?\s*$/; 
-    const chapterRemoveRegex = /(\b\d{1,4}[A-Z]*\b\s*)?(\b(?:chapter|chap|ch)\b\.?\s*)(\b\d{1,4}[A-Z]*\b)?/gi;
+    const chapterRemoveRegexV2 = /(\b\d{1,4}(?:\.\d+)?[A-Z]*\b\s*)?(\b(?:chapter|chap|ch)\b\.?\s*)(\b\d{1,4}(?:\.\d+)?[A-Z]*\b)?/gi
     const chapterRegex = /\b(?:chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
     const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
     const junkRegex = /\b(all page|novel bin|online)\b/i;
@@ -277,7 +277,7 @@ function trimTitle(title) {
         }
 
         mainTitle = filter[0]
-        .replace(chapterRemoveRegex, '').trim() // remove 'chapter' and any variation
+        .replace(chapterRemoveRegexV2, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
         .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();

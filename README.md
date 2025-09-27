@@ -81,7 +81,7 @@
 
 - The Sheet URL is parsed to extract the `spreadsheetId`
 - Entries are appended using the Google Sheets API `append` endpoint
-- Requires OAuth sign-in every 10min (interactive)
+- Requires OAuth sign-in (interactive)
 
 ---
 
