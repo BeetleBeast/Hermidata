@@ -50,6 +50,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("ResetAuth").addEventListener("click", ResetLoginAuth);
     document.getElementById("exportBtn").addEventListener("click", exportSettings);
     document.getElementById("importBtn").addEventListener("change", importSettings);
+    document.getElementById("exportDataBtn").addEventListener("click", exportHermidata );
+    document.getElementById("importDataBtn").addEventListener("change", importHermidata );
     document.getElementById("AllowContextMenu").addEventListener("change", AllowContextMenu);
     document.getElementById("saveFolderMapping").addEventListener("click", saveSettingsFolderPath);
 });
@@ -272,6 +274,67 @@ function importSettings(event) {
         } catch (err) {
             console.error("Failed to parse JSON:", err);
             alert("Invalid JSON format.");
+        }
+    };
+    reader.readAsText(file);
+}    
+async function exportHermidata() {
+    try {
+        const Data = await new Promise((resolve, reject) => {
+            browserAPI.storage.sync.get([null], (result) => {
+                if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
+                resolve(result || {});
+            });
+        });
+        
+        const jsonSTR = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonSTR], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+    
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Hermidata_export.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Extension error: Failed exportHermidata: ", error)
+    }
+}
+function importHermidata(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const importedData = JSON.parse(e.target.result);
+
+            // Get existing storage
+            const existingData = await new Promise((resolve, reject) => {
+                browserAPI.storage.sync.get(null, (result) => {
+                    if (browserAPI.runtime.lastError) 
+                        return reject(new Error(browserAPI.runtime.lastError));
+                    resolve(result || {});
+                });
+            });
+
+            // Merge
+            const mergedData = { ...existingData, ...importedData };
+
+            // Save merged result
+            await new Promise((resolve, reject) => {
+                browserAPI.storage.sync.set(mergedData, () => {
+                    if (browserAPI.runtime.lastError) 
+                        return reject(new Error(browserAPI.runtime.lastError));
+                    resolve();
+                });
+            });
+
+            console.log("Hermidata import + merge complete!");
+        } catch (error) {
+            console.error("Extension error: Failed importHermidata:", error);
         }
     };
     reader.readAsText(file);
