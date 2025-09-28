@@ -28,7 +28,9 @@
     <button id="save" type="button">Save</button>
     <p id="statusSheetURL"></p>
     <br>
+    <hr>
     <br>
+    <h3><strong> Default Table Input </strong></h3>
     <br>
     <table>change Default Input
         <thead>
@@ -51,7 +53,16 @@
     <button id="saveDefaultInput" type="button">Save</button>
     <p id="statusSaveDefaultInput"></p>
         <br>
-    <table>change Default Text-Menu Input
+        <hr>
+        <br>
+        <h3><strong> Context-menu </strong></h3>
+        <label for="AllowContextMenu">Allow context menu</label>
+        <input type="checkbox" id="AllowContextMenu" title="Allow context menu" checked>
+        <br>
+        <br>
+        <h4> Default Text-menu Input </h4>
+        <br>
+    <table>change Default context-Menu Input
         <thead>
             <tr>
             <th>Type</th>
@@ -72,6 +83,9 @@
     <button id="saveDefaultInputTextMenu" type="button">Save</button>
     <p id="statusSaveDefaultInputInputTextMenu"></p>
     <br>
+    <hr>
+    <br>
+    <h3><strong> Import/Export options </strong></h3>
     <br>
     <button type="button" id="exportBtn">Export Settings as JSON</button>
     <input type="file" accept=".json" placeholder="select Settings json" id="importBtn"></input>
@@ -81,17 +95,29 @@
     <input type="file" accept=".json" placeholder="select Hermidata json" id="importDataBtn"></input>
     <br>
     <br>
-    <label for="AllowContextMenu">Allow context menu</label>
-    <input type="checkbox" id="AllowContextMenu" title="Allow context menu" checked>
+    <hr>
     <br>
+    <h3><strong> folder mapping </strong></h3>
+    <br>
+
+    <h4> change status options </h4>
+    <pre> NOT MADE YET!</pre>
+    <div id="changeStatusOption"></div>
+
+    <h4> change type options </h4>
+    <pre> NOT MADE YET!</pre>
+    <div id="changeTypeOption"></div>
+
+    <h4> change folder name's </h4>
     <div id="folderMappingContainer"></div>
     <button id="saveFolderMapping">Save Folder Mapping</button>
     <br>
     <br>
+    <hr>
     <br>
     <button type="button" id="ResetAuth">Log-out</button>
 
 
-    <script src="settings.js"></script>
 </body>
+<script src="settings.js"></script>
 </html>

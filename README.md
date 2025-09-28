@@ -87,10 +87,6 @@
 
 ## 🧪 To-Do List
 
-- [ ] Improve Settings page usability
-
-## Future Enhancements (If Desired)
-
 - [ ] Allow editing, adding, or removing values inside `TYPE_OPTIONS`, `STATUS_OPTIONS`, and `FolderMapping` in Settings
 
 ---
