@@ -7,11 +7,17 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<main id="body">
-    <button id="openSettings" type="button" >
-        <img alt="0" class="icon" id="Settings_IMG" src='assets/settings_24.png'/>
-    </button>
-    <h2 id="Pagetitle" data-name="Page_Title">Loading...</h2>
+    <div id="header" class="HDSwitcher buttons">
+        <button id="HDClassicBtn" type="button" class="active Btn">Classic</button>
+        <button id="HDRSSBtn" type="button" class="Btn">RSS</button>
+    </div>
+<section id="body" class="HDClassic">
+    <div>
+        <button id="openSettings" type="button" >
+            <img alt="0" class="icon" id="Settings_IMG" src='assets/settings_24.png'/>
+        </button>
+        <h2 id="Pagetitle" data-name="Page_Title">Loading...</h2>
+    </div>
     <div id="ParentPreview">
         <table>
         <thead>
@@ -42,17 +48,32 @@
     </div>
     <div class="buttons" id="Btn-Parent">
         <button type="button" class="Btn" id="save">Save</button>
+        <button type="button" id="openFullPage" class="fullpage-btn Btn">Open Selected Spreadsheet</button>
     </div>
-</main>
+</section>
+<section class="HDRSS">
+    <section id="sort-RSS-entries"><!-- Dynamic load sort items--></section>
+    <section id="RSS-Notification"><!-- Dynamic load items--></section>
+    <section id="All-RSS-entries"><!-- Dynamic load items--></section>
+    <footer>
+        <button type="button" id="clear-notifications" class="Btn">Clear notifications</button>
+        <!--
+        <button type="button" id="openSettings" class="Btn">
+            <img alt="0" class="icon" id="Settings_IMG" src='assets/settings_24.png'/>
+        </button>
+        -->
+        <button type="button" id="openFullPageRSS" class="fullpage-RSS-btn Btn">Open RSS page</button>
+        <div id="RSS-latest-sync-div">RSS last sync: <span id="lastSync">Never</span></div> 
+        <button type="button" id="RSS-sync-Manual" class="Btn">Manual sync</button>
+        <span id="version">v1.4.3</span>
+    </footer>
+</section>
     <div id="spreadsheetPrompt">
         <label for="sheetUrlInput">Enter Spreadsheet URL:</label>
         <input type="text" id="sheetUrlInput" />
         <button type="button" id="saveSheetUrlBtn" class="Btn">Save</button>
     </div>
-
-
-    <button type="button" id="openFullPage" class="fullpage-btn Btn">Open Selected Spreadsheet</button>
-
+    
     <script src="popup.js"></script>
 </body>
 </html>

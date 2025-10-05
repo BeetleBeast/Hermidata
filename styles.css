@@ -33,6 +33,39 @@ body {
     background-color: var(--Btn_active);
     transition: none;
 }
+#header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.HDRSS {
+    opacity: 0;
+    position: absolute;
+    top: 50px;
+}
+#HDRSSBtn {
+    display: flex;
+    width: 100%;
+}
+#HDClassicBtn {
+    display: flex;
+    width: 100%;
+}
+.active {
+    background-color: var(--Btn_active);
+}
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 40px;
+    background-color: var(--bg-color);
+    border-top: 1px solid #ccc;
+    display: flex;
+    justify-content:flex-start;
+    align-items:center;
+}
 .fullpage-btn {
     position: absolute;
     bottom: 15px;
@@ -104,12 +137,10 @@ select.autoInput {
 
 #openSettings {
     position: absolute;
-    top: 10px;
     right: 10px;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 6px;
 }
 
 #openSettings .icon {

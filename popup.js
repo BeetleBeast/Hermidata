@@ -43,6 +43,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     FixTableSize()
     
     document.getElementById("save").addEventListener("click", async () => await saveSheet());
+    document.getElementById("HDClassicBtn").addEventListener("click", (e) => openClassic(e));
+    document.getElementById("HDRSSBtn").addEventListener("click", (e) =>  openRSS(e));
     document.getElementById("openSettings").addEventListener("click", () => {
         try {
             browserAPI.runtime.openOptionsPage();
@@ -471,4 +473,77 @@ function FixTableSize() {
         requestAnimationFrame(() => resize());
             input.addEventListener('input', resize);
     })
+}
+function openClassic(e) {
+    const changePageToClassic = (e) => {
+        e.target.classList = "active Btn";
+        document.querySelector("#HDRSSBtn").classList = "Btn";
+        document.querySelector(".HDRSS").style.opacity = 0;
+        document.querySelector(".HDClassic").style.opacity = 1;
+    }
+    changePageToClassic(e);
+}
+
+async function openRSS(e) {
+    const changePageToRSS = (e) => {
+        e.target.classList = "active Btn";
+        document.querySelector("#HDClassicBtn").classList = "Btn";
+        document.querySelector(".HDClassic").style.opacity = 0;
+        document.querySelector(".HDRSS").style.opacity = 1;
+    }
+    changePageToRSS(e);
+    document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
+
+    const allHermidata = await getAllHermidata();
+    
+    // TEMP
+    // sections to load
+    /*
+    document.querySelector(".sort-RSS-entries")
+    document.querySelector(".RSS-Notification")
+    document.querySelector(".All-RSS-entries")
+
+    // footer
+    
+    document.querySelector("#clear-notifications")
+
+    document.querySelector("#openSettings")
+
+    document.querySelector("#openFullPageRSS")
+    document.querySelector(".fullpage-RSS-btn")
+
+    document.querySelector("#RSS-latest-sync-div")
+    document.querySelector("#lastSync")
+    
+    document.querySelector("#RSS-sync-Manual")
+    */
+}
+
+async function getAllHermidata() {
+        const allData = await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get(null, (result) => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve(result || {});
+        });
+    });
+
+    let allHermidata = {};
+    let Count = 0;
+
+    for (const [key, value] of Object.entries(allData)) {
+        // Ensure the value is a valid Hermidata entry
+        if (!value || typeof value !== "object" || !value.Title || typeof value.Title !== "string") continue;
+
+
+
+        allHermidata[key] = value;
+        Count++;
+        }
+
+        // Nothing to do
+        if (Count === 0) {
+            console.log("No entries detected.");
+        }
+    console.log(`Total entries: ${Count}`);
+    return allHermidata;
 }

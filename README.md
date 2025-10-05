@@ -85,6 +85,16 @@
 
 ---
 
+## TO-DO
+
+- [ ] select saving option:
+  - Browser bookmark
+  - Browser sync
+  - google sheet
+  - ( FUTURE: Browser database ) <- maybe
+- [ ] prep work for RSS
+- [ ] RSS implemetation
+
 ## 🧪 To-Do List
 
 - [ ] Allow editing, adding, or removing values inside `TYPE_OPTIONS`, `STATUS_OPTIONS`, and `FolderMapping` in Settings
