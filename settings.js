@@ -281,13 +281,13 @@ function importSettings(event) {
 async function exportHermidata() {
     try {
         const Data = await new Promise((resolve, reject) => {
-            browserAPI.storage.sync.get([null], (result) => {
+            browserAPI.storage.sync.get(null, (result) => {
                 if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
                 resolve(result || {});
             });
         });
         
-        const jsonSTR = JSON.stringify(data, null, 2);
+        const jsonSTR = JSON.stringify(Data, null, 2);
         const blob = new Blob([jsonSTR], { type: "application/json" });
         const url = URL.createObjectURL(blob);
     

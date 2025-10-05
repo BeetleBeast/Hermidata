@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     Hermidata.Date = getCurrentDate();
     populateType()
     populateStatus()
+    // migrateHermidataV2toV3(); // TEMP
     Hermidata.Past = await getHermidata();
     document.getElementById("Pagetitle").textContent = Hermidata.Page_Title;
     document.getElementById("title").value =  Hermidata.Past.Title || Hermidata.Title;
@@ -66,7 +67,7 @@ function getCurrentTab() {
                 const tab = tabs[0];
     
                 // Regex to find the first number (optionally after "chapter", "chap", "ch")
-                const chapterNumberRegex = /(?:chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
+                const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
     
                 // create chapter based on URL
                 const parts = tab?.url?.split("/") || [];
@@ -79,7 +80,7 @@ function getCurrentTab() {
                 .find(p => chapterNumberRegex.test(p)) || ""
                 ).replace(/([A-Z])/gi, '').trim();
                 // If no chapter found, use empty string
-                Hermidata.Chapter = chapterPartV2 || chapterPartV1 || chapterPartV3 || "";
+                Hermidata.Chapter = chapterPartV2 || chapterPartV3 || chapterPartV1  || "";
                 Hermidata.Page_Title = tab.title || "Untitled Page";
                 Hermidata.Url = tab.url || "NO URL";
                 resolve(Hermidata);
@@ -114,20 +115,20 @@ async function setHermidata() {
         });
     });
 
-    // If old format exists, migrate each entry to top-level keys
+    // If old format exists (V1), migrate each entry to top-level keys (V2)
     if (oldData && typeof oldData === "object" && Object.keys(oldData).length > 0) {
         let migrate = {};
         for (const oldKey in oldData) {
             migrate[oldKey] = oldData[oldKey];
         }
-        // Remove the old Hermidata object
+        // Remove the old Hermidata object (V1)
         await new Promise((resolve, reject) => {
             browserAPI.storage.sync.remove("Hermidata", () => {
                 if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
                 else resolve();
             });
         });
-        // Save migrated entries as top-level keys
+        // Save migrated entries as top-level keys (V2)
         await new Promise((resolve, reject) => {
             browserAPI.storage.sync.set(migrate, () => {
                 if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
@@ -136,7 +137,7 @@ async function setHermidata() {
         });
     }
 
-    // Save back
+    // Save back (V2)
     await new Promise((resolve, reject) => {
         browserAPI.storage.sync.set({ [key]: Hermidata }, () => {
         if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
@@ -166,8 +167,10 @@ function makeHermidataKey() {
     const siteName = siteMatch ? siteMatch[1] : "";
 
     let DomainSlug = siteName.trim().toLowerCase();
-    if (!Hermidata.Hash || Hermidata.Hash === undefined) Hermidata.Hash = simpleHash(TitleSlug+DomainSlug );
-    return Hermidata.Hash || simpleHash(TitleSlug+DomainSlug );
+    
+    Hermidata.Hash = simpleHash(TitleSlug);
+    
+    return Hermidata.Hash || simpleHash(TitleSlug);
 }
 
 function simpleHash(str) {
@@ -181,6 +184,63 @@ function simpleHash(str) {
     return hash.toString();
 }
 
+async function migrateHermidataV2toV3() {
+    console.log("Starting V2 → V3 migration...");
+
+    const allData = await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get(null, (result) => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve(result || {});
+        });
+    });
+
+    const hashKeyPattern = /^-?\d+$/; // matches simpleHash integer strings
+    let migrated = {};
+    let removeKeys = [];
+    let migratedCount = 0;
+
+    for (const [key, value] of Object.entries(allData)) {
+        // Only migrate keys that look like V2 hashes
+        if (!hashKeyPattern.test(key)) continue;
+
+        // Ensure the value is a valid Hermidata entry
+        if (!value || typeof value !== "object" || !value.Title || typeof value.Title !== "string") continue;
+
+        const titleSlug = value.Title.trim().toLowerCase();
+        const newKey = simpleHash(titleSlug);
+
+        // Skip if already exists (don’t overwrite newer data)
+        if (allData[newKey]) continue;
+
+        migrated[newKey] = value;
+        removeKeys.push(key);
+        migratedCount++;
+    }
+
+    // Nothing to do
+    if (migratedCount === 0) {
+        console.log("No V2 entries detected for migration.");
+        return;
+    }
+
+    // Save migrated entries under new keys (V3)
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.set(migrated, () => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve();
+        });
+    });
+
+    // Optional: cleanup old V2 keys (uncomment to enable)
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.remove(removeKeys, () => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve();
+        });
+    });
+
+    console.log(`V2 → V3 migration complete. Migrated ${migratedCount} entries.`);
+}
 
 function sheetUrlInput(resolve, reject) {
     document.getElementById("spreadsheetPrompt").style.display = "block";
@@ -226,10 +286,9 @@ function trimTitle(title) {
     // "Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road"
 
     // Regex patterns
-    const OLDREGEX1 = /chapter.*$/i;
-    const OLDREGEX2 = /[-–—|:]?\s*$/; 
-    const chapterRemoveRegexV2 = /(\b\d{1,4}(?:\.\d+)?[A-Z]*\b\s*)?(\b(?:chapter|chap|ch)\b\.?\s*)(\b\d{1,4}(?:\.\d+)?[A-Z]*\b)?/gi
-    const chapterRegex = /\b(?:chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
+    const chapterRemoveRegexV2 = /(\b\d{1,4}(?:\.\d+)?[A-Z]*\b\s*)?(\b(?:Episode|chapter|chap|ch)\b\.?\s*)(\b\d{1,4}(?:\.\d+)?[A-Z]*\b)?/gi
+    
+    const chapterRegex = /\b(?:Episode|chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
     const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
     const junkRegex = /\b(all page|novel bin|online)\b/i;
     const mangaRegex = /\b\w*manga\w*\b|\bnovel\b|\banime\b|\btv-series\b/i;
