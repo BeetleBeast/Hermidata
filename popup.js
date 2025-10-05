@@ -494,7 +494,7 @@ async function openRSS(e) {
     changePageToRSS(e);
     document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
 
-    const allHermidata = await getAllHermidata();
+    // const allHermidata = await getAllHermidata();
     
     // TEMP
     // sections to load
