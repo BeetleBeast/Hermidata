@@ -497,15 +497,19 @@ async function openRSS(e) {
     makeRSSPage();
     // loadRSSData();
     const allHermidata = await getAllHermidata();
+    const getRSS = await getCustomRSS(index);
     // 'RSS',or 'custom' OR something different
-    const RSSsortedHermidata = Object.entries(allHermidata).forEach(element => {
-        element.RSS = {
-            hasRSS: haRSS || 'false',
-            type: RSSType || '',
-
+    let haRSS = '';
+    let RSSType = '';
+    Object.values(allHermidata).forEach(element => {
+        if ( !element.RSS ) {
+            element.RSS = {
+                hasRSS: haRSS || 'false',
+                type: RSSType || '',
+            }
         }
-        
     });
+    console.log(allHermidata)
     /*
     browserAPI.runtime.sendMessage({
         type: "LOAD_RSS",
@@ -530,16 +534,11 @@ async function getAllHermidata() {
         // Ensure the value is a valid Hermidata entry
         if (!value || typeof value !== "object" || !value.Title || typeof value.Title !== "string") continue;
 
-
-
         allHermidata[key] = value;
         Count++;
         }
-
-        // Nothing to do
-        if (Count === 0) {
-            console.log("No entries detected.");
-        }
+    // Nothing to do
+    if (Count === 0) console.log("No entries detected.");
     console.log(`Total entries: ${Count}`);
     return allHermidata;
 }
@@ -598,3 +597,15 @@ function makeItemSection(NotificationSection, AllItemSection) {
     // search bar to search by Title or Notes
     
 }
+
+async function getCustomRSS(index) {
+    // get RSS from background.js
+    return CustomRSS[index]
+}
+
+
+/* 
+RSS_DataBase_[hashed domain]_.json // random RSS file from site [domain hashed]
+goes to customRSS.json // handmade RSS file with index same as hermidata hash
+
+*/
