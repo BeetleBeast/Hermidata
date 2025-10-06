@@ -495,21 +495,68 @@ async function openRSS(e) {
     document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
 
     makeRSSPage();
+
+    
     // loadRSSData();
     const allHermidata = await getAllHermidata();
-    const getRSS = await getCustomRSS(index);
+
+    loadSavedFeeds(allHermidata);
+    // const getRSS = await getCustomRSS(index);
     // 'RSS',or 'custom' OR something different
-    let haRSS = '';
+
+    /*
+    let lastSync = new Date().toLocaleString();
+    let domain = '';
+    let latestChapter = ''
+    let nextChapterLink = ''
+    let Status = ''
+    let Tags = ''
+    let index = Hermidata.Hash || simpleHash(Hermidata.Title);
+
+    const RSSData = { // TEMP
+        lastSync,
+        entries: {
+            [index]: {
+                domain: domain,
+                latestChapter,
+                nextChapterLink,
+                Status,
+                Tags,
+            },
+        },
+        version: chrome.runtime.getManifest().version,
+
+    }
+    saveRSSData(RSSData);
+
+    console.log(RSSData);
+
+    const hasDataIn_Hermidata = Object.keys(allHermidata).find(key => { return key == index; }) || false;
+    const hasDataInRSS = Object.keys(RSSData.entries).find(key => { return key == index; }) || false;
+
+    const hasDataIn_HermidataAndRSS = hasDataIn_Hermidata && hasDataInRSS;
     let RSSType = '';
     Object.values(allHermidata).forEach(element => {
         if ( !element.RSS ) {
             element.RSS = {
-                hasRSS: haRSS || 'false',
+                hasRSS: hasDataIn_HermidataAndRSS,
                 type: RSSType || '',
             }
         }
     });
     console.log(allHermidata)
+    if ( allHermidata) {
+        for (const novel of Object.values(allHermidata)) {
+            const feed = GlobalFeeds.find(f => f.domain === new URL(novel.Url).hostname.replace(/^www\./, ''));
+            if (feed) {
+                console.log(`Found feed for ${novel.Title} at ${feed.url}`);
+                novel.latestChapter = feed.items[0]?.title || novel.latestChapter;
+                console.log(`Latest chapter for ${novel.Title}: ${novel.latestChapter}`);
+                console.log(feed);
+            }
+        }
+    }
+    */
     /*
     browserAPI.runtime.sendMessage({
         type: "LOAD_RSS",
@@ -520,7 +567,7 @@ async function openRSS(e) {
 }
 
 async function getAllHermidata() {
-        const allData = await new Promise((resolve, reject) => {
+    const allData = await new Promise((resolve, reject) => {
         browserAPI.storage.sync.get(null, (result) => {
             if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
             else resolve(result || {});
@@ -603,9 +650,65 @@ async function getCustomRSS(index) {
     return CustomRSS[index]
 }
 
+async function loadSavedFeeds(allHermidata={}) {
+    // what to get?
+    // latest chapter
+    // next chapter link
+    // Status ( bv. ongoing, finished, dropped etc)
+    // Tags ( website tags, (user tags stored in hermidata))
+    const FomatedFeeds = {
+        title: "",
+        chapterLink: "",
+        pubDate: "",
+    }
+    const SortedSavedFeeds = {};
 
+    const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
+    
+    const list = document.querySelector("#All-RSS-entries");
+    if (list) {
+        list.innerHTML = "";
+        for (const feed of savedFeeds) {
+            if ( !feed.title || !feed.url ) continue;
+            if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.Url.includes(feed.domain))?.Url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
+            SortedSavedFeeds[feed?.items?.[0]?.title || feed.title] = feed;
+            const li = document.createElement("li");
+            li.textContent = `${feed?.items?.[0]?.title || feed.title} — ${feed.domain}`;
+            li.onclick = () => browser.tabs.create({ url: feed?.items?.[0]?.link || feed.url });
+            list.appendChild(li);
+        }
+        console.log('[Hermidata] Loaded saved & sorted feeds:', SortedSavedFeeds);
+    }
+}
+
+
+
+
+async function loadRSSData() {
+    // load RSS data from storage
+    return new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get(["customRSS"], (result) => {
+            if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
+            resolve(result?.customRSS || {});
+        });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise loadRSSData: ',error);
+        return {};
+    })
+}
+
+async function saveRSSData(data) {
+    return new Promise((resolve, reject) => {
+        browserAPI.storage.sync.set({ customRSS: data }, () => {
+            if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
+            resolve();
+        });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise saveRSSData: ',error);
+    })
+}
 /* 
-RSS_DataBase_[hashed domain]_.json // random RSS file from site [domain hashed]
+RSS_DataBase_[hashed domain]_.json // random RSS get variable from site [domain hashed]
 goes to customRSS.json // handmade RSS file with index same as hermidata hash
 
 */

@@ -11,9 +11,10 @@
         "identity",
         "storage",
         "tabs",
-        "scripting"
+        "scripting",
+        "notifications"
     ],
-    "host_permissions": [ "https://*.googleapis.com/*" ],
+    "host_permissions": [ "https://*.googleapis.com/*", "*://*/*" ],
     "browser_specific_settings": {
         "gecko": {
             "id": "{8cc11236-9806-4fa0-a3fa-8bf55309a1d0}",
@@ -24,16 +25,15 @@
         "client_id": "10068474315-qegara9du372dg55gv3tur6keuegke4n.apps.googleusercontent.com",
         "scopes": ["https://www.googleapis.com/auth/spreadsheets"]
     },
+    "content_scripts": [{
+        "matches": ["<all_urls>"],
+        "js": ["content.js"],
+        "run_at": "document_idle"
+    }],
     "background": {
         "service_worker": "background.js",
         "scripts": ["background.js"]
     },
-    "content_scripts": [{
-        "matches": ["<all_urls>"],
-        "js": ["popup.js"],
-        "run_at": "document_idle"
-    }],
-
     "action": {
         "default_popup": "popup.html",
         "default_icon": {

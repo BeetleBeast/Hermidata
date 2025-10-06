@@ -506,6 +506,100 @@ async function updateCurrentBookmarkAndIcon(Url) {
     });
 }
 
+async function getAllHermidata() {
+    const allData = await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get(null, (result) => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve(result || {});
+        });
+    });
+
+    let allHermidata = {};
+    let Count = 0;
+
+    for (const [key, value] of Object.entries(allData)) {
+        // Ensure the value is a valid Hermidata entry
+        if (!value || typeof value !== "object" || !value.Title || typeof value.Title !== "string") continue;
+
+        allHermidata[key] = value;
+        Count++;
+        }
+    // Nothing to do
+    if (Count === 0) console.log("No entries detected.");
+    console.log(`Total entries: ${Count}`);
+    return allHermidata;
+}
+
+async function checkFeedsForUpdates() {
+    const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
+    const allHermidata = await getAllHermidata();
+    if (Object.keys(allHermidata).length === 0) {
+        console.log("[Hermidata] No Hermidata entries found, skipping feed check.");
+        return;
+    }
+    for (const feed of savedFeeds) {
+        try {
+            // HEAD request first
+
+            if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.Url.includes(feed.domain))?.Url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
+
+            const head = await fetch(feed.url, { method: "HEAD" });
+            const etag = head.headers.get("etag");
+            const lastMod = head.headers.get("last-modified");
+
+            if (feed.etag === etag && feed.lastModified === lastMod) {
+                console.log(`[Hermidata] No change in ${feed.title}`);
+                continue; // skip unchanged
+            }
+
+            // Fetch full feed
+            const response = await fetch(feed.url);
+            const text = await response.text();
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, "text/xml");
+            const items = [...xml.querySelectorAll("item")].map(item => ({
+                title: item.querySelector("title")?.textContent ?? "",
+                link: item.querySelector("link")?.textContent ?? "",
+                pubDate: item.querySelector("pubDate")?.textContent ?? "",
+                guid: item.querySelector("guid")?.textContent ?? item.querySelector("link")?.textContent ?? ""
+            }));
+
+            // Compare first item with last seen
+            if (items.length && items[0].guid !== feed.lastSeenGuid) {
+                const newCount = items.findIndex(i => i.guid === feed.lastSeenGuid);
+                const newItems = newCount === -1 ? items : items.slice(0, newCount);
+                notifyUser(feed, newItems);
+                feed.lastSeenGuid = items[0].guid;
+            }
+
+            // Save metadata
+            feed.etag = etag;
+            feed.lastModified = lastMod;
+            feed.lastChecked = new Date().toISOString();
+
+        } catch (err) {
+            console.error(`[Hermidata] Failed to check feed ${feed.url}:`, err);
+        }
+    }
+
+    // Save back updated feeds
+    await browser.storage.local.set({ savedFeeds });
+    console.log("[Hermidata] Feed check completed.");
+}
+
+function notifyUser(feed, newItems) {
+    const title = `${feed.title}: ${newItems.length} new chapter${newItems.length > 1 ? "s" : ""}`;
+    const message = newItems.map(i => i.title).join("\n");
+    browser.notifications.create({
+        type: "basic",
+        iconUrl: "assets/icon48.png",
+        title,
+        message
+    });
+}
+
+const browserAPI = typeof browser !== "undefined" ? browser : chrome;
+
 let currentBookmark = null;
 let currentTab = null;
 
@@ -550,8 +644,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         });
     }
 });
+
+// Run every 30 minutes
+setInterval(checkFeedsForUpdates, 30 * 60 * 1000);
+
 chrome.runtime.onStartup.addListener(() => {
     updateCurrentBookmarkAndIcon();
+    checkFeedsForUpdates();
 });
 
 chrome.tabs.onActivated.addListener(() => {
@@ -570,6 +669,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 // open settings fix bug from V
 chrome.runtime.onInstalled.addListener((details) => {
+    checkFeedsForUpdates();
     if (details.reason === "install") {
         // Open settings on first install
         chrome.runtime.openOptionsPage();

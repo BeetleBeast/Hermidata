@@ -9,3 +9,5 @@
 SecretTokenCodes*
 # ignore all zip files
 Zip-Files*
+# ignore all files inside Hidden
+Hidden*
