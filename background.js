@@ -591,4 +591,7 @@ chrome.runtime.onMessage.addListener((msg) => {
         });
         updateCurrentBookmarkAndIcon(msg.data[3]);
     }
+    else if (msg.type === "LOAD_RSS") {
+        // RSSWHATEVER();
+    }
 });

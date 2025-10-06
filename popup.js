@@ -494,28 +494,15 @@ async function openRSS(e) {
     changePageToRSS(e);
     document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
 
+    makeRSSPage();
+    // loadRSSData();
     // const allHermidata = await getAllHermidata();
-    
-    // TEMP
-    // sections to load
     /*
-    document.querySelector(".sort-RSS-entries")
-    document.querySelector(".RSS-Notification")
-    document.querySelector(".All-RSS-entries")
-
-    // footer
-    
-    document.querySelector("#clear-notifications")
-
-    document.querySelector("#openSettings")
-
-    document.querySelector("#openFullPageRSS")
-    document.querySelector(".fullpage-RSS-btn")
-
-    document.querySelector("#RSS-latest-sync-div")
-    document.querySelector("#lastSync")
-    
-    document.querySelector("#RSS-sync-Manual")
+    browserAPI.runtime.sendMessage({
+        type: "LOAD_RSS",
+        data: [],
+        args
+    });
     */
 }
 
@@ -546,4 +533,48 @@ async function getAllHermidata() {
         }
     console.log(`Total entries: ${Count}`);
     return allHermidata;
+}
+function makeRSSPage() {
+
+    // TEMP
+    // sections to load
+    
+    const sortSection = document.querySelector(".sort-RSS-entries")
+    makeSortSection(sortSection);
+    const NotificationSection = document.querySelector(".RSS-Notification")
+    const AllItemSection = document.querySelector(".All-RSS-entries")
+
+    // footer
+
+    const clearNotification = document.querySelector("#clear-notifications")
+
+    const openSettings = document.querySelector("#openSettings")
+
+    const openFullPageRSS = document.querySelector("#openFullPageRSS")
+    const RSSFullpage = document.querySelector(".fullpage-RSS-btn")
+
+    const latestRSSSync = document.querySelector("#RSS-latest-sync-div")
+    const latestSyncSpan = document.querySelector("#lastSync")
+
+    const ManualSyncBtn = document.querySelector("#RSS-sync-Manual")
+    
+}
+
+function removeAllChildNodes(parent) {
+    while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
+    }
+
+}
+function makeSortSection(sortSection) {
+    // sheck if exists
+    // make the sort section:
+    // search bar with auto complete
+    // under it, a list of checkboxes for each Type
+    // under it, a list of checkboxes for each Status
+    // under it, a list of checkboxes for each Source (extracted from all entries)
+    // under it, a list of checkboxes for each Tag (extracted from all entries)
+    // under it, a list of checkboxes for each Date (extracted from all entries)
+    
+    // checkboxes should be compact, max 4 rows, ckick for more
 }
