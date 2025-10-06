@@ -496,7 +496,16 @@ async function openRSS(e) {
 
     makeRSSPage();
     // loadRSSData();
-    // const allHermidata = await getAllHermidata();
+    const allHermidata = await getAllHermidata();
+    // 'RSS',or 'custom' OR something different
+    const RSSsortedHermidata = Object.entries(allHermidata).forEach(element => {
+        element.RSS = {
+            hasRSS: haRSS || 'false',
+            type: RSSType || '',
+
+        }
+        
+    });
     /*
     browserAPI.runtime.sendMessage({
         type: "LOAD_RSS",
@@ -543,7 +552,7 @@ function makeRSSPage() {
     makeSortSection(sortSection);
     const NotificationSection = document.querySelector(".RSS-Notification")
     const AllItemSection = document.querySelector(".All-RSS-entries")
-
+    makeItemSection(NotificationSection, AllItemSection);
     // footer
 
     const clearNotification = document.querySelector("#clear-notifications")
@@ -577,4 +586,15 @@ function makeSortSection(sortSection) {
     // under it, a list of checkboxes for each Date (extracted from all entries)
     
     // checkboxes should be compact, max 4 rows, ckick for more
+}
+function makeItemSection(NotificationSection, AllItemSection) {
+    // make the notification section
+    // make the all items section
+    // each item should have:
+    // Title, last Read, Latest chapter, Tag(s), Status, progress %
+    // buttons: open next chapter,
+    // sortable by each field
+    // filterable by Type, Status, Tags, Date
+    // search bar to search by Title or Notes
+    
 }
