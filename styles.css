@@ -14,6 +14,12 @@ body {
     margin-bottom: 15px;
     margin-right: 5px;
     overflow: hidden;
+    transition: height 0.6s ease;
+}
+body::after {
+    content: "";
+    display: block;
+    height: 40px; /* Height of the footer */
 }
 #Pagetitle {
     margin-right: 40px;
@@ -179,8 +185,10 @@ select.autoInput {
     display: flex;
     flex: content;
     align-items: center;
+    flex-direction: column;
     color: var(--Text-color);
     transition: background-color 0.3s ease;
+    height: 40px;
 }
 /*
 .RSS-Notification-item:nth-last-child(1) {
@@ -193,4 +201,48 @@ select.autoInput {
 }
 #RSS-Notification {
     overflow: scroll;
+}
+.RSS-Notification-item-footer {
+    font-size: 12px;
+    color: gray;
+    margin-top: -8px;
+}
+.RSS-Notification-item-image {
+	width: 40px;
+	height: 40px;
+	object-fit: fill;
+	border-radius: 50%;
+	padding: 0 15px;
+    position: absolute;
+    left: 5px;
+    top: 0;
+    margin: 0;
+    padding: 2px;
+}
+.RSS-Notification-item-info {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 0 15px;
+}
+.RSS-Notification-item-title {
+    font-weight: bold;
+    font-size: 16px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.RSS-Notification-item-chapter {
+    font-weight: bold;
+    font-size: 16px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.RSS-Notification-item-progress {
+    font-weight: bold;
+    font-size: 16px;
+    padding-left: 10px;
+    padding-right: 10px;
+    right: 0;
+    position: absolute;
 }

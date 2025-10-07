@@ -494,7 +494,7 @@ function openClassic(e) {
             a.style.pointerEvents = 'auto';
         });
         
-        // window.resizeTo(600, 400);
+        document.body.style.height = '';
     }
     changePageToClassic(e);
 }
@@ -514,7 +514,7 @@ async function openRSS(e) {
             a.style.pointerEvents = 'auto';
         });
         
-        window.resizeTo(800, 600);
+        document.body.style.height = '650px';
     }
     changePageToRSS(e);
     document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
@@ -716,7 +716,8 @@ function createElItem(feed, allHermidata={}) {
 
         ElImage.alt = "Feed Image";
         const ElInfo = document.createElement("div");
-        
+        ElInfo.className = "RSS-Notification-item-info";
+
         const chapter = getChapterFromTitle(feed?.items?.[0]?.title || feed.title, feed?.items?.[0]?.link || feed.url);
         const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
 
@@ -727,24 +728,38 @@ function createElItem(feed, allHermidata={}) {
         const maxTitleCharLangth = 60;
         const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
         
-        const lastRead = Object.values(allHermidata).find(novel => {
-            novel.Title == titleText })?.chapter || '0';
+        const lastRead = Object.values(allHermidata).find( novel =>  novel.Title == titleText )?.chapter || '0';
         
         const progress = lastRead != '0' ? parseFloat(lastRead) / parseFloat(chapter): '0';
 
-        ElInfo.textContent = `${titleTextTrunacted} | ${chapterText} | ${progress}%`;
+        const ELTitle = document.createElement("div");
+        const ELchapter = document.createElement("div");
+        const ELprogress = document.createElement("div");
+        
+        ELTitle.className = "RSS-Notification-item-title";
+        ELchapter.className = "RSS-Notification-item-chapter";
+        ELprogress.className = "RSS-Notification-item-progress";
+        
+
+
+        ELTitle.textContent = `${titleTextTrunacted}`;
+        ELchapter.textContent = `${chapterText}`;
+        ELprogress.textContent = `${progress}%`;
+
+
+        ElInfo.append(ElImage,ELTitle, ELchapter, ELprogress);
+
 
         const Elfooter = document.createElement("div");
         Elfooter.className = "RSS-Notification-item-footer";
-        Elfooter.textContent = `Source: ${feed?.domain || feed.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]}`;
+        Elfooter.textContent = `${feed?.domain || feed.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]}`;
         
         li.onclick = () => browser.tabs.create({ url: feed?.items?.[0]?.link || feed.url });
         
         // const pubDate = document.createElement("p");
         // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
-        li.appendChild(ElImage);
         li.appendChild(ElInfo);
-        // li.appendChild(Elfooter);
+        li.appendChild(Elfooter);
         // li.appendChild(pubDate);
         list.appendChild(li);
     }
