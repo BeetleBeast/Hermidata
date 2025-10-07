@@ -13,8 +13,11 @@ body {
     
     margin-bottom: 15px;
     margin-right: 5px;
-    overflow: hidden;
+    overflow: auto;
 }
+
+/* Not very elegant but it works */
+
 #Pagetitle {
     margin-right: 40px;
 }
@@ -74,10 +77,7 @@ footer {
     bottom: 15px;
     right: 0;
 }
-#ParentPreview{
-    max-width: 10000px;
-    overflow-x: hidden;
-}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -164,33 +164,4 @@ select.autoInput {
 #statusSaveDefaultInput,
 #statusSaveDefaultInputInputTextMenu {
     color: green;
-}
-
-
-
-.RSS-Notification-item {
-    border: 1px solid var(--Btn);
-    
-    margin-left: 5%;
-    
-    background-color: var(--bg-color);
-    border-radius: 4px;
-    padding: 8px 16px;
-    display: flex;
-    flex: content;
-    align-items: center;
-    color: var(--Text-color);
-    transition: background-color 0.3s ease;
-}
-/*
-.RSS-Notification-item:nth-last-child(1) {
-    margin-bottom: 40px;
-}
-*/
-.RSS-Notification-item:hover {
-    background-color: var(--Btn_hover);
-    cursor: pointer;
-}
-#RSS-Notification {
-    overflow: scroll;
 }

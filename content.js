@@ -54,7 +54,9 @@
     // --- 5. Fetch sample items ---
     for (const feed of GlobalFeeds) {
         try {
-            const items = await fetchAndParseRSS(feed.url);
+            const [items, lastBuildDate, image] = await fetchAndParseRSS(feed.url);
+            feed.lastBuildDate = lastBuildDate;
+            feed.image = image;
             feed.items = items;
             feed.lastFetched = new Date().toISOString();
             console.log(`Fetched ${items.length} items from ${feed.url}`);
@@ -65,16 +67,11 @@
 
     console.log('Final GlobalFeeds:', GlobalFeeds);
 
-    // // Send to background for storage or popup UI
-    // browser.runtime.sendMessage({ action: "foundFeeds", data: GlobalFeeds });
-
     // Save all found feeds to local storage
     browser.storage.local.get({ savedFeeds: [] }).then(({ savedFeeds }) => {
         const combined = [...savedFeeds];
         for (const feed of GlobalFeeds) {
-            if (!combined.find(f => f.url === feed.url)) {
-                combined.push(feed);
-            }
+            if (!combined.find(f => f.url === feed.url)) combined.push(feed); // edit this to update existing feeds if needed
         }
         browser.storage.local.set({ savedFeeds: combined }).then(() => {
             console.log(`[Hermidata] ${GlobalFeeds.length} feeds saved to local storage`);
@@ -90,6 +87,8 @@
             url: feed.url,
             domain,
             lastFetched: null,
+            lastBuildDate: null,
+            image: null,
             items: []
         };
     }
@@ -104,7 +103,9 @@
             link: item.querySelector("link")?.textContent ?? "",
             pubDate: new Date(item.querySelector("pubDate")?.textContent ?? 0)
         }));
-        return items;
+        const lastBuildDate = xml.querySelector("lastBuildDate")?.textContent ?? null;
+        const image = xml.querySelector("image > url")?.textContent ?? null;
+        return [items, lastBuildDate, image];
     }
 
     function addFeedToGlobal(feed, globalArr) {

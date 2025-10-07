@@ -67,22 +67,7 @@ function getCurrentTab() {
         try {
             browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const tab = tabs[0];
-    
-                // Regex to find the first number (optionally after "chapter", "chap", "ch")
-                const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
-    
-                // create chapter based on URL
-                const parts = tab?.url?.split("/") || [];
-                const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0]
-                // create chapter based on title
-                const titleParts = tab?.title?.split(/[-–—|:]/).map(p => p.trim());
-                const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
-                // create chapter based on title regex
-                const chapterPartV3 = (titleParts
-                .find(p => chapterNumberRegex.test(p)) || ""
-                ).replace(/([A-Z])/gi, '').trim();
-                // If no chapter found, use empty string
-                Hermidata.Chapter = chapterPartV2 || chapterPartV3 || chapterPartV1  || "";
+                Hermidata.Chapter = getChapterFromTitle(tab.title, tab.url) || 0;
                 Hermidata.Page_Title = tab.title || "Untitled Page";
                 Hermidata.Url = tab.url || "NO URL";
                 resolve(Hermidata);
@@ -92,6 +77,24 @@ function getCurrentTab() {
         }
     });
 }
+function getChapterFromTitle(title, url) {
+    // Regex to find the first number (optionally after "chapter", "chap", "ch")
+    const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
+
+    // create chapter based on URL
+    const parts = url?.split("/") || [];
+    const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0]
+    // create chapter based on title
+    const titleParts = title?.split(/[-–—|:]/).map(p => p.trim());
+    const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
+    // create chapter based on title regex
+    const chapterPartV3 = (titleParts
+    .find(p => chapterNumberRegex.test(p)) || ""
+    ).replace(/([A-Z])/gi, '').replace(/[^\d.]/g, '').trim();
+    // If no chapter found, use empty string
+    return chapterPartV2 || chapterPartV3 || chapterPartV1  || "";
+}
+
 // Get GoogleSheet URL
 function getGoogleSheetURL() {
     return new Promise((resolve, reject) => {
@@ -480,6 +483,18 @@ function openClassic(e) {
         document.querySelector("#HDRSSBtn").classList = "Btn";
         document.querySelector(".HDRSS").style.opacity = 0;
         document.querySelector(".HDClassic").style.opacity = 1;
+        document.querySelector(".HDClassic").style.overflow = 'hidden';
+        
+        // deactivate links in classic
+        document.querySelectorAll(".HDRSS").forEach(a => {
+            a.style.pointerEvents = 'none';
+        });
+        // activate links in RSS
+        document.querySelectorAll(".HDClassic").forEach(a => {
+            a.style.pointerEvents = 'auto';
+        });
+        
+        // window.resizeTo(600, 400);
     }
     changePageToClassic(e);
 }
@@ -490,15 +505,27 @@ async function openRSS(e) {
         document.querySelector("#HDClassicBtn").classList = "Btn";
         document.querySelector(".HDClassic").style.opacity = 0;
         document.querySelector(".HDRSS").style.opacity = 1;
+        // deactivate links in classic
+        document.querySelectorAll(".HDClassic").forEach(a => {
+            a.style.pointerEvents = 'none';
+        });
+        // activate links in RSS
+        document.querySelectorAll(".HDRSS").forEach(a => {
+            a.style.pointerEvents = 'auto';
+        });
+        
+        window.resizeTo(800, 600);
     }
     changePageToRSS(e);
     document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
 
-    makeRSSPage();
+    const allHermidata = await getAllHermidata();
+    
+    
+    makeRSSPage(allHermidata);
 
     
     // loadRSSData();
-    const allHermidata = await getAllHermidata();
 
     loadSavedFeeds(allHermidata);
     // const getRSS = await getCustomRSS(index);
@@ -589,16 +616,16 @@ async function getAllHermidata() {
     console.log(`Total entries: ${Count}`);
     return allHermidata;
 }
-function makeRSSPage() {
+function makeRSSPage(allHermidata) {
 
     // TEMP
     // sections to load
     
-    const sortSection = document.querySelector(".sort-RSS-entries")
+    const sortSection = document.querySelector("#sort-RSS-entries")
     makeSortSection(sortSection);
-    const NotificationSection = document.querySelector(".RSS-Notification")
-    const AllItemSection = document.querySelector(".All-RSS-entries")
-    makeItemSection(NotificationSection, AllItemSection);
+    const NotificationSection = document.querySelector("#RSS-Notification")
+    const AllItemSection = document.querySelector("#All-RSS-entries")
+    makeItemSection(NotificationSection, AllItemSection, allHermidata);
     // footer
 
     const clearNotification = document.querySelector("#clear-notifications")
@@ -633,7 +660,7 @@ function makeSortSection(sortSection) {
     
     // checkboxes should be compact, max 4 rows, ckick for more
 }
-function makeItemSection(NotificationSection, AllItemSection) {
+function makeItemSection(NotificationSection, AllItemSection, allHermidata={}) {
     // make the notification section
     // make the all items section
     // each item should have:
@@ -656,33 +683,72 @@ async function loadSavedFeeds(allHermidata={}) {
     // next chapter link
     // Status ( bv. ongoing, finished, dropped etc)
     // Tags ( website tags, (user tags stored in hermidata))
-    const FomatedFeeds = {
-        title: "",
-        chapterLink: "",
-        pubDate: "",
-    }
     const SortedSavedFeeds = {};
 
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
     
-    const list = document.querySelector("#All-RSS-entries");
-    if (list) {
-        list.innerHTML = "";
-        for (const feed of savedFeeds) {
-            if ( !feed.title || !feed.url ) continue;
-            if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.Url.includes(feed.domain))?.Url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
-            SortedSavedFeeds[feed?.items?.[0]?.title || feed.title] = feed;
-            const li = document.createElement("li");
-            li.textContent = `${feed?.items?.[0]?.title || feed.title} — ${feed.domain}`;
-            li.onclick = () => browser.tabs.create({ url: feed?.items?.[0]?.link || feed.url });
-            list.appendChild(li);
-        }
-        console.log('[Hermidata] Loaded saved & sorted feeds:', SortedSavedFeeds);
+    
+    for (const feed of savedFeeds) {
+        if ( !feed.title || !feed.url ) continue;
+        if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.Url.includes(feed.domain))?.Url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
+        SortedSavedFeeds[feed?.items?.[0]?.title || feed.title] = feed;
+        createElItem(feed, allHermidata);
     }
+    console.log('[Hermidata] Loaded saved & sorted feeds:', SortedSavedFeeds);
 }
 
+function createElItem(feed, allHermidata={}) {
+    
+    const list = document.querySelector("#RSS-Notification");
+    if (list && !document.querySelector(`.TitleHash-${simpleHash(feed?.items?.[0]?.title || feed.title)}`)) {
+        const li = document.createElement("li");
+        li.className = "RSS-Notification-item";
+        
+        li.classList.add("hasRSS", `TitleHash-${simpleHash(feed?.items?.[0]?.title || feed.title)}`);
+        const ElImage = document.createElement("img");
+        ElImage.className = "RSS-Notification-item-image";
+        ElImage.src = feed?.image || feed?.favicon || 'icons/icon48.png';
+        ElImage.sizes = "48x48";
+        ElImage.style.width = "48px";
+        ElImage.style.height = "48px";
+        ElImage.style.objectFit = "contain";
+        ElImage.style.borderRadius = "8px";
 
+        ElImage.alt = "Feed Image";
+        const ElInfo = document.createElement("div");
+        
+        const chapter = getChapterFromTitle(feed?.items?.[0]?.title || feed.title, feed?.items?.[0]?.link || feed.url);
+        const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
 
+        const status = '';
+        const tags = '';
+        
+        const titleText = trimTitle(feed?.items?.[0]?.title || feed.title);
+        const maxTitleCharLangth = 60;
+        const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
+        
+        const lastRead = Object.values(allHermidata).find(novel => {
+            novel.Title == titleText })?.chapter || '0';
+        
+        const progress = lastRead != '0' ? parseFloat(lastRead) / parseFloat(chapter): '0';
+
+        ElInfo.textContent = `${titleTextTrunacted} | ${chapterText} | ${progress}%`;
+
+        const Elfooter = document.createElement("div");
+        Elfooter.className = "RSS-Notification-item-footer";
+        Elfooter.textContent = `Source: ${feed?.domain || feed.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]}`;
+        
+        li.onclick = () => browser.tabs.create({ url: feed?.items?.[0]?.link || feed.url });
+        
+        // const pubDate = document.createElement("p");
+        // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
+        li.appendChild(ElImage);
+        li.appendChild(ElInfo);
+        // li.appendChild(Elfooter);
+        // li.appendChild(pubDate);
+        list.appendChild(li);
+    }
+}
 
 async function loadRSSData() {
     // load RSS data from storage
@@ -707,8 +773,3 @@ async function saveRSSData(data) {
         console.error('Extention error: Failed Premise saveRSSData: ',error);
     })
 }
-/* 
-RSS_DataBase_[hashed domain]_.json // random RSS get variable from site [domain hashed]
-goes to customRSS.json // handmade RSS file with index same as hermidata hash
-
-*/
