@@ -209,7 +209,7 @@ async function migrateHermidataV2toV3() {
         if (!hashKeyPattern.test(key)) continue;
 
         // Ensure the value is a valid Hermidata entry
-        if (!value || typeof value !== "object" || !value.Title || typeof value.Title !== "string") continue;
+        if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
 
         const titleSlug = value.Title.trim().toLowerCase();
         const newKey = simpleHash(titleSlug);
@@ -413,8 +413,9 @@ async function saveSheet() {
             break;
         }
     });
+    await updateChapterProgress(title, Chapter);
     Hermidata.Past = {};
-    await setHermidata();
+    // await setHermidata();
     browserAPI.runtime.sendMessage({
         type: "SAVE_NOVEL",
         data: [title, Type, Chapter, url, status, date, tags, notes],
@@ -524,73 +525,7 @@ async function openRSS(e) {
     
     makeRSSPage(allHermidata);
 
-    
-    // loadRSSData();
-
     loadSavedFeeds(allHermidata);
-    // const getRSS = await getCustomRSS(index);
-    // 'RSS',or 'custom' OR something different
-
-    /*
-    let lastSync = new Date().toLocaleString();
-    let domain = '';
-    let latestChapter = ''
-    let nextChapterLink = ''
-    let Status = ''
-    let Tags = ''
-    let index = Hermidata.Hash || simpleHash(Hermidata.Title);
-
-    const RSSData = { // TEMP
-        lastSync,
-        entries: {
-            [index]: {
-                domain: domain,
-                latestChapter,
-                nextChapterLink,
-                Status,
-                Tags,
-            },
-        },
-        version: chrome.runtime.getManifest().version,
-
-    }
-    saveRSSData(RSSData);
-
-    console.log(RSSData);
-
-    const hasDataIn_Hermidata = Object.keys(allHermidata).find(key => { return key == index; }) || false;
-    const hasDataInRSS = Object.keys(RSSData.entries).find(key => { return key == index; }) || false;
-
-    const hasDataIn_HermidataAndRSS = hasDataIn_Hermidata && hasDataInRSS;
-    let RSSType = '';
-    Object.values(allHermidata).forEach(element => {
-        if ( !element.RSS ) {
-            element.RSS = {
-                hasRSS: hasDataIn_HermidataAndRSS,
-                type: RSSType || '',
-            }
-        }
-    });
-    console.log(allHermidata)
-    if ( allHermidata) {
-        for (const novel of Object.values(allHermidata)) {
-            const feed = GlobalFeeds.find(f => f.domain === new URL(novel.Url).hostname.replace(/^www\./, ''));
-            if (feed) {
-                console.log(`Found feed for ${novel.Title} at ${feed.url}`);
-                novel.latestChapter = feed.items[0]?.title || novel.latestChapter;
-                console.log(`Latest chapter for ${novel.Title}: ${novel.latestChapter}`);
-                console.log(feed);
-            }
-        }
-    }
-    */
-    /*
-    browserAPI.runtime.sendMessage({
-        type: "LOAD_RSS",
-        data: [],
-        args
-    });
-    */
 }
 
 async function getAllHermidata() {
@@ -606,7 +541,7 @@ async function getAllHermidata() {
 
     for (const [key, value] of Object.entries(allData)) {
         // Ensure the value is a valid Hermidata entry
-        if (!value || typeof value !== "object" || !value.Title || typeof value.Title !== "string") continue;
+        if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
 
         allHermidata[key] = value;
         Count++;
@@ -672,17 +607,7 @@ function makeItemSection(NotificationSection, AllItemSection, allHermidata={}) {
     
 }
 
-async function getCustomRSS(index) {
-    // get RSS from background.js
-    return CustomRSS[index]
-}
-
 async function loadSavedFeeds(allHermidata={}) {
-    // what to get?
-    // latest chapter
-    // next chapter link
-    // Status ( bv. ongoing, finished, dropped etc)
-    // Tags ( website tags, (user tags stored in hermidata))
     const SortedSavedFeeds = {};
 
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
@@ -690,8 +615,9 @@ async function loadSavedFeeds(allHermidata={}) {
     
     for (const feed of savedFeeds) {
         if ( !feed.title || !feed.url ) continue;
-        if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.Url.includes(feed.domain))?.Url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
+        if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
         SortedSavedFeeds[feed?.items?.[0]?.title || feed.title] = feed;
+        linkRSSFeed(trimTitle(feed?.items?.[0]?.title), feed)
         createElItem(feed, allHermidata);
     }
     console.log('[Hermidata] Loaded saved & sorted feeds:', SortedSavedFeeds);
@@ -728,9 +654,8 @@ function createElItem(feed, allHermidata={}) {
         const maxTitleCharLangth = 60;
         const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
         
-        const lastRead = Object.values(allHermidata).find( novel =>  novel.Title == titleText )?.chapter || '0';
-        
-        const progress = lastRead != '0' ? parseFloat(lastRead) / parseFloat(chapter): '0';
+        const lastRead = allHermidata[simpleHash(titleText)]?.chapter?.current;        
+        const progress = lastRead != '0' ? ((parseFloat(lastRead) / parseFloat(chapter)) * 100 ).toPrecision(3): '0';
 
         const ELTitle = document.createElement("div");
         const ELchapter = document.createElement("div");
@@ -788,3 +713,110 @@ async function saveRSSData(data) {
         console.error('Extention error: Failed Premise saveRSSData: ',error);
     })
 }
+
+function makeHermidataV3(title, url, type = "manga") {
+    const hash = simpleHash(title);
+    const source = new URL(url).hostname.replace(/^www\./, "");
+
+    return {
+        id: hash,
+        title: title.trim(),
+        type,
+        url,
+        source,
+        status: "viewing",
+        chapter: {
+            current: 0,
+            latest: null,
+            history: [],
+            lastChecked: new Date().toISOString()
+        },
+        rss: null,
+        import: null,
+        meta: {
+            tags: [],
+            notes: "",
+            added: new Date().toISOString(),
+            updated: new Date().toISOString()
+        }
+    };
+}
+
+async function saveHermidataV3(entry) {
+    const key = entry.id || simpleHash(entry.title);
+    entry.meta.updated = new Date().toISOString();
+    await browser.storage.sync.set({ [key]: entry });
+    console.log(`[HermidataV3] Saved ${entry.title}`);
+}
+
+async function updateChapterProgress(title, newChapterNumber) {
+    const key = simpleHash(title);
+
+    const data = await browser.storage.sync.get(key);
+    const entry = data[key] ? data[key] : makeHermidataV3(title, Hermidata.Url, Hermidata.Type.toLowerCase());
+    if (!entry) {
+        console.warn(`[HermidataV3] No entry found for ${title}`);
+    }
+
+    if (newChapterNumber > entry.chapter.current) {
+        entry.chapter.history.push(entry.chapter.current);
+        entry.chapter.current = newChapterNumber;
+        entry.chapter.lastChecked = new Date().toISOString();
+        entry.meta.updated = new Date().toISOString();
+        await browser.storage.sync.set({ [key]: entry });
+        console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
+    }
+}
+// merge RSS feed data into existing Hermidata entry
+async function linkRSSFeed(title, rssData) {
+    const key = simpleHash(title);
+    const stored = await browser.storage.sync.get(key);
+    const entry = stored[key];
+    if (!entry) return;
+
+    entry.rss = {
+        title: rssData.title,
+        url: rssData.url,
+        domain: rssData.domain,
+        lastFetched: new Date().toISOString(),
+        latestItem: rssData.items?.[0] ?? null
+    };
+
+    // Optionally update chapter.latest from feed title
+    const latestChapter = getChapterFromTitle(rssData.items?.[0]?.title);
+    if (latestChapter) entry.chapter.latest = latestChapter;
+
+    await browser.storage.sync.set({ [key]: entry });
+}
+
+async function migrateHermidata() {
+    const allHermidata = await getAllHermidata();
+    if (!Object.keys(allHermidata).length) return;
+    // check 
+
+    const unified = {};
+    for (const [id, data] of Object.entries(allHermidata)) {
+        if (!data?.Title) continue; // skip invalid entries
+        unified[id] = {
+        id,
+        title: data.Title,
+        type: data.Type.toLowerCase(),
+        url: data.Url,
+        source: new URL(data.Url).hostname.replace(/^www\./, ""),
+        status: data.Status.toLowerCase(),
+        chapter: { current: Number(data.Chapter), latest: null, history: [], lastChecked: data.Date },
+        rss: null,
+        import: null,
+        meta: {
+            tags: data.Tag ? data.Tag.split(",").map(t => t.trim()) : [],
+            notes: data.Notes,
+            added: data.Date,
+            updated: new Date().toISOString()
+        }
+        };
+    }
+
+    await browser.storage.sync.set( unified );
+    console.log("[Hermidata] Migration completed", unified);
+}
+// migrateHermidata();

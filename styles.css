@@ -176,9 +176,6 @@ select.autoInput {
 
 .RSS-Notification-item {
     border: 1px solid var(--Btn);
-    
-    margin-left: 5%;
-    
     background-color: var(--bg-color);
     border-radius: 4px;
     padding: 8px 16px;
@@ -190,11 +187,6 @@ select.autoInput {
     transition: background-color 0.3s ease;
     height: 40px;
 }
-/*
-.RSS-Notification-item:nth-last-child(1) {
-    margin-bottom: 40px;
-}
-*/
 .RSS-Notification-item:hover {
     background-color: var(--Btn_hover);
     cursor: pointer;
@@ -212,12 +204,11 @@ select.autoInput {
 	height: 40px;
 	object-fit: fill;
 	border-radius: 50%;
-	padding: 0 15px;
+	padding: 2px;
     position: absolute;
     left: 5px;
     top: 0;
     margin: 0;
-    padding: 2px;
 }
 .RSS-Notification-item-info {
     display: flex;

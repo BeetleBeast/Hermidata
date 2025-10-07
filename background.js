@@ -519,7 +519,7 @@ async function getAllHermidata() {
 
     for (const [key, value] of Object.entries(allData)) {
         // Ensure the value is a valid Hermidata entry
-        if (!value || typeof value !== "object" || !value.Title || typeof value.Title !== "string") continue;
+        if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
 
         allHermidata[key] = value;
         Count++;
@@ -541,7 +541,7 @@ async function checkFeedsForUpdates() {
         try {
             // HEAD request first
 
-            if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.Url.includes(feed.domain))?.Url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
+            if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
 
             const head = await fetch(feed.url, { method: "HEAD" });
             const etag = head.headers.get("etag");
