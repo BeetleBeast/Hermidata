@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     populateType()
     populateStatus()
     // migrateHermidataV2toV3(); // TEMP
+    // await migrateHermidata();
     Hermidata.Past = await getHermidata();
     document.getElementById("Pagetitle").textContent = Hermidata.Page_Title;
     document.getElementById("title").value =  Hermidata.Past.Title || Hermidata.Title;
@@ -41,7 +42,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("tags").value =  Hermidata.Past.Tag || Hermidata.Tag;
     document.getElementById("notes").value = Hermidata.Notes;
     FixTableSize()
-    
     document.getElementById("save").addEventListener("click", async () => await saveSheet());
     document.getElementById("HDClassicBtn").addEventListener("click", (e) => openClassic(e));
     document.getElementById("HDRSSBtn").addEventListener("click", (e) =>  openRSS(e));
@@ -542,7 +542,7 @@ async function getAllHermidata() {
 
     for (const [key, value] of Object.entries(allData)) {
         // Ensure the value is a valid Hermidata entry
-        if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
+        if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string" ) continue;
 
         allHermidata[key] = value;
         Count++;
@@ -586,23 +586,32 @@ function removeAllChildNodes(parent) {
     }
 
 }
-function makeSubscibeBtn(feedList) {
+async function makeSubscibeBtn(feedList) {
+    const allHermidata_local = await getAllHermidata()
+    const feedListLocal = await loadSavedFeedsViaSavedFeeds(allHermidata_local);
     const subscribeBtn = document.querySelector("#subscribeBtn")
+    const AllItemSection = document.querySelector("#All-RSS-entries")
     subscribeBtn.className = "Btn";
     subscribeBtn.textContent = "Subscribe to RSS Feed";
-    let isCurentPageRSSFeed = false;
+    subscribeBtn.disabled = true
     
     const currentTitle = Hermidata.Title;
-    Object.values(feedList).forEach(feed => {
-        const feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
-            if (currentTitle == feedItemTitle) isCurentPageRSSFeed = true
+    let feedItemTitle;
+    Object.values(feedListLocal).forEach(feed => {
+        feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
+            if (currentTitle == feedItemTitle) {
+                subscribeBtn.disabled = false
+                console.log("current page is a feed page \n", currentTitle)
+            }
     });
-    subscribeBtn.disabled = !!isCurentPageRSSFeed;
-
     subscribeBtn.onclick = () => {
-        Object.values(feedList).forEach(feed => {
-            const feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
-            if (currentTitle == feedItemTitle) linkRSSFeed(feedItemTitle, feed)
+        Object.values(feedListLocal).forEach(feed => {
+            feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
+            if (currentTitle == feedItemTitle) {
+                linkRSSFeed(feedItemTitle, feed);
+                makefeedItem(AllItemSection, feedListLocal, true);
+                console.log('linked RSS to extention')
+            }
         });
     }
 }
@@ -618,17 +627,17 @@ function makeSortSection(sortSection) {
     
     // checkboxes should be compact, max 4 rows, ckick for more
 }
-function makeItemSection(NotificationSection, AllItemSection, feedList, allHermidata={}) {
-    const feed = (parent_section, seachable = false) => { 
-        Object.entries(feedList).forEach(async (key, feed) => {
-        if (parent_section && !document.querySelector(`.TitleHash-${key}`)) {
+
+async function makefeedItem(parent_section, feedListLocal, seachable = false) {
+    Object.entries(feedListLocal).forEach(async key => {
+        if (parent_section && !document.querySelector(`.TitleHash-${key[0]}`)) {
             const li = document.createElement("li");
-            li.className = "RSS-Notification-item";
+            li.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item" : "RSS-Notification-item";
             
-            li.classList.add("hasRSS", `TitleHash-${key}`);
+            li.classList.add("hasRSS", `TitleHash-${key[0]}`);
             const ElImage = document.createElement("img");
-            ElImage.className = "RSS-Notification-item-image";
-            ElImage.src = feed?.image || feed?.favicon || 'icons/icon48.png';
+            ElImage.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-image" : "RSS-Notification-item-image";
+            ElImage.src = key[1]?.image || key[1]?.favicon || 'icons/icon48.png';
             ElImage.sizes = "48x48";
             ElImage.style.width = "48px";
             ElImage.style.height = "48px";
@@ -639,28 +648,28 @@ function makeItemSection(NotificationSection, AllItemSection, feedList, allHermi
             const ElInfo = document.createElement("div");
             ElInfo.className = "RSS-Notification-item-info";
 
-            Hermidata = seachable ? await getAllHermidata(): '';
-            const currentHermidata = Hermidata?.[key]
-            const chapter = getChapterFromTitle(feed?.items?.[0]?.title || feed.title, feed?.items?.[0]?.link || feed.url);
+            const AllHermidata = seachable ? await getAllHermidata(): '';
+            const currentHermidata = AllHermidata?.[key[0]]
+            const chapter = getChapterFromTitle(key[1]?.items?.[0]?.title || key[1].title, key[1]?.items?.[0]?.link || key[1].url);
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
             const currentChapter = seachable ? `current Chapter: ${currentHermidata?.chapter?.current}` : '';
             const status = '';
             const tags = '';
             
-            const titleText = trimTitle(feed?.items?.[0]?.title || feed.title);
+            const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
             const maxTitleCharLangth = 60;
             const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
             
-            const lastRead = allHermidata[key]?.chapter?.current;        
+            const lastRead = AllHermidata[key[0]]?.chapter?.current || '0';        
             const progress = lastRead != '0' ? ((parseFloat(lastRead) / parseFloat(chapter)) * 100 ).toPrecision(3): '0';
 
             const ELTitle = document.createElement("div");
             const ELchapter = document.createElement("div");
             const ELprogress = document.createElement("div");
             
-            ELTitle.className = "RSS-Notification-item-title";
-            ELchapter.className = "RSS-Notification-item-chapter";
-            ELprogress.className = "RSS-Notification-item-progress";
+            ELTitle.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-title" : "RSS-Notification-item-title";
+            ELchapter.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-chapter" : "RSS-Notification-item-chapter";
+            ELprogress.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-progress" : "RSS-Notification-item-progress";
             
 
 
@@ -674,9 +683,9 @@ function makeItemSection(NotificationSection, AllItemSection, feedList, allHermi
 
             const Elfooter = document.createElement("div");
             Elfooter.className = "RSS-Notification-item-footer";
-            Elfooter.textContent = `${feed?.domain || feed.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]}`;
+            Elfooter.textContent = `${key[1]?.domain || key[1].url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]}`;
             
-            li.onclick = () => browser.tabs.create({ url: feed?.items?.[0]?.link || feed.url });
+            li.onclick = () => browser.tabs.create({ url: key[1]?.items?.[0]?.link || key[1].url });
             
             // const pubDate = document.createElement("p");
             // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
@@ -686,9 +695,13 @@ function makeItemSection(NotificationSection, AllItemSection, feedList, allHermi
             parent_section.appendChild(li);
         }
     });
-    };
-    feed(NotificationSection);
-    feed(AllItemSection, true);
+}
+
+
+async function makeItemSection(NotificationSection, AllItemSection, feedList, allHermidata={}) {
+    const feedListLocal = await feedList;
+    makefeedItem(NotificationSection, feedListLocal);
+    makefeedItem(AllItemSection, feedListLocal, true);
     // make the notification section
     // make the all items section
     // each item should have:
@@ -700,7 +713,7 @@ function makeItemSection(NotificationSection, AllItemSection, feedList, allHermi
     
 }
 
-async function loadSavedFeeds(allHermidata={}) {
+async function loadSavedFeedsViaSavedFeeds(allHermidata={}) {
     const feedList = {};
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
     
@@ -714,6 +727,21 @@ async function loadSavedFeeds(allHermidata={}) {
     }
     return feedList;
 }
+
+async function loadSavedFeeds(allHermidata={}) {
+    const feedList = {};
+    const hermidata_local = await getAllHermidata();
+    
+    
+    for (const [id, feed] of Object.entries(hermidata_local)) {
+        if ( feed?.rss ) {
+            const feedItemTitle = trimTitle(feed?.rss?.latestItem || feed.title)
+            feedList[simpleHash(feedItemTitle)] = feed;
+        }
+    }
+    return feedList;
+}
+
 
 async function loadRSSData() {
     // load RSS data from storage
@@ -798,7 +826,7 @@ async function updateChapterProgress(title, newChapterNumber) {
 async function linkRSSFeed(title, rssData) {
     const key = simpleHash(title);
     const stored = await browser.storage.sync.get(key);
-    const entry = stored[key];
+    const entry = stored[key] ? stored[key] : makeHermidataV3(title, Hermidata.Url, Hermidata.Type.toLowerCase());
     if (!entry) return;
 
     entry.rss = {
@@ -810,7 +838,7 @@ async function linkRSSFeed(title, rssData) {
     };
 
     // Optionally update chapter.latest from feed title
-    const latestChapter = getChapterFromTitle(rssData.items?.[0]?.title);
+    const latestChapter = getChapterFromTitle(rssData.items?.[0]?.title, entry.rss.url);
     if (latestChapter) entry.chapter.latest = latestChapter;
 
     await browser.storage.sync.set({ [key]: entry });
@@ -846,4 +874,3 @@ async function migrateHermidata() {
     await browser.storage.sync.set( unified );
     console.log("[Hermidata] Migration completed", unified);
 }
-// migrateHermidata();

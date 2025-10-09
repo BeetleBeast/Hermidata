@@ -36,7 +36,7 @@ body::after {
 .Btn:hover {
     background-color: var(--Btn_hover);
 }
-.Btn:active {
+.Btn:active:not(:disabled) {
     background-color: var(--Btn_active);
     transition: none;
 }
@@ -193,6 +193,7 @@ select.autoInput {
 }
 #RSS-Notification {
     overflow: scroll;
+    width: 100%;
 }
 .RSS-Notification-item-footer {
     font-size: 12px;
@@ -207,7 +208,7 @@ select.autoInput {
 	padding: 2px;
     position: absolute;
     left: 5px;
-    top: 0;
+    padding-top: 15px;
     margin: 0;
 }
 .RSS-Notification-item-info {
@@ -236,4 +237,11 @@ select.autoInput {
     padding-right: 10px;
     right: 0;
     position: absolute;
+}
+#subscribeBtn {
+    float: right;
+}
+#subscribeBtn:disabled {
+    cursor:not-allowed;
+
 }
