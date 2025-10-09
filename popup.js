@@ -651,7 +651,8 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
         const chapter = getChapterFromTitle(key[1]?.items?.[0]?.title || key[1].title, key[1]?.items?.[0]?.link || key[1].url);
         const currentHermidata = AllHermidata?.[key[0]]
         const currentChapter = currentHermidata?.chapter?.current
-        if ( parent_section && !document.querySelector(`${parent_section.id } .TitleHash-${key[0]}`) && ( chapter !== currentChapter )) {
+        const test = document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`)
+        if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`) && ( chapter !== currentChapter )) {
             const li = document.createElement("li");
             li.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item" : "RSS-Notification-item";
             
@@ -730,7 +731,6 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 
 async function makeItemSection(NotificationSection, AllItemSection) {
     const feedListLocal = await loadSavedFeedsViaSavedFeeds();
-    // if ( feedItem)
     makefeedItem(NotificationSection, feedListLocal);
     makefeedItem(AllItemSection, feedListLocal, true);
     // make the notification section
