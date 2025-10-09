@@ -520,13 +520,9 @@ async function openRSS(e) {
     changePageToRSS(e);
     document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
 
-    const allHermidata = await getAllHermidata();
-    
-    
-    
-    const feedList = loadSavedFeeds(allHermidata);
+    const feedList = loadSavedFeeds();
 
-    makeRSSPage(allHermidata, feedList);
+    makeRSSPage(feedList);
 }
 
 async function getAllHermidata() {
@@ -552,18 +548,18 @@ async function getAllHermidata() {
     console.log(`Total entries: ${Count}`);
     return allHermidata;
 }
-function makeRSSPage(allHermidata, feedList) {
+function makeRSSPage() {
 
     // TEMP
     // subscribe section
-    makeSubscibeBtn(feedList);
+    makeSubscibeBtn();
     // sort section
     const sortSection = document.querySelector("#sort-RSS-entries")
     makeSortSection(sortSection);
     // item & notification section
     const NotificationSection = document.querySelector("#RSS-Notification")
     const AllItemSection = document.querySelector("#All-RSS-entries")
-    makeItemSection(NotificationSection, AllItemSection, feedList, allHermidata);
+    makeItemSection(NotificationSection, AllItemSection);
     // footer
 
     const clearNotification = document.querySelector("#clear-notifications")
@@ -586,9 +582,8 @@ function removeAllChildNodes(parent) {
     }
 
 }
-async function makeSubscibeBtn(feedList) {
-    const allHermidata_local = await getAllHermidata()
-    const feedListLocal = await loadSavedFeedsViaSavedFeeds(allHermidata_local);
+async function makeSubscibeBtn() {
+    const feedListLocal = await loadSavedFeedsViaSavedFeeds();
     const subscribeBtn = document.querySelector("#subscribeBtn")
     const AllItemSection = document.querySelector("#All-RSS-entries")
     subscribeBtn.className = "Btn";
@@ -609,7 +604,7 @@ async function makeSubscibeBtn(feedList) {
             feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
             if (currentTitle == feedItemTitle) {
                 linkRSSFeed(feedItemTitle, feed);
-                makefeedItem(AllItemSection, feedListLocal, true);
+                makefeedItem(AllItemSection, feedListLocal, false);
                 console.log('linked RSS to extention')
             }
         });
@@ -698,8 +693,8 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 }
 
 
-async function makeItemSection(NotificationSection, AllItemSection, feedList, allHermidata={}) {
-    const feedListLocal = await feedList;
+async function makeItemSection(NotificationSection, AllItemSection) {
+    const feedListLocal = await loadSavedFeedsViaSavedFeeds();
     makefeedItem(NotificationSection, feedListLocal);
     makefeedItem(AllItemSection, feedListLocal, true);
     // make the notification section
@@ -713,9 +708,10 @@ async function makeItemSection(NotificationSection, AllItemSection, feedList, al
     
 }
 
-async function loadSavedFeedsViaSavedFeeds(allHermidata={}) {
+async function loadSavedFeedsViaSavedFeeds() {
     const feedList = {};
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
+    const allHermidata = await getAllHermidata();
     
     
     for (const feed of savedFeeds) {
@@ -723,19 +719,18 @@ async function loadSavedFeedsViaSavedFeeds(allHermidata={}) {
         if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
         const feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
         feedList[simpleHash(feedItemTitle)] = feed;
-        // createElItem(feed, allHermidata);
     }
     return feedList;
 }
 
-async function loadSavedFeeds(allHermidata={}) {
+async function loadSavedFeeds() {
     const feedList = {};
     const hermidata_local = await getAllHermidata();
     
     
     for (const [id, feed] of Object.entries(hermidata_local)) {
         if ( feed?.rss ) {
-            const feedItemTitle = trimTitle(feed?.rss?.latestItem || feed.title)
+            const feedItemTitle = trimTitle(feed?.rss?.latestItem.title || feed.title)
             feedList[simpleHash(feedItemTitle)] = feed;
         }
     }

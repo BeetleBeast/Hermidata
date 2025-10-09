@@ -51,7 +51,8 @@ body::after {
     position: absolute;
     top: 50px;
     width: 98vw;
-    height: 99vh;
+    overflow: scroll;
+    height: 500px;
 }
 #HDRSSBtn {
     display: flex;
