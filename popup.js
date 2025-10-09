@@ -589,6 +589,8 @@ async function makeSubscibeBtn() {
     subscribeBtn.className = "Btn";
     subscribeBtn.textContent = "Subscribe to RSS Feed";
     subscribeBtn.disabled = true
+    subscribeBtn.ariaLabel = "this site doesn't have a RSS link"
+    // TODO:  find the correct arai for label
     
     const currentTitle = Hermidata.Title;
     let feedItemTitle;
@@ -596,6 +598,7 @@ async function makeSubscibeBtn() {
         feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
             if (currentTitle == feedItemTitle) {
                 subscribeBtn.disabled = false
+                subscribeBtn.ariaLabel = ""
                 console.log("current page is a feed page \n", currentTitle)
             }
     });
@@ -648,8 +651,6 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
             const chapter = getChapterFromTitle(key[1]?.items?.[0]?.title || key[1].title, key[1]?.items?.[0]?.link || key[1].url);
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
             const currentChapter = seachable ? `current Chapter: ${currentHermidata?.chapter?.current}` : '';
-            const status = '';
-            const tags = '';
             
             const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
             const maxTitleCharLangth = 60;
@@ -677,8 +678,22 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 
 
             const Elfooter = document.createElement("div");
+
+            const status = '';
+            if ( currentHermidata?.meta?.tags.length() > 0) {
+                const tagDicContainer = document.createElement('div')
+                tagDicContainer.className = "tag-div-container"
+                for (const tag in currentHermidata?.meta?.tags) {
+                    const tagDiv = document.createElement('div');
+                    tagDiv.textContent = tag;
+                    tagDiv.className = 'tag-div';
+                    tagDicContainer.appendChild(tagDiv)
+                }
+                Elfooter.appendChild(tagDicContainer)
+            }
             Elfooter.className = "RSS-Notification-item-footer";
-            Elfooter.textContent = `${key[1]?.domain || key[1].url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]}`;
+            const domain = key[1]?.domain || key[1].url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
+            Elfooter.textContent = `${domain}`;
             
             li.onclick = () => browser.tabs.create({ url: key[1]?.items?.[0]?.link || key[1].url });
             
