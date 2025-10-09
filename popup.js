@@ -90,6 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error('Extention error trying to open new tab GoogleSheetURL: ',error)
         }
     });
+    changePageToClassic();
 });
 
 // Get active tab info
@@ -502,26 +503,28 @@ function FixTableSize() {
             input.addEventListener('input', resize);
     })
 }
+function changePageToClassic() {
+    document.querySelector("#HDRSSBtn").classList = "Btn";
+    document.querySelector(".HDRSS").style.opacity = 0;
+    document.querySelector(".HDClassic").style.opacity = 1;
+    document.querySelector(".HDClassic").style.overflow = 'hidden';
+    
+    // deactivate links in classic
+    document.querySelectorAll(".HDRSS").forEach(a => {
+        a.style.pointerEvents = 'none';
+    });
+    // activate links in RSS
+    document.querySelectorAll(".HDClassic").forEach(a => {
+        a.style.pointerEvents = 'auto';
+    });
+    document.body.style.height = '';
+}
 function openClassic(e) {
-    const changePageToClassic = (e) => {
+    const changclassListofClassic = (e) => {
         e.target.classList = "active Btn";
-        document.querySelector("#HDRSSBtn").classList = "Btn";
-        document.querySelector(".HDRSS").style.opacity = 0;
-        document.querySelector(".HDClassic").style.opacity = 1;
-        document.querySelector(".HDClassic").style.overflow = 'hidden';
-        
-        // deactivate links in classic
-        document.querySelectorAll(".HDRSS").forEach(a => {
-            a.style.pointerEvents = 'none';
-        });
-        // activate links in RSS
-        document.querySelectorAll(".HDClassic").forEach(a => {
-            a.style.pointerEvents = 'auto';
-        });
-        
-        document.body.style.height = '';
     }
-    changePageToClassic(e);
+    changePageToClassic();
+    changclassListofClassic(e);
 }
 
 async function openRSS(e) {
@@ -747,7 +750,7 @@ async function makeItemSection(NotificationSection, AllItemSection) {
 async function loadSavedFeedsViaSavedFeeds() {
     const feedList = {};
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
-    AllHermidata = await getAllHermidata();
+    AllHermidata = AllHermidata ? AllHermidata : await getAllHermidata();
     
     
     for (const feed of savedFeeds) {
