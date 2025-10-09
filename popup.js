@@ -420,6 +420,11 @@ function populateStatus() {
         folderSelect.appendChild(option);
     });
 }
+
+function capitalizeFirst(str) {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
+}
+
 async function saveSheet() {
     const title = document.getElementById("title").value;
     const Type = document.getElementById("Type").value;
@@ -443,7 +448,7 @@ async function saveSheet() {
     // await setHermidata();
     browserAPI.runtime.sendMessage({
         type: "SAVE_NOVEL",
-        data: [title, Type, Chapter, url, status, date, tags, notes],
+        data: [title, capitalizeFirst(Type), Chapter, url, capitalizeFirst(status), date, tags, notes],
         args
     });
 
@@ -558,7 +563,6 @@ async function getAllHermidata() {
 
     let allHermidata = {};
     let Count = 0;
-    let MigrateDataV2toV3Needed = false
     for (const [key, value] of Object.entries(allData)) {
         // Ensure the value is a valid Hermidata entry
         if (!value || typeof value !== "object" ||  ( !value.title && !value.Title )|| ( typeof value.title !== "string" && typeof value.Title !== "string" ) ) continue;
@@ -750,7 +754,7 @@ async function makeItemSection(NotificationSection, AllItemSection) {
 async function loadSavedFeedsViaSavedFeeds() {
     const feedList = {};
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
-    AllHermidata = AllHermidata ? AllHermidata : await getAllHermidata();
+    AllHermidata = AllHermidata || await getAllHermidata();
     
     
     for (const feed of savedFeeds) {
