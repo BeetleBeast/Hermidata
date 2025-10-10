@@ -52,7 +52,11 @@
     </div>
 </section>
 <section class="HDRSS">
-    <button id="subscribeBtn" type="button" class="Btn" disabled>Subscribe to new RSS feed</button>
+    <div id="HDRSS-subscribe-container">
+        <input id="title_HDRSS" class="HDRSS_Input" data-name="Title"  type="text" spellcheck="false" placeholder="Title" />
+        <select id="Type_HDRSS" class="HDRSS_Input" data-name="Type"  type="text" title="Type" ></select>
+        <button id="subscribeBtn" type="button" class="Btn" disabled>Subscribe to new RSS feed</button>
+    </div>
     <section id="sort-RSS-entries"><!-- Dynamic load sort items--></section>
     <section id="RSS-Notification"><!-- Dynamic load items--></section>
     <section id="All-RSS-entries"><!-- Dynamic load items--></section>
@@ -64,7 +68,7 @@
         </button>
         -->
         <button type="button" id="openFullPageRSS" class="fullpage-RSS-btn Btn">Open RSS page</button>
-        <div id="RSS-latest-sync-div">RSS last sync: <span id="lastSync">Never</span></div> 
+        <div id="RSS-latest-sync-div">RSS: <span id="lastSync">Never</span></div> 
         <button type="button" id="RSS-sync-Manual" class="Btn">Manual sync</button>
         <span id="version">v1.4.3</span>
     </footer>

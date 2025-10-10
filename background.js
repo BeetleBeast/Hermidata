@@ -74,6 +74,35 @@ function updateIcon(Url = null) {
         console.warn("No valid tab to set icon");
     }
 }
+// mapping function to normalize types before looking up the folder
+function resolveBaseType(type, key) {
+    const map = {
+        Manga: "Manga",
+        Manhwa: "Manga",
+        Manhua: "Manga",
+
+        Novel: "Novel",
+        Webnovel: "Novel",
+
+        Anime: "Anime",
+        "TV-Series": "TV-Series",
+    };
+    return map[type] || type;
+}
+
+function resolveBaseStatus(status) {
+    const map = {
+        Viewing: "Viewing",
+        
+        Finished: "Finished",
+        
+        Dropped: "Dropped",
+        
+        Planned: "Planned",
+        "On-hold": "Planned"
+    }
+    return map[status] || status
+}
 // Helper function to set icon and title
 function setIconAndTitle(actionApi, tabId) {
     const iconPath = currentBookmark
@@ -160,8 +189,9 @@ async function addBookmark([title, type, chapter, url, status, date, tags, notes
     const settings = await new Promise((resolve) => {
         chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
     });
-
-    const folderInfo = settings?.FolderMapping?.[type]?.[status];
+    const baseType = resolveBaseType(type)
+    const baseStatus = resolveBaseStatus(status)
+    const folderInfo = settings?.FolderMapping?.[baseType]?.[baseStatus];
     if (!folderInfo?.path) {
         console.warn("Folder mapping not found for", type, status);
         return;
@@ -191,8 +221,9 @@ async function replaceBookmark(dataArray, decision) {
     const settings = await new Promise((resolve) => {
         chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
     });
-
-    const folderInfo = settings?.FolderMapping?.[type]?.[status];
+    const baseType = resolveBaseType(type)
+    const baseStatus = resolveBaseStatus(status)
+    const folderInfo = settings?.FolderMapping?.[baseType]?.[baseStatus];
     if (!folderInfo?.path) {
         console.warn("Folder mapping not found for", type, status);
         return;
@@ -581,6 +612,7 @@ async function checkFeedsForUpdates() {
             console.error(`[Hermidata] Failed to check feed ${feed.url}:`, err);
         }
     }
+    lastAutoFeedCkeck = Date.now()
 
     // Save back updated feeds
     await browser.storage.local.set({ savedFeeds });
@@ -602,6 +634,9 @@ const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 
 let currentBookmark = null;
 let currentTab = null;
+
+let lastAutoFeedCkeck = 0
+let lastFeedCkeck = 0;
 
 chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.sync.get([ "Settings" ], (result) => {
@@ -645,8 +680,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
 });
 
-// Run every 30 minutes
-setInterval(checkFeedsForUpdates, 30 * 60 * 1000);
+setInterval(checkFeedsForUpdates, 30 * 60 * 1000); // run every 30 min
 
 chrome.runtime.onStartup.addListener(() => {
     updateCurrentBookmarkAndIcon();
@@ -670,20 +704,26 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // open settings fix bug from V
 chrome.runtime.onInstalled.addListener((details) => {
     checkFeedsForUpdates();
-    if (details.reason === "install") {
-        // Open settings on first install
-        chrome.runtime.openOptionsPage();
-    } else if (details.reason === "update") {
-        // Optional: open settings after an update
-        const thisVersion = chrome.runtime.getManifest().version;
-        console.log(`Updated to version ${thisVersion}`);
-        chrome.runtime.openOptionsPage();
-    }
+
+    chrome.storage.sync.get([ "Settings" ], (result) => {
+        const settings = result?.Settings;
+        if (details.reason === "install") {
+            // Open settings on first install to fix bug from V?
+            if (!settings) chrome.runtime.openOptionsPage();
+        } else if (details.reason === "update") {
+            const thisVersion = chrome.runtime.getManifest().version;
+            console.log(`Updated to version ${thisVersion}`);
+            // open settings after an update to fix bug from V?
+            if (!settings) chrome.runtime.openOptionsPage();
+        }
+        
+    });
 });
 
 
+
 // usage from popup
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === "SAVE_NOVEL") {
         getToken((token) => {
             writeToSheet(token, msg.data);
@@ -691,7 +731,22 @@ chrome.runtime.onMessage.addListener((msg) => {
         });
         updateCurrentBookmarkAndIcon(msg.data[3]);
     }
-    else if (msg.type === "LOAD_RSS") {
-        // RSSWHATEVER();
+    else if (msg.type === "RELOAD_RSS_SYNC") {
+        const now = Date.now()
+        if (now - lastFeedCkeck >= 1000 *60 * 2) { // 2min passed
+            lastFeedCkeck = now;
+            checkFeedsForUpdates();
+            chrome.runtime.sendMessage({ type: "SYNC_COMPLETED" });
+        } else {
+            console.log('Skipping - already checked recently')
+        }
+    }
+    else if ( msg.type === "GET_LAST_SYNC") {
+        // Send the age in minutes (max 2 digits)
+        const diffMinutes = lastAutoFeedCkeck
+        ? Math.min(99, Math.floor((Date.now() - lastAutoFeedCkeck) / 60000))
+        : null;
+
+        sendResponse({ minutesAgo: diffMinutes });
     }
 });

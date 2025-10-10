@@ -2,30 +2,14 @@ const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 
 const HARDCAP_RUNAWAYGROWTH = 300;
 
-let Type = ["Manga", "Novel", "Anime", "TV-series"];
-let statusList = ["Finished", "Viewing", "Dropped", "Planned"];
-let Hermidata = {
-    Page_Title: '',
-    Title: '',
-    Type: Type[0],
-    Chapter: 0,
-    Url: '',
-    Status: statusList[1],
-    Date: '',
-    Tag: '',
-    Notes: '',
-    GoogleSheetURL: '',
-    Past: {},
-    Hash: ''
-}
+const novelType =  ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"]
+const novelStatus = ['Ongoing', 'Completed', 'Hiatus', 'Canceled']
+const readStatus = ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned']
 let HermidataNeededKeys = {
     Page_Title: '',
     GoogleSheetURL: '',
     Past: {},
 }
-const novelType = ['manga', 'manhwa', 'manhua', 'novel', 'webnovel']
-const novelStatus = ['ongoing', 'completed', 'hiatus', 'canceled']
-const readStatus = ['viewing', 'Finished', 'On-hold', 'Dropped', 'Planned']
 let HermidataV3 = {
     id: '',
     title: '',
@@ -55,17 +39,37 @@ let AllHermidata;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
+    // await migrateHermidataV3toV3hash();
     HermidataV3 = await getCurrentTab();
     HermidataV3.title = trimTitle(HermidataNeededKeys.Page_Title);
     HermidataNeededKeys.GoogleSheetURL = await getGoogleSheetURL();
     populateType()
     populateStatus()
-    // migrateHermidataV2toV3(); // TEMP
-    await migrateHermidata();
+    // migrateHermidataV2toV3();
+    // await migrateHermidata();
     HermidataNeededKeys.Past = await getHermidata();
+
+
+    if (!novelType.includes(HermidataNeededKeys.Past?.type)) {
+        let capitalizeFirstLetterType = capitalizeFirst(HermidataNeededKeys.Past?.type)
+        if ( novelType.includes(capitalizeFirstLetterType) ) HermidataNeededKeys.Past.type = capitalizeFirstLetterType
+        else {
+            console.warn('type can\'t be found in past',HermidataNeededKeys.Past?.type)
+        }
+    }
+    if (!readStatus.includes(HermidataNeededKeys.Past?.status)) {
+        let capitalizeFirstLetterStatus = capitalizeFirst(HermidataNeededKeys.Past?.status)
+        if ( readStatus.includes(capitalizeFirstLetterStatus) ) HermidataNeededKeys.Past.status = capitalizeFirstLetterStatus
+        else {
+            console.warn('type can\'t be found in past',HermidataNeededKeys.Past?.status)
+        }
+    }
+
     document.getElementById("Pagetitle").textContent = HermidataNeededKeys.Page_Title;
     document.getElementById("title").value =  HermidataNeededKeys.Past?.title || HermidataV3.title;
+    document.getElementById("title_HDRSS").value = HermidataNeededKeys.Past?.title || HermidataV3.title;
     document.getElementById("Type").value = HermidataNeededKeys.Past?.type || HermidataV3.type;
+    document.getElementById("Type_HDRSS").value = HermidataNeededKeys.Past?.type || HermidataV3.type;
     document.getElementById("chapter").value = HermidataV3.chapter.current;
     document.getElementById("url").value = HermidataV3.url;
     document.getElementById("status").value =  HermidataNeededKeys.Past?.status || HermidataV3.status;
@@ -92,6 +96,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     changePageToClassic();
 });
+
+function removeKeysFromSync(key) {
+    return new Promise((resolve, reject) => {
+        browserAPI.storage.sync.remove(key, () => {
+            if(browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else {
+                console.log("Removed key:", key);
+                resolve();
+            }
+        });
+    });
+}
 
 // Get active tab info
 function getCurrentTab() {
@@ -197,17 +213,14 @@ async function getHermidata() {
     })
 }
 
+function returnHashedTitle(title,type) {
+    return type 
+    ? simpleHash(`${type}:${trimTitle(title).toLowerCase()}`) // V2
+    : simpleHash(trimTitle(title).toLowerCase()) // V1
+}
 function makeHermidataKey() {
-    let TitleSlug = HermidataV3.title.trim().toLowerCase();
-    // Extract domain name from url
-    const siteMatch = RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataV3.url);
-    const siteName = siteMatch ? siteMatch[1] : "";
-
-    let DomainSlug = siteName.trim().toLowerCase();
-    
-    HermidataV3.id = simpleHash(TitleSlug);
-    
-    return HermidataV3.id || simpleHash(TitleSlug);
+    HermidataV3.id = returnHashedTitle(HermidataV3.title, HermidataV3.type);
+    return HermidataV3.id;
 }
 
 function simpleHash(str) {
@@ -243,8 +256,7 @@ async function migrateHermidataV2toV3() {
         // Ensure the value is a valid Hermidata entry
         if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
 
-        const titleSlug = value.Title.trim().toLowerCase();
-        const newKey = simpleHash(titleSlug);
+        const newKey = returnHashedTitle(value.Title, value.type);
 
         // Skip if already exists (don’t overwrite newer data)
         if (allData[newKey]) continue;
@@ -404,11 +416,16 @@ function getCurrentDate() {
 }
 function populateType() {
     const folderSelect = document.getElementById("Type");
+    const folderSelect2 = document.getElementById("Type_HDRSS")
     novelType.forEach(element => {
         const option = document.createElement("option");
         option.value = element;
         option.textContent = element;
         folderSelect.appendChild(option);
+        const option2 = document.createElement("option");
+        option2.value = element;
+        option2.textContent = element;
+        folderSelect2.appendChild(option2);
     });
 }
 function populateStatus() {
@@ -443,12 +460,15 @@ async function saveSheet() {
         tempHermi[sheetListVariable[i]] = key || '';
         i++
     });
-    await updateChapterProgress(title, Chapter);
+    // save to Browser in JSON format
+    await updateChapterProgress(title, Type, Chapter);
     HermidataNeededKeys.Past = {};
     // await setHermidata();
+
+    // save to google sheet & bookmark/replace bookmark
     browserAPI.runtime.sendMessage({
         type: "SAVE_NOVEL",
-        data: [title, capitalizeFirst(Type), Chapter, url, capitalizeFirst(status), date, tags, notes],
+        data: [title, Type, Chapter, url, status, date, tags, notes],
         args
     });
 
@@ -548,6 +568,7 @@ async function openRSS(e) {
         });
         
         document.body.style.height = '650px';
+        if (document.body.offsetWidth <= 300) document.body.style.width = '664px';
     }
     changePageToRSS(e);
     makeRSSPage();
@@ -575,6 +596,64 @@ async function getAllHermidata() {
     console.log(`Total entries: ${Count}`);
     return allHermidata;
 }
+async function migrateHermidataV3toV3hash() {
+    const allHermidata = await getAllHermidata();
+    const allKeys = Object.keys(allHermidata);
+
+    if (!allKeys.length) {
+        console.warn("No Hermidata entries found.");
+        return;
+    }
+
+    const newEntries = {};
+    const keysToRemove = [];
+    let migratedCount = 0;
+
+    for (const [oldKey, data] of Object.entries(allHermidata)) {
+        try {
+            const title = data.title || data.Title || data?.HermidataV3?.title || "";
+            if (!title) continue;
+
+            // Compute new canonical hash
+            const newHash = returnHashedTitle(title, data.type);
+
+            if ( oldKey === newHash && data.id === newHash) continue;
+
+            // update data with new id
+            const updatedData = {...data, id: newHash }
+            // add new entry with new Hash
+            newEntries[newHash] = updatedData;
+            keysToRemove.push(oldKey);
+
+            migratedCount++;
+        } catch (err) {
+            console.error("Migration error for entry:", oldKey, err);
+        }
+    }
+
+    if (migratedCount === 0) {
+        console.log("No entries needed updates.");
+        return;
+    }
+
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.set(newEntries, () => {
+            if (browserAPI.runtime.lastError)
+                reject(new Error(browserAPI.runtime.lastError));
+            else resolve();
+        });
+    });
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.remove(keysToRemove, () => {
+            if (browserAPI.runtime.lastError)
+                reject(new Error(browserAPI.runtime.lastError));
+            else resolve();
+        });
+    });
+    console.log(`Migration complete — ${migratedCount} entries migrated.`);
+    console.log("Removed old keys:", keysToRemove);
+}
+
 function makeRSSPage() {
 
     // TEMP
@@ -588,19 +667,46 @@ function makeRSSPage() {
     const AllItemSection = document.querySelector("#All-RSS-entries")
     makeItemSection(NotificationSection, AllItemSection);
     // footer
-    document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
-    const clearNotification = document.querySelector("#clear-notifications")
+    makeFooterSection();
+}
 
-    const openSettings = document.querySelector("#openSettings")
-
-    const openFullPageRSS = document.querySelector("#openFullPageRSS")
-    const RSSFullpage = document.querySelector(".fullpage-RSS-btn")
-
-    const latestRSSSync = document.querySelector("#RSS-latest-sync-div")
-    const latestSyncSpan = document.querySelector("#lastSync")
-
-    const ManualSyncBtn = document.querySelector("#RSS-sync-Manual")
+function makeFooterSection() {
     
+    // clear notification
+    const clearNotification = document.querySelector("#clear-notifications");
+    clearNotification.addEventListener('click', () => {
+        removeAllChildNodes(document.querySelector("#RSS-Notification")) // clear front-end
+        // TODO // clear back-end
+    });
+    // open RSS full page
+    const FullpageRSSButton = document.querySelector(".fullpage-RSS-btn");
+    FullpageRSSButton.addEventListener('click', () => openFullpageRSS()) // TODO openFullpageRSS()
+    
+    // sync text & button
+    SyncTextAndButtonOfRSS()
+
+    // manifest version
+    document.querySelector("#version").innerHTML = chrome.runtime.getManifest().version;
+}
+
+function SyncTextAndButtonOfRSS() {
+    const latestRSSSync = document.querySelector("#RSS-latest-sync-div");
+    const latestSyncSpan = document.querySelector("#lastSync");
+    
+    chrome.runtime.sendMessage({ type: "GET_LAST_SYNC" }, (response) => {
+        latestSyncSpan.textContent = "hasn't sync yet";
+        if ( !response || response.minutesAgo === null) return;
+        const languageSuffix = response.minutesAgo >= 2 ? 's' : ''
+        if (response.minutesAgo < 1) latestSyncSpan.textContent = "Just synced";
+        else latestSyncSpan.textContent = `synced: ${response.minutesAgo} minute${languageSuffix} ago`
+    });
+    const ManualSyncBtn = document.querySelector("#RSS-sync-Manual");
+    ManualSyncBtn.addEventListener("click", () => {
+        browserAPI.runtime.sendMessage({ type: "RELOAD_RSS_SYNC" });
+    });
+    chrome.runtime.onMessage.addListener((msg) => {
+        if ( msg.type === "SYNC_COMPLETED") latestSyncSpan.textContent = "Just synced";
+    });
 }
 
 function removeAllChildNodes(parent) {
@@ -616,16 +722,18 @@ async function makeSubscibeBtn() {
     subscribeBtn.className = "Btn";
     subscribeBtn.textContent = "Subscribe to RSS Feed";
     subscribeBtn.disabled = true
+    subscribeBtn.title = "this site doesn't have a RSS link"
     subscribeBtn.ariaLabel = "this site doesn't have a RSS link"
-    // TODO:  find the correct arai for label
     
-    const currentTitle = HermidataV3.title;
+    const currentTitle = document.getElementById("title_HDRSS").value || HermidataV3.title;
+    const currentType = document.getElementById("Type_HDRSS").value || HermidataV3.type;
     let feedItemTitle;
     Object.values(feedListLocal).forEach(feed => {
         feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
             if (currentTitle == feedItemTitle) {
                 subscribeBtn.disabled = false
-                subscribeBtn.ariaLabel = ""
+                subscribeBtn.title = "subscribe to recieve notifications"
+                subscribeBtn.ariaLabel = "subscribe to recieve notifications"
                 console.log("current page is a feed page \n", currentTitle)
             }
     });
@@ -633,7 +741,7 @@ async function makeSubscibeBtn() {
         Object.values(feedListLocal).forEach(feed => {
             feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
             if (currentTitle == feedItemTitle) {
-                linkRSSFeed(feedItemTitle, feed);
+                linkRSSFeed(feedItemTitle, currentType, feed);
                 makefeedItem(AllItemSection, feedListLocal, false);
                 console.log('linked RSS to extention')
             }
@@ -658,12 +766,12 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
         const chapter = getChapterFromTitle(key[1]?.items?.[0]?.title || key[1].title, key[1]?.items?.[0]?.link || key[1].url);
         const currentHermidata = AllHermidata?.[key[0]]
         const currentChapter = currentHermidata?.chapter?.current
-        const test = document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`)
         if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`) && ( chapter !== currentChapter )) {
             const li = document.createElement("li");
             li.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item" : "RSS-Notification-item";
-            
             li.classList.add("hasRSS", `TitleHash-${key[0]}`);
+            li.addEventListener('contextmenu', (e) => rightmouseclickonItem(e))
+
             const ElImage = document.createElement("img");
             ElImage.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-image" : "RSS-Notification-item-image";
             ElImage.src = key[1]?.image || key[1]?.favicon || 'icons/icon48.png';
@@ -681,7 +789,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
             const currentChapterText = seachable ? `current Chapter: ${currentChapter}` : '';
             const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
-            const maxTitleCharLangth = 60;
+            const maxTitleCharLangth = 50;
             const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
             
             const lastRead = AllHermidata[key[0]]?.chapter?.current || '0';        
@@ -734,12 +842,100 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
         }
     });
 }
+function rightmouseclickonItem(e) {
+    e.preventDefault(); // stop the browser’s default context menu
 
+    // Remove any existing custom menu first
+    document.querySelectorAll(".custom-context-menu").forEach(el => el.remove());
 
+    // Create the menu container
+    const menu = document.createElement("div");
+    menu.className = "custom-context-menu";
+    menu.style.top = `${e.clientY}px`;
+    menu.style.left = `${e.clientX}px`;
+
+    // Define your menu options
+    const options = [
+        { label: "Copy title", action: () => copyTitle(e.target) },
+        { label: "Open in page", action: () => openInPage(e.target) },
+        { label: "Open in new window", action: () => openInNewWindow(e.target) },
+        "separator",
+        { label: "Clear notification", action: () => clearNotification(e.target) },
+        "separator",
+        { label: "Unsubscribe", action: () => unsubscribe(e.target) },
+    ];
+    // Build the menu content
+    for (const opt of options) {
+        if (opt === "separator") {
+        const hr = document.createElement("hr");
+        hr.className = "menu-separator";
+        menu.appendChild(hr);
+        continue;
+        }
+        const itemContainer = document.createElement('div');
+        itemContainer.className = "context-menu-item-container";
+
+        const item = document.createElement("div");
+        item.className = "menu-item";
+        item.textContent = opt.label;
+        item.addEventListener("click", () => {
+        opt.action();
+        menu.remove();
+        });
+        itemContainer.appendChild(item);
+        menu.appendChild(itemContainer);
+    }
+
+    document.body.appendChild(menu);
+
+    // Remove when clicking elsewhere
+    document.addEventListener(
+        "click",
+        () => {
+        menu.remove();
+        },
+        { once: true }
+    );
+}
+function copyTitle(target) {
+    const title = document.querySelector(`.RSS-Notification-item-title.${target.className}`).textContent.trim();
+    navigator.clipboard.writeText(title);
+    console.log("Copied:", title);
+}
+
+function openInPage(target) {
+    const url = target.dataset.url;
+    if (url) window.open(url, "_self");
+}
+
+function openInNewWindow(target) {
+    const url = target.dataset.url;
+    if (url) window.open(url, "_blank");
+}
+
+function clearNotification(target) {
+    console.log("Cleared notification for", target);
+    // find id of list item
+    const item = getNotificationItem(target);
+    item.remove()
+}
+
+function getNotificationItem(el) {
+    if (!el) return undefined
+
+    if (el.parentElement?.id === 'RSS-Notification' &&  el.className?.split(' ')[0] === 'RSS-Notification-item' ) return el
+
+    return getNotificationItem(el.parentElement)
+}
+
+function unsubscribe(target) {
+    console.log("Unsubscribed from", target);
+}
 async function makeItemSection(NotificationSection, AllItemSection) {
-    const feedListLocal = await loadSavedFeedsViaSavedFeeds();
-    makefeedItem(NotificationSection, feedListLocal);
-    makefeedItem(AllItemSection, feedListLocal, true);
+    const feedFromHermidata = await loadSavedFeeds(); // actually subscribed
+    const feedListLocal = await loadSavedFeedsViaSavedFeeds(); // pick-up from the road
+    makefeedItem(NotificationSection, feedFromHermidata);
+    makefeedItem(AllItemSection, feedFromHermidata, true);
     // make the notification section
     // make the all items section
     // each item should have:
@@ -756,12 +952,12 @@ async function loadSavedFeedsViaSavedFeeds() {
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
     AllHermidata = AllHermidata || await getAllHermidata();
     
-    
+
     for (const feed of savedFeeds) {
         if ( !feed.title || !feed.url ) continue;
         if ( feed.domain !=  Object.values(AllHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
-        const feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
-        feedList[simpleHash(feedItemTitle)] = feed;
+        const type = Object.values(AllHermidata).find(novel => novel.title == trimTitle(feed?.items?.[0]?.title)).type
+        feedList[returnHashedTitle(feed?.items?.[0]?.title || feed.title || HermidataV3.title, type || HermidataV3.type) ] = feed;
     }
     return feedList;
 }
@@ -773,24 +969,23 @@ async function loadSavedFeeds() {
     
     for (const [id, feed] of Object.entries(AllHermidata)) {
         if ( feed?.rss ) {
-            const feedItemTitle = trimTitle(feed?.rss?.latestItem.title || feed.title)
-            feedList[simpleHash(feedItemTitle)] = feed;
+            feedList[id] = feed;
         }
     }
     return feedList;
 }
 
-function makeHermidataV3(title, url, type = "manga") {
-    const hash = simpleHash(title);
+function makeHermidataV3(title, url, type = "Manga") {
+    const hash = returnHashedTitle(title, type)
     const source = new URL(url).hostname.replace(/^www\./, "");
 
     return {
         id: hash,
-        title: title.trim(),
+        title: title,
         type,
         url,
         source,
-        status: "viewing",
+        status: "Viewing",
         chapter: {
             current: 0,
             latest: null,
@@ -809,17 +1004,17 @@ function makeHermidataV3(title, url, type = "manga") {
 }
 
 async function saveHermidataV3(entry) {
-    const key = entry.id || simpleHash(entry.title);
+    const key = entry.id || returnHashedTitle(entry.title, entry.type);
     entry.meta.updated = new Date().toISOString();
     await browser.storage.sync.set({ [key]: entry });
     console.log(`[HermidataV3] Saved ${entry.title}`);
 }
 
-async function updateChapterProgress(title, newChapterNumber) {
-    const key = simpleHash(title);
+async function updateChapterProgress(title, type, newChapterNumber) {
+    const key = returnHashedTitle(title, type);
 
     const data = await browser.storage.sync.get(key);
-    const entry = data[key] ? data[key] : makeHermidataV3(title, HermidataV3.url, HermidataV3.type.toLowerCase());
+    const entry = data[key] ? data[key] : makeHermidataV3(title, HermidataV3.url, HermidataV3.type);
     if (!entry) {
         console.warn(`[HermidataV3] No entry found for ${title}`);
     }
@@ -827,6 +1022,7 @@ async function updateChapterProgress(title, newChapterNumber) {
     if (newChapterNumber > entry.chapter.current) {
         entry.chapter.history.push(entry.chapter.current);
         entry.chapter.current = newChapterNumber;
+        entry.status = HermidataV3.status;
         entry.chapter.lastChecked = new Date().toISOString();
         entry.meta.updated = new Date().toISOString();
         await browser.storage.sync.set({ [key]: entry });
@@ -836,15 +1032,16 @@ async function updateChapterProgress(title, newChapterNumber) {
 /**
  *  merge RSS feed data into existing Hermidata entry
 */
-async function linkRSSFeed(title, rssData) {
-    const key = simpleHash(title);
+async function linkRSSFeed(title, type, rssData) {
+    const key = returnHashedTitle(title, type);
     const stored = await browser.storage.sync.get(key);
-    const entry = stored[key] ? stored[key] : makeHermidataV3(title, HermidataV3.url, HermidataV3.type.toLowerCase());
+    const entry = stored[key] ? stored[key] : makeHermidataV3(title, HermidataV3.url, HermidataV3.type);
     if (!entry) return;
 
     entry.rss = {
         title: rssData.title,
         url: rssData.url,
+        image: rssData.image,
         domain: rssData.domain,
         lastFetched: new Date().toISOString(),
         latestItem: rssData.items?.[0] ?? null
@@ -868,10 +1065,10 @@ async function migrateHermidata() {
         unified[id] = {
         id,
         title: data.Title,
-        type: data.Type.toLowerCase(),
+        type: data.Type,
         url: data.Url,
         source: new URL(data.Url).hostname.replace(/^www\./, ""),
-        status: data.Status.toLowerCase(),
+        status: data.Status,
         chapter: { current: Number(data.Chapter), latest: null, history: [], lastChecked: data.Date },
         rss: null,
         import: null,

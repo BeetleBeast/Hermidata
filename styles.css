@@ -68,7 +68,7 @@ body::after {
 footer {
     position: fixed;
     bottom: 0;
-    width: 100%;
+    width: 98vw;
     height: 40px;
     background-color: var(--bg-color);
     border-top: 1px solid #ccc;
@@ -172,8 +172,33 @@ select.autoInput {
     color: green;
 }
 
+#HDRSS-subscribe-container {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: end;
+    margin-bottom: 5px;
+}
+#title_HDRSS {
+    width: max-content;
+    flex: 1;
+    cursor: text;
+}
+#Type_HDRSS {
+}
+.HDRSS_Input {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
 
-
+    font-size: 14px;
+    list-style: none;
+    text-align: center;
+    scroll-behavior: smooth;
+}
 .RSS-Notification-item {
     border: 1px solid var(--Btn);
     background-color: var(--bg-color);
@@ -244,4 +269,75 @@ select.autoInput {
 #subscribeBtn:disabled {
     cursor:not-allowed;
 
+}
+/* --- footer --- */
+#clear-notifications {
+    height: 100%;
+    padding: 0 15px;
+}
+#openFullPageRSS {
+    height: 100%;
+    padding: 0 15px;
+}
+#RSS-latest-sync-div {
+    padding-left: 5px;
+    padding-right: 5px;
+    width: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 100%;
+}
+#RSS-sync-Manual {
+    height: 100%;
+    padding: 0 15px;
+}
+#version {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 15px;
+    padding-right: 15px;
+    height: 100%;
+}
+/* --- context-menu --- */
+
+.custom-context-menu {
+    position: sticky;
+    background: #222;
+    color: white;
+    border-radius: 8px;
+    padding: 4px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 180px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-self: center;
+    width: fit-content;
+    flex-flow: column;
+    border: 1px solid #555;
+}
+.context-menu-item-container {
+    width: 100%;
+}
+.menu-item {
+    padding: 8px 12px;
+    padding-left: 25px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.menu-item:hover {
+    background: #444;
+}
+
+.menu-separator {
+    height: 1px;
+    background: #555;
+    margin: 4px 0;
+    width: 100%;
 }

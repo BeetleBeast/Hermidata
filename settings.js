@@ -79,6 +79,12 @@ function getDefaultSettings() {
         },
         TYPE_OPTIONS : ["Manga", "Novel", "Anime", "TV-series"],
         STATUS_OPTIONS : ["Finished", "Viewing", "Dropped", "Planned"],
+
+        NOVEL_TYPE_OPTIONS_V3: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"],
+        NOVEL_TYPE_OPTIONS_V2: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel'],
+        NOVEL_STATUS_OPTIONS_V2: ['Ongoing', 'Completed', 'Hiatus', 'Canceled'],
+        READ_STATUS_OPTIONS_V2: ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'],
+
         FolderMapping: {
             Manga: {
                 Finished: {
@@ -256,7 +262,7 @@ function exportSettings() {
         const a = document.createElement("a");
         
         a.href = url;
-        a.download = "bookmark_plus_export.json";
+        a.download = "Hermidata_Settings_export.json";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -382,7 +388,7 @@ function importRSSBtn(event) {
     };
     reader.readAsText(file);
 }
-async function exportRSSBtn() {
+async function exportRSSBtn() { // possible rss
     try {
         const Data = await new Promise((resolve, reject) => {
             browserAPI.storage.local.get(null, (result) => {
