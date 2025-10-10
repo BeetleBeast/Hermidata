@@ -946,6 +946,94 @@ async function makeItemSection(NotificationSection, AllItemSection) {
     // search bar to search by Title or Notes
     
 }
+// TEMP: has not been chacked by a human
+async function migrateHermidataTypes(newTypesList) {
+    const allData = await getAllHermidata();
+    
+    if (!Object.keys(allData).length) {
+        console.warn("No Hermidata entries found.");
+        return;
+    }
+
+    const updates = {};
+    const keysToRemove = [];
+    const migrationLog = [];
+
+    for (const [oldKey, data] of Object.entries(allData)) {
+        if (!data?.title) continue;
+
+        // Compute new type mapping
+        let newType = data.type;
+        for (const type of newTypesList) {
+            if (type.toLowerCase() === (data.type || "").toLowerCase()) {
+                newType = type;
+                break;
+            }
+        }
+
+        // Generate new hash for title + newType
+        const newHash = returnHashedTitle(data.title, newType);
+
+        // Detect collision with another entry having same title but different type
+        const collision = Object.values(allData).find(
+            e => e.title === data.title && e.type !== newType
+        );
+
+        if (collision) {
+            // By default, prefer the new type
+            console.log(`Collision detected for "${data.title}": old type "${collision.type}", new type "${newType}"`);
+        }
+
+        // Prepare updated object
+        const updatedData = { ...data, type: newType, id: newHash };
+
+        // Save under new hash
+        updates[newHash] = updatedData;
+
+        // Remove old key if it differs from new hash
+        if (oldKey !== newHash) keysToRemove.push(oldKey);
+
+        // Log the migration
+        migrationLog.push({
+            oldKey,
+            newKey: newHash,
+            oldType: data.type,
+            newType: newType,
+            title: data.title,
+            timestamp: Date.now()
+        });
+    }
+
+    // Write all updates to storage
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.set(updates, () => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve();
+        });
+    });
+
+    // Remove old keys
+    if (keysToRemove.length) {
+        await new Promise((resolve, reject) => {
+            browserAPI.storage.sync.remove(keysToRemove, () => {
+                if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+                else resolve();
+            });
+        });
+    }
+
+    // Save migration log for reference
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.set({ __migrationLog: migrationLog }, () => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve();
+        });
+    });
+
+    console.log(`Type migration complete. Total entries migrated: ${Object.keys(updates).length}`);
+    console.table(migrationLog);
+}
+
 
 async function loadSavedFeedsViaSavedFeeds() {
     const feedList = {};
