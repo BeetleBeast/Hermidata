@@ -1107,10 +1107,13 @@ async function updateChapterProgress(title, type, newChapterNumber) {
         console.warn(`[HermidataV3] No entry found for ${title}`);
     }
 
-    if (newChapterNumber > entry.chapter.current) {
+    if (newChapterNumber >= entry.chapter.current) {
+        entry.id = key;
         entry.chapter.history.push(entry.chapter.current);
         entry.chapter.current = newChapterNumber;
         entry.status = HermidataV3.status;
+        entry.type = HermidataV3.type;
+        entry.meta.tags = HermidataV3.meta.tags;
         entry.chapter.lastChecked = new Date().toISOString();
         entry.meta.updated = new Date().toISOString();
         await browser.storage.sync.set({ [key]: entry });
