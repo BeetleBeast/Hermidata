@@ -453,13 +453,13 @@ async function saveSheet() {
     const notes = document.getElementById("notes").value || "";
     const args = '';
     const sheetList = [title, Type, Chapter, url, status, date, tags, notes]
-    const sheetListVariable = ['title', 'type', 'chapter', 'url', 'status', 'date', 'tags', 'notes']
-    const tempHermi = {}
-    let i = 0
-    sheetList.forEach((key) => {
-        tempHermi[sheetListVariable[i]] = key || '';
-        i++
-    });
+    HermidataV3.title = sheetList[0]
+    HermidataV3.type = sheetList[1]
+    HermidataV3.chapter.current = sheetList[2]
+    HermidataV3.url = sheetList[3]
+    HermidataV3.status = sheetList[4]
+    HermidataV3.meta.tags = sheetList[6]
+    HermidataV3.meta.notes = sheetList[7]
     // save to Browser in JSON format
     await updateChapterProgress(title, Type, Chapter);
     HermidataNeededKeys.Past = {};
