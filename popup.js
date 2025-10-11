@@ -39,7 +39,14 @@ let AllHermidata;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
+    /*
+        const removeItems = []
+        for ( const key of removeItems) {
+            removeKeysFromSync(key)
+        }
+    */
     // await migrateHermidataV3toV3hash();
+    AllHermidata = await getAllHermidata();
     HermidataV3 = await getCurrentTab();
     HermidataV3.title = trimTitle(HermidataNeededKeys.Page_Title);
     HermidataNeededKeys.GoogleSheetURL = await getGoogleSheetURL();
@@ -49,22 +56,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     // await migrateHermidata();
     HermidataNeededKeys.Past = await getHermidata();
 
-
-    if (!novelType.includes(HermidataNeededKeys.Past?.type)) {
-        let capitalizeFirstLetterType = capitalizeFirst(HermidataNeededKeys.Past?.type)
-        if ( novelType.includes(capitalizeFirstLetterType) ) HermidataNeededKeys.Past.type = capitalizeFirstLetterType
-        else {
-            console.warn('type can\'t be found in past',HermidataNeededKeys.Past?.type)
+    if (HermidataNeededKeys?.Past) {
+        if (!novelType.includes(HermidataNeededKeys.Past?.type)) {
+            let capitalizeFirstLetterType = capitalizeFirst(HermidataNeededKeys.Past?.type)
+            if ( novelType.includes(capitalizeFirstLetterType) ) HermidataNeededKeys.Past.type = capitalizeFirstLetterType
+            else {
+                console.warn('type can\'t be found in past',HermidataNeededKeys.Past?.type)
+            }
         }
-    }
-    if (!readStatus.includes(HermidataNeededKeys.Past?.status)) {
-        let capitalizeFirstLetterStatus = capitalizeFirst(HermidataNeededKeys.Past?.status)
-        if ( readStatus.includes(capitalizeFirstLetterStatus) ) HermidataNeededKeys.Past.status = capitalizeFirstLetterStatus
-        else {
-            console.warn('type can\'t be found in past',HermidataNeededKeys.Past?.status)
+        if (!readStatus.includes(HermidataNeededKeys.Past?.status)) {
+            let capitalizeFirstLetterStatus = capitalizeFirst(HermidataNeededKeys.Past?.status)
+            if ( readStatus.includes(capitalizeFirstLetterStatus) ) HermidataNeededKeys.Past.status = capitalizeFirstLetterStatus
+            else {
+                console.warn('status can\'t be found in past',HermidataNeededKeys.Past?.status)
+            }
         }
-    }
-
+    } else console.log('no past hermidata')
     document.getElementById("Pagetitle").textContent = HermidataNeededKeys.Page_Title;
     document.getElementById("title").value =  HermidataNeededKeys.Past?.title || HermidataV3.title;
     document.getElementById("title_HDRSS").value = HermidataNeededKeys.Past?.title || HermidataV3.title;
@@ -131,7 +138,7 @@ function getChapterFromTitle(title, url) {
 
     // create chapter based on URL
     const parts = url?.split("/") || [];
-    const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0]
+    const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0] || ''
     // create chapter based on title
     const titleParts = title?.split(/[-–—|:]/).map(p => p.trim());
     const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
@@ -198,12 +205,48 @@ async function setHermidata() {
         });
     });
 }
-
+/**
+ * Title
+ * Type
+ * needs both 
+ * @returns the hermidata json object
+ */
 async function getHermidata() {
+    // get all Hermidata and return latest with same title
     const allHermidata = await getAllHermidata();
     const found = await findLatestByTitle(HermidataV3.title, allHermidata);
-    if ( found) return found
-    const key = makeHermidataKey();
+    // if ( found) return found
+
+
+    let absoluteKey = ''
+    let absoluteObj = {}
+
+    // Generate all possible keys
+    const possibleKeys = novelType.map(type => returnHashedTitle(HermidataV3.title, type));
+    
+    const possibleObj = {}
+    for (const key of possibleKeys) {
+        const obj = await getHermidataViaKey(key);
+        if ( obj && Object.keys(obj).length) possibleObj[key] = obj;
+    }
+    console.log('posible Objects', possibleObj)
+
+
+    if ( Object.keys(possibleObj).length == 1 ) {
+        absoluteKey = Object.keys(possibleObj)[0]
+        absoluteObj = Object.values(possibleObj)[0]
+        return absoluteObj
+    }
+    // more then 1 result -> filter it
+    if ( Object.keys(possibleObj).length > 1 ) {
+        absoluteObj = await tryToFindByOtherMeans(possibleObj)
+
+        const objs = Object.values(possibleObj);
+        // Check for possible same-series different-type pairs
+        return await migrateCopy(objs)
+    }
+    if ( Object.entries(absoluteObj).length > 0) return absoluteObj
+    const key = absoluteKey || makeHermidataKey();
     return new Promise((resolve, reject) => {
         browserAPI.storage.sync.get([key], (result) => {
             if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
@@ -215,6 +258,193 @@ async function getHermidata() {
         return {};
     })
 }
+
+async function migrateCopy(objs) {
+    // Compare pairs and pick which one is newer vs older
+    for (let i = 0; i < objs.length; i++) {
+        for (let j = i + 1; j < objs.length; j++) {
+            const obj1 = objs[i];
+            const obj2 = objs[j];
+            if (isSameSeries(obj1, obj2) && obj1.type !== obj2.type) return await migrationSteps(obj1, obj2);
+        }
+    }
+}
+async function migrationSteps(obj1, obj2) {
+    // Pick by date or lastUpdated
+    const date1 = new Date(obj1.lastUpdated || obj1.date || 0);
+    const date2 = new Date(obj2.lastUpdated || obj2.date || 0);
+
+    let newer = obj1;
+    let older = obj2;
+
+    if (date1 < date2) {
+        newer = obj2;
+        older = obj1;
+    }
+
+    // Confirm with clear indication which is which
+    const confirmMerge = confirmMigrationPrompt(newer, older );
+
+    if (confirmMerge) {
+        const migrated = await migrateHermidataV4(newer, older);
+        return migrated; // Stop after successful merge
+    } else {
+        console.log("User canceled migration; switching it up");
+        // Confirm with clear indication which is which
+        let New_older = newer;
+        let New_newer = older
+        const confirm_NewMerge = confirmMigrationPrompt(New_newer, New_older );
+
+        if (confirm_NewMerge) {
+            const migrated = await migrateHermidataV4(New_newer, New_older);
+            return migrated; // Stop after successful merge
+        } else {
+            console.log("User canceled migration; keeping newer data.");
+            return newer;
+        }   
+    }
+}
+async function tryToFindByOtherMeans(possibleObj) {
+    // Try to find by URL domain or substring
+    const urlDomain = HermidataV3.url ? new URL(HermidataV3.url).hostname.replace(/^www\./, '') : "";
+    const byUrl = Object.values(possibleObj).find(item => {
+        try {
+            const storedDomain = new URL(item.url || "").hostname.replace(/^www\./, '');
+            return storedDomain === urlDomain;
+        } catch { return false; }
+    });
+    if (byUrl) return byUrl;
+
+    // Try to find same title + newest date
+    const sameTitleMatches = Object.values(possibleObj).filter(item => {
+        return trimTitle(item.title).toLowerCase() === trimTitle(HermidataV3.title).toLowerCase();
+    });
+    if (sameTitleMatches.length) {
+        sameTitleMatches.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+        return sameTitleMatches[0];
+    }
+     // Prefer the same type if exists
+    const typeKey = returnHashedTitle(HermidataV3.title, HermidataV3.type);
+    if (possibleObj[typeKey]) return possibleObj[typeKey];
+
+    // Fallback: old V1 hash (title only)
+    const fallbackKey = simpleHash(trimTitle(HermidataV3.title).toLowerCase());
+    const fallbackObj = await getHermidataViaKey(fallbackKey);
+    if (fallbackObj) return fallbackObj;
+
+    // Nothing found
+    return '';
+}
+
+async function getHermidataViaKey(key) {
+    return new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get([key], (result) => {
+            if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
+            resolve(result?.[key] || {});
+        });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        console.log('Key',key,'\n');
+        return {};
+    })
+}
+
+/**
+ *  Detect if two Hermidata entries refer to the same series (by title similarity)
+ */
+function isSameSeries(a, b) {
+    if (!a || !b) return false;
+    const titleA = trimTitle(a.title || "").toLowerCase();
+    const titleB = trimTitle(b.title || "").toLowerCase();
+    if (!titleA || !titleB) return false;
+
+    // Exact match or fuzzy match (ignoring punctuation)
+    return (
+        titleA === titleB ||
+        titleA.replace(/\W/g, "") === titleB.replace(/\W/g, "")
+    );
+}
+
+/**
+ *  Create a clear confirmation message for user
+ */
+function confirmMigrationPrompt(newer, older, options = {}) {
+    const msg = options.message || 
+        `
+        Same title detected with different types.
+
+        Title: ${newer.title}
+
+        • Old type: ${older.type}
+        • New type: ${newer.type}
+
+        Chapters:
+        • Old: ${older.chapter?.current || "?"}
+        • New: ${newer.chapter?.current || "?"}
+
+        Notes:
+        • Old: ${older.meta?.notes || "(none)"}
+        • New: ${newer.meta?.notes || "(none)"}
+
+        → Keep the newer type (“${newer.type}”) and merge?
+            `;
+            return confirm(msg);
+}
+
+/**
+ *  Merge two Hermidata entries intelligently
+ */
+function mergeHermidata(oldData, newData) {
+    const merged = structuredClone(oldData); // safe deep copy
+
+    // Prefer newer or non-empty fields
+    merged.type = newData.type || oldData.type;
+    merged.id = returnHashedTitle(merged.title, merged.type);
+    merged.url = newData.url || oldData.url;
+    merged.lastUpdated = Date.now();
+
+    merged.chapter = {
+        current: newData.chapter?.current || oldData.chapter?.current || "0",
+        total: newData.chapter?.total || oldData.chapter?.total || "",
+    };
+
+    merged.status = newData.status || oldData.status || "Planned";
+
+    merged.meta = {
+        ...oldData.meta,
+        ...newData.meta,
+        tags: [...new Set([
+            ...(oldData.meta?.tags?.split(",") || []),
+            ...(newData.meta?.tags?.split(",") || []),
+        ])].filter(Boolean).join(", "),
+        notes: newData.meta?.notes || oldData.meta?.notes || "",
+    };
+
+    return merged;
+}
+
+/**
+ *  Migrate an old entry to a new key and remove the old one
+ */
+async function migrateHermidataV4(newer, older) {
+    const merged = {
+        ...older,
+        ...newer, // newer values take priority
+        type: newer.type,
+        lastUpdated: new Date().toISOString(),
+    };
+
+    const newKey = returnHashedTitle(merged.title, merged.type);
+    const oldKey = returnHashedTitle(older.title, older.type);
+
+    await browserAPI.storage.sync.set({ [newKey]: merged });
+    await browserAPI.storage.sync.remove(oldKey);
+
+    console.log(`Migrated from ${oldKey} → ${newKey}`);
+    return merged;
+}
+
+
 
 async function migrateKey(oldData, newType) {
     const newKey = returnHashedTitle(oldData.title, newType);
@@ -661,10 +891,12 @@ async function migrateHermidataV3toV3hash() {
         try {
             const title = data.title || data.Title || data?.HermidataV3?.title || "";
             if (!title) continue;
+            if (!data.type || typeof data.type !== "string") continue;
+
+            const capitalizedType = data.type.charAt(0).toUpperCase() + data.type.slice(1);
 
             // Compute new canonical hash
-            const newHash = returnHashedTitle(title, data.type);
-
+            const newHash = returnHashedTitle(title, capitalizedType);
             if ( oldKey === newHash && data.id === newHash) continue;
 
             // update data with new id
@@ -764,19 +996,19 @@ function removeAllChildNodes(parent) {
 
 }
 async function makeSubscibeBtn() {
-    const feedListLocal = await loadSavedFeedsViaSavedFeeds();
+    const feedListGLobal = await loadSavedFeedsViaSavedFeeds();
+    const feedListLocal = await loadSavedFeeds();
     const subscribeBtn = document.querySelector("#subscribeBtn")
+    const NotificationSection = document.querySelector("#RSS-Notification")
     const AllItemSection = document.querySelector("#All-RSS-entries")
     subscribeBtn.className = "Btn";
     subscribeBtn.textContent = "Subscribe to RSS Feed";
     subscribeBtn.disabled = true
     subscribeBtn.title = "this site doesn't have a RSS link"
     subscribeBtn.ariaLabel = "this site doesn't have a RSS link"
-    
-    const currentTitle = document.getElementById("title_HDRSS").value || HermidataV3.title;
-    const currentType = document.getElementById("Type_HDRSS").value || HermidataV3.type;
     let feedItemTitle;
-    Object.values(feedListLocal).forEach(feed => {
+    const currentTitle = document.getElementById("title_HDRSS").value || HermidataV3.title;
+    Object.values(feedListGLobal).forEach(feed => {
         feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
             if (currentTitle == feedItemTitle) {
                 subscribeBtn.disabled = false
@@ -786,19 +1018,33 @@ async function makeSubscibeBtn() {
             }
     });
     subscribeBtn.onclick = () => {
-        Object.values(feedListLocal).forEach(feed => {
+        Object.values(feedListGLobal).forEach(feed => {
             feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
             if (currentTitle == feedItemTitle) {
+                const currentType = document.getElementById("Type_HDRSS").value || HermidataV3.type;
                 linkRSSFeed(feedItemTitle, currentType, feed);
-                makefeedItem(AllItemSection, feedListLocal, false);
+                reloadContent(NotificationSection,AllItemSection, feedListLocal)
                 console.log('linked RSS to extention')
             }
         });
     }
 }
+function reloadContent(NotificationSection,AllItemSection, feedFromHermidata) {
+    removeAllChildNodes(document.querySelector("#RSS-Notification")) // clear front-end
+    removeAllChildNodes(document.querySelector("#All-RSS-entries")) // clear front-end
+    makeFeedHeader(NotificationSection);
+    makefeedItem(NotificationSection, feedFromHermidata);
+    makeItemHeader(AllItemSection);
+    makefeedItem(AllItemSection, feedFromHermidata, true);
+}
 function makeSortSection(sortSection) {
-    // sheck if exists
+    makeSortHeader(sortSection);
     // make the sort section:
+    // makeSortOptions(sortSection);
+
+}
+function makeSortOptions(parent_section) {
+    if (document.querySelector('.mainContainerHeader')) return
     // search bar with auto complete
     // under it, a list of checkboxes for each Type
     // under it, a list of checkboxes for each Status
@@ -807,23 +1053,60 @@ function makeSortSection(sortSection) {
     // under it, a list of checkboxes for each Date (extracted from all entries)
     
     // checkboxes should be compact, max 4 rows, ckick for more
-}
 
+    const mainContainer = document.createElement('div');
+    mainContainer.className = 'mainContainerHeader'
+
+}
+function makeSortHeader(parent_section) {
+    if (document.querySelector('.containerHeader-sort')) return
+    const container = document.createElement('div');
+    container.className = 'containerHeader-sort'
+    const title = document.createElement('div');
+    title.className = "titleHeader";
+    title.textContent = 'Sort'
+    container.appendChild(title);
+    parent_section.appendChild(container)
+
+}
+function makeFeedHeader(parent_section) {
+    if (document.querySelector('.containerHeader-feed')) return
+    const container = document.createElement('div');
+    container.className = 'containerHeader-feed'
+    const title = document.createElement('div');
+    title.className = "titleHeader";
+    title.textContent = 'Notifications'
+    container.appendChild(title);
+    parent_section.appendChild(container)
+
+}
+function makeItemHeader(parent_section) {
+    if (document.querySelector('.containerHeader-item')) return
+    const container = document.createElement('div');
+    container.className = 'containerHeader-item'
+    const title = document.createElement('div');
+    title.className = "titleHeader";
+    title.textContent = 'All saved items'
+    container.appendChild(title);
+    parent_section.appendChild(container)
+
+}
 async function makefeedItem(parent_section, feedListLocal, seachable = false) {
     Object.entries(feedListLocal).forEach(async key => {
         const title = key[1]?.items?.[0]?.title || key[1].title;
         const url = key[1]?.items?.[0]?.link || key[1].url
-        const chapter = getChapterFromTitle(title, url) || key[1]?.chapter?.latest;
+        const chapter = key[1]?.chapter?.latest || ( getChapterFromTitle(title, url) == '01'? '': getChapterFromTitle(title, url) )|| key[1]?.chapter?.current || '';
         const currentHermidata = AllHermidata?.[key[0]]
         const currentChapter = currentHermidata?.chapter?.current
-        if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`) && ( chapter !== currentChapter )) {
+        // removed && ( seachable || (chapter !== currentChapter ))
+        if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`)) {
             const li = document.createElement("li");
-            li.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item" : "RSS-Notification-item";
+            li.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item" : "RSS-Notification-item";
             li.classList.add("hasRSS", `TitleHash-${key[0]}`);
             li.addEventListener('contextmenu', (e) => rightmouseclickonItem(e))
 
             const ElImage = document.createElement("img");
-            ElImage.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-image" : "RSS-Notification-item-image";
+            ElImage.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item-image" : "RSS-Notification-item-image";
             ElImage.src = key[1]?.image || key[1]?.favicon || 'icons/icon48.png';
             ElImage.sizes = "48x48";
             ElImage.style.width = "48px";
@@ -833,30 +1116,30 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 
             ElImage.alt = "Feed Image";
             const ElInfo = document.createElement("div");
-            ElInfo.className = "RSS-Notification-item-info";
+            ElInfo.className =  parent_section.id == "All-RSS-entries" ? "RSS-entries-item-info" : "RSS-Notification-item-info";
 
             
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
-            const currentChapterText = seachable ? `current Chapter: ${currentChapter}` : '';
+            const AllItemChapterText = currentChapter != chapter ? `read ${currentChapter} of ${chapter}` : `up-to-date`;
             const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
             const maxTitleCharLangth = 50;
             const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
             
-            const lastRead = AllHermidata[key[0]]?.chapter?.current || '0';        
-            const progress = lastRead != '0' ? ((parseFloat(lastRead) / parseFloat(chapter)) * 100 ).toPrecision(3): '0';
+            const lastRead = AllHermidata[key[0]]?.chapter?.current || '0';
+            const progress = lastRead != '0' ? ((parseFloat(lastRead) / parseFloat(chapter)) * 100 ).toPrecision(3) : '0';
 
             const ELTitle = document.createElement("div");
             const ELchapter = document.createElement("div");
             const ELprogress = document.createElement("div");
             
-            ELTitle.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-title" : "RSS-Notification-item-title";
-            ELchapter.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-chapter" : "RSS-Notification-item-chapter";
-            ELprogress.className = parent_section.id == "#All-RSS-entries" ? "RSS-entries-item-progress" : "RSS-Notification-item-progress";
+            ELTitle.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item-title" : "RSS-Notification-item-title";
+            ELchapter.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item-chapter" : "RSS-Notification-item-chapter";
+            ELprogress.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item-progress" : "RSS-Notification-item-progress";
             
 
 
             ELTitle.textContent = `${titleTextTrunacted}`;
-            ELchapter.textContent = seachable ? `${currentChapterText} - ${chapterText}` : `${chapterText}`;
+            ELchapter.textContent = seachable ? `${AllItemChapterText}` : `${chapterText}`;
             ELprogress.textContent = `${progress}%`;
 
 
@@ -877,7 +1160,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
                 }
                 Elfooter.appendChild(tagDicContainer)
             }
-            Elfooter.className = "RSS-Notification-item-footer";
+            Elfooter.className =  parent_section.id == "All-RSS-entries" ? "RSS-entries-item-footer" :"RSS-Notification-item-footer";
             const domain = key[1]?.domain || key[1].url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
             Elfooter.textContent = `${domain}`;
             
@@ -902,10 +1185,14 @@ function rightmouseclickonItem(e) {
     const menu = document.createElement("div");
     menu.className = "custom-context-menu";
     menu.style.top = `${e.clientY}px`;
+    if (e.clientY > 400) {
+        menu.style.bottom = `${15}px`;
+        menu.style.top = `${e.clientY - 150}px`;
+    }
     menu.style.left = `${e.clientX}px`;
 
     // Define your menu options
-    const options = [
+    const optionsNotification = [
         { label: "Copy title", action: () => copyTitle(e.target) },
         { label: "Open in page", action: () => openInPage(e.target) },
         { label: "Open in new window", action: () => openInNewWindow(e.target) },
@@ -914,6 +1201,18 @@ function rightmouseclickonItem(e) {
         "separator",
         { label: "Unsubscribe", action: () => unsubscribe(e.target) },
     ];
+    const optionsAllItems = [
+        { label: "Copy title", action: () => copyTitle(e.target) },
+        { label: "Open in page", action: () => openInPage(e.target) },
+        { label: "Open in new window", action: () => openInNewWindow(e.target) },
+        "separator",
+        { label: "Rename", action: () => RenameItem(e.target) },
+        "separator",
+        { label: "delete", action: () => remove(e.target) },
+    ];
+    const itemLocation = getNotificationItem(e.target) ? 'notification' :  'entries'
+    
+    const options = itemLocation == 'notification' ? optionsNotification : optionsAllItems;
     // Build the menu content
     for (const opt of options) {
         if (opt === "separator") {
@@ -939,18 +1238,19 @@ function rightmouseclickonItem(e) {
     document.body.appendChild(menu);
 
     // Remove when clicking elsewhere
-    document.addEventListener(
-        "click",
-        () => {
-        menu.remove();
-        },
-        { once: true }
-    );
+    document.addEventListener("click", () => { menu.remove(); }, { once: true });
 }
 function copyTitle(target) {
-    const title = document.querySelector(`.RSS-Notification-item-title.${target.className}`).textContent.trim();
-    navigator.clipboard.writeText(title);
-    console.log("Copied:", title);
+    const item = getEntriesItem(target) || getNotificationItem(target);
+    const nameClass = item.className.split(' ')[0] == 'RSS-entries-item' 
+        ? 'RSS-entries-item-title'
+        : 'RSS-Notification-item-title';
+    const title0 = document.querySelector(`.${nameClass}.${nameClass}`)
+    const title1 = document.querySelector(`.RSS-Notification-item-title.${target.className}`);
+    const title2 = document.querySelector(`.RSS-entries-item-title.${target.className}`);
+    const title = title1 || title2 || title0
+    navigator.clipboard.writeText(title.textContent.trim());
+    console.log("Copied:", title.textContent.trim());
 }
 
 function openInPage(target) {
@@ -968,8 +1268,64 @@ function clearNotification(target) {
     // find id of list item
     const item = getNotificationItem(target);
     item.remove()
+    // remove from back-end
 }
 
+function RenameItem(target) {
+    const item = getEntriesItem(target)
+    if (!item) {
+        console.log('isn\'t a entries item');
+        return;
+    }
+    const hashItem = item.className.split('TitleHash-')[1]
+    const toBeRenamedItem = AllHermidata[hashItem]
+    const newName = prompt(`Renaming ${toBeRenamedItem.title}`,toBeRenamedItem.title)
+    if(newName != toBeRenamedItem.title) {
+        // TODO migrate old data to new one with diff name
+    }
+    console.log(`renaming item ${toBeRenamedItem}`)
+}
+
+function remove(target) {
+    const item = getEntriesItem(target)
+    if (!item) {
+        console.log('isn\'t a entries item');
+        return;
+    }
+    const hashItem = item.className.split('TitleHash-')[1]
+    const toBeRemovedItem = AllHermidata[hashItem]
+    const confirmation = confirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
+    if ( confirmation) {
+        console.warn(`Removing item ${toBeRemovedItem}`)
+        removeKeysFromSync(hashItem)
+    }
+}
+
+async function unsubscribe(target) {
+    console.log("Unsubscribed from", target);
+    const item = getNotificationItem(target);
+    if (!item) {
+        console.log('isn\'t a notification item');
+        return;
+    }
+    const hashItem = item.className.split('TitleHash-')[1]
+    
+    const NotificationSection = document.querySelector("#RSS-Notification")
+    const AllItemSection = document.querySelector("#All-RSS-entries")
+    const feedFromHermidata = await loadSavedFeeds();
+
+    await unLinkRSSFeed({hash:hashItem });
+    console.log('un-link RSS to extention')
+    reloadContent(NotificationSection, AllItemSection, feedFromHermidata)
+    console.log('reloading notification')
+}
+function getEntriesItem(el) {
+    if (!el) return undefined
+
+    if (el.parentElement?.id === 'All-RSS-entries' &&  el.className?.split(' ')[0] === 'RSS-entries-item' ) return el
+
+    return getEntriesItem(el.parentElement)
+}
 function getNotificationItem(el) {
     if (!el) return undefined
 
@@ -978,16 +1334,13 @@ function getNotificationItem(el) {
     return getNotificationItem(el.parentElement)
 }
 
-function unsubscribe(target) {
-    console.log("Unsubscribed from", target);
-    // TODO make un-subscribe button
-    // TEMP use this to unfix problems
-}
 async function makeItemSection(NotificationSection, AllItemSection) {
     const feedFromHermidata = await loadSavedFeeds(); // actually subscribed
-    const feedListLocal = await loadSavedFeedsViaSavedFeeds(); // pick-up from the road
+
+    makeFeedHeader(NotificationSection);
     makefeedItem(NotificationSection, feedFromHermidata);
-    makefeedItem(AllItemSection, feedFromHermidata, true);
+    makeItemHeader(AllItemSection);
+    makefeedItem(AllItemSection, AllHermidata, true);
     // make the notification section
     // make the all items section
     // each item should have:
@@ -998,94 +1351,6 @@ async function makeItemSection(NotificationSection, AllItemSection) {
     // search bar to search by Title or Notes
     
 }
-// TEMP: has not been chacked by a human
-async function migrateHermidataTypes(newTypesList) {
-    const allData = await getAllHermidata();
-    
-    if (!Object.keys(allData).length) {
-        console.warn("No Hermidata entries found.");
-        return;
-    }
-
-    const updates = {};
-    const keysToRemove = [];
-    const migrationLog = [];
-
-    for (const [oldKey, data] of Object.entries(allData)) {
-        if (!data?.title) continue;
-
-        // Compute new type mapping
-        let newType = data.type;
-        for (const type of newTypesList) {
-            if (type.toLowerCase() === (data.type || "").toLowerCase()) {
-                newType = type;
-                break;
-            }
-        }
-
-        // Generate new hash for title + newType
-        const newHash = returnHashedTitle(data.title, newType);
-
-        // Detect collision with another entry having same title but different type
-        const collision = Object.values(allData).find(
-            e => e.title === data.title && e.type !== newType
-        );
-
-        if (collision) {
-            // By default, prefer the new type
-            console.log(`Collision detected for "${data.title}": old type "${collision.type}", new type "${newType}"`);
-        }
-
-        // Prepare updated object
-        const updatedData = { ...data, type: newType, id: newHash };
-
-        // Save under new hash
-        updates[newHash] = updatedData;
-
-        // Remove old key if it differs from new hash
-        if (oldKey !== newHash) keysToRemove.push(oldKey);
-
-        // Log the migration
-        migrationLog.push({
-            oldKey,
-            newKey: newHash,
-            oldType: data.type,
-            newType: newType,
-            title: data.title,
-            timestamp: Date.now()
-        });
-    }
-
-    // Write all updates to storage
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set(updates, () => {
-            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-            else resolve();
-        });
-    });
-
-    // Remove old keys
-    if (keysToRemove.length) {
-        await new Promise((resolve, reject) => {
-            browserAPI.storage.sync.remove(keysToRemove, () => {
-                if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-                else resolve();
-            });
-        });
-    }
-
-    // Save migration log for reference
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set({ __migrationLog: migrationLog }, () => {
-            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-            else resolve();
-        });
-    });
-
-    console.log(`Type migration complete. Total entries migrated: ${Object.keys(updates).length}`);
-    console.table(migrationLog);
-}
-
 
 async function loadSavedFeedsViaSavedFeeds() {
     const feedList = {};
@@ -1096,7 +1361,7 @@ async function loadSavedFeedsViaSavedFeeds() {
     for (const feed of savedFeeds) {
         if ( !feed.title || !feed.url ) continue;
         if ( feed.domain !=  Object.values(AllHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
-        const type = Object.values(AllHermidata).find(novel => novel.title == trimTitle(feed?.items?.[0]?.title)).type
+        const type = Object.values(AllHermidata).find(novel => novel.title == trimTitle(feed?.items?.[0]?.title))?.type || novelType[0]
         feedList[returnHashedTitle(feed?.items?.[0]?.title || feed.title || HermidataV3.title, type || HermidataV3.type) ] = feed;
     }
     return feedList;
@@ -1178,7 +1443,7 @@ async function updateChapterProgress(title, type, newChapterNumber) {
 async function linkRSSFeed(title, type, rssData) {
     const key = returnHashedTitle(title, type);
     const stored = await browser.storage.sync.get(key);
-    const entry = stored[key] ? stored[key] : makeHermidataV3(title, HermidataV3.url, HermidataV3.type);
+    const entry = stored[key] ? stored[key] : makeHermidataV3(title, HermidataV3.url, type);
     if (!entry) return;
 
     entry.rss = {
@@ -1197,6 +1462,16 @@ async function linkRSSFeed(title, type, rssData) {
     await browser.storage.sync.set({ [key]: entry });
 }
 
+async function unLinkRSSFeed({hash, title = '', type = '', }) {
+    const key = hash || returnHashedTitle(title, type);
+    const stored = await browser.storage.sync.get(key);
+    const entry = stored[key]
+    if (!entry) return;
+
+    entry.rss = null;
+
+    await browser.storage.sync.set({ [key]: entry });
+}
 async function migrateHermidata() {
     const allHermidata = await getAllHermidata();
     if (!Object.keys(allHermidata).length) return;

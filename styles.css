@@ -6,6 +6,8 @@
     --bg-color: rgb(12, 17, 24);
     --Input-color: rgb(40, 53, 75);
     --table-color: var(----Input-color);
+
+    --hr: #555
 }
 body {
     background-color: var(--bg-color);
@@ -171,21 +173,6 @@ select.autoInput {
 #statusSaveDefaultInputInputTextMenu {
     color: green;
 }
-
-#HDRSS-subscribe-container {
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    justify-content: end;
-    margin-bottom: 5px;
-}
-#title_HDRSS {
-    width: max-content;
-    flex: 1;
-    cursor: text;
-}
-#Type_HDRSS {
-}
 .HDRSS_Input {
     background-color: var(--bg-color);
     color: var(--Text-color);
@@ -199,6 +186,21 @@ select.autoInput {
     text-align: center;
     scroll-behavior: smooth;
 }
+
+.titleHeader {
+    font-size: large;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 15px;
+    padding-bottom: 15px;
+}
+.ContainerHeader {
+    width: 100%;
+    border-top: 1px solid var(--hr);
+    border-bottom: 1px solid var(--hr);
+}
+.RSS-entries-item,
 .RSS-Notification-item {
     border: 1px solid var(--Btn);
     background-color: var(--bg-color);
@@ -212,19 +214,24 @@ select.autoInput {
     transition: background-color 0.3s ease;
     height: 40px;
 }
+
+.RSS-entries-item:hover,
 .RSS-Notification-item:hover {
     background-color: var(--Btn_hover);
     cursor: pointer;
 }
+#RSS-entries,
 #RSS-Notification {
     overflow: scroll;
     width: 100%;
 }
+.RSS-entries-item-footer,
 .RSS-Notification-item-footer {
     font-size: 12px;
     color: gray;
     margin-top: -8px;
 }
+.RSS-entries-item-image,
 .RSS-Notification-item-image {
 	width: 40px;
 	height: 40px;
@@ -236,6 +243,7 @@ select.autoInput {
     padding-top: 15px;
     margin: 0;
 }
+.RSS-entries-item-info,
 .RSS-Notification-item-info {
     display: flex;
     flex: 1;
@@ -243,18 +251,21 @@ select.autoInput {
     justify-content: space-evenly;
     padding: 0 15px;
 }
+.RSS-entries-item-title,
 .RSS-Notification-item-title {
     font-weight: bold;
     font-size: 16px;
     padding-left: 10px;
     padding-right: 10px;
 }
+.RSS-entries-item-chapter,
 .RSS-Notification-item-chapter {
     font-weight: bold;
     font-size: 16px;
     padding-left: 10px;
     padding-right: 10px;
 }
+.RSS-entries-item-progress,
 .RSS-Notification-item-progress {
     font-weight: bold;
     font-size: 16px;
@@ -265,10 +276,42 @@ select.autoInput {
 }
 #subscribeBtn {
     float: right;
+    position: relative;
 }
 #subscribeBtn:disabled {
     cursor:not-allowed;
-
+}
+#HDRSS-subscribe-container {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: end;
+    margin-bottom: 5px;
+    position: relative;
+}
+#HDRSS-subscribe-container:hover #Type_HDRSS,
+#HDRSS-subscribe-container:hover #title_HDRSS,
+#subscribeBtn:hover + #Type_HDRSS + #title_HDRSS {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+#Type_HDRSS:not(:focus) {
+    transform: translateX(20%);
+    opacity: 0;
+    pointer-events: none; /* prevents accidental hover */
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+#title_HDRSS {
+    width: max-content;
+    flex: 1;
+    cursor: text;
+}
+#title_HDRSS:not(:focus) {
+    transform: translateX(50%);
+    opacity: 0;
+    pointer-events: none; /* prevents accidental hover */
+    transition: transform 0.3s ease, opacity 0.3s ease;
 }
 /* --- footer --- */
 #clear-notifications {
