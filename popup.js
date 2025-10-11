@@ -200,6 +200,9 @@ async function setHermidata() {
 }
 
 async function getHermidata() {
+    const allHermidata = await getAllHermidata();
+    const found = await findLatestByTitle(HermidataV3.title, allHermidata);
+    if ( found) return found
     const key = makeHermidataKey();
     return new Promise((resolve, reject) => {
         browserAPI.storage.sync.get([key], (result) => {
@@ -208,10 +211,26 @@ async function getHermidata() {
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise getHermidata: ',error);
-        console.log('Key',key,'\n','Hermidata',Hermidata, '\n','HermidataV3', HermidataV3);
+        console.log('Key',key,'\n', '\n','HermidataV3', HermidataV3);
         return {};
     })
 }
+
+async function migrateKey(oldData, newType) {
+    const newKey = returnHashedTitle(oldData.title, newType);
+    const oldKey = returnHashedTitle(oldData.title, oldData.type);
+
+    const newData = { ...oldData, type: newType, id: newKey, lastUpdated: Date.now() };
+
+    // Write new entry
+    await browserAPI.storage.sync.set({ [newKey]: newData });
+
+    // Remove old entry
+    await browserAPI.storage.sync.remove(oldKey);
+
+    console.log(`Migrated from ${oldKey} → ${newKey}`);
+}
+
 
 function returnHashedTitle(title,type) {
     return type 
@@ -474,6 +493,35 @@ async function saveSheet() {
 
     if(!Testing) setTimeout( () => window.close(), 400);
 }
+
+async function findLatestByTitle(title, allData) {
+    if (!title) return null;
+
+    // Normalize title for comparison
+    const cleanTitle = trimTitle(title).toLowerCase();
+
+    // Step 1: Find all entries that match this title
+    const matches = Object.values(allData).filter(item => {
+        if (!item || typeof item !== "object") return false;
+        const storedTitle = trimTitle(item.title || item.Title || "").toLowerCase();
+        return storedTitle === cleanTitle;
+    });
+
+    // Step 2: If nothing found, return null
+    if (matches.length === 0) return null;
+
+    // Step 3: Sort by "lastUpdated" or "date" (newest first)
+    const sorted = matches.toSorted((a, b) => {
+        const timeA = new Date(a.lastUpdated || a.date || 0).getTime();
+        const timeB = new Date(b.lastUpdated || b.date || 0).getTime();
+        return timeB - timeA;
+    });
+
+    // Step 4: Return the latest entry
+    return sorted[0];
+}
+
+
 function FixTableSize() {
     const inputs = document.querySelectorAll('input.autoInput');
     inputs.forEach(input => {
@@ -763,7 +811,9 @@ function makeSortSection(sortSection) {
 
 async function makefeedItem(parent_section, feedListLocal, seachable = false) {
     Object.entries(feedListLocal).forEach(async key => {
-        const chapter = getChapterFromTitle(key[1]?.items?.[0]?.title || key[1].title, key[1]?.items?.[0]?.link || key[1].url);
+        const title = key[1]?.items?.[0]?.title || key[1].title;
+        const url = key[1]?.items?.[0]?.link || key[1].url
+        const chapter = getChapterFromTitle(title, url) || key[1]?.chapter?.latest;
         const currentHermidata = AllHermidata?.[key[0]]
         const currentChapter = currentHermidata?.chapter?.current
         if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`) && ( chapter !== currentChapter )) {
@@ -930,6 +980,8 @@ function getNotificationItem(el) {
 
 function unsubscribe(target) {
     console.log("Unsubscribed from", target);
+    // TODO make un-subscribe button
+    // TEMP use this to unfix problems
 }
 async function makeItemSection(NotificationSection, AllItemSection) {
     const feedFromHermidata = await loadSavedFeeds(); // actually subscribed
