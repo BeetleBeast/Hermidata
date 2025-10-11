@@ -900,7 +900,7 @@ async function migrateHermidataV3toV3hash() {
             if ( oldKey === newHash && data.id === newHash) continue;
 
             // update data with new id
-            const updatedData = {...data, id: newHash }
+            const updatedData = {...data, id: newHash, type: capitalizedType }
             // add new entry with new Hash
             newEntries[newHash] = updatedData;
             keysToRemove.push(oldKey);
