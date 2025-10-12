@@ -200,6 +200,151 @@ select.autoInput {
     border-top: 1px solid var(--hr);
     border-bottom: 1px solid var(--hr);
 }
+
+/* ---- sort ------ */
+/* Root container */
+.mainContainerHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-color);
+    border-bottom: 1px solid var(--Btn);
+    border-radius: 0 0 8px 8px;
+    font-family: system-ui, sans-serif;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Search bar */
+.filter-search {
+    width: 100%;
+    position: relative;
+}
+
+.filter-search input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1px solid var(--Btn);
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+.search-container {
+    width: 100%;
+}
+.search-input {
+    width: 100%;
+}
+.filter-search input[type="text"]:focus {
+    outline: none;
+    border-color: #007aff;
+    box-shadow: 0 0 4px rgba(0, 122, 255, 0.4);
+}
+.filter-section-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    background: var(--bg-color);
+    border: 10 solid var(--Btn);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+/* Each filter section (Type, Status, etc.) */
+.filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    background: var(--bg-color);
+    padding: 0.8rem;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    align-items: center;
+    border: 1px solid var(--Btn);
+    width: 150px;
+    height: fit-content;
+    padding-bottom: 15px;
+}
+.filter-header-text {
+    padding-top: 2px;
+    margin-top: 0;
+}
+.filter-header {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--Text-color);
+    border-bottom: 1px solid var(--Btn);
+    padding-bottom: 0.3rem;
+}
+
+/* List of checkboxes under each filter */
+.filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    margin-top: 0.4rem;
+}
+
+/* Each checkbox + label combo */
+.filter-item-container {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+}
+
+/* Custom SVG checkbox box */
+.custom-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--Btn);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-color: var(--bg-color);
+    transition: all 0.2s ease;
+}
+
+/* Hover highlight */
+.custom-checkbox:hover {
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+/* Neutral (empty) */
+.custom-checkbox[data-state="0"] {
+    background: none;
+}
+
+/* Include (+) */
+.custom-checkbox[data-state="1"] {
+    background: url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">\<line x1="8" y1="2" x2="8" y2="14" stroke="%2300aa00" stroke-width="2"/>\<line x1="2" y1="8" x2="14" y2="8" stroke="%2300aa00" stroke-width="2"/>\</svg>') center/contain no-repeat;
+}
+
+/* Exclude (-) */
+.custom-checkbox[data-state="2"] {
+    background: url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">\<line x1="2" y1="8" x2="14" y2="8" stroke="%23ff3b30" stroke-width="2"/>\</svg>') center/contain no-repeat;
+}
+
+/* Label */
+.filter-item-container label {
+    -webkit-user-select:none;
+    user-select: none;
+    font-size: 0.9rem;
+    color: var(--Text-color);
+}
+
+/* Responsive: stack filters nicely */
+@media (max-width: 600px) {
+    .filter-list {
+        flex-direction: column;
+    }
+}
+
+
 .RSS-entries-item,
 .RSS-Notification-item {
     border: 1px solid var(--Btn);

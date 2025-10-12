@@ -29,7 +29,8 @@ let HermidataV3 = {
         tags: [],
         notes: "",
         added: new Date().toISOString(),
-        updated: new Date().toISOString()
+        updated: new Date().toISOString(),
+        altTitles: []
     }
 }
 const Testing = false;
@@ -132,6 +133,15 @@ function getCurrentTab() {
         }
     });
 }
+
+function findByTitleOrAltV2(title, allData) {
+    title = trimTitle(title);
+    return Object.values(allData).find(novel => 
+        trimTitle(novel.title) === title ||
+        (novel.meta?.altTitles || []).some(t => trimTitle(t) === title)
+    );
+}
+
 function getChapterFromTitle(title, url) {
     // Regex to find the first number (optionally after "chapter", "chap", "ch")
     const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
@@ -147,7 +157,7 @@ function getChapterFromTitle(title, url) {
     .find(p => chapterNumberRegex.test(p)) || ""
     ).replace(/([A-Z])/gi, '').replace(/[^\d.]/g, '').trim();
     // If no chapter found, use empty string
-    return chapterPartV2 || chapterPartV3 || chapterPartV1  || "";
+    return chapterPartV2 || chapterPartV3 || "";
 }
 
 // Get GoogleSheet URL
@@ -291,7 +301,10 @@ async function migrationSteps(obj1, obj2) {
     }
 
     // Confirm with clear indication which is which
+    console.log("Can use confirm?", typeof confirm);
     const confirmMerge = confirmMigrationPrompt(newer, older );
+    console.log("Can use confirm?", typeof confirm);
+    console.log('WTF after')
 
     if (confirmMerge) {
         const migrated = await migrateHermidataV4(newer, older);
@@ -336,7 +349,7 @@ async function tryToFindByOtherMeans(possibleObj) {
     if (possibleObj[typeKey]) return possibleObj[typeKey];
 
     // Fallback: old V1 hash (title only)
-    const fallbackKey = simpleHash(trimTitle(HermidataV3.title).toLowerCase());
+    const fallbackKey = returnHashedTitle(HermidataV3.title);
     const fallbackObj = await getHermidataViaKey(fallbackKey);
     if (fallbackObj) return fallbackObj;
 
@@ -602,7 +615,12 @@ function trimTitle(title) {
     const chapterRegex = /\b(?:Episode|chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
     const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
     const junkRegex = /\b(all page|novel bin|online)\b/i;
-    const mangaRegex = /\b\w*manga\w*\b|\bnovel\b|\banime\b|\btv-series\b/i;
+    const cleanTitleKeyword = (title) => {
+        return title
+        .replace(/^\s*(manga|novel|anime|tv-series)\b\s*/i, '') // start
+        .replace(/\s*\b(manga|novel|anime|tv-series)\s*$/i, '') // end
+        .trim();
+}
     const siteNameRegex = new RegExp(`\\b${siteName}\\b`, 'i');
     const flexibleSiteNameRegex = new RegExp(`\\b${siteName
         .replace(/[-/\\^$*+?.()|[\]{}]/g, "").split("")
@@ -616,7 +634,7 @@ function trimTitle(title) {
         .filter(p => !junkRegex.test(p))
         .filter(p => !siteNameRegex.test(p))
         .filter(p => !flexibleSiteNameRegex.test(p))
-        .map(p => p.replace(mangaRegex, '').trim())
+        .map(p => cleanTitleKeyword(p))
         .map(p => p.replace(/^[\s:;,\-–—|]+/, "").trim()) // remove leading punctuation + spaces
         .map(p => p.replace('#', '').trim()) // remove any '#' characters
         .filter(Boolean)
@@ -741,12 +759,12 @@ async function findLatestByTitle(title, allData) {
     if (!title) return null;
 
     // Normalize title for comparison
-    const cleanTitle = trimTitle(title).toLowerCase();
+    const cleanTitle = trimTitle(title);
 
     // Step 1: Find all entries that match this title
     const matches = Object.values(allData).filter(item => {
         if (!item || typeof item !== "object") return false;
-        const storedTitle = trimTitle(item.title || item.Title || "").toLowerCase();
+        const storedTitle = trimTitle(item.title || item.Title || "");
         return storedTitle === cleanTitle;
     });
 
@@ -1052,25 +1070,221 @@ function reloadContent(NotificationSection,AllItemSection, feedFromHermidata) {
 }
 function makeSortSection(sortSection) {
     makeSortHeader(sortSection);
-    // make the sort section:
-    // makeSortOptions(sortSection);
+    makeSortOptions(sortSection);
+    sortOptionLogic(sortSection);
 
 }
-function makeSortOptions(parent_section) {
-    if (document.querySelector('.mainContainerHeader')) return
-    // search bar with auto complete
-    // under it, a list of checkboxes for each Type
-    // under it, a list of checkboxes for each Status
-    // under it, a list of checkboxes for each Source (extracted from all entries)
-    // under it, a list of checkboxes for each Tag (extracted from all entries)
-    // under it, a list of checkboxes for each Date (extracted from all entries)
+function sortOptionLogic(parent_section) {
+    // state object for filters
+    const filters = {
+        include: {}, // { type: ['Manga'], status: ['Ongoing'] }
+        exclude: {}
+    };
+
+    // find all custom checkboxes
+    const checkboxes = parent_section.querySelectorAll(".custom-checkbox");
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener("click", () => {
+            let state = parseInt(cb.dataset.state || "0");
+
+            // cycle 0→1→2→0
+            state = (state + 1 ) % 3;
+            cb.dataset.state = state;
+
+            // find its label text (filter name)
+            const label = cb.nextElementSibling?.textContent?.trim();
+            // find which section it belongs to (Type, Status, etc.)
+            const section = cb.closest(".filter-section")?.firstChild?.textContent?.trim();
+            const temp1 = cb.closest(".filter-section")
+            const temp2 =  cb.closest(".filter-section")?.querySelector(".filter-header")
+            if (!label || !section) return;
+
+            // init arrays if not exist
+            if (!filters.include[section]) filters.include[section] = [];
+            if (!filters.exclude[section]) filters.exclude[section] = [];
+
+            // reset previous state
+            filters.include[section] = filters.include[section].filter(v => v !== label);
+            filters.exclude[section] = filters.exclude[section].filter(v => v !== label);
+
+            // apply new state
+            if (state === 1) filters.include[section].push(label);
+            else if (state === 2) filters.exclude[section].push(label);
+            // trigger filtering logic here
+            applyFilterToEntries(filters);
+        });
+    });
+}
+
+function applyFilterToEntries(filters) {
+    const entries = document.querySelectorAll(".RSS-entries-item");
+
     
-    // checkboxes should be compact, max 4 rows, ckick for more
+    entries.forEach(entry => {
+        const hashItem = entry.className.split('TitleHash-')[1];
+        const entryData = AllHermidata[hashItem];
+        const type = entryData.type;
+        const status = entryData.status;
+        const source = entryData.source;
+        const tags = entryData.meta.tags || "";
+
+        let visible = true;
+
+        // Check all include filters — must match at least one in each group
+        for (const [section, values] of Object.entries(filters.include)) {
+            if (values.length === 0) continue;
+
+            const val = section === "Type" ? type
+                : section === "Status" ? status
+                : section === "Source" ? source
+                : section === "Tags" ? tags
+                : "";
+
+            const match = Array.isArray(val)
+                ? val.some(v => values.includes(v))
+                : values.includes(val);
+
+            if (!match) {
+                visible = false;
+                break;
+            }
+        }
+
+        // Check exclude filters — hide if matches any
+        if (visible) {
+            for (const [section, values] of Object.entries(filters.exclude)) {
+                if (values.length === 0) continue;
+
+                const val = section === "Type" ? type
+                    : section === "Status" ? status
+                    : section === "Source" ? source
+                    : section === "Tags" ? tags
+                    : "";
+                const match = Array.isArray(val)
+                    ? val.some(v => values.includes(v))
+                    : values.includes(val);
+
+                if (match) {
+                    visible = false;
+                    break;
+                }
+            }
+        }
+
+        entry.style.display = visible ? "" : "none";
+    });
+}
+
+
+function makeSortOptions(parent_section) {
+    if (document.querySelector('.mainContainerHeader')) return;
 
     const mainContainer = document.createElement('div');
-    mainContainer.className = 'mainContainerHeader'
+    mainContainer.className = 'mainContainerHeader';
 
+    // 1. Search bar
+    const searchContainer = document.createElement('div');
+    searchContainer.className = 'search-container';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search...';
+    searchInput.className = 'search-input';
+    searchContainer.appendChild(searchInput);
+    mainContainer.appendChild(searchContainer);
+
+    // Helper to create a filter section
+    const createFilterSection = (title, items, className) => {
+        const section = document.createElement('div');
+        section.className = `filter-section ${className}`;
+        section.style.width = 'fit-content';
+        const header = document.createElement('h4');
+        header.textContent = title;
+        header.className = 'filter-header-text'
+        header.style.cursor = 'pointer';
+        section.appendChild(header);
+        
+
+
+        const list = document.createElement('div');
+        list.className = 'filter-list';
+        list.style.display = 'block';
+
+        header.addEventListener('click', () => {
+            list.style.display = list.style.display === 'none' ? 'block' : 'none';
+        });
+
+        items.forEach(itemText => {
+            const itemContainer = document.createElement('div');
+            itemContainer.className = 'filter-item-container';
+
+            // Custom checkbox div
+            const checkbox = document.createElement('div');
+            checkbox.className = 'custom-checkbox';
+            checkbox.dataset.state = '0'; // 0=neutral, 1=include, 2=exclude
+
+            // Label
+            const label = document.createElement('label');
+            label.textContent = itemText;
+
+            // Toggle on click
+            checkbox.addEventListener('click', () => {
+                let state = Number(checkbox.dataset.state);
+                state = state % 3; // cycle 0->1->2->0
+                checkbox.dataset.state = state.toString();
+            });
+
+            itemContainer.appendChild(checkbox);
+            itemContainer.appendChild(label);
+            list.appendChild(itemContainer);
+        });
+
+        section.appendChild(list);
+        return section;
+    };
+    const filterSection = document.createElement('div');
+    filterSection.className = 'filter-section-container'
+    mainContainer.appendChild(filterSection);
+
+    // 2. Type
+    const typeSection = createFilterSection('Type', novelType, 'filter-type');
+    filterSection.appendChild(typeSection);
+
+    // 3. Status
+    const statusSection = createFilterSection('Status', readStatus, 'filter-status');
+    filterSection.appendChild(statusSection);
+
+    // 3.5. novels Status filter
+    const novelStatusSection = createFilterSection('Novel-Status', novelStatus, 'filter-novel-status');
+    filterSection.appendChild(novelStatusSection);
+
+    // 4. Source
+    const allSources = Array.from(new Set(Object.values(AllHermidata || {}).map(item => item.source).filter(Boolean)));
+    const sourceSection = createFilterSection('Source', allSources, 'filter-source');
+    filterSection.appendChild(sourceSection);
+
+    // 5. Tags
+    const allTags = Array.from(new Set([].concat(...Object.values(AllHermidata || {}).map(item => item.meta?.tags || []))));
+    const tagSection = createFilterSection('Tag', allTags, 'filter-tag');
+    filterSection.appendChild(tagSection);
+
+    // 6. Dates
+    const allDates = Array.from(new Set(Object.values(AllHermidata || {}).map(item => item.meta?.added?.slice(0,10)).filter(Boolean)))
+        .sort((a, b) => new Date(b) - new Date(a));
+    const dateSection = createFilterSection('Date', allDates, 'filter-date');
+    filterSection.appendChild(dateSection);
+
+    parent_section.appendChild(mainContainer);
+    const element = ['Type', 'Status', 'Novel-Status', 'Source', 'Tag', 'Date'];
+    for (let index = 0; index < element.length; index++) {
+        const elFilterClassName = ['filter-type', 'filter-status', 'filter-novel-status', 'filter-source', 'filter-tag', 'filter-date']
+        const elFilter = mainContainer.querySelector(`.${elFilterClassName[index]}`)
+        const calcWidth = elFilter?.clientWidth || '';
+        if ( calcWidth && elFilter) elFilter.style.minWidth = `${calcWidth}px`;
+    }
 }
+
+
 function makeSortHeader(parent_section) {
     if (document.querySelector('.containerHeader-sort')) return
     const container = document.createElement('div');
@@ -1106,7 +1320,7 @@ function makeItemHeader(parent_section) {
 }
 async function makefeedItem(parent_section, feedListLocal, seachable = false) {
     Object.entries(feedListLocal).forEach(async key => {
-        const title = key[1]?.items?.[0]?.title || key[1].title;
+        const title = findByTitleOrAltV2(key[1]?.items?.[0]?.title || key[1].title, AllHermidata).title || key[1]?.items?.[0]?.title || key[1].title;
         const url = key[1]?.items?.[0]?.link || key[1].url
         const chapter = key[1]?.chapter?.latest || ( getChapterFromTitle(title, url) == '01'? '': getChapterFromTitle(title, url) )|| key[1]?.chapter?.current || '';
         const currentHermidata = AllHermidata?.[key[0]]
@@ -1177,7 +1391,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
             const domain = key[1]?.domain || key[1].url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
             Elfooter.textContent = `${domain}`;
             
-            li.onclick = () => browser.tabs.create({ url: key[1]?.items?.[0]?.link || key[1].url });
+            li.onclick = () => browser.tabs.create({ url: key[1]?.items?.[0]?.link || key[1].url || key[1]?.rss.latestItem?.link });
             
             // const pubDate = document.createElement("p");
             // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
@@ -1219,6 +1433,7 @@ function rightmouseclickonItem(e) {
         { label: "Open in page", action: () => openInPage(e.target) },
         { label: "Open in new window", action: () => openInNewWindow(e.target) },
         "separator",
+        { label: "add alt title", action: () => addAltTitle(e.target) },
         { label: "Rename", action: () => RenameItem(e.target) },
         "separator",
         { label: "delete", action: () => remove(e.target) },
@@ -1258,7 +1473,7 @@ function copyTitle(target) {
     const nameClass = item.className.split(' ')[0] == 'RSS-entries-item' 
         ? 'RSS-entries-item-title'
         : 'RSS-Notification-item-title';
-    const title0 = document.querySelector(`.${nameClass}.${nameClass}`)
+    const title0 = item.querySelector(`.${nameClass}`)
     const title1 = document.querySelector(`.RSS-Notification-item-title.${target.className}`);
     const title2 = document.querySelector(`.RSS-entries-item-title.${target.className}`);
     const title = title1 || title2 || title0
@@ -1283,20 +1498,73 @@ function clearNotification(target) {
     item.remove()
     // remove from back-end
 }
-
-function RenameItem(target) {
+async function addAltTitle(target) {
     const item = getEntriesItem(target)
     if (!item) {
         console.log('isn\'t a entries item');
         return;
     }
-    const hashItem = item.className.split('TitleHash-')[1]
-    const toBeRenamedItem = AllHermidata[hashItem]
-    const newName = prompt(`Renaming ${toBeRenamedItem.title}`,toBeRenamedItem.title)
-    if(newName != toBeRenamedItem.title) {
-        // TODO migrate old data to new one with diff name
+    const hashItem = item.className.split('TitleHash-')[1];
+    const entry = AllHermidata[hashItem];
+    if (!entry) {
+        console.warn("Entry not found for hash:", hashItem);
+        return;
     }
-    console.log(`renaming item ${toBeRenamedItem}`)
+    const newTitle = prompt("Add alternate title for this entry:");
+    if (!newTitle) return;
+
+    // Normalize and deduplicate
+    const trimmed = trimTitle(newTitle);
+    entry.meta = entry.meta || {};
+    entry.meta.altTitles = Array.from(
+        new Set([...(entry.meta.altTitles || []), trimmed])
+    );
+
+    // Save to storage
+    await browserAPI.storage.sync.set({ [hashItem]: entry });
+
+    console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
+}
+async function RenameItem(target) {
+    const item = getEntriesItem(target)
+    if (!item) {
+        console.log('isn\'t a entries item');
+        return;
+    }
+    const oldKey = item.className.split('TitleHash-')[1]
+    const oldData = AllHermidata[oldKey]
+    if (!oldData) {
+        console.warn("No data found for this item");
+        return;
+    }
+    const newTitle = prompt(`Renaming "${oldData.title}" to:`, oldData.title);
+    if (!newTitle || newTitle.trim() === oldData.title.trim()) {
+        console.log("Rename canceled or unchanged");
+        return;
+    }
+    // Generate new key and object
+    const newKey = returnHashedTitle(newTitle, oldData.type);
+    const newData = { ...oldData, title: trimTitle(newTitle), id: newKey };
+
+    // Add the old title as an altTitle
+    newData.meta = newData.meta || {};
+    newData.meta.altTitles = Array.from(
+        new Set([...(newData.meta.altTitles || []), oldData.title])
+    );
+
+    // Save and clean up
+    await browserAPI.storage.sync.set({ [newKey]: newData });
+    await browserAPI.storage.sync.remove(oldKey);
+
+    //  update your in-memory list
+    delete AllHermidata[oldKey];
+    AllHermidata[newKey] = newData;
+
+    // update UI
+    item.querySelector(".RSS-entries-item-title").textContent = newTitle;
+    item.className = item.className.replace(oldKey, newKey);
+
+    console.log(`[Hermidata] Renamed "${oldData.title}" → "${newTitle}"`);
 }
 
 function remove(target) {
@@ -1375,7 +1643,8 @@ async function loadSavedFeedsViaSavedFeeds() {
         if ( !feed.title || !feed.url ) continue;
         if ( feed.domain !=  Object.values(AllHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
         const type = Object.values(AllHermidata).find(novel => novel.title == trimTitle(feed?.items?.[0]?.title))?.type || novelType[0]
-        feedList[returnHashedTitle(feed?.items?.[0]?.title || feed.title || HermidataV3.title, type || HermidataV3.type) ] = feed;
+        const typeV2 = findByTitleOrAltV2(trimTitle(feed?.items?.[0]?.title || feed.title), AllHermidata)?.type || novelType[0]
+        feedList[returnHashedTitle(feed?.items?.[0]?.title || feed.title || HermidataV3.title, (typeV2 || type ) || HermidataV3.type) ] = feed;
     }
     return feedList;
 }
@@ -1415,6 +1684,7 @@ function makeHermidataV3(title, url, type = "Manga") {
         meta: {
             tags: [],
             notes: "",
+            altTitles: [],
             added: new Date().toISOString(),
             updated: new Date().toISOString()
         }
@@ -1454,7 +1724,7 @@ async function updateChapterProgress(title, type, newChapterNumber) {
  *  merge RSS feed data into existing Hermidata entry
 */
 async function linkRSSFeed(title, type, rssData) {
-    const key = returnHashedTitle(title, type);
+    const key = returnHashedTitle(findByTitleOrAltV2(feedItemTitle, AllHermidata) || title, type);
     const stored = await browser.storage.sync.get(key);
     const entry = stored[key] ? stored[key] : makeHermidataV3(title, HermidataV3.url, type);
     if (!entry) return;
@@ -1488,31 +1758,68 @@ async function unLinkRSSFeed({hash, title = '', type = '', }) {
 async function migrateHermidata() {
     const allHermidata = await getAllHermidata();
     if (!Object.keys(allHermidata).length) return;
-    // check 
 
     const unified = {};
+    let updatedCount = 0;
+
     for (const [id, data] of Object.entries(allHermidata)) {
-        if (!data?.Title) continue; // skip invalid entries
-        unified[id] = {
-        id,
-        title: data.Title,
-        type: data.Type,
-        url: data.Url,
-        source: new URL(data.Url).hostname.replace(/^www\./, ""),
-        status: data.Status,
-        chapter: { current: Number(data.Chapter), latest: null, history: [], lastChecked: data.Date },
-        rss: null,
-        import: null,
-        meta: {
-            tags: data.Tag ? data.Tag.split(",").map(t => t.trim()) : [],
-            notes: data.Notes,
-            added: data.Date,
-            updated: new Date().toISOString()
+        if (!data?.title) continue; // skip invalid entries
+
+        // Defensive fallback helpers
+        const meta = data.meta || {};
+        const chapter = data.chapter || {};
+        const altTitles = Array.isArray(meta.altTitles) ? meta.altTitles : [];
+
+        // Create unique set of alt titles, always ensuring main title is first
+        const altSet = new Set([ trimTitle(data.title), ...altTitles.map(trimTitle) ]);
+        const altTitlesFinal = Array.from(altSet);
+
+        // Handle URL parsing safely
+        let source = data.source || "";
+        try {
+            if (!source && (data.url || data.Url)) {
+                source = new URL(data.url || data.Url).hostname.replace(/^www\./, "");
+            }
+        } catch {
+            source = "unknown";
         }
+
+        unified[id] = {
+            id,
+            title: data.title,
+            type: data.type,
+            url: data.url || data.Url || "",
+            source,
+            status: data.status || "Unknown",
+            chapter: {
+                current: chapter.current || Number(data.Chapter) || 0,
+                latest: chapter.latest || null,
+                history: chapter.history || [],
+                lastChecked: chapter.lastChecked || data.Date || null
+            },
+            rss: data.rss || null,
+            import: data.import || null,
+            meta: {
+                tags: Array.isArray(meta.tags) ? meta.tags : [],
+                notes: meta.notes || "",
+                added: meta.added || data.Date || new Date().toISOString(),
+                updated: meta.updated || new Date().toISOString(),
+                altTitles: altTitlesFinal
+            }
         };
+
+        updatedCount++;
     }
 
-    await browser.storage.sync.set( unified );
-    console.log("[Hermidata] Migration completed", unified);
-    return unified
+    // Save everything safely
+    await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.set(unified, () => {
+            if (browserAPI.runtime.lastError)
+                reject(new Error(browserAPI.runtime.lastError));
+            else resolve();
+        });
+    });
+
+    console.log(`[Hermidata] Migration completed. ${updatedCount} entries updated.`);
+    return unified;
 }
