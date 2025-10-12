@@ -212,6 +212,7 @@ async function setHermidata() {
  * @returns the hermidata json object
  */
 async function getHermidata() {
+try {
     // get all Hermidata and return latest with same title
     const allHermidata = await getAllHermidata();
     const found = await findLatestByTitle(HermidataV3.title, allHermidata);
@@ -257,6 +258,10 @@ async function getHermidata() {
         console.log('Key',key,'\n', '\n','HermidataV3', HermidataV3);
         return {};
     })
+} catch (err) {
+    console.error("Fatal error in getHermidata:", err);
+    return {};
+}
 }
 
 async function migrateCopy(objs) {
@@ -268,6 +273,9 @@ async function migrateCopy(objs) {
             if (isSameSeries(obj1, obj2) && obj1.type !== obj2.type) return await migrationSteps(obj1, obj2);
         }
     }
+    console.warn("No migratable pair found, returning most recent");
+    objs.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+    return objs[0] || {};
 }
 async function migrationSteps(obj1, obj2) {
     // Pick by date or lastUpdated
@@ -369,26 +377,31 @@ function isSameSeries(a, b) {
  *  Create a clear confirmation message for user
  */
 function confirmMigrationPrompt(newer, older, options = {}) {
-    const msg = options.message || 
-        `
-        Same title detected with different types.
-
-        Title: ${newer.title}
-
-        • Old type: ${older.type}
-        • New type: ${newer.type}
-
-        Chapters:
-        • Old: ${older.chapter?.current || "?"}
-        • New: ${newer.chapter?.current || "?"}
-
-        Notes:
-        • Old: ${older.meta?.notes || "(none)"}
-        • New: ${newer.meta?.notes || "(none)"}
-
-        → Keep the newer type (“${newer.type}”) and merge?
-            `;
-            return confirm(msg);
+    try {
+        const msg = options.message || 
+            `
+            Same title detected with different types.
+    
+            Title: ${newer.title}
+    
+            • Old type: ${older.type}
+            • New type: ${newer.type}
+    
+            Chapters:
+            • Old: ${older.chapter?.current || "?"}
+            • New: ${newer.chapter?.current || "?"}
+    
+            Notes:
+            • Old: ${older.meta?.notes || "(none)"}
+            • New: ${newer.meta?.notes || "(none)"}
+    
+            → Keep the newer type (“${newer.type}”) and merge?
+        `;
+        return confirm(msg);
+    } catch (error) {
+        console.warn("Prompt blocked; auto-selecting newest entry:", error.message);
+        return false;
+    }
 }
 
 /**
