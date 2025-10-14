@@ -36,7 +36,7 @@ let HermidataV3 = {
 const Testing = false;
 
 let AllHermidata;
-
+let selectedIndex = -1;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
@@ -301,9 +301,7 @@ async function migrationSteps(obj1, obj2) {
     }
 
     // Confirm with clear indication which is which
-    console.log("Can use confirm?", typeof confirm);
     const confirmMerge = confirmMigrationPrompt(newer, older );
-    console.log("Can use confirm?", typeof confirm);
     console.log('WTF after')
 
     if (confirmMerge) {
@@ -410,11 +408,40 @@ function confirmMigrationPrompt(newer, older, options = {}) {
     
             → Keep the newer type (“${newer.type}”) and merge?
         `;
-        return confirm(msg);
+        return customConfirm(msg);
     } catch (error) {
         console.warn("Prompt blocked; auto-selecting newest entry:", error.message);
         return false;
     }
+}
+function customConfirm(msg) {
+    return new Promise((resolve) => {
+        const container = document.querySelector('.promptSection');
+        const label = document.querySelector('.genericLabel');
+        const btn1 = document.querySelector('.genericButton1');
+        const btn2 = document.querySelector('.genericButton2');
+
+        label.textContent = msg;
+        container.style.display = 'flex';
+
+        const cleanup = () => {
+            container.style.display = 'none';
+            btn1.removeEventListener('click', onYes);
+            btn2.removeEventListener('click', onNo);
+        };
+        const onYes = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        const onNo = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        btn1.addEventListener('click', onYes);
+        btn2.addEventListener('click', onNo);
+    });
 }
 
 /**
@@ -1028,7 +1055,6 @@ function removeAllChildNodes(parent) {
 }
 async function makeSubscibeBtn() {
     const feedListGLobal = await loadSavedFeedsViaSavedFeeds();
-    const feedListLocal = await loadSavedFeeds();
     const subscribeBtn = document.querySelector("#subscribeBtn")
     const NotificationSection = document.querySelector("#RSS-Notification")
     const AllItemSection = document.querySelector("#All-RSS-entries")
@@ -1054,26 +1080,144 @@ async function makeSubscibeBtn() {
             if (currentTitle == feedItemTitle) {
                 const currentType = document.getElementById("Type_HDRSS").value || HermidataV3.type;
                 linkRSSFeed(feedItemTitle, currentType, feed);
-                reloadContent(NotificationSection,AllItemSection, feedListLocal)
+                reloadContent(NotificationSection, AllItemSection)
                 console.log('linked RSS to extention')
             }
         });
     }
 }
-function reloadContent(NotificationSection,AllItemSection, feedFromHermidata) {
-    removeAllChildNodes(document.querySelector("#RSS-Notification")) // clear front-end
-    removeAllChildNodes(document.querySelector("#All-RSS-entries")) // clear front-end
+async function reloadContent(NotificationSection,AllItemSection) {
+    removeAllChildNodes(NotificationSection) // clear front-end
+    removeAllChildNodes(AllItemSection) // clear front-end
     makeFeedHeader(NotificationSection);
-    makefeedItem(NotificationSection, feedFromHermidata);
+    const feedListLocalReload = await loadSavedFeeds();
+    makefeedItem(NotificationSection, feedListLocalReload);
     makeItemHeader(AllItemSection);
-    makefeedItem(AllItemSection, feedFromHermidata, true);
+    makefeedItem(AllItemSection, feedListLocalReload, true);
 }
 function makeSortSection(sortSection) {
-    makeSortHeader(sortSection);
+    // makeSortHeader(sortSection);
     makeSortOptions(sortSection);
     sortOptionLogic(sortSection);
-
 }
+
+
+
+function filterEntries(query, filtered = null) {
+    const allItems = document.querySelectorAll('.RSS-entries-item');
+    
+    allItems.forEach(item => {
+        const titleEl = item.querySelector('.RSS-entries-item-title');
+        const titleText = titleEl?.textContent?.toLowerCase() || '';
+
+        const match = filtered
+        ? filtered.some(f => f.title.toLowerCase() === titleText)
+        : !query || titleText.includes(query);
+
+        item.style.display = match ? '' : 'none';
+    });
+}
+
+function setupSearchBar(e_, suggestionBox) {
+    const searchInput = document.querySelector('.search-input');
+
+    const items = suggestionBox.querySelectorAll('.autocomplete-item');
+    if (!items.length) return;
+
+    if (e_.key === 'ArrowDown') {
+        e_.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+        updateHighlightedSuggestion(items, selectedIndex);
+    } else if (e_.key === 'ArrowUp') {
+        e_.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+        updateHighlightedSuggestion(items, selectedIndex);
+    } else if (e_.key === 'Enter') {
+        e_.preventDefault();
+        if (selectedIndex >= 0 && items[selectedIndex]) {
+            // use selected suggestion
+            const chosen = items[selectedIndex].textContent;
+            applySearchSelection(searchInput, suggestionBox, chosen);
+        } else if (items.length > 0) {
+            // autocomplete to first suggestion
+            const chosen = items[0].textContent;
+            applySearchSelection(searchInput, suggestionBox, chosen);
+        }
+    }
+
+    // Hide autocomplete when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!suggestionBox.contains(e.target) && e.target !== searchInput) {
+        suggestionBox.innerHTML = '';
+        }
+    });
+}
+
+function handleSearchInput(e, suggestionBox) {
+    const query = e.target.value.trim().toLowerCase();
+    suggestionBox.innerHTML = '';
+
+    if (!query) {
+        filterEntries('');
+        return;
+    }
+
+    const filtered = Object.values(AllHermidata).filter(item =>
+        [item.title, ...(item.meta?.altTitles || [])]
+        .some(t => t.toLowerCase().includes(query))
+    );
+
+    filterEntries(query, filtered);
+
+    // Autocomplete suggestions
+    const suggestions = filtered
+        .map(f => f.title)
+        .filter((v, i, arr) => arr.indexOf(v) === i)
+        .slice(0, 7);
+
+    // Build suggestion elements
+    suggestions.forEach((s, idx) => {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        div.textContent = s;
+        div.addEventListener('click', () => {
+        applySearchSelection(e.target, suggestionBox, s);
+        });
+        suggestionBox.appendChild(div);
+    });
+}
+
+function applySearchSelection(input, suggestionBox, value) {
+    input.value = value;
+    filterEntries(value);
+    suggestionBox.innerHTML = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    suggestionBox.innerHTML = '';
+    input.focus();
+}
+
+function updateHighlightedSuggestion(items, selectedIndex) {
+    items.forEach((el, i) => {
+        el.classList.toggle('highlighted', i === selectedIndex);
+    });
+}
+
+function filterEntries(query, filtered = null) {
+    const allItems = document.querySelectorAll('.RSS-entries-item');
+
+    allItems.forEach(item => {
+        const titleEl = item.querySelector('.RSS-entries-item-title');
+        const titleText = titleEl?.textContent?.toLowerCase() || '';
+
+        const match = filtered
+        ? filtered.some(f => f.title.toLowerCase() === titleText)
+        : !query || titleText.includes(query);
+
+        item.style.display = match ? '' : 'none';
+    });
+}
+
+
 function sortOptionLogic(parent_section) {
     // state object for filters
     const filters = {
@@ -1096,8 +1240,6 @@ function sortOptionLogic(parent_section) {
             const label = cb.nextElementSibling?.textContent?.trim();
             // find which section it belongs to (Type, Status, etc.)
             const section = cb.closest(".filter-section")?.firstChild?.textContent?.trim();
-            const temp1 = cb.closest(".filter-section")
-            const temp2 =  cb.closest(".filter-section")?.querySelector(".filter-header")
             if (!label || !section) return;
 
             // init arrays if not exist
@@ -1129,6 +1271,10 @@ function applyFilterToEntries(filters) {
         const source = entryData.source;
         const tags = entryData.meta.tags || "";
 
+        const isISOString =  new Date(entryData.meta.added)?.getHours() ? true : false;
+        const splitDatum =  entryData.meta?.added.split('/')[2]
+        const dateAdded = isISOString ? entryData.meta.added.split('-')[0] : splitDatum || new Date()?.toISOString().split('-')[0]
+
         let visible = true;
 
         // Check all include filters — must match at least one in each group
@@ -1138,7 +1284,8 @@ function applyFilterToEntries(filters) {
             const val = section === "Type" ? type
                 : section === "Status" ? status
                 : section === "Source" ? source
-                : section === "Tags" ? tags
+                : section === "Tag" ? tags
+                : section === "Date" ? dateAdded
                 : "";
 
             const match = Array.isArray(val)
@@ -1160,6 +1307,7 @@ function applyFilterToEntries(filters) {
                     : section === "Status" ? status
                     : section === "Source" ? source
                     : section === "Tags" ? tags
+                    : section === "Date" ? dateAdded
                     : "";
                 const match = Array.isArray(val)
                     ? val.some(v => values.includes(v))
@@ -1190,7 +1338,15 @@ function makeSortOptions(parent_section) {
     searchInput.type = 'text';
     searchInput.placeholder = 'Search...';
     searchInput.className = 'search-input';
+    
+    const autocompleteContainer = document.createElement('div');
+    autocompleteContainer.className = 'autocompleteContainer';
+
+    searchInput.addEventListener('input', (e) => handleSearchInput(e, autocompleteContainer));
+    searchInput.addEventListener('keydown', (e) => setupSearchBar(e, autocompleteContainer));
+
     searchContainer.appendChild(searchInput);
+    searchContainer.appendChild(autocompleteContainer);
     mainContainer.appendChild(searchContainer);
 
     // Helper to create a filter section
@@ -1198,21 +1354,28 @@ function makeSortOptions(parent_section) {
         const section = document.createElement('div');
         section.className = `filter-section ${className}`;
         section.style.width = 'fit-content';
+        const headerContainer = document.createElement('div');
+        headerContainer.className = 'filter-header-container';
+
+        const headersymbol = document.createElement('div');
+        headersymbol.className = 'filter-header-symbol';
+        headersymbol.dataset.filterState = 'down';
+
         const header = document.createElement('h4');
         header.textContent = title;
         header.className = 'filter-header-text'
         header.style.cursor = 'pointer';
-        section.appendChild(header);
         
-
-
+        
+        
         const list = document.createElement('div');
         list.className = 'filter-list';
-        list.style.display = 'block';
-
+        
         header.addEventListener('click', () => {
-            list.style.display = list.style.display === 'none' ? 'block' : 'none';
+            headersymbol.dataset.filterState = headersymbol.dataset.filterState === 'down' ? 'up' : 'down';
         });
+        headerContainer.append(header,headersymbol);
+        section.appendChild(headerContainer)
 
         items.forEach(itemText => {
             const itemContainer = document.createElement('div');
@@ -1243,7 +1406,17 @@ function makeSortOptions(parent_section) {
         return section;
     };
     const filterSection = document.createElement('div');
-    filterSection.className = 'filter-section-container'
+    filterSection.className = 'filter-section-container';
+
+    const filterSectionTitle = document.createElement('h4');
+    filterSectionTitle.className = 'filterSectionTitle';
+    filterSectionTitle.classList.add('Btn');
+    filterSectionTitle.textContent = "filter";
+    filterSectionTitle.dataset.filterDisplay = 'none';
+    filterSectionTitle.addEventListener('click', () => {
+        filterSectionTitle.dataset.filterDisplay = filterSectionTitle.dataset.filterDisplay === 'none' ? 'flex' : 'none';
+    });
+    searchContainer.appendChild(filterSectionTitle);
     mainContainer.appendChild(filterSection);
 
     // 2. Type
@@ -1269,7 +1442,8 @@ function makeSortOptions(parent_section) {
     filterSection.appendChild(tagSection);
 
     // 6. Dates
-    const allDates = Array.from(new Set(Object.values(AllHermidata || {}).map(item => item.meta?.added?.slice(0,10)).filter(Boolean)))
+    // Object.values(AllHermidata || {}).map(item => item.meta?.added?.slice(0,10)).filter(Boolean)
+    const allDates = (['2026', '2025', '2024'])
         .sort((a, b) => new Date(b) - new Date(a));
     const dateSection = createFilterSection('Date', allDates, 'filter-date');
     filterSection.appendChild(dateSection);
@@ -1280,7 +1454,8 @@ function makeSortOptions(parent_section) {
         const elFilterClassName = ['filter-type', 'filter-status', 'filter-novel-status', 'filter-source', 'filter-tag', 'filter-date']
         const elFilter = mainContainer.querySelector(`.${elFilterClassName[index]}`)
         const calcWidth = elFilter?.clientWidth || '';
-        if ( calcWidth && elFilter) elFilter.style.minWidth = `${calcWidth}px`;
+        if (calcWidth && elFilter) elFilter.style.minWidth = `${calcWidth}px`;
+        else console.log('mimnimum width not added for: ',elFilter,'\n', 'calcWidth is: ',calcWidth)
     }
 }
 
@@ -1575,7 +1750,7 @@ function remove(target) {
     }
     const hashItem = item.className.split('TitleHash-')[1]
     const toBeRemovedItem = AllHermidata[hashItem]
-    const confirmation = confirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
+    const confirmation = customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
     if ( confirmation) {
         console.warn(`Removing item ${toBeRemovedItem}`)
         removeKeysFromSync(hashItem)
@@ -1724,7 +1899,8 @@ async function updateChapterProgress(title, type, newChapterNumber) {
  *  merge RSS feed data into existing Hermidata entry
 */
 async function linkRSSFeed(title, type, rssData) {
-    const key = returnHashedTitle(findByTitleOrAltV2(feedItemTitle, AllHermidata) || title, type);
+    const titleOrAlt = findByTitleOrAltV2(title, AllHermidata).title
+    const key = returnHashedTitle( titleOrAlt || title, type);
     const stored = await browser.storage.sync.get(key);
     const entry = stored[key] ? stored[key] : makeHermidataV3(title, HermidataV3.url, type);
     if (!entry) return;

@@ -5,6 +5,7 @@
     --Text-color: lightgray;
     --bg-color: rgb(12, 17, 24);
     --Input-color: rgb(40, 53, 75);
+    --Input-colorV2: rgb(32, 39, 51);
     --table-color: var(----Input-color);
 
     --hr: #555
@@ -209,7 +210,6 @@ select.autoInput {
     gap: 1rem;
     padding: 1rem;
     background: var(--bg-color);
-    border-bottom: 1px solid var(--Btn);
     border-radius: 0 0 8px 8px;
     font-family: system-ui, sans-serif;
     width: 100%;
@@ -222,6 +222,46 @@ select.autoInput {
     position: relative;
 }
 
+.autocomplete-item:hover {
+    background: var(--Btn-hover);
+}
+
+#filter-search {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--Btn);
+    background: var(--bg-color);
+}
+
+.autocompleteContainer {
+    position: absolute;
+    background: var(--bg-color);
+    border: 1px solid var(--Btn);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    width: 34.2em;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 999;
+    top: 5.5em;
+    overflow: hidden;
+}
+
+.autocomplete-item {
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.highlighted {
+    background: var(--Btn_hover);
+    color: var(--Text-color);
+}
+
+
+
 .filter-search input[type="text"] {
     width: 100%;
     padding: 10px 12px;
@@ -232,10 +272,72 @@ select.autoInput {
 }
 .search-container {
     width: 100%;
+    display: flex;
+    flex-direction: row;
+    height: 32px;
 }
 .search-input {
     width: 100%;
+    background-color: var(--Input-colorV2);
+    color: var(--Text-color);
+    outline-color: var(--Btn);
+    text-emphasis-color: var(--Btn);
+    accent-color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-right: none;
+    border-radius: 0;
 }
+.search-input:focus {
+    outline: 1px invert var(--Btn);
+}
+.filter-header-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.filter-header-symbol {
+	position: initial;
+	display: block;
+	height: 0.5rem;
+	width: 0.5rem;
+	transform: translateY(-100%) rotate(45deg);
+	transition-property: all;
+	transition-timing-function: cubic-bezier(0.4,0,0.2,1);
+	transition-duration: 0.2s;
+	content: "";
+	transform-origin: 75% 75%;
+	box-shadow: 2px 2px;
+	pointer-events: none;
+    margin-left: 10px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+    margin-top: 15px;
+}
+.filterSectionTitle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.filter-header-text {
+    padding-top: 2px;
+    margin-top: 0;
+    -webkit-user-select: none;
+    user-select: none;
+    margin-bottom: 0;
+}
+.filter-header-symbol[data-filter-state="up"] {
+    transform: translateY(-50%) rotate(225deg);
+    
+}
+.filter-header-container:has(.filter-header-symbol[data-filter-state="up"]) ~ .filter-list {
+    max-height: 500px;
+    transform: translateY(0);
+    opacity: 1;
+}
+
 .filter-search input[type="text"]:focus {
     outline: none;
     border-color: #007aff;
@@ -250,7 +352,20 @@ select.autoInput {
     border: 10 solid var(--Btn);
     border-radius: 6px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    justify-content: center;
+    
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: max-height 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
 }
+.search-container:has(.filterSectionTitle[data-filter-display="flex"]) ~ .filter-section-container {
+    max-height: 500px;
+    transform: translateY(0);
+    opacity: 1;
+}
+
 /* Each filter section (Type, Status, etc.) */
 .filter-section {
     display: flex;
@@ -266,10 +381,6 @@ select.autoInput {
     height: fit-content;
     padding-bottom: 15px;
 }
-.filter-header-text {
-    padding-top: 2px;
-    margin-top: 0;
-}
 .filter-header {
     margin: 0;
     font-size: 0.9rem;
@@ -282,9 +393,15 @@ select.autoInput {
 /* List of checkboxes under each filter */
 .filter-list {
     display: flex;
+    flex-direction: column;
     flex-wrap: wrap;
-    gap: 0.6rem 1rem;
     margin-top: 0.4rem;
+
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: max-height 0.3s  cubic-bezier(0.4,0,0.2,1), transform 0.3s  cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
 }
 
 /* Each checkbox + label combo */
@@ -528,4 +645,43 @@ select.autoInput {
     background: #555;
     margin: 4px 0;
     width: 100%;
+}
+
+
+.promptSection {
+    display: none;
+    background-color: rgba(0, 0, 0, 0.2);
+    align-items: center;
+    justify-content: center;
+}
+
+.genericInput {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80%;
+    background-color: var(--Input-colorV2);
+    color: var(--Text-color);
+    outline-color: var(--Btn);
+    text-emphasis-color: var(--Btn);
+    accent-color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-right: none;
+    border-radius: 0;
+}
+.genericInput:focus {
+    outline: 1px invert var(--Btn);
+}
+
+.genericLabel {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+}
+.genericButton1 {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+}
+.genericButton2 {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
 }
