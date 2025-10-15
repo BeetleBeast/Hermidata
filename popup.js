@@ -35,18 +35,16 @@ let HermidataV3 = {
 }
 const Testing = false;
 
+const CalcDiffCache = new Map();
+
 let AllHermidata;
 let selectedIndex = -1;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
-    console.timeStamp('Start of new Hermidata')
-    /*
-        const removeItems = []
-        for ( const key of removeItems) {
-            removeKeysFromSync(key)
-        }
-    */
+    console.log('Start of new Hermidata');
+    const dups = await findPotentialDuplicates(0.9);
+    if ( dups.length > 0) console.table(dups , 'potential duplicates table');
     // await migrateHermidataV3toV3hash();
     AllHermidata = await getAllHermidata();
     HermidataV3 = await getCurrentTab();
@@ -234,10 +232,13 @@ try {
     let absoluteObj = {}
 
     // find title from alt
-    const TrueTitle = findByTitleOrAltV2(HermidataV3.title, allHermidata)?.title
+    const TrueTitle = findByTitleOrAltV2(HermidataV3.title, allHermidata)?.title;
+    // find title from fuzzy seach
+    const AltKeyNeeded = await detectAltTitleNeeded(HermidataV3.title, HermidataV3.type);
+    const fuzzyKey = AltKeyNeeded?.relatedKey;
     // Generate all possible keys
     const possibleKeys = novelType.map(type => returnHashedTitle(TrueTitle, type));
-    
+    if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey)
     const possibleObj = {}
     for (const key of possibleKeys) {
         const obj = await getHermidataViaKey(key);
@@ -245,6 +246,16 @@ try {
     }
     console.log('posible Objects', possibleObj)
 
+    // add alt title to Object
+    if (AltKeyNeeded?.needAltTitle && fuzzyKey) {
+        const relatedEntry = possibleObj[fuzzyKey];
+        if (relatedEntry) {
+            const confirmation = await customConfirm(
+                `${AltKeyNeeded.reason}\nAdd "${HermidataV3.title}" as an alt title for "${relatedEntry.title}"?`
+            );
+            if (confirmation) await appendAltTitle(HermidataV3.title, relatedEntry);
+        }
+    }
 
     if ( Object.keys(possibleObj).length == 1 ) {
         absoluteKey = Object.keys(possibleObj)[0]
@@ -290,7 +301,7 @@ async function migrateCopy(objs) {
     objs.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
     return objs[0] || {};
 }
-async function migrationSteps(obj1, obj2) {
+async function migrationSteps(obj1, obj2, options = {}) {
     // Pick by date or lastUpdated
     const date1 = new Date(obj1.lastUpdated || obj1.date || 0);
     const date2 = new Date(obj2.lastUpdated || obj2.date || 0);
@@ -304,8 +315,7 @@ async function migrationSteps(obj1, obj2) {
     }
 
     // Confirm with clear indication which is which
-    const confirmMerge = await confirmMigrationPrompt(newer, older );
-    console.log('WTF after')
+    const confirmMerge = await confirmMigrationPrompt(newer, older, options );
 
     if (confirmMerge) {
         const migrated = await migrateHermidataV4(newer, older);
@@ -315,7 +325,7 @@ async function migrationSteps(obj1, obj2) {
         // Confirm with clear indication which is which
         let New_older = newer;
         let New_newer = older
-        const confirm_NewMerge = await confirmMigrationPrompt(New_newer, New_older );
+        const confirm_NewMerge = await confirmMigrationPrompt(New_newer, New_older, options );
 
         if (confirm_NewMerge) {
             const migrated = await migrateHermidataV4(New_newer, New_older);
@@ -571,6 +581,7 @@ async function migrateHermidataV4(newer, older) {
         ...older,
         ...newer, // newer values take priority
         type: newer.type,
+        title: newer.title,
         lastUpdated: new Date().toISOString(),
     };
 
@@ -1142,24 +1153,27 @@ function removeAllChildNodes(parent) {
 }
 async function makeSubscibeBtn() {
     const feedListGLobal = await loadSavedFeedsViaSavedFeeds();
-    const subscribeBtn = document.querySelector("#subscribeBtn")
-    const NotificationSection = document.querySelector("#RSS-Notification")
-    const AllItemSection = document.querySelector("#All-RSS-entries")
+    const subscribeBtn = document.querySelector("#subscribeBtn");
+    const NotificationSection = document.querySelector("#RSS-Notification");
+    const AllItemSection = document.querySelector("#All-RSS-entries");
+
     subscribeBtn.className = "Btn";
     subscribeBtn.textContent = "Subscribe to RSS Feed";
-    subscribeBtn.disabled = true
-    subscribeBtn.title = "this site doesn't have a RSS link"
-    subscribeBtn.ariaLabel = "this site doesn't have a RSS link"
+    subscribeBtn.disabled = true;
+    subscribeBtn.title = "this site doesn't have a RSS link";
+    subscribeBtn.ariaLabel = "this site doesn't have a RSS link";
+
     let feedItemTitle;
     const currentTitle = document.getElementById("title_HDRSS").value || HermidataV3.title;
+
     Object.values(feedListGLobal).forEach(feed => {
         feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
-            if (currentTitle == feedItemTitle) {
-                subscribeBtn.disabled = false
-                subscribeBtn.title = "subscribe to recieve notifications"
-                subscribeBtn.ariaLabel = "subscribe to recieve notifications"
-                console.log("current page is a feed page \n", currentTitle)
-            }
+        if (currentTitle == feedItemTitle) {
+            subscribeBtn.disabled = false
+            subscribeBtn.title = "subscribe to recieve notifications"
+            subscribeBtn.ariaLabel = "subscribe to recieve notifications"
+            console.log("current page is a feed page \n", currentTitle)
+        }
     });
     subscribeBtn.onclick = () => {
         Object.values(feedListGLobal).forEach(feed => {
@@ -1296,9 +1310,9 @@ function filterEntries(query, filtered = null) {
         const titleEl = item.querySelector('.RSS-entries-item-title');
         const titleText = titleEl?.textContent?.toLowerCase() || '';
 
-        const match = filtered
+        const match = ( filtered
         ? filtered.some(f => f.title.toLowerCase() === titleText)
-        : !query || titleText.includes(query);
+        : !query ) || titleText.includes(query);
 
         item.style.display = match ? '' : 'none';
         match 
@@ -1529,6 +1543,7 @@ function makeSortOptions(parent_section) {
         section.style.width = 'fit-content';
         const headerContainer = document.createElement('div');
         headerContainer.className = 'filter-header-container';
+        headerContainer.style.cursor = 'pointer';
 
         const headersymbol = document.createElement('div');
         headersymbol.className = 'filter-header-symbol';
@@ -1537,14 +1552,13 @@ function makeSortOptions(parent_section) {
         const header = document.createElement('h4');
         header.textContent = title;
         header.className = 'filter-header-text'
-        header.style.cursor = 'pointer';
         
         
         
         const list = document.createElement('div');
         list.className = 'filter-list';
         
-        header.addEventListener('click', () => {
+        headerContainer.addEventListener('click', () => {
             headersymbol.dataset.filterState = headersymbol.dataset.filterState === 'down' ? 'up' : 'down';
         });
         headerContainer.append(header,headersymbol);
@@ -1897,6 +1911,19 @@ async function addAltTitle(target) {
 
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
 }
+async function appendAltTitle(newTitle, entry) {
+    // Normalize and deduplicate
+    const trimmed = trimTitle(newTitle);
+    entry.meta = entry.meta || {};
+    entry.meta.altTitles = Array.from(
+        new Set([...(entry.meta.altTitles || []), trimmed])
+    );
+
+    const entryKey = entry.id || returnHashedTitle(entry.title, entry.type);
+
+    await browserAPI.storage.sync.set({ [entryKey]: entry });
+    console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
+}
 async function RenameItem(target) {
     const item = getEntriesItem(target)
     if (!item) {
@@ -2102,13 +2129,34 @@ async function updateChapterProgress(title, type, newChapterNumber) {
 }
 /**
  *  merge RSS feed data into existing Hermidata entry
+ * @param {String} title - the RSS Feed title
+ * @param {String} type - the RSS input type
+ * @param {Object} rssData  - the RSS feed data
 */
 async function linkRSSFeed(title, type, rssData) {
-    const titleOrAlt = findByTitleOrAltV2(title, AllHermidata).title
-    const key = returnHashedTitle( titleOrAlt || title, type);
-    const stored = await browser.storage.sync.get(key);
-    const entry = stored[key] ? stored[key] : makeHermidataV3(title, HermidataV3.url, type);
-    if (!entry) return;
+    // check if new entry is inside database
+    const altCheck = await detectAltTitleNeeded(title, type, rssData.domain);
+    
+    const titleOrAlt = findByTitleOrAltV2(title, AllHermidata)?.title || title
+    const key = returnHashedTitle( titleOrAlt, type);
+
+    const KeysToFetch = [key];
+    if (altCheck.relatedKey && altCheck.relatedKey !== key) KeysToFetch.push(altCheck.relatedKey)
+    
+    const stored = await browser.storage.sync.get(KeysToFetch);
+    const entry = stored[key] || stored[altCheck.relatedKey];
+
+    if (altCheck.needAltTitle && altCheck.relatedKey) {
+        const relatedEntry = stored[altCheck.relatedKey];
+        if (relatedEntry) {
+            const confirmation = await customConfirm(
+                `${altCheck.reason}\nAdd "${title}" as an alt title for "${relatedEntry.title}"?`
+            );
+            if (confirmation) await appendAltTitle(title, relatedEntry);
+        }
+    }
+
+    if (!entry) makeHermidataV3(title, HermidataV3.url, type);
 
     entry.rss = {
         title: rssData.title,
@@ -2136,6 +2184,206 @@ async function unLinkRSSFeed({hash, title = '', type = '', }) {
 
     await browser.storage.sync.set({ [key]: entry });
 }
+
+/**
+ * Select 2 ID's wich the user wants to merge
+ * @param {String} id1 
+ * @param {String} id2 
+ */
+async function SelectDuplicates(id1, id2) {
+    const data = AllHermidata || await getAllHermidata();
+    const obj1 = data[id1];
+    const obj2 = data[id2];
+    const finalObj = await migrationSteps(obj1, obj2);
+    console.log('finalObj is: ',finalObj)
+}
+/**
+ * compare the similarity between both inputs
+ * @param {String} id1 
+ * @param {String} id2 
+ * @returns {Premise<{
+ * keyA: String
+ * keyB: String
+ * titleA: String
+ * titleB: String
+ * sourceA: String
+ * sourceB: String
+ * score: number
+ * }>}
+ */
+async function findDuplicatescore(id1, id2) {
+    const data = AllHermidata || await getAllHermidata();
+    const score = CalcDiff(data[id1].title, data[id2].title);
+    let output = []
+    output.push({
+        keyA: id1,
+        keyB: id2,
+        titleA: data[id1].title,
+        titleB: data[id2].title,
+        sourceA: data[id1].source,
+        sourceB: data[id2].source,
+        score: score
+    })
+    return output;
+}
+
+
+async function findPotentialDuplicates(threshold = 0.9) {
+    const data = AllHermidata || await getAllHermidata();
+    const entries = Object.entries(data);
+    const duplicates = [];
+
+    console.group("Duplicate Title Scan");
+
+    for (let i = 0; i < entries.length; i++) {
+        const [keyA, valA] = entries[i];
+        for (let j = i + 1; j < entries.length; j++) {
+            const [keyB, valB] = entries[j];
+
+            // Skip if same source and title already identical
+            if (valA.source === valB.source && valA.title === valB.title) continue;
+
+            const score = CalcDiff(valA.title, valB.title);
+            if (score >= threshold) {
+                duplicates.push({
+                    keyA,
+                    keyB,
+                    titleA: valA.title,
+                    titleB: valB.title,
+                    sourceA: valA.source,
+                    sourceB: valB.source,
+                    score
+                });
+
+                console.warn(
+                    `[DUPLICATE ${score.toFixed(2)}]`,
+                    `(${valA.source}) "${valA.title}" ↔ (${valB.source}) "${valB.title}"`
+                );
+            }
+        }
+    }
+
+    console.groupEnd();
+
+    console.info(`Scan complete: found ${duplicates.length} potential duplicates.`);
+    return duplicates;
+}
+/**
+ * returns an Object with inside the argument of the input needs an alt name
+ * @param {String} title - Input title
+ * @param {String} type - Input type
+ * @param {String} source - Input source - default HermidataV3.source
+ * @param {Float} threshold  - float number of height to probality it is the same novel - default 0.85
+ * @returns {Premise<{
+ *  needAltTitle: boolean,
+ *  reason: String,
+ *  similarity: number|null,
+ *  relatedKey: String|null,
+ *  relatedTitle: String|null
+ * }>}
+ */
+async function detectAltTitleNeeded(title, type, source = HermidataV3.source, threshold = 0.85) {
+    const data = AllHermidata || await getAllHermidata();
+    if (!data) return { needAltTitle: false, reason: "No data loaded" };
+
+    const normalizedTitle = trimTitle(title);
+    const titleOrAltMatch = findByTitleOrAltV2(normalizedTitle, data);
+
+    // 1. Already exists by title or alt title → no alt title needed
+    if (titleOrAltMatch) {
+        return { 
+            needAltTitle: false,
+            reason: "Title or alt title already exists",
+            existingKey: returnHashedTitle(titleOrAltMatch.title, type)
+        };
+    }
+
+    // 2. Compute candidate similarities (same source/type only)
+    const candidates = Object.entries(data)
+        .filter(([key, entry]) => entry.source !== source && entry.type === type);
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const [key, entry] of candidates) {
+        const sim = CalcDiff(normalizedTitle, entry.title.toLowerCase());
+        if (sim > bestScore) {
+            bestScore = sim;
+            bestMatch = { key, entry };
+        }
+    }
+
+    // 3. Decide threshold
+    if (bestScore >= threshold) {
+        return {
+            needAltTitle: true,
+            reason: "Similar title detected",
+            similarity: bestScore,
+            relatedKey: bestMatch.key,
+            relatedTitle: bestMatch.entry.title
+        };
+    }
+
+    // 4. No similar title found
+    return {
+        needAltTitle: false,
+        reason: "No close matches found"
+    };
+}
+
+function CalcDiff(a, b) {
+    if (!a || !b) return 0;
+
+    // Create a stable key for caching
+    const key = a < b ? `${a}__${b}` : `${b}__${a}`;
+    if (CalcDiffCache.has(key)) return CalcDiffCache.get(key);
+
+    // Normalize text
+    const clean = str => str.toLowerCase().replace(/[^a-z0-9\s]/gi, '').trim();
+    const A = clean(a), B = clean(b);
+
+    if (A === B) {
+        CalcDiffCache.set(key, 1);
+        return 1;
+    }
+
+    const wordsA = A.split(/\s+/);
+    const wordsB = B.split(/\s+/);
+
+    const common = wordsA.filter(w => wordsB.includes(w)).length;
+    const wordScore = common / Math.max(wordsA.length, wordsB.length);
+
+    const charScore = 1 - levenshteinDistance(A, B) / Math.max(A.length, B.length);
+    const score = (wordScore * 0.4) + (charScore * 0.6);
+
+    CalcDiffCache.set(key, score);
+    return score;
+}
+
+function levenshteinDistance(a, b) {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + cost
+            );
+        }
+    }
+
+    return dp[m][n];
+}
+
+
 async function migrateHermidata() {
     const allHermidata = await getAllHermidata();
     if (!Object.keys(allHermidata).length) return;

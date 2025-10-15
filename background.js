@@ -609,7 +609,7 @@ async function checkFeedsForUpdates() {
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
     const allHermidata = await getAllHermidata();
 
-    console.group(`[Hermidata] Checking ${savedFeeds.length} feeds`);
+    console.groupCollapsed(`[Hermidata] Checking ${savedFeeds.length} feeds`);
 
     if (Object.keys(allHermidata).length === 0) {
         console.log("[Hermidata] No Hermidata entries found, skipping feed check.");
