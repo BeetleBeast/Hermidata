@@ -85,6 +85,13 @@
 
 ---
 
+## problems
+
+### RSS
+
+- [ ] alt names need to be manualy set-up if not wil result in out-of-sync duplicate entry.
+
+
 ## TO-DO
 
 - [ ] select saving option:

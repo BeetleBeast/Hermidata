@@ -7,6 +7,8 @@
     --Input-color: rgb(40, 53, 75);
     --Input-colorV2: rgb(32, 39, 51);
     --table-color: var(----Input-color);
+    --Btn_disabled: rgb(120, 120, 120);
+    --bg_disabled: rgb(24, 28, 36);
 
     --hr: #555
 }
@@ -240,9 +242,7 @@ select.autoInput {
     border: 1px solid var(--Btn);
     border-top: none;
     border-radius: 0 0 8px 8px;
-    width: 34.2em;
     max-height: 250px;
-    overflow-y: auto;
     z-index: 999;
     top: 5.5em;
     overflow: hidden;
@@ -512,20 +512,21 @@ select.autoInput {
     align-items: center;
     justify-content: space-evenly;
     padding: 0 15px;
+    margin-right: 7px;
+    margin-left: 15px;
 }
 .RSS-entries-item-title,
 .RSS-Notification-item-title {
     font-weight: bold;
-    font-size: 16px;
+    font-size: 15px;
     padding-left: 10px;
-    padding-right: 10px;
 }
 .RSS-entries-item-chapter,
 .RSS-Notification-item-chapter {
     font-weight: bold;
-    font-size: 16px;
+    font-size: 15px;
     padding-left: 10px;
-    padding-right: 10px;
+    padding-right: 15px;
 }
 .RSS-entries-item-progress,
 .RSS-Notification-item-progress {
@@ -536,12 +537,16 @@ select.autoInput {
     right: 0;
     position: absolute;
 }
+
 #subscribeBtn {
     float: right;
     position: relative;
 }
 #subscribeBtn:disabled {
     cursor:not-allowed;
+    color: var(--Btn_disabled);
+    background-color: var(--bg_disabled);
+    opacity: 0.7;
 }
 #HDRSS-subscribe-container {
     display: flex;
@@ -551,23 +556,48 @@ select.autoInput {
     margin-bottom: 5px;
     position: relative;
 }
-#HDRSS-subscribe-container:hover #Type_HDRSS,
-#HDRSS-subscribe-container:hover #title_HDRSS,
-#subscribeBtn:hover + #Type_HDRSS + #title_HDRSS {
+
+/* Base state — hidden */
+#HDRSS-subscribe-container #title_HDRSS,
+#HDRSS-subscribe-container #Type_HDRSS {
+    transform: translateX(50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+#HDRSS-subscribe-container:hover:has(#subscribeBtn:not(:disabled)) #Type_HDRSS,
+#HDRSS-subscribe-container:hover:has(#subscribeBtn:not(:disabled)) #title_HDRSS {
     transform: translateX(0);
     opacity: 1;
     pointer-events: auto;
 }
-#Type_HDRSS:not(:focus) {
-    transform: translateX(20%);
-    opacity: 0;
-    pointer-events: none; /* prevents accidental hover */
-    transition: transform 0.3s ease, opacity 0.3s ease;
+#HDRSS-subscribe-container:has(#title_HDRSS:focus) #title_HDRSS,
+#HDRSS-subscribe-container:has(#title_HDRSS:focus) #Type_HDRSS,
+#HDRSS-subscribe-container:has(#Type_HDRSS:focus) #title_HDRSS,
+#HDRSS-subscribe-container:has(#Type_HDRSS:focus) #Type_HDRSS,
+#HDRSS-subscribe-container:has(#subscribeBtn:focus) #title_HDRSS,
+#HDRSS-subscribe-container:has(#subscribeBtn:focus) #Type_HDRSS {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
 }
+
 #title_HDRSS {
     width: max-content;
     flex: 1;
     cursor: text;
+
+    background-color: var(--Input-colorV2);
+    color: var(--Text-color);
+    outline-color: var(--Btn);
+    text-emphasis-color: var(--Btn);
+    accent-color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-right: none;
+    border-radius: 0;
+}
+#title_HDRSS:focus {
+    outline: 1px invert var(--Btn);
 }
 #title_HDRSS:not(:focus) {
     transform: translateX(50%);
@@ -597,8 +627,11 @@ select.autoInput {
 #RSS-sync-Manual {
     height: 100%;
     padding: 0 15px;
+    margin-right: 70px;
 }
 #version {
+    position: absolute;
+    right: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -653,10 +686,15 @@ select.autoInput {
     background-color: rgba(0, 0, 0, 0.2);
     align-items: center;
     justify-content: center;
+    position: absolute;
+    top: 50px;
+    width: 98vw;
+    overflow: scroll;
+    height: 500px;
 }
 
 .genericInput {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 80%;
@@ -674,14 +712,17 @@ select.autoInput {
 }
 
 .genericLabel {
+    display: none;
     background-color: var(--bg-color);
     color: var(--Text-color);
 }
 .genericButton1 {
+    display: none;
     background-color: var(--bg-color);
     color: var(--Text-color);
 }
 .genericButton2 {
+    display: none;
     background-color: var(--bg-color);
     color: var(--Text-color);
 }

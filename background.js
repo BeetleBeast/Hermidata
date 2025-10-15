@@ -561,65 +561,216 @@ async function getAllHermidata() {
     return allHermidata;
 }
 
+// Helper: parse only the first 1–2 items
+function getFeedLatestToken(xmlText) {
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlText, "text/xml");
+        const items = [...doc.querySelectorAll("item, entry")].slice(0, 2); // Only first 2
+        if (items.length === 0) return null;
+
+        // Prefer guid/id/link/pubDate/title — whichever exists first
+        const item = items[0];
+        const guid = item.querySelector("guid")?.textContent?.trim();
+        if (guid) return `guid:${guid}`;
+        const id = item.querySelector("id")?.textContent?.trim();
+        if (id) return `id:${id}`;
+
+        const linkEl = item.querySelector("link");
+        const href = linkEl?.getAttribute?.("href");
+        if (href) return `link:${href}`;
+        const linkText = linkEl?.textContent?.trim();
+        if (linkText) return `link:${linkText}`;
+
+        const pub = item.querySelector("pubDate, updated, published")?.textContent?.trim();
+        if (pub) return `pub:${pub}`;
+
+        const title = item.querySelector("title")?.textContent?.trim();
+        if (title) return `title:${title}`;
+
+        return null;
+    } catch (e) {
+        console.warn("[Hermidata] XML parse error:", e);
+        return null;
+    }
+}
+
+// Helper: SHA-1 hash as hex
+async function sha1Hex(str) {
+    const enc = new TextEncoder();
+    const data = enc.encode(str);
+    const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+}
+
 async function checkFeedsForUpdates() {
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
     const allHermidata = await getAllHermidata();
+
+    console.group(`[Hermidata] Checking ${savedFeeds.length} feeds`);
+
     if (Object.keys(allHermidata).length === 0) {
         console.log("[Hermidata] No Hermidata entries found, skipping feed check.");
         return;
     }
+
     for (const feed of savedFeeds) {
         try {
-            // HEAD request first
+            if (shouldSkipFeed(feed, allHermidata)) continue;
 
-            if ( feed.domain !=  Object.values(allHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
-
-            const head = await fetch(feed.url, { method: "HEAD" });
-            const etag = head.headers.get("etag");
-            const lastMod = head.headers.get("last-modified");
-
-            if (feed.etag === etag && feed.lastModified === lastMod) {
-                console.log(`[Hermidata] No change in ${feed.title}`);
-                continue; // skip unchanged
+            // Try to get HEAD metadata (ETag, Last-Modified)
+            const meta = await fetchFeedHead(feed);
+            if (isFeedUnchanged(feed, meta)) {
+                console.log(`[Hermidata] No change in ${feed.title} (etag+lastMod)`);
+                continue;
             }
 
-            // Fetch full feed
-            const response = await fetch(feed.url);
-            const text = await response.text();
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(text, "text/xml");
-            const items = [...xml.querySelectorAll("item")].map(item => ({
-                title: item.querySelector("title")?.textContent ?? "",
-                link: item.querySelector("link")?.textContent ?? "",
-                pubDate: item.querySelector("pubDate")?.textContent ?? "",
-                guid: item.querySelector("guid")?.textContent ?? item.querySelector("link")?.textContent ?? ""
-            }));
+            // Fetch the full feed
+            const text = await fetchFeedText(feed);
+            if (!text) continue;
 
-            // Compare first item with last seen
-            if (items.length && items[0].guid !== feed.lastSeenGuid) {
-                const newCount = items.findIndex(i => i.guid === feed.lastSeenGuid);
-                const newItems = newCount === -1 ? items : items.slice(0, newCount);
-                notifyUser(feed, newItems);
-                feed.lastSeenGuid = items[0].guid;
+            // Detect content changes via token or hash
+            if (!await hasFeedChanged(feed, text)) {
+                console.log(`[Hermidata] No change in ${feed.title} | ${feed?.items[0]?.title} (token/hash)`);
+                continue;
             }
+
+            // Parse and handle feed contents
+            const xml = parseXmlSafely(text, feed.title);
+            const items = parseItems(xml, feed.title);
+            compareLastSeen(items, feed);
 
             // Save metadata
-            feed.etag = etag;
-            feed.lastModified = lastMod;
-            feed.lastChecked = new Date().toISOString();
+            saveFeedMetaData(feed, meta);
 
+            console.log(`[Hermidata] [✓] Updated feed: ${feed.title}`);
         } catch (err) {
-            console.error(`[Hermidata] Failed to check feed ${feed.url}:`, err);
+            console.error(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
         }
     }
-    lastAutoFeedCkeck = Date.now()
 
-    // Save back updated feeds
+    lastAutoFeedCkeck = Date.now();
     await browser.storage.local.set({ savedFeeds });
     console.log("[Hermidata] Feed check completed.");
+    console.groupEnd();
+}
+// ==== feed helpers ====
+function shouldSkipFeed(feed, allHermidata) {
+    const novel = Object.values(allHermidata).find(novel => novel.url.includes(feed.domain));
+    const novelDomain = novel?.url?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+    return feed.domain !== novelDomain;
+}
+async function fetchFeedHead(feed) {
+    let meta = { etag: null, lastModified: null };
+    try {
+        const head = await fetch(feed.url, { method: "HEAD" });
+        if (head.ok) {
+            meta.etag = head.headers.get("etag");
+            meta.lastModified = head.headers.get("last-modified");
+        } else {
+        console.warn(`[Hermidata] HEAD not allowed for ${feed.domain} ( ${feed.title} | ${head.status} ). Falling back to GET.`);
+    }
+    } catch {
+        console.warn(`[Hermidata] HEAD failed for ${feed.title}, using GET fallback`);
+    }
+    return meta;
+}
+function isFeedUnchanged(feed, meta) {
+    return (
+        meta.etag &&
+        meta.lastModified &&
+        feed.etag === meta.etag &&
+        feed.lastModified === meta.lastModified
+    );
+}
+async function fetchFeedText(feed) {
+    const response = await fetch(feed.url);
+    if (!response.ok) {
+        console.warn(`[Hermidata] Feed GET failed: ${feed.url} (${response.status})`);
+        return null;
+    }
+    return await response.text();
+}
+async function hasFeedChanged(feed, text) {
+    const latestToken = getFeedLatestToken(text);
+    let feedChanged = false;
+
+    if (latestToken && feed.lastToken !== latestToken) {
+        feedChanged = true;
+        feed.lastToken = latestToken;
+    } else if (!latestToken) {
+        // fallback: hash of first 5KB
+        const snippet = text.slice(0, 5000);
+        const hash = await sha1Hex(snippet);
+        if (feed.lastHash !== hash) {
+            feedChanged = true;
+            feed.lastHash = hash;
+        }
+    }
+
+    return feedChanged;
+}
+function parseXmlSafely(text, title) {
+    const parser = new DOMParser();
+    let xml = parser.parseFromString(text, "text/xml");
+
+    if (xml.querySelector("parsererror")) {
+        console.warn(`[Hermidata] XML parsing failed for ${title}, falling back to text/html mode.`);
+        xml = parser.parseFromString(text, "text/html");
+    }
+
+    return xml;
 }
 
-function notifyUser(feed, newItems) {
+function parseItems(xml, title) {
+    const entries = [...xml.querySelectorAll("item, entry")];
+    if (!entries.length) {
+        console.warn(`[Hermidata] No <item> or <entry> elements found in ${title}.`);
+        return [];
+    }
+    
+    return entries.slice(0, 10).map(item => ({
+        title: item.querySelector("title")?.textContent.trim() ?? "",
+        link: (
+            item.querySelector("link")?.getAttribute?.("href") ??
+            item.querySelector("link")?.textContent ??
+            ""
+        ).trim(),
+        pubDate: item.querySelector("pubDate, updated, published")?.textContent.trim() ?? "",
+        guid:
+        item.querySelector("guid")?.textContent ??
+        item.querySelector("id")?.textContent ??
+        item.querySelector("link")?.textContent ??
+        ""
+    }));
+}
+
+function saveFeedMetaData(feed, meta) {
+    feed.etag = meta.etag;
+    feed.lastModified = meta.lastModified;
+    feed.lastChecked = new Date().toISOString();
+}
+
+function compareLastSeen(items, feed) {
+    if (!items.length) return feed;
+    const latest = items[0];
+    if (latest.guid !== feed.lastSeenGuid || latest.pubDate !== feed.lastSeenDate) {
+        const newCount = items.findIndex(i => i.guid === feed.lastSeenGuid && i.pubDate === feed.lastSeenDate);
+        const newItems = newCount === -1 ? items : items.slice(0, newCount);
+        notifyUser(feed, newItems);
+
+        feed.lastSeenGuid = latest.guid;
+        feed.lastSeenDate = latest.pubDate;
+    }
+
+    return feed;
+}
+
+async function notifyUser(feed, newItems) {
+    const allHermidata = await getAllHermidata();
+    if (shouldSkipFeed(feed, allHermidata)) return;
     const title = `${feed.title}: ${newItems.length} new chapter${newItems.length > 1 ? "s" : ""}`;
     const message = newItems.map(i => i.title).join("\n");
     browser.notifications.create({

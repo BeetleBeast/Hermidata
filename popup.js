@@ -40,6 +40,7 @@ let selectedIndex = -1;
 
 // On popup load
 document.addEventListener("DOMContentLoaded", async () => {
+    console.timeStamp('Start of new Hermidata')
     /*
         const removeItems = []
         for ( const key of removeItems) {
@@ -57,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // await migrateHermidata();
     HermidataNeededKeys.Past = await getHermidata();
 
-    if (HermidataNeededKeys?.Past) {
+    if (Object.values(HermidataNeededKeys?.Past).length > 0) {
         if (!novelType.includes(HermidataNeededKeys.Past?.type)) {
             let capitalizeFirstLetterType = capitalizeFirst(HermidataNeededKeys.Past?.type)
             if ( novelType.includes(capitalizeFirstLetterType) ) HermidataNeededKeys.Past.type = capitalizeFirstLetterType
@@ -232,8 +233,10 @@ try {
     let absoluteKey = ''
     let absoluteObj = {}
 
+    // find title from alt
+    const TrueTitle = findByTitleOrAltV2(HermidataV3.title, allHermidata)?.title
     // Generate all possible keys
-    const possibleKeys = novelType.map(type => returnHashedTitle(HermidataV3.title, type));
+    const possibleKeys = novelType.map(type => returnHashedTitle(TrueTitle, type));
     
     const possibleObj = {}
     for (const key of possibleKeys) {
@@ -301,7 +304,7 @@ async function migrationSteps(obj1, obj2) {
     }
 
     // Confirm with clear indication which is which
-    const confirmMerge = confirmMigrationPrompt(newer, older );
+    const confirmMerge = await confirmMigrationPrompt(newer, older );
     console.log('WTF after')
 
     if (confirmMerge) {
@@ -312,7 +315,7 @@ async function migrationSteps(obj1, obj2) {
         // Confirm with clear indication which is which
         let New_older = newer;
         let New_newer = older
-        const confirm_NewMerge = confirmMigrationPrompt(New_newer, New_older );
+        const confirm_NewMerge = await confirmMigrationPrompt(New_newer, New_older );
 
         if (confirm_NewMerge) {
             const migrated = await migrateHermidataV4(New_newer, New_older);
@@ -414,18 +417,99 @@ function confirmMigrationPrompt(newer, older, options = {}) {
         return false;
     }
 }
+
+function deactivateother() {
+    // deactivate links in classic
+    document.querySelectorAll(".HDClassic").forEach(a => {
+        a.style.pointerEvents = 'none';
+    });
+    // deactivate links in HDRSS
+    document.querySelectorAll(".HDRSS").forEach(a => {
+        a.style.pointerEvents = 'none';
+    });
+    document.querySelector(".HDRSS").style.opacity = 0.2;
+    document.querySelector(".HDClassic").style.opacity = 0;
+}
+function activateother() {
+    // deactivate links in classic
+    document.querySelectorAll(".HDClassic").forEach(a => {
+        a.style.pointerEvents = 'none';
+    });
+    // deactivate links in HDRSS
+    document.querySelectorAll(".HDRSS").forEach(a => {
+        a.style.pointerEvents = 'auto';
+    });
+    document.querySelector(".HDRSS").style.opacity = 1;
+    document.querySelector(".HDClassic").style.opacity = 0;
+}
+function customPrompt(msg, defaultInput) {
+    return new Promise((resolve) => {
+        const container = document.querySelector('.promptSection');
+        const input = document.querySelector('.genericInput');
+        const label = document.querySelector('.genericLabel');
+        const btn1 = document.querySelector('.genericButton1');
+        const btn2 = document.querySelector('.genericButton2');
+        const activateConfirmSetup = () => {
+            deactivateother();
+            container.style.display = 'flex';
+            label.style.display = 'block';
+            input.style.display = 'block';
+            btn1.style.display = 'block';
+            btn2.style.display = 'block';
+        }
+        const deactivateConfirmSetup = () => {
+            activateother();
+            container.style.display = 'none';
+            label.style.display = 'none';
+            input.style.display = 'none';
+            btn1.style.display = 'none';
+            btn2.style.display = 'none';
+        }
+        const cleanup = () => {
+            deactivateConfirmSetup();
+            btn1.removeEventListener('click', onYes);
+            btn2.removeEventListener('click', onNo);
+        };
+        const onYes = () => {
+            cleanup();
+            resolve(input.value);
+        };
+
+        const onNo = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        activateConfirmSetup();
+        label.textContent = msg;
+        input.value = defaultInput;
+
+        btn1.addEventListener('click', onYes);
+        btn2.addEventListener('click', onNo);
+    });
+}
 function customConfirm(msg) {
     return new Promise((resolve) => {
         const container = document.querySelector('.promptSection');
         const label = document.querySelector('.genericLabel');
         const btn1 = document.querySelector('.genericButton1');
         const btn2 = document.querySelector('.genericButton2');
-
-        label.textContent = msg;
-        container.style.display = 'flex';
-
-        const cleanup = () => {
+        const activateConfirmSetup = () => {
+            deactivateother();
+            container.style.display = 'flex';
+            label.style.display = 'block';
+            btn1.style.display = 'block';
+            btn2.style.display = 'block';
+        }
+        const deactivateConfirmSetup = () => {
+            activateother();
             container.style.display = 'none';
+            label.style.display = 'none';
+            btn1.style.display = 'none';
+            btn2.style.display = 'none';
+        }
+        const cleanup = () => {
+            deactivateConfirmSetup();
             btn1.removeEventListener('click', onYes);
             btn2.removeEventListener('click', onNo);
         };
@@ -438,6 +522,9 @@ function customConfirm(msg) {
             cleanup();
             resolve(false);
         };
+
+        activateConfirmSetup();
+        label.textContent = msg;
 
         btn1.addEventListener('click', onYes);
         btn2.addEventListener('click', onNo);
@@ -1214,6 +1301,9 @@ function filterEntries(query, filtered = null) {
         : !query || titleText.includes(query);
 
         item.style.display = match ? '' : 'none';
+        match 
+        ? item.classList.add('seachable')
+        : item.classList.remove('seachable') || '';
     });
 }
 
@@ -1222,7 +1312,8 @@ function sortOptionLogic(parent_section) {
     // state object for filters
     const filters = {
         include: {}, // { type: ['Manga'], status: ['Ongoing'] }
-        exclude: {}
+        exclude: {},
+        sort: ''
     };
 
     // find all custom checkboxes
@@ -1242,6 +1333,31 @@ function sortOptionLogic(parent_section) {
             const section = cb.closest(".filter-section")?.firstChild?.textContent?.trim();
             if (!label || !section) return;
 
+            if (section === "Sort") {
+                // Reset all sort checkboxes first
+                filters.sort = ''
+                const sortCheckboxes = cb.closest(".filter-section").querySelectorAll(".custom-checkbox");
+                sortCheckboxes.forEach(otherCb => otherCb.dataset.state = "0");
+
+                // Enable current one
+                if (state === 1) {
+                    cb.dataset.state = "1" 
+                    filters.sort = label
+                } else if (state === 2) {
+                    cb.dataset.state = "2";
+                    filters.sort = `Reverse-${label}`
+                }
+
+                // apply and persist
+                if (filters.sort) {
+                    applySortToEntries(filters.sort);
+                    localStorage.setItem("lastSort", filters.sort);
+                } else {
+                    localStorage.removeItem("lastSort");
+                }
+                return;
+            }
+
             // init arrays if not exist
             if (!filters.include[section]) filters.include[section] = [];
             if (!filters.exclude[section]) filters.exclude[section] = [];
@@ -1259,17 +1375,71 @@ function sortOptionLogic(parent_section) {
     });
 }
 
+function applySortToEntries(sortType) {
+    const container = document.querySelector('#All-RSS-entries');
+    if (!container) return;
+
+    // Always sort all entries (even hidden), to keep global order consistent
+    const entries = Array.from(container.querySelectorAll('.RSS-entries-item'));
+    if (!entries.length) return;
+
+    const getData = (entry) => {
+        const hash = entry.className.split('TitleHash-')[1]?.replace(' seachable','');
+        return AllHermidata[hash] || {};
+    };
+
+    const compareAlphabet = (a, b, reverse = false) => {
+        const titleA = getData(a).title?.toLowerCase() || '';
+        const titleB = getData(b).title?.toLowerCase() || '';
+        return reverse ? titleB.localeCompare(titleA) : titleA.localeCompare(titleB);
+    };
+
+    const compareDate = (a, b, key, reverse = false) => {
+        const dateA = new Date(getData(a).meta?.[key] || 0);
+        const dateB = new Date(getData(b).meta?.[key] || 0);
+        return reverse ? dateA - dateB : dateB - dateA;
+    };
+
+    // Normalize sort type
+    const reverse = sortType.startsWith("Reverse-");
+    const baseType = sortType.replace("Reverse-", "");
+
+    switch (baseType) {
+        case "Alphabet":
+            entries.sort((a, b) => compareAlphabet(a, b, reverse));
+            break;
+        case "Recently-Added":
+            entries.sort((a, b) => compareDate(a, b, "added", reverse));
+            break;
+        case "Latest-Updates":
+            entries.sort((a, b) => compareDate(a, b, "updated", reverse));
+            break;
+        default:
+            return;
+    }
+
+    // Force DOM reflow even if order is same
+    const frag = document.createDocumentFragment();
+    entries.forEach(entry => frag.appendChild(entry));
+    container.appendChild(frag);
+
+    console.log(`[Hermidata] Sorted by ${sortType}`);
+}
+
+
 function applyFilterToEntries(filters) {
     const entries = document.querySelectorAll(".RSS-entries-item");
 
     
     entries.forEach(entry => {
-        const hashItem = entry.className.split('TitleHash-')[1];
+        const hashItem = entry.className.split('TitleHash-')[1].replace(' seachable','');
         const entryData = AllHermidata[hashItem];
         const type = entryData.type;
         const status = entryData.status;
         const source = entryData.source;
         const tags = entryData.meta.tags || "";
+
+        
 
         const isISOString =  new Date(entryData.meta.added)?.getHours() ? true : false;
         const splitDatum =  entryData.meta?.added.split('/')[2]
@@ -1321,6 +1491,9 @@ function applyFilterToEntries(filters) {
         }
 
         entry.style.display = visible ? "" : "none";
+        visible
+            ? entry.classList.add('seachable')
+            : entry.classList.remove('seachable') || '';
     });
 }
 
@@ -1331,7 +1504,7 @@ function makeSortOptions(parent_section) {
     const mainContainer = document.createElement('div');
     mainContainer.className = 'mainContainerHeader';
 
-    // 1. Search bar
+    // 0. Search bar
     const searchContainer = document.createElement('div');
     searchContainer.className = 'search-container';
     const searchInput = document.createElement('input');
@@ -1419,6 +1592,23 @@ function makeSortOptions(parent_section) {
     searchContainer.appendChild(filterSectionTitle);
     mainContainer.appendChild(filterSection);
 
+    // 1. Sort
+    const Allsorts = (['Alphabet', 'Recently-Added', 'Latest-Updates'])
+    const SortSection = createFilterSection('Sort', Allsorts, 'filter-sort');
+    filterSection.appendChild(SortSection);
+    // Add click listeners for sort options
+    SortSection.querySelectorAll('.filter-item-container').forEach(container => {
+        const label = container.querySelector('label');
+        applySortToEntries(localStorage.getItem('lastSort') || 'Alphabet');
+        label.addEventListener('click', () => {
+            const sortType = label.textContent.trim();
+            localStorage.setItem('lastSort', sortType);
+            // Apply sorting immediately
+            applySortToEntries(sortType);
+        });
+    });
+
+
     // 2. Type
     const typeSection = createFilterSection('Type', novelType, 'filter-type');
     filterSection.appendChild(typeSection);
@@ -1457,6 +1647,9 @@ function makeSortOptions(parent_section) {
         if (calcWidth && elFilter) elFilter.style.minWidth = `${calcWidth}px`;
         else console.log('mimnimum width not added for: ',elFilter,'\n', 'calcWidth is: ',calcWidth)
     }
+    document.querySelector('.autocompleteContainer').style.width = `${  document.querySelector('.search-input').offsetWidth}px`;
+    const lastSort = localStorage.getItem("lastSort");
+    if (lastSort) applySortToEntries(lastSort);
 }
 
 
@@ -1504,12 +1697,12 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
         if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`)) {
             const li = document.createElement("li");
             li.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item" : "RSS-Notification-item";
-            li.classList.add("hasRSS", `TitleHash-${key[0]}`);
+            li.classList.add("hasRSS", `TitleHash-${key[0]}`, 'seachable');
             li.addEventListener('contextmenu', (e) => rightmouseclickonItem(e))
 
             const ElImage = document.createElement("img");
             ElImage.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item-image" : "RSS-Notification-item-image";
-            ElImage.src = key[1]?.image || key[1]?.favicon || 'icons/icon48.png';
+            ElImage.src = key[1]?.rss?.image ||key[1]?.image || key[1]?.favicon || 'icons/icon48.png';
             ElImage.sizes = "48x48";
             ElImage.style.width = "48px";
             ElImage.style.height = "48px";
@@ -1522,7 +1715,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 
             
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
-            const AllItemChapterText = currentChapter != chapter ? `read ${currentChapter} of ${chapter}` : `up-to-date`;
+            const AllItemChapterText = currentChapter != chapter ? `read ${currentChapter} of ${chapter}` : `up-to-date (${chapter})`;
             const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
             const maxTitleCharLangth = 50;
             const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
@@ -1648,12 +1841,16 @@ function copyTitle(target) {
     const nameClass = item.className.split(' ')[0] == 'RSS-entries-item' 
         ? 'RSS-entries-item-title'
         : 'RSS-Notification-item-title';
-    const title0 = item.querySelector(`.${nameClass}`)
-    const title1 = document.querySelector(`.RSS-Notification-item-title.${target.className}`);
-    const title2 = document.querySelector(`.RSS-entries-item-title.${target.className}`);
-    const title = title1 || title2 || title0
-    navigator.clipboard.writeText(title.textContent.trim());
-    console.log("Copied:", title.textContent.trim());
+    // RSS-entries-item hasRSS TitleHash--1692575891 seachable
+    console.log('seachable',item.className.split(' ')[item.className.split(' ').length -1])
+    if (item.className.split(' ')[item.className.split(' ').length -1] == 'seachable') {
+        const title0 = item.querySelector(`.${nameClass}`)
+        const title1 = document.querySelector(`.RSS-Notification-item-title.${target.className}`);
+        const title2 = document.querySelector(`.RSS-entries-item-title.${target.className}`);
+        const title = title0 || ( title1 || title2 )
+        navigator.clipboard.writeText(title.textContent.trim());
+        console.log("Copied:", title.textContent.trim());
+    }
 }
 
 function openInPage(target) {
@@ -1679,13 +1876,13 @@ async function addAltTitle(target) {
         console.log('isn\'t a entries item');
         return;
     }
-    const hashItem = item.className.split('TitleHash-')[1];
+    const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
     const entry = AllHermidata[hashItem];
     if (!entry) {
         console.warn("Entry not found for hash:", hashItem);
         return;
     }
-    const newTitle = prompt("Add alternate title for this entry:");
+    const newTitle = await customPrompt("Add alternate title for this entry:");
     if (!newTitle) return;
 
     // Normalize and deduplicate
@@ -1706,13 +1903,13 @@ async function RenameItem(target) {
         console.log('isn\'t a entries item');
         return;
     }
-    const oldKey = item.className.split('TitleHash-')[1]
+    const oldKey = item.className.split('TitleHash-')[1].replace(' seachable','');
     const oldData = AllHermidata[oldKey]
     if (!oldData) {
         console.warn("No data found for this item");
         return;
     }
-    const newTitle = prompt(`Renaming "${oldData.title}" to:`, oldData.title);
+    const newTitle = await customPrompt(`Renaming "${oldData.title}" to:`, oldData.title);
     if (!newTitle || newTitle.trim() === oldData.title.trim()) {
         console.log("Rename canceled or unchanged");
         return;
@@ -1748,7 +1945,7 @@ function remove(target) {
         console.log('isn\'t a entries item');
         return;
     }
-    const hashItem = item.className.split('TitleHash-')[1]
+    const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
     const toBeRemovedItem = AllHermidata[hashItem]
     const confirmation = customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
     if ( confirmation) {
@@ -1764,7 +1961,7 @@ async function unsubscribe(target) {
         console.log('isn\'t a notification item');
         return;
     }
-    const hashItem = item.className.split('TitleHash-')[1]
+    const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
     
     const NotificationSection = document.querySelector("#RSS-Notification")
     const AllItemSection = document.querySelector("#All-RSS-entries")
@@ -1859,7 +2056,7 @@ function makeHermidataV3(title, url, type = "Manga") {
         meta: {
             tags: [],
             notes: "",
-            altTitles: [],
+            altTitles: [title],
             added: new Date().toISOString(),
             updated: new Date().toISOString()
         }
@@ -1874,13 +2071,20 @@ async function saveHermidataV3(entry) {
 }
 
 async function updateChapterProgress(title, type, newChapterNumber) {
+    let needsToMigrate = false
     const key = returnHashedTitle(title, type);
-
+    const Hermidata = await getHermidata()
     const data = await browser.storage.sync.get(key);
-    const entry = data[key] ? data[key] : makeHermidataV3(title, HermidataV3.url, HermidataV3.type);
+    
+    let entry = {};
+    if (data[key]) entry = data[key]
+    else if (Object.entries(Hermidata).length > 0) entry = Hermidata
+    else entry = makeHermidataV3(title, HermidataV3.url, HermidataV3.type);
+
     if (!entry) {
         console.warn(`[HermidataV3] No entry found for ${title}`);
     }
+    if ( entry.title !== title || entry.type !== type || key !== entry.id) needsToMigrate = true
 
     if (newChapterNumber >= entry.chapter.current) {
         entry.id = key;
@@ -1894,6 +2098,7 @@ async function updateChapterProgress(title, type, newChapterNumber) {
         await browser.storage.sync.set({ [key]: entry });
         console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
     }
+    if (needsToMigrate) await getHermidata()
 }
 /**
  *  merge RSS feed data into existing Hermidata entry
