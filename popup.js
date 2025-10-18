@@ -45,33 +45,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log('Start of new Hermidata');
     const dups = await findPotentialDuplicates(0.9);
     if ( dups.length > 0) console.table(dups , 'potential duplicates table');
-    // await migrateHermidataV3toV3hash();
+
     AllHermidata = await getAllHermidata();
     HermidataV3 = await getCurrentTab();
     HermidataV3.title = trimTitle(HermidataNeededKeys.Page_Title);
     HermidataNeededKeys.GoogleSheetURL = await getGoogleSheetURL();
     populateType()
     populateStatus()
-    // migrateHermidataV2toV3();
-    // await migrateHermidata();
+    changePageToClassic();
     HermidataNeededKeys.Past = await getHermidata();
 
-    if (Object.values(HermidataNeededKeys?.Past).length > 0) {
-        if (!novelType.includes(HermidataNeededKeys.Past?.type)) {
-            let capitalizeFirstLetterType = capitalizeFirst(HermidataNeededKeys.Past?.type)
-            if ( novelType.includes(capitalizeFirstLetterType) ) HermidataNeededKeys.Past.type = capitalizeFirstLetterType
-            else {
-                console.warn('type can\'t be found in past',HermidataNeededKeys.Past?.type)
-            }
-        }
-        if (!readStatus.includes(HermidataNeededKeys.Past?.status)) {
-            let capitalizeFirstLetterStatus = capitalizeFirst(HermidataNeededKeys.Past?.status)
-            if ( readStatus.includes(capitalizeFirstLetterStatus) ) HermidataNeededKeys.Past.status = capitalizeFirstLetterStatus
-            else {
-                console.warn('status can\'t be found in past',HermidataNeededKeys.Past?.status)
-            }
-        }
-    } else console.log('no past hermidata')
+    trycapitalizingTypesAndStatus();
     document.getElementById("Pagetitle").textContent = HermidataNeededKeys.Page_Title;
     document.getElementById("title").value =  HermidataNeededKeys.Past?.title || HermidataV3.title;
     document.getElementById("title_HDRSS").value = HermidataNeededKeys.Past?.title || HermidataV3.title;
@@ -101,7 +85,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error('Extention error trying to open new tab GoogleSheetURL: ',error)
         }
     });
-    changePageToClassic();
 });
 
 function removeKeysFromSync(key) {
@@ -131,6 +114,25 @@ function getCurrentTab() {
             console.error('Extention error inside getCurrentTab: ',error)
         }
     });
+}
+
+function trycapitalizingTypesAndStatus() {
+    if (Object.values(HermidataNeededKeys?.Past).length > 0) {
+        if (!novelType.includes(HermidataNeededKeys.Past?.type)) {
+            let capitalizeFirstLetterType = capitalizeFirst(HermidataNeededKeys.Past?.type)
+            if ( novelType.includes(capitalizeFirstLetterType) ) HermidataNeededKeys.Past.type = capitalizeFirstLetterType
+            else {
+                console.warn('type can\'t be found in past',HermidataNeededKeys.Past?.type)
+            }
+        }
+        if (!readStatus.includes(HermidataNeededKeys.Past?.status)) {
+            let capitalizeFirstLetterStatus = capitalizeFirst(HermidataNeededKeys.Past?.status)
+            if ( readStatus.includes(capitalizeFirstLetterStatus) ) HermidataNeededKeys.Past.status = capitalizeFirstLetterStatus
+            else {
+                console.warn('status can\'t be found in past',HermidataNeededKeys.Past?.status)
+            }
+        }
+    } else console.log('no past hermidata')
 }
 
 function findByTitleOrAltV2(title, allData) {
@@ -173,47 +175,6 @@ function getGoogleSheetURL() {
         }
     });
 }
-async function setHermidata() {
-    const key = makeHermidataKey();
-
-    // Check if old format exists
-    const oldData = await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.get(["Hermidata"], (result) => {
-            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-            else resolve(result?.Hermidata || null);
-        });
-    });
-
-    // If old format exists (V1), migrate each entry to top-level keys (V2)
-    if (oldData && typeof oldData === "object" && Object.keys(oldData).length > 0) {
-        let migrate = {};
-        for (const oldKey in oldData) {
-            migrate[oldKey] = oldData[oldKey];
-        }
-        // Remove the old Hermidata object (V1)
-        await new Promise((resolve, reject) => {
-            browserAPI.storage.sync.remove("Hermidata", () => {
-                if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-                else resolve();
-            });
-        });
-        // Save migrated entries as top-level keys (V2)
-        await new Promise((resolve, reject) => {
-            browserAPI.storage.sync.set(migrate, () => {
-                if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-                else resolve();
-            });
-        });
-    }
-
-    // Save back (V2)
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set({ [key]: Hermidata }, () => {
-        if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-        else resolve();
-        });
-    });
-}
 /**
  * Title
  * Type
@@ -222,13 +183,9 @@ async function setHermidata() {
  */
 async function getHermidata() {
 try {
-    // get all Hermidata and return latest with same title
+    // get all Hermidata
     const allHermidata = await getAllHermidata();
-    const found = await findLatestByTitle(HermidataV3.title, allHermidata);
-    // if ( found) return found
 
-
-    let absoluteKey = ''
     let absoluteObj = {}
 
     // find title from alt
@@ -238,7 +195,9 @@ try {
     const fuzzyKey = AltKeyNeeded?.relatedKey;
     // Generate all possible keys
     const possibleKeys = novelType.map(type => returnHashedTitle(TrueTitle, type));
-    if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey)
+    // add fuzzy key if not inside possible keys
+    if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey);
+    // get all posible hermidata Obj
     const possibleObj = {}
     for (const key of possibleKeys) {
         const obj = await getHermidataViaKey(key);
@@ -247,18 +206,12 @@ try {
     console.log('posible Objects', possibleObj)
 
     // add alt title to Object
-    if (AltKeyNeeded?.needAltTitle && fuzzyKey) {
-        const relatedEntry = possibleObj[fuzzyKey];
-        if (relatedEntry) {
-            const confirmation = await customConfirm(
-                `${AltKeyNeeded.reason}\nAdd "${HermidataV3.title}" as an alt title for "${relatedEntry.title}"?`
-            );
-            if (confirmation) await appendAltTitle(HermidataV3.title, relatedEntry);
-        }
+    if (AltKeyNeeded?.needAltTitle && fuzzyKey && possibleObj[fuzzyKey]) {
+        const confirmation = await customConfirm(`${AltKeyNeeded.reason}\nAdd "${HermidataV3.title}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
+        if (confirmation) await appendAltTitle(HermidataV3.title, possibleObj[fuzzyKey]);
     }
 
     if ( Object.keys(possibleObj).length == 1 ) {
-        absoluteKey = Object.keys(possibleObj)[0]
         absoluteObj = Object.values(possibleObj)[0]
         return absoluteObj
     }
@@ -271,7 +224,8 @@ try {
         return await migrateCopy(objs)
     }
     if ( Object.entries(absoluteObj).length > 0) return absoluteObj
-    const key = absoluteKey || makeHermidataKey();
+
+    const key = makeHermidataKey();
     return new Promise((resolve, reject) => {
         browserAPI.storage.sync.get([key], (result) => {
             if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
@@ -318,7 +272,7 @@ async function migrationSteps(obj1, obj2, options = {}) {
     const confirmMerge = await confirmMigrationPrompt(newer, older, options );
 
     if (confirmMerge) {
-        const migrated = await migrateHermidataV4(newer, older);
+        const migrated = await migrateHermidataV5(newer, older);
         return migrated; // Stop after successful merge
     } else {
         console.log("User canceled migration; switching it up");
@@ -328,7 +282,7 @@ async function migrationSteps(obj1, obj2, options = {}) {
         const confirm_NewMerge = await confirmMigrationPrompt(New_newer, New_older, options );
 
         if (confirm_NewMerge) {
-            const migrated = await migrateHermidataV4(New_newer, New_older);
+            const migrated = await migrateHermidataV5(New_newer, New_older);
             return migrated; // Stop after successful merge
         } else {
             console.log("User canceled migration; keeping newer data.");
@@ -400,7 +354,7 @@ function isSameSeries(a, b) {
 /**
  *  Create a clear confirmation message for user
  */
-function confirmMigrationPrompt(newer, older, options = {}) {
+async function confirmMigrationPrompt(newer, older, options = {}) {
     try {
         const msg = options.message || 
             `
@@ -421,7 +375,7 @@ function confirmMigrationPrompt(newer, older, options = {}) {
     
             → Keep the newer type (“${newer.type}”) and merge?
         `;
-        return customConfirm(msg);
+        return await customConfirm(msg);
     } catch (error) {
         console.warn("Prompt blocked; auto-selecting newest entry:", error.message);
         return false;
@@ -542,74 +496,90 @@ function customConfirm(msg) {
 }
 
 /**
- *  Merge two Hermidata entries intelligently
+ * merge two Hermidata object entries into one object & migrates to new key
+ * @param {object} newer - the object to keep as primary ( newest data )
+ * @param {object} older - the object to be merged/remplaced
+ * @returns {Premise<{
+ *  id: string
+ *  title: string
+ *  type: string
+ *  url: string
+ *  source: string
+ *  status: string
+ *  chapter: {
+ *   current: number
+ *   latest: number|null
+ *   history: number[]
+ *   lastChecked: string
+ *  }
+ *  rss: object|null
+ *  import: object|null
+ *  meta: {
+ *   tags: string[]
+ *   notes: string
+ *   altTitles: string[]
+ *   added: string
+ *   updated: string
+ *  }
+ * }|null>} The merged Hermidata entry
  */
-function mergeHermidata(oldData, newData) {
-    const merged = structuredClone(oldData); // safe deep copy
-
-    // Prefer newer or non-empty fields
-    merged.type = newData.type || oldData.type;
-    merged.id = returnHashedTitle(merged.title, merged.type);
-    merged.url = newData.url || oldData.url;
-    merged.lastUpdated = Date.now();
-
-    merged.chapter = {
-        current: newData.chapter?.current || oldData.chapter?.current || "0",
-        total: newData.chapter?.total || oldData.chapter?.total || "",
-    };
-
-    merged.status = newData.status || oldData.status || "Planned";
-
-    merged.meta = {
-        ...oldData.meta,
-        ...newData.meta,
-        tags: [...new Set([
-            ...(oldData.meta?.tags?.split(",") || []),
-            ...(newData.meta?.tags?.split(",") || []),
-        ])].filter(Boolean).join(", "),
-        notes: newData.meta?.notes || oldData.meta?.notes || "",
-    };
-
-    return merged;
-}
-
-/**
- *  Migrate an old entry to a new key and remove the old one
- */
-async function migrateHermidataV4(newer, older) {
+async function migrateHermidataV5(newer, older) {
+    // step 1. new key
+    // re-make keys
+    const [ newTitle, newType ] = [newer.title, newer.type]
+    const [ oldTitle, oldType ] = [older.title, older.type]
+    const newKey = returnHashedTitle(newTitle, newType);
+    const oldKey = returnHashedTitle(oldTitle, oldType);
+    // check keys validity
+    if ( newKey !== newer.id || oldKey !== older.id) return null;
+    // step 2. start with shell
+    const mergeAltTitles = (mainTitle, ...altLists) => {
+        return [
+            mainTitle,
+            ...Array.from(new Set( altLists.flat().filter(t => trimTitle(t) && trimTitle(t) !== trimTitle(mainTitle)) ) )
+        ];
+    }
+    const base = makeHermidataV3(newTitle, newer.url || older.url, newType);
     const merged = {
-        ...older,
-        ...newer, // newer values take priority
-        type: newer.type,
-        title: newer.title,
-        lastUpdated: new Date().toISOString(),
-    };
-
-    const newKey = returnHashedTitle(merged.title, merged.type);
-    const oldKey = returnHashedTitle(older.title, older.type);
-
+        ...base,
+        id: newKey,
+        title: newTitle || oldTitle,
+        type: newType || oldType,
+        url: newer.url || older.url,
+        source: newer.source || older.source,
+        status: newer.status || older.status || "Planned",
+        chapter: {
+            current: newer.chapter?.current ?? older.chapter?.current ?? 0,
+            latest: newer.chapter?.latest ?? older.chapter?.latest ?? null,
+            history: Array.from( new Set([...(older.chapter?.history || []), ...(newer.chapter?.history || [])]) ).sort((a, b) => a - b),
+            lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString()
+        },
+        rss: newer.rss || older.rss || null,
+        import: newer.import || older.import || null,
+        meta: {
+            tags: Array.from(
+                new Set([
+                    ...(older.meta?.tags || []),
+                    ...(newer.meta?.tags || [])
+                ])
+            ),
+            notes: newer.meta?.notes || older.meta?.notes || "",
+            altTitles: mergeAltTitles(
+                newTitle,
+                older.meta?.altTitles || [],
+                newer.meta?.altTitles || [],
+                [newer.title, older.title]
+            ),
+            added: older.meta?.added || base.meta.added,
+            updated: new Date().toISOString()
+        }
+    }
+    // step 3. save & remove key
     await browserAPI.storage.sync.set({ [newKey]: merged });
     await browserAPI.storage.sync.remove(oldKey);
 
     console.log(`Migrated from ${oldKey} → ${newKey}`);
     return merged;
-}
-
-
-
-async function migrateKey(oldData, newType) {
-    const newKey = returnHashedTitle(oldData.title, newType);
-    const oldKey = returnHashedTitle(oldData.title, oldData.type);
-
-    const newData = { ...oldData, type: newType, id: newKey, lastUpdated: Date.now() };
-
-    // Write new entry
-    await browserAPI.storage.sync.set({ [newKey]: newData });
-
-    // Remove old entry
-    await browserAPI.storage.sync.remove(oldKey);
-
-    console.log(`Migrated from ${oldKey} → ${newKey}`);
 }
 
 
@@ -632,63 +602,6 @@ function simpleHash(str) {
         hash |= 0; // Convert to 32bit integer
     }
     return hash.toString();
-}
-
-async function migrateHermidataV2toV3() {
-    console.log("Starting V2 → V3 migration...");
-
-    const allData = await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.get(null, (result) => {
-            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-            else resolve(result || {});
-        });
-    });
-
-    const hashKeyPattern = /^-?\d+$/; // matches simpleHash integer strings
-    let migrated = {};
-    let removeKeys = [];
-    let migratedCount = 0;
-
-    for (const [key, value] of Object.entries(allData)) {
-        // Only migrate keys that look like V2 hashes
-        if (!hashKeyPattern.test(key)) continue;
-
-        // Ensure the value is a valid Hermidata entry
-        if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
-
-        const newKey = returnHashedTitle(value.Title, value.type);
-
-        // Skip if already exists (don’t overwrite newer data)
-        if (allData[newKey]) continue;
-
-        migrated[newKey] = value;
-        removeKeys.push(key);
-        migratedCount++;
-    }
-
-    // Nothing to do
-    if (migratedCount === 0) {
-        console.log("No V2 entries detected for migration.");
-        return;
-    }
-
-    // Save migrated entries under new keys (V3)
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set(migrated, () => {
-            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-            else resolve();
-        });
-    });
-
-    // Optional: cleanup old V2 keys (uncomment to enable)
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.remove(removeKeys, () => {
-            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-            else resolve();
-        });
-    });
-
-    console.log(`V2 → V3 migration complete. Migrated ${migratedCount} entries.`);
 }
 
 function sheetUrlInput(resolve, reject) {
@@ -725,7 +638,7 @@ function trimTitle(title) {
     if (!title) return "";
 
     // Extract domain name from url
-    const siteMatch = RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataV3.url);
+    const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataV3.url);
     const siteName = siteMatch ? siteMatch[1] : "";
 
     // Split title by common separators
@@ -772,7 +685,7 @@ function trimTitle(title) {
     // Extract main title (remove chapter info)
     let mainTitle = '';
     let Url_filter_parts = HermidataV3.url.split('/')
-    let Url_filter = Url_filter_parts[Url_filter_parts.length -1].replace(/-/g,' ').toLowerCase().trim();
+    let Url_filter = Url_filter_parts.at(-1).replace(/-/g,' ').toLowerCase().trim();
     let MakemTitle = (filter) => {
         if (!filter.length) return '';
         // Edge case: if first looks like "chapter info" but second looks like a real title → swap them
@@ -868,7 +781,6 @@ async function saveSheet() {
     // save to Browser in JSON format
     await updateChapterProgress(title, Type, Chapter);
     HermidataNeededKeys.Past = {};
-    // await setHermidata();
 
     // save to google sheet & bookmark/replace bookmark
     browserAPI.runtime.sendMessage({
@@ -879,34 +791,6 @@ async function saveSheet() {
 
     if(!Testing) setTimeout( () => window.close(), 400);
 }
-
-async function findLatestByTitle(title, allData) {
-    if (!title) return null;
-
-    // Normalize title for comparison
-    const cleanTitle = trimTitle(title);
-
-    // Step 1: Find all entries that match this title
-    const matches = Object.values(allData).filter(item => {
-        if (!item || typeof item !== "object") return false;
-        const storedTitle = trimTitle(item.title || item.Title || "");
-        return storedTitle === cleanTitle;
-    });
-
-    // Step 2: If nothing found, return null
-    if (matches.length === 0) return null;
-
-    // Step 3: Sort by "lastUpdated" or "date" (newest first)
-    const sorted = matches.toSorted((a, b) => {
-        const timeA = new Date(a.lastUpdated || a.date || 0).getTime();
-        const timeB = new Date(b.lastUpdated || b.date || 0).getTime();
-        return timeB - timeA;
-    });
-
-    // Step 4: Return the latest entry
-    return sorted[0];
-}
-
 
 function FixTableSize() {
     const inputs = document.querySelectorAll('input.autoInput');
@@ -1030,69 +914,8 @@ async function getAllHermidata() {
     console.log(`Total entries: ${Count}`);
     return allHermidata;
 }
-async function migrateHermidataV3toV3hash() {
-    const allHermidata = await getAllHermidata();
-    const allKeys = Object.keys(allHermidata);
-
-    if (!allKeys.length) {
-        console.warn("No Hermidata entries found.");
-        return;
-    }
-
-    const newEntries = {};
-    const keysToRemove = [];
-    let migratedCount = 0;
-
-    for (const [oldKey, data] of Object.entries(allHermidata)) {
-        try {
-            const title = data.title || data.Title || data?.HermidataV3?.title || "";
-            if (!title) continue;
-            if (!data.type || typeof data.type !== "string") continue;
-
-            const capitalizedType = data.type.charAt(0).toUpperCase() + data.type.slice(1);
-
-            // Compute new canonical hash
-            const newHash = returnHashedTitle(title, capitalizedType);
-            if ( oldKey === newHash && data.id === newHash) continue;
-
-            // update data with new id
-            const updatedData = {...data, id: newHash, type: capitalizedType }
-            // add new entry with new Hash
-            newEntries[newHash] = updatedData;
-            keysToRemove.push(oldKey);
-
-            migratedCount++;
-        } catch (err) {
-            console.error("Migration error for entry:", oldKey, err);
-        }
-    }
-
-    if (migratedCount === 0) {
-        console.log("No entries needed updates.");
-        return;
-    }
-
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set(newEntries, () => {
-            if (browserAPI.runtime.lastError)
-                reject(new Error(browserAPI.runtime.lastError));
-            else resolve();
-        });
-    });
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.remove(keysToRemove, () => {
-            if (browserAPI.runtime.lastError)
-                reject(new Error(browserAPI.runtime.lastError));
-            else resolve();
-        });
-    });
-    console.log(`Migration complete — ${migratedCount} entries migrated.`);
-    console.log("Removed old keys:", keysToRemove);
-}
 
 function makeRSSPage() {
-
-    // TEMP
     // subscribe section
     makeSubscibeBtn();
     // sort section
@@ -1202,23 +1025,6 @@ function makeSortSection(sortSection) {
     sortOptionLogic(sortSection);
 }
 
-
-
-function filterEntries(query, filtered = null) {
-    const allItems = document.querySelectorAll('.RSS-entries-item');
-    
-    allItems.forEach(item => {
-        const titleEl = item.querySelector('.RSS-entries-item-title');
-        const titleText = titleEl?.textContent?.toLowerCase() || '';
-
-        const match = filtered
-        ? filtered.some(f => f.title.toLowerCase() === titleText)
-        : !query || titleText.includes(query);
-
-        item.style.display = match ? '' : 'none';
-    });
-}
-
 function setupSearchBar(e_, suggestionBox) {
     const searchInput = document.querySelector('.search-input');
 
@@ -1315,9 +1121,8 @@ function filterEntries(query, filtered = null) {
         : !query ) || titleText.includes(query);
 
         item.style.display = match ? '' : 'none';
-        match 
-        ? item.classList.add('seachable')
-        : item.classList.remove('seachable') || '';
+        if (match) item.classList.add('seachable')
+        else item.classList.remove('seachable');
     });
 }
 
@@ -1335,7 +1140,7 @@ function sortOptionLogic(parent_section) {
 
     checkboxes.forEach(cb => {
         cb.addEventListener("click", () => {
-            let state = parseInt(cb.dataset.state || "0");
+            let state = Number.parseInt(cb.dataset.state || "0");
 
             // cycle 0→1→2→0
             state = (state + 1 ) % 3;
@@ -1455,7 +1260,7 @@ function applyFilterToEntries(filters) {
 
         
 
-        const isISOString =  new Date(entryData.meta.added)?.getHours() ? true : false;
+        const isISOString =  !!new Date(entryData.meta.added)?.getHours();
         const splitDatum =  entryData.meta?.added.split('/')[2]
         const dateAdded = isISOString ? entryData.meta.added.split('-')[0] : splitDatum || new Date()?.toISOString().split('-')[0]
 
@@ -1465,13 +1270,26 @@ function applyFilterToEntries(filters) {
         for (const [section, values] of Object.entries(filters.include)) {
             if (values.length === 0) continue;
 
-            const val = section === "Type" ? type
-                : section === "Status" ? status
-                : section === "Source" ? source
-                : section === "Tag" ? tags
-                : section === "Date" ? dateAdded
-                : "";
-
+            let val;
+            switch (section) {
+                case "Type":
+                    val = type
+                    break;
+                case "Status":
+                    val = status
+                    break;
+                case "Source":
+                    val = source
+                    break;
+                case "Tag":
+                    val = tags
+                    break;
+                case "Date":
+                    val = dateAdded
+                    break;
+                default:
+                    break;
+            }
             const match = Array.isArray(val)
                 ? val.some(v => values.includes(v))
                 : values.includes(val);
@@ -1487,12 +1305,26 @@ function applyFilterToEntries(filters) {
             for (const [section, values] of Object.entries(filters.exclude)) {
                 if (values.length === 0) continue;
 
-                const val = section === "Type" ? type
-                    : section === "Status" ? status
-                    : section === "Source" ? source
-                    : section === "Tags" ? tags
-                    : section === "Date" ? dateAdded
-                    : "";
+                let val;
+                switch (section) {
+                    case "Type":
+                        val = type
+                        break;
+                    case "Status":
+                        val = status
+                        break;
+                    case "Source":
+                        val = source
+                        break;
+                    case "Tag":
+                        val = tags
+                        break;
+                    case "Date":
+                        val = dateAdded
+                        break;
+                    default:
+                        break;
+                }
                 const match = Array.isArray(val)
                     ? val.some(v => values.includes(v))
                     : values.includes(val);
@@ -1507,7 +1339,7 @@ function applyFilterToEntries(filters) {
         entry.style.display = visible ? "" : "none";
         visible
             ? entry.classList.add('seachable')
-            : entry.classList.remove('seachable') || '';
+            : entry.classList.remove('seachable');
     });
 }
 
@@ -1641,7 +1473,7 @@ function makeSortOptions(parent_section) {
     filterSection.appendChild(sourceSection);
 
     // 5. Tags
-    const allTags = Array.from(new Set([].concat(...Object.values(AllHermidata || {}).map(item => item.meta?.tags || []))));
+    const allTags = Array.from(new Set(...Object.values(AllHermidata || {}).map(item => item.meta?.tags || [])).flat());
     const tagSection = createFilterSection('Tag', allTags, 'filter-tag');
     filterSection.appendChild(tagSection);
 
@@ -1729,13 +1561,13 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 
             
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
-            const AllItemChapterText = currentChapter != chapter ? `read ${currentChapter} of ${chapter}` : `up-to-date (${chapter})`;
+            const AllItemChapterText = currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
             const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
             const maxTitleCharLangth = 50;
             const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
             
-            const lastRead = AllHermidata[key[0]]?.chapter?.current || '0';
-            const progress = lastRead != '0' ? ((parseFloat(lastRead) / parseFloat(chapter)) * 100 ).toPrecision(3) : '0';
+            const lastRead = AllHermidata[key[0]]?.chapter?.current || null;
+            const progress = lastRead ? ((Number.parseFloat(lastRead) / Number.parseFloat(chapter)) * 100 ).toPrecision(3) : '0';
 
             const ELTitle = document.createElement("div");
             const ELchapter = document.createElement("div");
@@ -1896,7 +1728,7 @@ async function addAltTitle(target) {
         console.warn("Entry not found for hash:", hashItem);
         return;
     }
-    const newTitle = await customPrompt("Add alternate title for this entry:");
+    const newTitle = await customPrompt("Add alternate title for this entry:", '');
     if (!newTitle) return;
 
     // Normalize and deduplicate
@@ -1966,7 +1798,7 @@ async function RenameItem(target) {
     console.log(`[Hermidata] Renamed "${oldData.title}" → "${newTitle}"`);
 }
 
-function remove(target) {
+async function remove(target) {
     const item = getEntriesItem(target)
     if (!item) {
         console.log('isn\'t a entries item');
@@ -1974,7 +1806,7 @@ function remove(target) {
     }
     const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
     const toBeRemovedItem = AllHermidata[hashItem]
-    const confirmation = customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
+    const confirmation = await customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
     if ( confirmation) {
         console.warn(`Removing item ${toBeRemovedItem}`)
         removeKeysFromSync(hashItem)
@@ -1992,11 +1824,10 @@ async function unsubscribe(target) {
     
     const NotificationSection = document.querySelector("#RSS-Notification")
     const AllItemSection = document.querySelector("#All-RSS-entries")
-    const feedFromHermidata = await loadSavedFeeds();
 
     await unLinkRSSFeed({hash:hashItem });
     console.log('un-link RSS to extention')
-    reloadContent(NotificationSection, AllItemSection, feedFromHermidata)
+    reloadContent(NotificationSection, AllItemSection)
     console.log('reloading notification')
 }
 function getEntriesItem(el) {
@@ -2060,14 +1891,43 @@ async function loadSavedFeeds() {
     }
     return feedList;
 }
-
+/**
+ * 
+ * @param {string} title 
+ * @param {string} url 
+ * @param {string} type 
+ * @returns {{
+ *  id: string,
+ *  title: string,
+ *  type: string,
+ *  url: string,
+ *  source: string,
+ *  status: string,
+ *  chapter: {
+ *   current: number,
+ *   latest: number|null,
+ *   history: number[],
+ *   lastChecked: string
+ *  },
+ *  rss: object|null,
+ *  import: object|null,
+ *  meta: {
+ *   tags: string[],
+ *   notes: string,
+ *   altTitles: string[],
+ *   added: string,
+ *   updated: string
+ *  }
+ * }}
+ */
 function makeHermidataV3(title, url, type = "Manga") {
+    const trimTitle = trimTitle(title);
     const hash = returnHashedTitle(title, type)
     const source = new URL(url).hostname.replace(/^www\./, "");
 
     return {
         id: hash,
-        title: title,
+        title: trimTitle,
         type,
         url,
         source,
@@ -2083,7 +1943,7 @@ function makeHermidataV3(title, url, type = "Manga") {
         meta: {
             tags: [],
             notes: "",
-            altTitles: [title],
+            altTitles: [trimTitle],
             added: new Date().toISOString(),
             updated: new Date().toISOString()
         }
@@ -2381,74 +2241,4 @@ function levenshteinDistance(a, b) {
     }
 
     return dp[m][n];
-}
-
-
-async function migrateHermidata() {
-    const allHermidata = await getAllHermidata();
-    if (!Object.keys(allHermidata).length) return;
-
-    const unified = {};
-    let updatedCount = 0;
-
-    for (const [id, data] of Object.entries(allHermidata)) {
-        if (!data?.title) continue; // skip invalid entries
-
-        // Defensive fallback helpers
-        const meta = data.meta || {};
-        const chapter = data.chapter || {};
-        const altTitles = Array.isArray(meta.altTitles) ? meta.altTitles : [];
-
-        // Create unique set of alt titles, always ensuring main title is first
-        const altSet = new Set([ trimTitle(data.title), ...altTitles.map(trimTitle) ]);
-        const altTitlesFinal = Array.from(altSet);
-
-        // Handle URL parsing safely
-        let source = data.source || "";
-        try {
-            if (!source && (data.url || data.Url)) {
-                source = new URL(data.url || data.Url).hostname.replace(/^www\./, "");
-            }
-        } catch {
-            source = "unknown";
-        }
-
-        unified[id] = {
-            id,
-            title: data.title,
-            type: data.type,
-            url: data.url || data.Url || "",
-            source,
-            status: data.status || "Unknown",
-            chapter: {
-                current: chapter.current || Number(data.Chapter) || 0,
-                latest: chapter.latest || null,
-                history: chapter.history || [],
-                lastChecked: chapter.lastChecked || data.Date || null
-            },
-            rss: data.rss || null,
-            import: data.import || null,
-            meta: {
-                tags: Array.isArray(meta.tags) ? meta.tags : [],
-                notes: meta.notes || "",
-                added: meta.added || data.Date || new Date().toISOString(),
-                updated: meta.updated || new Date().toISOString(),
-                altTitles: altTitlesFinal
-            }
-        };
-
-        updatedCount++;
-    }
-
-    // Save everything safely
-    await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.set(unified, () => {
-            if (browserAPI.runtime.lastError)
-                reject(new Error(browserAPI.runtime.lastError));
-            else resolve();
-        });
-    });
-
-    console.log(`[Hermidata] Migration completed. ${updatedCount} entries updated.`);
-    return unified;
 }
