@@ -597,9 +597,9 @@ function simpleHash(str) {
     let hash = 0, i, chr;
     if (str.length === 0) return hash.toString();
     for (i = 0; i < str.length; i++) {
-        chr = str.charCodeAt(i);
+        chr = str.codePointAt(i);
         hash = ((hash << 5) - hash) + chr;
-        hash |= 0; // Convert to 32bit integer
+        hash = Math.trunc(hash); // Convert to 32bit integer
     }
     return hash.toString();
 }
@@ -823,7 +823,7 @@ function FixTableSize() {
             const parent = document.getElementById('ParentPreview');
             const parentMaxWidth = 10000; // same as your CSS
             const parentStyle = getComputedStyle(parent);
-            const parentPadding = parseFloat(parentStyle.paddingLeft) + parseFloat(parentStyle.paddingRight);
+            const parentPadding = Number.parseFloat(parentStyle.paddingLeft) + Number.parseFloat(parentStyle.paddingRight);
             // Actual usable space in the parent
             const maxContainerWidth = (document.body.offsetWidth, parentMaxWidth) - parentPadding;
             // Get all first-row cells and subtract other columns' widths
@@ -1921,13 +1921,13 @@ async function loadSavedFeeds() {
  * }}
  */
 function makeHermidataV3(title, url, type = "Manga") {
-    const trimTitle = trimTitle(title);
+    const Title = trimTitle(title);
     const hash = returnHashedTitle(title, type)
     const source = new URL(url).hostname.replace(/^www\./, "");
 
     return {
         id: hash,
-        title: trimTitle,
+        title: Title,
         type,
         url,
         source,
@@ -1943,7 +1943,7 @@ function makeHermidataV3(title, url, type = "Manga") {
         meta: {
             tags: [],
             notes: "",
-            altTitles: [trimTitle],
+            altTitles: [Title],
             added: new Date().toISOString(),
             updated: new Date().toISOString()
         }
