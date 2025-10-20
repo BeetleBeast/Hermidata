@@ -544,95 +544,219 @@ async function updateCurrentBookmarkAndIcon(Url) {
         let searchUrl = Url || currentTab.url;
         const validBookmarks = await searchValidBookmarks(searchUrl);
         currentBookmark = validBookmarks.length > 0 ? validBookmarks[0] : null;
-        const validFuzzyBookmarks = await hasRelatedBookmark(searchUrl);
-        generalFuzzyBookmark
-        updateIcon(Url);
+        const validFuzzyBookmarks = await hasRelatedBookmark(currentTab);
+        generalFuzzyBookmark = validFuzzyBookmarks || null;
+        let NewUrl = Url || generalFuzzyBookmark?.[0].bookmarkUrl || searchUrl
+        updateIcon(NewUrl);
     });
 }
-
-async function hasRelatedBookmark(searchUrl) {
+/**
+ * Return the bookmark after a fuzzy search instead of a direct search
+ * @param {*} currentTab 
+ * @returns 
+ */
+async function hasRelatedBookmark(currentTab) {
+    let hasValidFuzzy = false;
     const Browserroot = typeof browser !== "undefined" && navigator.userAgent.includes("Firefox")
         ? "Bookmarks Menu"
         : "Bookmarks";
-    const rootBookmarkID = await getRootByTitle(Browserroot);
-    const all = await getAllBookmarks(rootBookmarkID);
     const settings = await new Promise((resolve) => {
         chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
     });
-    const folderInfo = settings?.FolderMapping
     let flatmapFolderInfo = []
-    const flatmapFolderInfoObj = {}
-    for (let type1 = 0; type1 < Object.values(folderInfo).length; type1++) {
-        const element1 = Object.values(folderInfo)[type1];
-        const key1 = Object.keys(folderInfo)[type1]
+    for (let type1 = 0; type1 < Object.values(settings?.FolderMapping).length; type1++) {
+        const element1 = Object.values(settings?.FolderMapping)[type1];
         for (let type2 = 0; type2 < Object.values(element1).length; type2++) {
             const element2 = Object.values(element1)[type2];
-            const key2 = Object.keys(element1)[type2];
                 flatmapFolderInfo.push(element2)
-                flatmapFolderInfoObj[`${key1}_|_${key2}`] = element2;
         }
         
     }
-    let pathSegments = {};
-    for (let index = 0; index < flatmapFolderInfo.length; index++) {
-        const element = flatmapFolderInfo[index];
-        pathSegments[element.path] = element.path.split('/')
-        
-    }
-    let pathSegmentsObj = {};
-    for (let index = 0; index < Object.keys(flatmapFolderInfoObj).length; index++) {
-        const element = Object.values(flatmapFolderInfoObj)[index];
-        const key1 = Object.keys(flatmapFolderInfoObj)[index]
-        pathSegmentsObj[key1].segments = element.path.split('/')
-        
-    }
-    let hasValidFuzzyBookmark = false;
-    const PotentialDup = await findPotentialRelatedNames(allFlat, 0.9);
-    console.table(PotentialDup)
+    
+    const [ hasValidFuzzyBookmark, fuzzyBookmarkMatches ] = await detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot);
+    const [hasValidFuzzyHermidata, fuzzyHermidataMatches ] = await detectFuzzyHermidata(currentTab);
 
-
-    return hasValidFuzzyBookmark
+    if (hasValidFuzzyBookmark) console.log("Found potential bookmark duplicates:", fuzzyBookmarkMatches);
+    else if (hasValidFuzzyHermidata) console.log("Found potential hermidata duplicates:", fuzzyHermidataMatches);
+    if ( hasValidFuzzyBookmark === true) return fuzzyBookmarkMatches;
+    else if ( hasValidFuzzyHermidata === true) return fuzzyHermidataMatches
 }
+async function detectFuzzyHermidata(currentTab, threshold = 0.8) {
+    const fuzzyMatches = [];
+    const allHermidata = allHermidataCashed || await getAllHermidata();
+    if ( allHermidataCashed === undefined ) allHermidataCashed = allHermidata;
+    console.groupCollapsed("Fuzzy Bookmark Detection");
+    console.log("Current tab:", currentTab.title);
+    const trimmedTitle = trimTitle(currentTab.title, currentTab.url)
+    console.log("Current tab trimmed: ", trimmedTitle)
+    for (let i = 0; i < Object.keys(allHermidata).length; i++) {
+        const index = Object.keys(allHermidata)[i];
 
-async function findPotentialRelatedNames(validBookmarks, threshold = 0.9) {
-    const entries = await validBookmarks;
-    const duplicates = [];
+        const hermidata = allHermidata[index]
+        let score = null
+        if (hermidata?.meta?.altTitles.length > 1) {
+            for (let index = 0; index < hermidata?.meta?.altTitles.length; index++) {
+                score = CalcDiff( hermidata?.meta?.altTitles?.[index] || hermidata.title, trimmedTitle);
+                if (score >= threshold) {
+                    fuzzyMatches.push({
+                        bookmarkTitle: hermidata.title,
+                        bookmarkUrl: currentTab.url,
+                        similarity: score
+                    });
+                    console.warn(`[Fuzzy Match ${score.toFixed(2)}] "${hermidata.title}" ↔ "${trimmedTitle}"`);
+                }
+            }
+        }
+    }
 
-    console.group("Duplicate Title Scan");
+    
+    const hasValidFuzzyBookmark = fuzzyMatches.length > 0;
 
-    for (let i = 0; i < entries.length; i++) {
-        const [keyA, valA] = entries[i];
-        for (let j = i + 1; j < entries.length; j++) {
-            const [keyB, valB] = entries[j];
 
-            // Skip if same source and title already identical
-            if (valA.source === valB.source && valA.title === valB.title) continue;
+    console.table(fuzzyMatches);
+    console.groupEnd();
+    return [hasValidFuzzyBookmark, fuzzyMatches];
+}
+async function detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot, threshold = 0.8) {
+    const fuzzyMatches = [];
 
-            const score = CalcDiff(valA.title, valB.title);
+    for (let i = 0; i < flatmapFolderInfo.length; i++) {
+        const folder = flatmapFolderInfo[i];
+        folder.pathSegments = folder.path.split('/').filter(Boolean);
+        folder.finalFolderId = await new Promise((resolve) => {
+            createNestedFolders(folder.pathSegments, Browserroot, resolve);
+        });
+        folder.bookmarks = await getBookmarkChildren(folder.finalFolderId);
+
+        for (const bookmark of folder.bookmarks) {
+            const score = CalcDiff(bookmark.title, currentTab.title);
+
             if (score >= threshold) {
-                duplicates.push({
-                    keyA,
-                    keyB,
-                    titleA: valA.title,
-                    titleB: valB.title,
-                    sourceA: valA.source,
-                    sourceB: valB.source,
-                    score
+                fuzzyMatches.push({
+                    folderPath: folder.path,
+                    bookmarkTitle: bookmark.title,
+                    bookmarkUrl: bookmark.url,
+                    similarity: score
                 });
 
                 console.warn(
-                    `[DUPLICATE ${score.toFixed(2)}]`,
-                    `(${valA.source}) "${valA.title}" ↔ (${valB.source}) "${valB.title}"`
+                    `[Fuzzy Match ${score.toFixed(2)}] "${bookmark.title}" ↔ "${currentTab.title}" in folder "${folder.path}"`
                 );
             }
         }
     }
 
+    const hasValidFuzzyBookmark = fuzzyMatches.length > 0;
+
+    console.groupCollapsed("Fuzzy Bookmark Detection");
+    console.log("Current tab:", currentTab.title);
+    console.table(fuzzyMatches);
     console.groupEnd();
 
-    console.info(`Scan complete: found ${duplicates.length} potential duplicates.`);
-    return duplicates;
+    return [ hasValidFuzzyBookmark, fuzzyMatches ];
 }
+
+function trimTitle(title, url) {
+    let cleanString = (str) => {
+    if (!str) return "";
+    return str
+        // Remove all control characters (C0 + C1), zero-width chars, and formatting chars
+        .replace(/[\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F]/g, '')
+        // Normalize multiple spaces to a single space
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+    if (!title) return "";
+
+    // Extract domain name from url
+    const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(url);
+    const siteName = siteMatch ? siteMatch[1] : "";
+
+    // Split title by common separators
+    let cleanstring = cleanString(title);
+    const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|,|\|) /g).map(p => p.trim()).filter(Boolean);
+
+    // "Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road"
+
+    // Regex patterns
+    const chapterRemoveRegexV2 = /(\b\d{1,4}(?:\.\d+)?[A-Z]*\b\s*)?(\b(?:Episode|chapter|chap|ch)\b\.?\s*)(\b\d{1,4}(?:\.\d+)?[A-Z]*\b)?/gi
+    
+    const chapterRegex = /\b(?:Episode|chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
+    const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
+    const junkRegex = /\b(all page|novel bin|online)\b/i;
+    const cleanTitleKeyword = (title) => {
+        return title
+        .replace(/^\s*(manga|novel|anime|tv-series)\b\s*/i, '') // start
+        .replace(/\s*\b(manga|novel|anime|tv-series)\s*$/i, '') // end
+        .trim();
+}
+    const siteNameRegex = new RegExp(`\\b${siteName}\\b`, 'i');
+    const flexibleSiteNameRegex = new RegExp(`\\b${siteName
+        .replace(/[-/\\^$*+?.()|[\]{}]/g, "").split("")
+        .map(ch => ch.replace(/\s+/, ""))
+        .map(ch => `${ch}[\\s._-]*`)
+        .join("")}\\b`, 'i');
+
+    // Remove junk and site name
+    let filtered = parts
+        .filter(p => !readRegex.test(p))
+        .filter(p => !junkRegex.test(p))
+        .filter(p => !siteNameRegex.test(p))
+        .filter(p => !flexibleSiteNameRegex.test(p))
+        .map(p => cleanTitleKeyword(p))
+        .map(p => p.replace(/^[\s:;,\-–—|]+/, "").trim()) // remove leading punctuation + spaces
+        .map(p => p.replace('#', '').trim()) // remove any '#' characters
+        .filter(Boolean)
+
+    // Remove duplicates
+    filtered = filtered.filter((item, idx, arr) =>
+        arr.findIndex(i => i.toLowerCase() === item.toLowerCase()) === idx
+    );
+
+    // Extract main title (remove chapter info)
+    let mainTitle = '';
+    let Url_filter_parts = url.split('/')
+    let Url_filter = Url_filter_parts.at(-1).replace(/-/g,' ').toLowerCase().trim();
+    let MakemTitle = (filter) => {
+        if (!filter.length) return '';
+        // Edge case: if first looks like "chapter info" but second looks like a real title → swap them
+        if (
+            filter.length > 1 &&
+            /^\s*(chapter|ch\.?)\s*\d+/i.test(filter[0]) && // first is chapter info
+            !/^\s*(chapter|ch\.?)\s*\d+/i.test(filter[1])   // second is NOT chapter info
+        ) {
+            [filter[0], filter[1]] = [filter[1], filter[0]]; // swap
+        }
+        // if first el is chapter info place it at the end
+        if (filtered[0]?.replace(/\s*([–—-]|:|#|\|)\s*/g,' ').toLowerCase() === Url_filter) {// fip the first to last
+            filter[filter.length] = filter[0];
+            filter.shift();
+        }
+
+        mainTitle = filter[0]
+        .replace(chapterRemoveRegexV2, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
+        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
+        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
+        .trim();
+        if(mainTitle === '' ) return MakemTitle(filter.slice(1));
+        
+        if (filter.length < 2) return mainTitle;
+        let Chapter_Title = filter[1]
+        .replace(chapterRegex, '').trim() // remove 'chapter' and any variation
+        .replace(/\b\d+(\.\d+)?\b/g, "") // remove numbers
+        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
+        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
+        .trim();
+
+        if (Chapter_Title === '' && filter.length == 2) return mainTitle;
+        if (Chapter_Title === '') return [mainTitle, ...MakemTitle(filter.slice(1))];
+        HermidataV3.meta.notes = `Chapter Title: ${Chapter_Title}`;
+        return mainTitle;
+    }
+    mainTitle = MakemTitle(filtered);
+    return mainTitle.trim() || title;
+}
+
 function CalcDiff(a, b) {
     if (!a || !b) return 0;
 
@@ -685,27 +809,32 @@ function levenshteinDistance(a, b) {
     return dp[m][n];
 }
 async function getAllHermidata() {
-    const allData = await new Promise((resolve, reject) => {
-        browserAPI.storage.sync.get(null, (result) => {
-            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
-            else resolve(result || {});
+    try {
+        const allData = await new Promise((resolve, reject) => {
+            browserAPI.storage.sync.get(null, (result) => {
+                if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+                else resolve(result || {});
+            });
         });
-    });
 
-    let allHermidata = {};
-    let Count = 0;
+        let allHermidata = {};
+        let Count = 0;
 
-    for (const [key, value] of Object.entries(allData)) {
-        // Ensure the value is a valid Hermidata entry
-        if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
+        for (const [key, value] of Object.entries(allData)) {
+            // Ensure the value is a valid Hermidata entry
+            if (!value || typeof value !== "object" || !value.title || typeof value.title !== "string") continue;
 
-        allHermidata[key] = value;
-        Count++;
-        }
-    // Nothing to do
-    if (Count === 0) console.log("No entries detected.");
-    console.log(`Total entries: ${Count}`);
-    return allHermidata;
+            allHermidata[key] = value;
+            Count++;
+            }
+        // Nothing to do
+        if (Count === 0) console.log("No entries detected.");
+        console.log(`Total entries: ${Count}`);
+        return allHermidata;
+    }
+    catch(err) {
+        console.error(err)
+    }
 }
 
 // Helper: parse only the first 1–2 items
@@ -941,7 +1070,7 @@ const CalcDiffCache = new Map();
 
 let AllHermidata;
 let selectedIndex = -1;
-
+let allHermidataCashed = undefined;
 chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.sync.get([ "Settings" ], (result) => {
         const Settings = result.Settings;
