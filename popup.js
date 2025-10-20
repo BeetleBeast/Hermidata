@@ -1473,7 +1473,7 @@ function makeSortOptions(parent_section) {
     filterSection.appendChild(sourceSection);
 
     // 5. Tags
-    const allTags = Array.from(new Set(...Object.values(AllHermidata || {}).map(item => item.meta?.tags || [])).flat());
+    const allTags = Array.from(new Set(...Object.values(AllHermidata || {}).map(item => item.meta?.tags || [])));
     const tagSection = createFilterSection('Tag', allTags, 'filter-tag');
     filterSection.appendChild(tagSection);
 

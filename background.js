@@ -492,6 +492,17 @@ function updateBookmark(id, changes) {
         });
     });
 }
+function getAllBookmarks(id) {
+    if (typeof browser !== "undefined" && browser.bookmarks?.update) {
+        return browser.bookmarks.getSubTree(id);
+    }
+    return new Promise((resolve, reject) => {
+        chrome.bookmarks.getSubTree(id, (result) => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError));
+        else resolve(result);
+        });
+    });
+}
 function moveBookmark(id, parentId) {
     if (typeof browser !== "undefined" && browser.bookmarks?.move) {
         return browser.bookmarks.move(id, { parentId });
@@ -533,10 +544,146 @@ async function updateCurrentBookmarkAndIcon(Url) {
         let searchUrl = Url || currentTab.url;
         const validBookmarks = await searchValidBookmarks(searchUrl);
         currentBookmark = validBookmarks.length > 0 ? validBookmarks[0] : null;
+        const validFuzzyBookmarks = await hasRelatedBookmark(searchUrl);
+        generalFuzzyBookmark
         updateIcon(Url);
     });
 }
 
+async function hasRelatedBookmark(searchUrl) {
+    const Browserroot = typeof browser !== "undefined" && navigator.userAgent.includes("Firefox")
+        ? "Bookmarks Menu"
+        : "Bookmarks";
+    const rootBookmarkID = await getRootByTitle(Browserroot);
+    const all = await getAllBookmarks(rootBookmarkID);
+    const settings = await new Promise((resolve) => {
+        chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
+    });
+    const folderInfo = settings?.FolderMapping
+    let flatmapFolderInfo = []
+    const flatmapFolderInfoObj = {}
+    for (let type1 = 0; type1 < Object.values(folderInfo).length; type1++) {
+        const element1 = Object.values(folderInfo)[type1];
+        const key1 = Object.keys(folderInfo)[type1]
+        for (let type2 = 0; type2 < Object.values(element1).length; type2++) {
+            const element2 = Object.values(element1)[type2];
+            const key2 = Object.keys(element1)[type2];
+                flatmapFolderInfo.push(element2)
+                flatmapFolderInfoObj[`${key1}_|_${key2}`] = element2;
+        }
+        
+    }
+    let pathSegments = {};
+    for (let index = 0; index < flatmapFolderInfo.length; index++) {
+        const element = flatmapFolderInfo[index];
+        pathSegments[element.path] = element.path.split('/')
+        
+    }
+    let pathSegmentsObj = {};
+    for (let index = 0; index < Object.keys(flatmapFolderInfoObj).length; index++) {
+        const element = Object.values(flatmapFolderInfoObj)[index];
+        const key1 = Object.keys(flatmapFolderInfoObj)[index]
+        pathSegmentsObj[key1].segments = element.path.split('/')
+        
+    }
+    let hasValidFuzzyBookmark = false;
+    const PotentialDup = await findPotentialRelatedNames(allFlat, 0.9);
+    console.table(PotentialDup)
+
+
+    return hasValidFuzzyBookmark
+}
+
+async function findPotentialRelatedNames(validBookmarks, threshold = 0.9) {
+    const entries = await validBookmarks;
+    const duplicates = [];
+
+    console.group("Duplicate Title Scan");
+
+    for (let i = 0; i < entries.length; i++) {
+        const [keyA, valA] = entries[i];
+        for (let j = i + 1; j < entries.length; j++) {
+            const [keyB, valB] = entries[j];
+
+            // Skip if same source and title already identical
+            if (valA.source === valB.source && valA.title === valB.title) continue;
+
+            const score = CalcDiff(valA.title, valB.title);
+            if (score >= threshold) {
+                duplicates.push({
+                    keyA,
+                    keyB,
+                    titleA: valA.title,
+                    titleB: valB.title,
+                    sourceA: valA.source,
+                    sourceB: valB.source,
+                    score
+                });
+
+                console.warn(
+                    `[DUPLICATE ${score.toFixed(2)}]`,
+                    `(${valA.source}) "${valA.title}" ↔ (${valB.source}) "${valB.title}"`
+                );
+            }
+        }
+    }
+
+    console.groupEnd();
+
+    console.info(`Scan complete: found ${duplicates.length} potential duplicates.`);
+    return duplicates;
+}
+function CalcDiff(a, b) {
+    if (!a || !b) return 0;
+
+    // Create a stable key for caching
+    const key = a < b ? `${a}__${b}` : `${b}__${a}`;
+    if (CalcDiffCache.has(key)) return CalcDiffCache.get(key);
+
+    // Normalize text
+    const clean = str => str.toLowerCase().replace(/[^a-z0-9\s]/gi, '').trim();
+    const A = clean(a), B = clean(b);
+
+    if (A === B) {
+        CalcDiffCache.set(key, 1);
+        return 1;
+    }
+
+    const wordsA = A.split(/\s+/);
+    const wordsB = B.split(/\s+/);
+
+    const common = wordsA.filter(w => wordsB.includes(w)).length;
+    const wordScore = common / Math.max(wordsA.length, wordsB.length);
+
+    const charScore = 1 - levenshteinDistance(A, B) / Math.max(A.length, B.length);
+    const score = (wordScore * 0.4) + (charScore * 0.6);
+
+    CalcDiffCache.set(key, score);
+    return score;
+}
+
+function levenshteinDistance(a, b) {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + cost
+            );
+        }
+    }
+
+    return dp[m][n];
+}
 async function getAllHermidata() {
     const allData = await new Promise((resolve, reject) => {
         browserAPI.storage.sync.get(null, (result) => {
@@ -658,9 +805,8 @@ async function checkFeedsForUpdates() {
 }
 // ==== feed helpers ====
 function shouldSkipFeed(feed, allHermidata) {
-    const novel = Object.values(allHermidata).find(novel => novel.url.includes(feed.domain));
-    const novelDomain = novel?.url?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
-    return feed.domain !== novelDomain;
+    const novel = Object.values(allHermidata).find(novel => novel?.rss?.url === feed.url);
+    return novel === undefined;
 }
 async function fetchFeedHead(feed) {
     let meta = { etag: null, lastModified: null };
@@ -772,7 +918,7 @@ async function notifyUser(feed, newItems) {
     const allHermidata = await getAllHermidata();
     if (shouldSkipFeed(feed, allHermidata)) return;
     const title = `${feed.title}: ${newItems.length} new chapter${newItems.length > 1 ? "s" : ""}`;
-    const message = newItems.map(i => i.title).join("\n");
+    const message = newItems[0].title.join("\n");
     browser.notifications.create({
         type: "basic",
         iconUrl: "assets/icon48.png",
@@ -786,8 +932,15 @@ const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 let currentBookmark = null;
 let currentTab = null;
 
+let generalFuzzyBookmark = null;
+
 let lastAutoFeedCkeck = 0
 let lastFeedCkeck = 0;
+
+const CalcDiffCache = new Map();
+
+let AllHermidata;
+let selectedIndex = -1;
 
 chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.sync.get([ "Settings" ], (result) => {
