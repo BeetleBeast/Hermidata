@@ -543,13 +543,26 @@ async function updateCurrentBookmarkAndIcon(Url) {
 
         let searchUrl = Url || currentTab.url;
         const validBookmarks = await searchValidBookmarks(searchUrl);
-        currentBookmark = validBookmarks.length > 0 ? validBookmarks[0] : null;
         const validFuzzyBookmarks = await hasRelatedBookmark(currentTab);
-        generalFuzzyBookmark = validFuzzyBookmarks || null;
-        let NewUrl = Url || generalFuzzyBookmark?.[0].bookmarkUrl || searchUrl
+        if (validFuzzyBookmarks.bookmarkSameChapter ?? validFuzzyBookmarks.hermidataSameChapter) {
+            currentBookmark = validFuzzyBookmarks;
+        } else if (validBookmarks.length > 0) {
+            currentBookmark = validBookmarks[0]
+        }
+        
+        let NewUrl = Url || validFuzzyBookmarks.bookmark.bookmarkUrl || searchUrl
         updateIcon(NewUrl);
     });
 }
+/*
+TODO:
+1.
+do a fuzzy search comparason between all bookmarks and current tab [✓]
+do also a fuzzy search comparason between all Hermidata and current tab [✓]
+if detect same with 80% threshold go to point 2.
+2.
+do a check to see if the same chapter count if yes => color it
+*/
 /**
  * Return the bookmark after a fuzzy search instead of a direct search
  * @param {*} currentTab 
@@ -578,8 +591,54 @@ async function hasRelatedBookmark(currentTab) {
 
     if (hasValidFuzzyBookmark) console.log("Found potential bookmark duplicates:", fuzzyBookmarkMatches);
     else if (hasValidFuzzyHermidata) console.log("Found potential hermidata duplicates:", fuzzyHermidataMatches);
-    if ( hasValidFuzzyBookmark === true) return fuzzyBookmarkMatches;
-    else if ( hasValidFuzzyHermidata === true) return fuzzyHermidataMatches
+    let sameChapter = undefined;
+    const finalObj = {};
+    if ( hasValidFuzzyBookmark === true) {
+        sameChapter = isSameChapterCount(fuzzyBookmarkMatches, currentTab);
+        finalObj.bookmark = fuzzyBookmarkMatches;
+        finalObj.bookmarkSameChapter = sameChapter
+    }
+    else if ( hasValidFuzzyHermidata === true) {
+        sameChapter = isSameChapterCount(fuzzyHermidataMatches, currentTab);
+        finalObj.hermidata = fuzzyHermidataMatches;
+        finalObj.hermidataSameChapter = sameChapter
+    }
+    return finalObj
+}
+function isSameChapterCount(a,b) {
+    const isSameNummber = false;
+
+    const fuzzyUrl = a.bookmarkUrl;
+    const fuzzytitle = trimTitle(a.bookmarkTitle, fuzzyUrl);
+
+    const currentTabUrl = b.url;
+    const currentTab = trimTitle(b.title, currentTabUrl);
+
+    getChapterFromTitle = (title, url) => {
+        // Regex to find the first number (optionally after "chapter", "chap", "ch")
+        const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
+
+        // create chapter based on URL
+        const parts = url?.split("/") || [];
+        const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0] || ''
+        // create chapter based on title
+        const titleParts = title?.split(/[-–—|:]/).map(p => p.trim());
+        const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
+        // create chapter based on title regex
+        const chapterPartV3 = (titleParts
+        .find(p => chapterNumberRegex.test(p)) || ""
+        ).replace(/([A-Z])/gi, '').replace(/[^\d.]/g, '').trim();
+        // If no chapter found, use empty string
+        return chapterPartV2 || chapterPartV3 || "";
+    }
+    const fuzzychapter = getChapterFromTitle(fuzzytitle, fuzzyUrl)
+    const curentTabChapter = getChapterFromTitle(currentTab, currentTabUrl)
+
+
+
+    if ( Number.parseFloat(fuzzychapter) === Number.parseFloat(curentTabChapter)) isSameNummber = true
+    return isSameNummber
+    
 }
 async function detectFuzzyHermidata(currentTab, threshold = 0.8) {
     const fuzzyMatches = [];
@@ -750,7 +809,6 @@ function trimTitle(title, url) {
 
         if (Chapter_Title === '' && filter.length == 2) return mainTitle;
         if (Chapter_Title === '') return [mainTitle, ...MakemTitle(filter.slice(1))];
-        HermidataV3.meta.notes = `Chapter Title: ${Chapter_Title}`;
         return mainTitle;
     }
     mainTitle = MakemTitle(filtered);
