@@ -1,0 +1,225 @@
+/* ...existing code... */
+:root{
+    --accent:rgb(15, 34, 94);
+    --gap:12px;
+    --radius:8px;
+
+    --Btn: ;
+    --Btn_hover: rgb(34, 48, 89);
+    --Btn_active: rgb(15, 34, 94);
+    --Input-color: rgb(40, 53, 75);
+    --Input-colorV2: rgb(32, 39, 51);
+    --table-color: var(----Input-color);
+    --Btn_disabled: rgb(120, 120, 120);
+    --bg_disabled: rgb(24, 28, 36);
+    
+    --hr: #555;
+    
+    --muted: rgb(120, 120, 120);
+    --Text-color: lightgray;
+    --bg-color: rgb(12, 17, 24);
+    --card: rgb(18, 31, 49);
+    --border: rgb(63, 76, 96);
+}
+
+
+* {
+    box-sizing: border-box;
+    font-family: Segoe UI, system-ui, Arial;
+}
+
+body {
+    margin: 0;
+    background: var(--bg-color);
+    color: var(--Text-color)
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border)
+}
+
+.topbar h1 {
+    font-size: 16px;
+    margin: 0
+}
+
+.toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center
+}
+
+.toolbar input {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border)
+}
+
+.Btn {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.Btn:hover {
+    background-color: var(--Btn_hover);
+}
+.Btn:active:not(:disabled) {
+    background-color: var(--Btn_active);
+    transition: none;
+}
+
+.layout {
+    display: flex;
+    gap: 12px;
+    padding: 12px
+}
+
+.left {
+    flex: 1;
+    max-width: 720px
+}
+
+.right {
+    width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: absolute;
+    right: 5px;
+}
+
+.subscribe,
+.filters,
+.notifications,
+.details {
+    background: var(--card);
+    padding: 12px;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04)
+}
+
+.entries {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0;
+    display: grid;
+    gap: 8px
+}
+
+.entries li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--bg-color), var(--bg-color));
+    border: 1px solid var(--border)
+}
+
+.entry-meta {
+    flex: 1;
+    min-width: 0
+}
+
+.entry-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.entry-sub {
+    font-size: 12px;
+    color: var(--muted)
+}
+
+.entry-actions {
+    display: flex;
+    gap: 6px
+}
+
+.checkbox {
+    width: 18px;
+    height: 18px
+}
+
+.details label {
+    display: block;
+    margin-bottom: 8px
+}
+
+.details input,
+.details textarea,
+.details select {
+    width: 100%;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid var(--border)
+}
+
+input[type=number],
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    -moz-appearance: textfield;
+}
+input,
+select  {
+    background-color: var(--Input-colorV2);
+    color: var(--Text-color);
+    outline-color: var(--Btn);
+    text-emphasis-color: var(--Btn);
+    accent-color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 0;
+}
+.genericInput:focus {
+    outline: 1px invert var(--Btn);
+}
+
+.history {
+    max-height: 140px;
+    overflow: auto;
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+    margin-top: 8px
+}
+#bulkEditPanel {
+    display: none;
+}
+.toast {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    background: #111;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all .25s
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0)
+}
+
+@media (max-width:980px) {
+    .layout {
+        flex-direction: column
+    }
+
+    .right {
+        width: auto
+    }
+}

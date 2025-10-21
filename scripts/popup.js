@@ -572,6 +572,7 @@ async function migrateHermidataV5(newer, older) {
             ),
             added: older.meta?.added || base.meta.added,
             updated: new Date().toISOString()
+            // add originalRelease
         }
     }
     // step 3. save & remove key
@@ -582,6 +583,14 @@ async function migrateHermidataV5(newer, older) {
     return merged;
 }
 
+async function getSettings() {
+    return await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get("Settings", (result) => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve(result.Settings || {});
+        });
+    });
+}
 
 function returnHashedTitle(title,type) {
     return type 
@@ -939,7 +948,7 @@ function makeFooterSection() {
     });
     // open RSS full page
     const FullpageRSSButton = document.querySelector(".fullpage-RSS-btn");
-    FullpageRSSButton.addEventListener('click', () => openFullpageRSS()) // TODO openFullpageRSS()
+    FullpageRSSButton.addEventListener('click', () => open('./RSSFullpage.html')) // TODO openFullpageRSS()
     
     // sync text & button
     SyncTextAndButtonOfRSS()
@@ -1245,6 +1254,11 @@ function applySortToEntries(sortType) {
     console.log(`[Hermidata] Sorted by ${sortType}`);
 }
 
+function getYearNumber(dateInput){
+    const isISOString = !!new Date(dateInput)?.getHours();
+    const splitDatum = dateInput.split('/')[2]
+    return isISOString ? dateInput.split('-')[0] : splitDatum || new Date()?.toISOString().split('-')[0]
+}
 
 function applyFilterToEntries(filters) {
     const entries = document.querySelectorAll(".RSS-entries-item");
@@ -1257,12 +1271,8 @@ function applyFilterToEntries(filters) {
         const status = entryData.status;
         const source = entryData.source;
         const tags = entryData.meta.tags || "";
+        const dateAdded = getYearNumber(entryData.meta.added);
 
-        
-
-        const isISOString =  !!new Date(entryData.meta.added)?.getHours();
-        const splitDatum =  entryData.meta?.added.split('/')[2]
-        const dateAdded = isISOString ? entryData.meta.added.split('-')[0] : splitDatum || new Date()?.toISOString().split('-')[0]
 
         let visible = true;
 
@@ -1473,14 +1483,12 @@ function makeSortOptions(parent_section) {
     filterSection.appendChild(sourceSection);
 
     // 5. Tags
-    const allTags = Array.from(new Set(...Object.values(AllHermidata || {}).map(item => item.meta?.tags || [])));
+    const allTags = Array.from(new Set(Object.values(AllHermidata || {}).flatMap(item => item.meta?.tags || [])));
     const tagSection = createFilterSection('Tag', allTags, 'filter-tag');
     filterSection.appendChild(tagSection);
 
     // 6. Dates
-    // Object.values(AllHermidata || {}).map(item => item.meta?.added?.slice(0,10)).filter(Boolean)
-    const allDates = (['2026', '2025', '2024'])
-        .sort((a, b) => new Date(b) - new Date(a));
+    const allDates = generateDateFilterSection()
     const dateSection = createFilterSection('Date', allDates, 'filter-date');
     filterSection.appendChild(dateSection);
 
@@ -1496,6 +1504,54 @@ function makeSortOptions(parent_section) {
     document.querySelector('.autocompleteContainer').style.width = `${  document.querySelector('.search-input').offsetWidth}px`;
     const lastSort = localStorage.getItem("lastSort");
     if (lastSort) applySortToEntries(lastSort);
+}
+
+/**
+ * Converts a date (string, Date, or number) into a decade label bucket.
+ * @param {string|Date|number} dateInput
+ * @returns {string} decadeLabel
+ */
+function getYearBucket(dateInput) {
+    if (!dateInput) return "Unknown";
+    const year = getYearNumber(dateInput)
+    if (Number.isNaN(year)) return "Unknown";
+
+    switch (year) {
+        case year >= 2016 && year <= 2020:
+            return "2020s";
+        case year >= 2011 && year <= 2015:
+            return "2015s";
+        case year >= 2000 && year <= 2010:
+            return "2010s";
+        case year >= 1990 && year <= 1999:
+            return "90s";
+        case year <= 1989:
+            return "80s & older";
+        default:
+            return String(year)
+    }
+}
+
+function generateDateFilterSection() {
+    const allEntries = Object.values(AllHermidata || {});
+    const yearBuckets = allEntries.map(entry => {
+        const dateStr = entry.meta?.originalRelease || entry.meta?.added || entry.meta?.updated || null;
+        return getYearBucket(dateStr);
+    });
+
+    const uniqueBuckets = Array.from(new Set(yearBuckets)).filter(Boolean);
+
+    const thisYeay = new Date().getFullYear()
+    const everySingleYear = thisYeay - 2020
+    const sortOrderOldType = ["2020s", "2015s", "2010s", "90s", "80s & older"];
+    const sortOrderEveryYearType = []
+    for (let index = 0; index < everySingleYear; index++) {
+        sortOrderEveryYearType.push(String(thisYeay - index))
+    }
+    const sortOrder = sortOrderEveryYearType.concat(sortOrderOldType)
+    uniqueBuckets.sort((a, b) => sortOrder.indexOf(a) - sortOrder.indexOf(b));
+
+    return uniqueBuckets;
 }
 
 
@@ -1539,6 +1595,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
         const chapter = key[1]?.chapter?.latest || ( getChapterFromTitle(title, url) == '01'? '': getChapterFromTitle(title, url) )|| key[1]?.chapter?.current || '';
         const currentHermidata = AllHermidata?.[key[0]]
         const currentChapter = currentHermidata?.chapter?.current
+        const settings = await getSettings();
         // removed && ( seachable || (chapter !== currentChapter ))
         if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`)) {
             const li = document.createElement("li");
@@ -1559,7 +1616,21 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
             const ElInfo = document.createElement("div");
             ElInfo.className =  parent_section.id == "All-RSS-entries" ? "RSS-entries-item-info" : "RSS-Notification-item-info";
 
-            
+            const ElTagContainer = document.createElement("div");
+            ElTagContainer.className =  parent_section.id == "All-RSS-entries" ? "RSS-entries-item-tag-container" : "RSS-Notification-item-tag-container";
+            if ( currentHermidata.meta?.tags.length > 0 ) {
+                const allTags = typeof currentHermidata.meta?.tags == "object" ? currentHermidata.meta?.tags : currentHermidata.meta?.tags?.split(',');
+                for (let index in allTags) {
+                    const tagName = allTags[index]
+                    const tagDiv = document.createElement('div');
+                    tagDiv.classList = [`tag-div tag-div-${tagName}`];
+                    tagDiv.textContent = `[${tagName}]`;
+                    tagDiv.style.color = settings.tagColoring?.[tagName];
+                    tagDiv.dataset.TagColor = settings.tagColoring?.[tagName];
+                    ElTagContainer.append(tagDiv)
+                }
+            }
+
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
             const AllItemChapterText = currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
             const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
@@ -1609,6 +1680,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
             
             // const pubDate = document.createElement("p");
             // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
+            li.append(ElTagContainer)
             li.appendChild(ElInfo);
             li.appendChild(Elfooter);
             // li.appendChild(pubDate);

@@ -710,7 +710,15 @@ select.autoInput {
 .genericInput:focus {
     outline: 1px invert var(--Btn);
 }
+.RSS-entries-item-tag-container {
+	position: absolute;
+	margin-top: 25px;
+	right: 27em;
+}
 
+.tag-div {
+	padding-right: 25px;
+}
 .genericLabel {
     display: none;
     background-color: var(--bg-color);

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hermidata — RSS / Library</title>
+  <link rel="stylesheet" href="../styles/RSSPageStyles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Hermidata — RSS & Library</h1>
+    <div class="toolbar">
+      <input id="search" placeholder="Search titles / tags..." />
+      <button id="bulkEditButton" class="Btn">open bulk edit</button>
+      <button id="bulkMarkRead" class="Btn">Mark selected as Read</button>
+      <button id="bulkOpen" class="Btn">Open selected</button>
+      <button id="reloadData" class="Btn">Reload</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="left">
+      <div class="subscribe">
+        <h3>Site RSS / Selectors</h3>
+        <label>Site domain <input id="siteDomain" placeholder="example.com" /></label>
+        <label>RSS selector <input id="rssSelector" placeholder=".feed-link" /></label>
+        <label>Item selector <input id="itemSelector" placeholder=".post" /></label>
+        <button id="saveSelectors" class="Btn">Save selector</button>
+      </div>
+
+      <div class="filters">
+        <h3>Filters</h3>
+        <select id="filterType" title="type"><option>All types</option></select>
+        <select id="filterStatus" title="status"><option>All status</option></select>
+      </div>
+
+      <ul id="entries" class="entries" aria-live="polite"></ul>
+    </section>
+
+    <aside class="right">
+      <div class="notifications">
+        <h3>Notifications</h3>
+        <label><input type="checkbox" id="desktopNotify" /> Desktop notifications</label>
+        <label><input type="checkbox" id="emailNotify" /> Email (placeholder)</label>
+        <div id="notificationPreview" class="notifyPreview">No recent notifications</div>
+      </div>
+
+      <div class="details" id="detailsPane">
+        <h3>Details</h3>
+        <form id="editForm">
+          <label>Title <input id="detailTitle" /></label>
+          <label>Type <select id="detailType"></select></label>
+          <label>Status <select id="detailStatus"></select></label>
+          <label>URL <input id="detailUrl" /></label>
+          <label>Current Chapter <input id="detailCurrent" type="number" min="0" /></label>
+          <label>Notes <textarea id="detailNotes"></textarea></label>
+          <div class="history">
+            <h4>Chapter history</h4>
+            <ul id="chapterHistory"></ul>
+          </div>
+          <div class="actions">
+            <button type="button" id="saveDetail" class="Btn">Save</button>
+            <button type="button" id="deleteDetail" class="Btn">Delete</button>
+          </div>
+        </form>
+      </div>
+    </aside>
+    <div id="bulkEditPanel">
+        <h3>Bulk Edit</h3>
+        <label for="bulkEditType">Type:</label>
+        <select id="bulkEditType">
+            <option value="Manga">Manga</option>
+            <option value="Novel">Novel</option>
+            <option value="Anime">Anime</option>
+            <option value="TV-Series">TV-Series</option>
+        </select>
+        <br>
+        <label for="bulkEditStatus">Status:</label>
+        <select id="bulkEditStatus">
+            <option value="Viewing">Viewing</option>
+            <option value="Finished">Finished</option>
+            <option value="Dropped">Dropped</option>
+            <option value="Planned">Planned</option>
+        </select>
+        <br>
+        <label for="bulkEditTags">Tags (comma-separated):</label>
+        <input type="text" id="bulkEditTags" />
+        <br>
+        <button id="saveBulkEditButton">Save Changes</button>
+        <button class="CancelBulkEdit">Cancel</button>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script src="../scripts/RSS.js"></script>
+</body>
+</html>

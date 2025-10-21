@@ -2,7 +2,7 @@
     "name": "Hermidata",
     "author": "BeetleB",
     "description": "Organize your bookmarks more effectively using your google sheets & smart bookmarks.",
-    "version": "0.15.6",
+    "version": "0.16.0",
     "manifest_version": 3,
     "permissions": [
         "contextMenus",
@@ -27,15 +27,15 @@
     },
     "content_scripts": [{
         "matches": ["<all_urls>"],
-        "js": ["content.js"],
+        "js": ["scripts/content.js"],
         "run_at": "document_idle"
     }],
     "background": {
-        "service_worker": "background.js",
-        "scripts": ["background.js"]
+        "service_worker": "scripts/background.js",
+        "scripts": ["scripts/background.js"]
     },
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "pages/popup.html",
         "default_icon": {
             "16": "assets/icon16.png",
             "24": "assets/icon.png",
@@ -45,17 +45,16 @@
     },
     "web_accessible_resources": [{
         "resources": [
-            "icon/*.png",
-            "settings/*.png",
-            "assets/icon_red48.png",
-            "assets/settings_24.png",
-            "assets/settings_24Dark.png"
+            "pages/RSSFullpage.html",
+            "scripts/RSS.js",
+            "styles/*",
+            "assets/*"
     ],
         "matches": ["<all_urls>"]
     }],
-    "options_page": "settings.html",
+    "options_page": "pages/settings.html",
     "options_ui": {
-        "page": "settings.html",
+        "page": "pages/settings.html",
         "open_in_tab": true
     }
 }

@@ -30,7 +30,7 @@ function getToken(callback) {
             // Parse the access token from the URL and save it in local storage
             const params = new URLSearchParams(new URL(redirectUrl).hash.substring(1));
             const token = params.get("access_token");
-            const expiresIn = parseInt(params.get("expires_in"), 10) * 1000; // ms
+            const expiresIn = Number.parseInt(params.get("expires_in"), 10) * 1000; // ms
             const expiry = Date.now() + expiresIn;
 
             if (!token) {
@@ -56,8 +56,7 @@ function getToken(callback) {
 }
 // Update Icon
 function updateIcon(Url = null) {
-    const api = typeof browser !== "undefined" ? browser : chrome;
-    const actionApi = api.action || api.browserAction;
+    const actionApi = browserAPI.action || browserAPI.browserAction;
 
     if (Url) {
         chrome.tabs.query({active : true}, (tabs) => {
@@ -393,7 +392,7 @@ function parseMangaFireUrl(url) {
         const parts = new URL(url).pathname.split('/').filter(Boolean);
         const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
         if (!titleSlug) return { title: "Unknown", chapter: "0" }
-        const chapter = parts[parts.length - 1].includes('chapter') ?  parts[parts.length - 1].replace('chapter-', '') : '0';
+        const chapter = parts.at(-1).includes('chapter') ?  parts.at(-1).replace('chapter-', '') : '0';
         const title = titleSlug
             .split('.')[0]             // remove Site's ID code (.yvov1)
             .replace(/(.)\1$/, '$1')   // Remove last char if second to last is the same
@@ -550,7 +549,7 @@ async function updateCurrentBookmarkAndIcon(Url) {
             currentBookmark = validBookmarks[0]
         }
         
-        let NewUrl = Url || validFuzzyBookmarks.bookmark.bookmarkUrl || searchUrl
+        let NewUrl = Url || validFuzzyBookmarks?.bookmark?.bookmarkUrl || searchUrl
         updateIcon(NewUrl);
     });
 }
@@ -591,7 +590,7 @@ async function hasRelatedBookmark(currentTab) {
 
     if (hasValidFuzzyBookmark) console.log("Found potential bookmark duplicates:", fuzzyBookmarkMatches);
     else if (hasValidFuzzyHermidata) console.log("Found potential hermidata duplicates:", fuzzyHermidataMatches);
-    let sameChapter = undefined;
+    let sameChapter;
     const finalObj = {};
     if ( hasValidFuzzyBookmark === true) {
         sameChapter = isSameChapterCount(fuzzyBookmarkMatches, currentTab);

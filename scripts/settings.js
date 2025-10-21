@@ -1,7 +1,7 @@
 const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 let TYPE_OPTIONS = ["Manga", "Novel", "Anime", "TV-series"];
 let STATUS_OPTIONS = ["Finished", "Viewing", "Dropped", "Planned"];
-
+const tagColoring = {};
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("spreadsheetUrl").value.trim();
     const status = document.getElementById("statusSheetURL");
@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
         buildFolderMappingForm(settings);
         document.getElementById("AllowContextMenu").checked = !!settings.AllowContextMenu;
     });
+    loadTagColoring();
     // Save spreadsheetUrl value
     document.getElementById("save").addEventListener("click", () => {
         chrome.storage.sync.set({ spreadsheetUrl: input }, () => {
@@ -84,7 +85,7 @@ function getDefaultSettings() {
         NOVEL_TYPE_OPTIONS_V2: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel'],
         NOVEL_STATUS_OPTIONS_V2: ['Ongoing', 'Completed', 'Hiatus', 'Canceled'],
         READ_STATUS_OPTIONS_V2: ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'],
-
+        tagColoring: {},
         FolderMapping: {
             Manga: {
                 Finished: {
@@ -169,6 +170,82 @@ function LoadAndPopulate(elements) {
         setValuesToElements(elements.menu, result.Settings.DefaultChoiceText_Menu);
         
     })
+}
+
+function buildTagColoringForm() {
+    const container = document.getElementById("tagColoringContainer");
+    if (container) container.innerHTML = "";
+
+    Object.keys(tagColoring).forEach(tag => {
+        const label = document.createElement("label");
+        label.textContent = `Color for ${tag}: `;
+
+        const input = document.createElement("input");
+        input.type = "color";
+        input.value = tagColoring[tag];
+        input.dataset.tag = tag;
+
+        container.appendChild(label);
+        container.appendChild(input);
+        container.appendChild(document.createElement("br"));
+
+        input.addEventListener("input", () => {
+            tagColoring[tag] = input.value;
+            saveTagColoring(tagColoring);
+        });
+    });
+}
+
+async function saveTagColoring(tagColoringInput) {
+    const settings = await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get("Settings", (result) => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve(result.Settings || {});
+        });
+    });
+    settings.tagColoring = tagColoringInput;
+    chrome.storage.sync.set({ Settings: settings }, () => {
+        console.log("Tag colors saved.");
+    });
+}
+
+// Call this function to load existing tag colors
+async function loadTagColoring() {
+    chrome.storage.sync.get(["Settings"], async (result) => {
+        Object.assign(tagColoring, result.Settings.tagColoring || await createDefaultTagColor());
+        buildTagColoringForm();
+    });
+}
+async function createDefaultTagColor() {
+    const allTags = Array.from(new Set(Object.values(await getAllHermidata()).flatMap(item => item.meta?.tags || [])));
+    const defaultColor = 'white';
+    let defaultTagColor = {};
+    allTags.forEach(f => {
+        defaultTagColor[f] = defaultColor
+    })
+    return defaultTagColor
+}
+async function getAllHermidata() {
+    const allData = await new Promise((resolve, reject) => {
+        browserAPI.storage.sync.get(null, (result) => {
+            if (browserAPI.runtime.lastError) reject(new Error(browserAPI.runtime.lastError));
+            else resolve(result || {});
+        });
+    });
+
+    let allHermidata = {};
+    let Count = 0;
+    for (const [key, value] of Object.entries(allData)) {
+        // Ensure the value is a valid Hermidata entry
+        if (!value || typeof value !== "object" ||  ( !value.title && !value.Title )|| ( typeof value.title !== "string" && typeof value.Title !== "string" ) ) continue;
+
+        allHermidata[key] = value;
+        Count++;
+    }
+    // Nothing to do
+    if (Count === 0) console.log("No entries detected.");
+    console.log(`Total entries: ${Count}`);
+    return allHermidata;
 }
 function ensureSettingsUpToDate(callback) {
     chrome.storage.sync.get(["Settings"], (result) => {
