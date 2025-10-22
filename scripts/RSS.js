@@ -19,13 +19,6 @@
   const novelType = ['Manga','Manhwa','Manhua','Novel','Webnovel','Anime','TV-Series'];
   const novelStatus = ['Viewing','Finished','On-hold','Dropped','Planned'];
 
-  // sample store (replace with chrome.storage.sync / extension messaging)
-  const STORE_KEY = 'hermidata_demo';
-  const sample = [
-    { id:'1', title:'The Wandering Fairy', type:'Novel', status:'Viewing', url:'https://site.example/series/1', chapter:{current:12, history:[10,11]}, meta:{tags:['fantasy'],notes:'Good read'} },
-    { id:'2', title:'Moonlight Manhwa', type:'Manhwa', status:'Ongoing', url:'https://othersite/series/abc', chapter:{current:42, history:[40,41]}, meta:{tags:['romance'],notes:''} },
-  ];
-
   // DOM
   const entriesEl = document.getElementById('entries');
   const searchEl = document.getElementById('search');
@@ -275,7 +268,7 @@ async function saveBulkEdit() {
   updateNotificationPreview();
 
   // expose small API for integration
-  window.HermidataPage = {
+  globalThis.HermidataPage = {
     reload: async ()=>{ await loadData(); await renderList(); },
     addEntry: async (entry)=>{ entry.id = entry.id || String(Date.now()); DATA.push(entry); saveData(entry); await renderList(); }
   };

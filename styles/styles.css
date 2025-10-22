@@ -715,7 +715,11 @@ select.autoInput {
 	margin-top: 25px;
 	right: 27em;
 }
-
+.RSS-Notification-item-tag-container {
+	position: absolute;
+	margin-top: 25px;
+	right: 27em;
+}
 .tag-div {
 	padding-right: 25px;
 }

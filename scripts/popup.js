@@ -391,20 +391,20 @@ function deactivateother() {
     document.querySelectorAll(".HDRSS").forEach(a => {
         a.style.pointerEvents = 'none';
     });
-    document.querySelector(".HDRSS").style.opacity = 0.2;
-    document.querySelector(".HDClassic").style.opacity = 0;
+    document.querySelector(".HDRSS").style.opacity = 0;
+    document.querySelector(".HDClassic").style.opacity = 0.2;
 }
 function activateother() {
     // deactivate links in classic
     document.querySelectorAll(".HDClassic").forEach(a => {
-        a.style.pointerEvents = 'none';
+        a.style.pointerEvents = 'auto';
     });
     // deactivate links in HDRSS
     document.querySelectorAll(".HDRSS").forEach(a => {
-        a.style.pointerEvents = 'auto';
+        a.style.pointerEvents = 'none';
     });
-    document.querySelector(".HDRSS").style.opacity = 1;
-    document.querySelector(".HDClassic").style.opacity = 0;
+    document.querySelector(".HDRSS").style.opacity = 0;
+    document.querySelector(".HDClassic").style.opacity = 1;
 }
 function customPrompt(msg, defaultInput) {
     return new Promise((resolve) => {
@@ -523,13 +523,13 @@ function customConfirm(msg) {
  *  }
  * }|null>} The merged Hermidata entry
  */
-async function migrateHermidataV5(newer, older) {
+async function migrateHermidataV5(newer, older, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT') {
     // step 1. new key
     // re-make keys
     const [ newTitle, newType ] = [newer.title, newer.type]
     const [ oldTitle, oldType ] = [older.title, older.type]
-    const newKey = returnHashedTitle(newTitle, newType);
-    const oldKey = returnHashedTitle(oldTitle, oldType);
+    const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : getOldIDType(newer);
+    const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : getOldIDType(older);
     // check keys validity
     if ( newKey !== newer.id || oldKey !== older.id) return null;
     // step 2. start with shell
@@ -590,6 +590,55 @@ async function getSettings() {
             else resolve(result.Settings || {});
         });
     });
+}
+
+function detectHashType(obj) {
+    if (!obj?.title || !obj?.type || !obj?.id) return "unknown";
+
+    const normalizedTitle = trimTitle(obj.title).toLowerCase();
+
+    const oldHash = (() => {
+        let hash = 0, chr;
+        const str = `${obj.type}:${normalizedTitle}`;
+        for (let i = 0; i < str.length; i++) {
+            chr = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0;
+        }
+        return hash.toString();
+    })();
+
+    const newHash = (() => {
+        let hash = 0, chr;
+        const str = `${obj.type}:${normalizedTitle}`;
+        for (let i = 0; i < str.length; i++) {
+            chr = str.codePointAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash = Math.trunc(hash);
+        }
+        return hash.toString();
+    })();
+
+    if (obj.id === oldHash) return "old";
+    if (obj.id === newHash) return "new";
+    return "unknown";
+}
+
+
+
+function getOldIDType(Obj) {
+    const OLD_simpleHash = (str) => {
+        let hash = 0, i, chr;
+        if (str.length === 0) return hash.toString();
+        for (i = 0; i < str.length; i++) {
+            chr = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0;
+        }
+        return hash.toString();
+    }
+    const oldId = OLD_simpleHash(`${Obj.type}:${trimTitle(Obj.title).toLowerCase()}`);
+    return oldId
 }
 
 function returnHashedTitle(title,type) {
@@ -948,7 +997,7 @@ function makeFooterSection() {
     });
     // open RSS full page
     const FullpageRSSButton = document.querySelector(".fullpage-RSS-btn");
-    FullpageRSSButton.addEventListener('click', () => open('./RSSFullpage.html')) // TODO openFullpageRSS()
+    FullpageRSSButton.addEventListener('click', () => open('./RSSFullpage.html'))
     
     // sync text & button
     SyncTextAndButtonOfRSS()
@@ -2051,7 +2100,8 @@ async function updateChapterProgress(title, type, newChapterNumber) {
         entry.chapter.current = newChapterNumber;
         entry.status = HermidataV3.status;
         entry.type = HermidataV3.type;
-        entry.meta.tags = HermidataV3.meta.tags;
+        const rawTags = HermidataV3.meta.tags;
+        entry.meta.tags = Array.isArray(rawTags) ? rawTags : rawTags.split(',').map(tag => tag.trim()).filter(Boolean);
         entry.chapter.lastChecked = new Date().toISOString();
         entry.meta.updated = new Date().toISOString();
         await browser.storage.sync.set({ [key]: entry });
@@ -2117,6 +2167,155 @@ async function unLinkRSSFeed({hash, title = '', type = '', }) {
     await browser.storage.sync.set({ [key]: entry });
 }
 
+async function detectOldHashEntries() {
+    const all = AllHermidata || await getAllHermidata();
+    const results = [];
+
+    for (const [key, obj] of Object.entries(all)) {
+        const oldHash = getOldIDType(obj);
+        const newHash = returnHashedTitle(obj.title, obj.type);
+
+        if (obj.id === oldHash && oldHash !== newHash) {
+            results.push({
+                key,
+                title: obj.title,
+                type: obj.type,
+                source: obj.source,
+                oldHash,
+                newHash
+            });
+        }
+    }
+
+    console.table(results);
+    console.info(`Found ${results.length} entries using the old hash method.`);
+    return results;
+}
+
+async function migrateOldHashes() {
+    const oldEntries = await detectOldHashEntries();
+    if (!oldEntries.length) {
+        console.log("No old-hash entries found — everything is already up to date!");
+        return;
+    }
+
+    const all = AllHermidata || await getAllHermidata();
+
+    for (const entry of oldEntries) {
+        const older = all[entry.oldHash];
+        const newer = { ...older, id: entry.newHash };
+        try {
+            await migrateHermidataV5(newer, older, 'YES');
+        } catch (err) {
+            console.error(`Migration failed for ${entry.title}:`, err);
+        }
+    }
+
+    console.log(`Finished migrating ${oldEntries.length} entries to new hash.`);
+}
+
+async function migrateAndCheckDuplicates() {
+    await migrateOldHashes();
+    console.log("Now scanning for duplicates...");
+    const dups = await findPotentialDuplicates(0.9);
+
+    if (dups.length === 0) {
+        console.log("No duplicates found after migration.");
+    } else {
+        console.warn(`Found ${dups.length} potential duplicates.`);
+        console.table(dups.map(d => ({
+            TitleA: d.titleA,
+            TitleB: d.titleB,
+            Score: d.score.toFixed(2)
+        })));
+    }
+
+    return dups;
+}
+/**
+ * Entry to auto merge duplicates
+ * @param {number} threshold - decimal number dictating the threshold of similarity to merge found entries
+ * @returns - merged Keys, titles, sources and levenstein score
+ */
+async function migrateAndAutoMergeDuplicates(threshold = 0.9) {
+    // Step 1: migrate all old hashes first
+    await migrateOldHashes();
+
+    // Step 2: scan for duplicates
+    console.log("Scanning for duplicates after migration...");
+    const dups = await findPotentialDuplicates(threshold);
+
+    if (!dups.length) {
+        console.log("No duplicates found after migration.");
+        return [];
+    }
+
+    console.warn(`Found ${dups.length} potential duplicates.`);
+    console.table(
+        dups.map(d => ({
+            TitleA: d.titleA,
+            TitleB: d.titleB,
+            Score: d.score.toFixed(2),
+        }))
+    );
+
+    // Step 3: automatically merge them
+    for (const dup of dups) {
+        await autoMergeDuplicate(dup.keyA, dup.keyB);
+    }
+
+    console.log("All possible duplicates processed.");
+    return dups;
+}
+
+/**
+ * Automatically merges two entries by picking the one
+ * with the highest chapter.latest (or the newest update).
+ */
+async function autoMergeDuplicate(idA, idB) {
+    const data = AllHermidata || await getAllHermidata();
+    const objA = data[idA];
+    const objB = data[idB];
+
+    if (!objA || !objB) {
+        console.warn(`Skipping missing objects:`, idA, idB);
+        return;
+    }
+
+    // Compare chapter.latest as "progress"
+    const latestA = objA.chapter?.latest ?? 0;
+    const latestB = objB.chapter?.latest ?? 0;
+
+    // Pick which one is "newer"
+    let newer = objA;
+    let older = objB;
+    if (latestB > latestA) [newer, older] = [objB, objA];
+
+    const newerHashType = detectHashType(newer);
+    const olderHashType = detectHashType(older);
+    console.log(`Auto-merging "${older.title}" → "${newer.title}"`,
+        `\n newer hash: ${newerHashType}`,
+        `\n older hash: ${olderHashType}`
+    );
+    // check if Hash is the old way
+    // TODO
+    // Use your existing migrateHermidataV5 logic
+    const merged = await migrateHermidataV5(newer, older,
+        olderHashType === 'old' ? 'OLD' : 'DEFAULT',
+        newerHashType === 'old' ? 'OLD' : 'DEFAULT'
+    );
+
+    // Save and remove the old entry key
+    if (merged) {
+        await browserAPI.storage.sync.set({ [merged.id]: merged });
+        await browserAPI.storage.sync.remove(older.id);
+        console.log(`Merged "${older.title}" into "${newer.title}"`);
+    } else {
+        console.error(`Merge failed for:`, older.title, newer.title);
+    }
+}
+
+
 /**
  * Select 2 ID's wich the user wants to merge
  * @param {String} id1 
@@ -2140,6 +2339,8 @@ async function SelectDuplicates(id1, id2) {
  * titleB: String
  * sourceA: String
  * sourceB: String
+ * RSSA: object|null
+ * RSSB: object|null
  * score: number
  * }>}
  */
@@ -2154,6 +2355,8 @@ async function findDuplicatescore(id1, id2) {
         titleB: data[id2].title,
         sourceA: data[id1].source,
         sourceB: data[id2].source,
+        RSSA: data[id1]?.rss || null,
+        RSSB: data[id2]?.rss || null,
         score: score
     })
     return output;
@@ -2173,7 +2376,7 @@ async function findPotentialDuplicates(threshold = 0.9) {
             const [keyB, valB] = entries[j];
 
             // Skip if same source and title already identical
-            if (valA.source === valB.source && valA.title === valB.title) continue;
+            if (valA.source === valB.source && valA.title === valB.title && valA.id === valB.id ) continue;
 
             const score = CalcDiff(valA.title, valB.title);
             if (score >= threshold) {

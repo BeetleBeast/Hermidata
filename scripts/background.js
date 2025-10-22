@@ -463,7 +463,7 @@ async function getRootByTitle(title) {
     for (const child of rootNode.children || []) {
         if (child.title === title && !child.url) {
             rootidList.push(child.id)
-            return rootidList[rootidList.length - 1];
+            return rootidList.at(-1);
         }
     }
     return rootNode.id;
@@ -543,13 +543,15 @@ async function updateCurrentBookmarkAndIcon(Url) {
         let searchUrl = Url || currentTab.url;
         const validBookmarks = await searchValidBookmarks(searchUrl);
         const validFuzzyBookmarks = await hasRelatedBookmark(currentTab);
-        if (validFuzzyBookmarks.bookmarkSameChapter ?? validFuzzyBookmarks.hermidataSameChapter) {
-            currentBookmark = validFuzzyBookmarks;
+        const isValid = validFuzzyBookmarks?.bookmarkSameChapter || validFuzzyBookmarks?.hermidataSameChapter || false;
+        const validEntry = validFuzzyBookmarks?.bookmark || validFuzzyBookmarks?.hermidata || false;
+        if (isValid) {
+            currentBookmark = validEntry;
         } else if (validBookmarks.length > 0) {
             currentBookmark = validBookmarks[0]
         }
         
-        let NewUrl = Url || validFuzzyBookmarks?.bookmark?.bookmarkUrl || searchUrl
+        let NewUrl = Url || currentBookmark?.currentUrl || '';
         updateIcon(NewUrl);
     });
 }
@@ -568,13 +570,13 @@ do a check to see if the same chapter count if yes => color it
  * @returns 
  */
 async function hasRelatedBookmark(currentTab) {
-    let hasValidFuzzy = false;
     const Browserroot = typeof browser !== "undefined" && navigator.userAgent.includes("Firefox")
         ? "Bookmarks Menu"
         : "Bookmarks";
-    const settings = await new Promise((resolve) => {
+    const settings = settingsCashed || await new Promise((resolve) => {
         chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
     });
+    if (!settingsCashed) settingsCashed = settings;
     let flatmapFolderInfo = []
     for (let type1 = 0; type1 < Object.values(settings?.FolderMapping).length; type1++) {
         const element1 = Object.values(settings?.FolderMapping)[type1];
@@ -587,9 +589,6 @@ async function hasRelatedBookmark(currentTab) {
     
     const [ hasValidFuzzyBookmark, fuzzyBookmarkMatches ] = await detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot);
     const [hasValidFuzzyHermidata, fuzzyHermidataMatches ] = await detectFuzzyHermidata(currentTab);
-
-    if (hasValidFuzzyBookmark) console.log("Found potential bookmark duplicates:", fuzzyBookmarkMatches);
-    else if (hasValidFuzzyHermidata) console.log("Found potential hermidata duplicates:", fuzzyHermidataMatches);
     let sameChapter;
     const finalObj = {};
     if ( hasValidFuzzyBookmark === true) {
@@ -598,22 +597,22 @@ async function hasRelatedBookmark(currentTab) {
         finalObj.bookmarkSameChapter = sameChapter
     }
     else if ( hasValidFuzzyHermidata === true) {
-        sameChapter = isSameChapterCount(fuzzyHermidataMatches, currentTab);
-        finalObj.hermidata = fuzzyHermidataMatches;
+        sameChapter = isSameChapterCount(fuzzyHermidataMatches[0], currentTab);
+        finalObj.hermidata = fuzzyHermidataMatches[0];
         finalObj.hermidataSameChapter = sameChapter
     }
     return finalObj
 }
 function isSameChapterCount(a,b) {
-    const isSameNummber = false;
+    let isSameNummber = false;
 
-    const fuzzyUrl = a.bookmarkUrl;
+    const fuzzyUrl = a.fuzzySearchUrl;
     const fuzzytitle = trimTitle(a.bookmarkTitle, fuzzyUrl);
 
     const currentTabUrl = b.url;
     const currentTab = trimTitle(b.title, currentTabUrl);
 
-    getChapterFromTitle = (title, url) => {
+    const getChapterFromTitle = (title, url) => {
         // Regex to find the first number (optionally after "chapter", "chap", "ch")
         const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
 
@@ -628,9 +627,9 @@ function isSameChapterCount(a,b) {
         .find(p => chapterNumberRegex.test(p)) || ""
         ).replace(/([A-Z])/gi, '').replace(/[^\d.]/g, '').trim();
         // If no chapter found, use empty string
-        return chapterPartV2 || chapterPartV3 || "";
+        return chapterPartV2 || chapterPartV3 || chapterPartV1 || "";
     }
-    const fuzzychapter = getChapterFromTitle(fuzzytitle, fuzzyUrl)
+    const fuzzychapter = a.chapter || getChapterFromTitle(fuzzytitle, fuzzyUrl)
     const curentTabChapter = getChapterFromTitle(currentTab, currentTabUrl)
 
 
@@ -641,8 +640,7 @@ function isSameChapterCount(a,b) {
 }
 async function detectFuzzyHermidata(currentTab, threshold = 0.8) {
     const fuzzyMatches = [];
-    const allHermidata = allHermidataCashed || await getAllHermidata();
-    if ( allHermidataCashed === undefined ) allHermidataCashed = allHermidata;
+    const allHermidata = allHermidataCashed;
     console.groupCollapsed("Fuzzy Bookmark Detection");
     console.log("Current tab:", currentTab.title);
     const trimmedTitle = trimTitle(currentTab.title, currentTab.url)
@@ -652,27 +650,23 @@ async function detectFuzzyHermidata(currentTab, threshold = 0.8) {
 
         const hermidata = allHermidata[index]
         let score = null
-        if (hermidata?.meta?.altTitles.length > 1) {
             for (let index = 0; index < hermidata?.meta?.altTitles.length; index++) {
                 score = CalcDiff( hermidata?.meta?.altTitles?.[index] || hermidata.title, trimmedTitle);
                 if (score >= threshold) {
                     fuzzyMatches.push({
                         bookmarkTitle: hermidata.title,
-                        bookmarkUrl: currentTab.url,
+                        fuzzySearchUrl: hermidata.url,
+                        currentUrl: currentTab.url,
+                        chapter: hermidata?.chapter?.current || Number.NaN,
                         similarity: score
                     });
                     console.warn(`[Fuzzy Match ${score.toFixed(2)}] "${hermidata.title}" ↔ "${trimmedTitle}"`);
                 }
             }
-        }
     }
 
     
     const hasValidFuzzyBookmark = fuzzyMatches.length > 0;
-
-
-    console.table(fuzzyMatches);
-    console.groupEnd();
     return [hasValidFuzzyBookmark, fuzzyMatches];
 }
 async function detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot, threshold = 0.8) {
@@ -693,7 +687,8 @@ async function detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot, t
                 fuzzyMatches.push({
                     folderPath: folder.path,
                     bookmarkTitle: bookmark.title,
-                    bookmarkUrl: bookmark.url,
+                    fuzzySearchUrl: bookmark.url,
+                    currentUrl: currentTab.url,
                     similarity: score
                 });
 
@@ -705,12 +700,6 @@ async function detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot, t
     }
 
     const hasValidFuzzyBookmark = fuzzyMatches.length > 0;
-
-    console.groupCollapsed("Fuzzy Bookmark Detection");
-    console.log("Current tab:", currentTab.title);
-    console.table(fuzzyMatches);
-    console.groupEnd();
-
     return [ hasValidFuzzyBookmark, fuzzyMatches ];
 }
 
@@ -1101,7 +1090,7 @@ function compareLastSeen(items, feed) {
 }
 
 async function notifyUser(feed, newItems) {
-    const allHermidata = await getAllHermidata();
+    const allHermidata = allHermidataCashed || await getAllHermidata();
     if (shouldSkipFeed(feed, allHermidata)) return;
     const title = `${feed.title}: ${newItems.length} new chapter${newItems.length > 1 ? "s" : ""}`;
     const message = newItems[0].title.join("\n");
@@ -1125,9 +1114,11 @@ let lastFeedCkeck = 0;
 
 const CalcDiffCache = new Map();
 
-let AllHermidata;
 let selectedIndex = -1;
-let allHermidataCashed = undefined;
+
+let allHermidataCashed;
+let settingsCashed;
+
 chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.sync.get([ "Settings" ], (result) => {
         const Settings = result.Settings;
@@ -1181,8 +1172,9 @@ chrome.tabs.onActivated.addListener(() => {
     updateCurrentBookmarkAndIcon();
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (changeInfo.status === 'complete') {
+        if ( allHermidataCashed === undefined ) allHermidataCashed = await getAllHermidata();
         // Only update if this tab is active in the current window
         chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
             if (tabs.length && tabs[0].id === tabId) {
