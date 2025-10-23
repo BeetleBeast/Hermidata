@@ -539,19 +539,25 @@ async function updateCurrentBookmarkAndIcon(Url) {
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
         currentTab = tabs[0];
         if (!currentTab && Url == null) return;
-
+        // initialize currentBookmark
         let searchUrl = Url || currentTab.url;
+        let NewUrl;
         const validBookmarks = await searchValidBookmarks(searchUrl);
+        // get valid bookmark first as priority because its faster
+        if (validBookmarks.length > 0) currentBookmark = validBookmarks[0]
+        NewUrl = Url || currentBookmark?.url
+        updateIcon(NewUrl);
+
         const validFuzzyBookmarks = await hasRelatedBookmark(currentTab);
+        // get fuzzy bookmark & hermidata second priority because its slower
         const isValid = validFuzzyBookmarks?.bookmarkSameChapter || validFuzzyBookmarks?.hermidataSameChapter || false;
         const validEntry = validFuzzyBookmarks?.bookmark || validFuzzyBookmarks?.hermidata || false;
-        if (isValid) {
-            currentBookmark = validEntry;
-        } else if (validBookmarks.length > 0) {
-            currentBookmark = validBookmarks[0]
-        }
+        if (isValid) currentBookmark = validEntry;
+
+        else if (validBookmarks.length > 0) currentBookmark = validBookmarks[0]
+        else currentBookmark = null
         
-        let NewUrl = Url || currentBookmark?.currentUrl || '';
+        NewUrl = Url || currentBookmark?.url || currentBookmark?.currentUrl || '';
         updateIcon(NewUrl);
     });
 }
@@ -640,7 +646,7 @@ function isSameChapterCount(a,b) {
 }
 async function detectFuzzyHermidata(currentTab, threshold = 0.8) {
     const fuzzyMatches = [];
-    const allHermidata = allHermidataCashed;
+    const allHermidata = allHermidataCashed || await getAllHermidata();
     console.groupCollapsed("Fuzzy Bookmark Detection");
     console.log("Current tab:", currentTab.title);
     const trimmedTitle = trimTitle(currentTab.title, currentTab.url)
