@@ -71,7 +71,18 @@
     browser.storage.local.get({ savedFeeds: [] }).then(({ savedFeeds }) => {
         const combined = [...savedFeeds];
         for (const feed of GlobalFeeds) {
-            if (!combined.find(f => f.url === feed.url)) combined.push(feed); // edit this to update existing feeds if needed
+            console.log(`[Hermidata] Checking feed: ${feed.title}`);
+            const existingIndex = combined.findIndex(f => f.url === feed.url);
+            console.log(`[Hermidata] existingIndex: ${existingIndex}`);
+            if (existingIndex === -1) combined.push(feed);
+            else {
+                // Existing feed → update if newer
+                const existing = combined[existingIndex];
+                if ((feed.lastFetched || 0) > (existing.lastFetched || 0)) {
+                    combined[existingIndex] = { ...existing, ...feed };
+                    console.log(`[Hermidata] Updated feed: ${feed.title}`);
+                }
+            }
         }
         browser.storage.local.set({ savedFeeds: combined }).then(() => {
             console.log(`[Hermidata] ${GlobalFeeds.length} feeds saved to local storage`);

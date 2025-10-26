@@ -55,7 +55,7 @@ function getToken(callback) {
     });
 }
 // Update Icon
-function updateIcon(Url = null) {
+function updateIcon(Url = null, currentTabParameter = null) {
     const actionApi = browserAPI.action || browserAPI.browserAction;
 
     if (Url) {
@@ -67,8 +67,8 @@ function updateIcon(Url = null) {
             }
             setIconAndTitle(actionApi, matchedTab.id);
         });
-    } else if (currentTab?.id) {
-        setIconAndTitle(actionApi, currentTab.id);
+    } else if (currentTab?.id || currentTabParameter?.id) {
+        setIconAndTitle(actionApi, currentTab?.id || currentTabParameter?.id);
     } else {
         console.warn("No valid tab to set icon");
     }
@@ -536,40 +536,41 @@ function getBookmarkChildren(parentId = "2") {
     });
 }
 async function updateCurrentBookmarkAndIcon(Url) {
-    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-        currentTab = tabs[0];
-        if (!currentTab && Url == null) return;
-        // initialize currentBookmark
-        let searchUrl = Url || currentTab.url;
-        let NewUrl;
-        const validBookmarks = await searchValidBookmarks(searchUrl);
-        // get valid bookmark first as priority because its faster
-        if (validBookmarks.length > 0) currentBookmark = validBookmarks[0]
-        NewUrl = Url || currentBookmark?.url
-        updateIcon(NewUrl);
+    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!currentTab && Url == null) return;
+    // initialize currentBookmark
+    let searchUrl = Url ?? currentTab.url;
+    let NewUrl;
 
-        const validFuzzyBookmarks = await hasRelatedBookmark(currentTab);
-        // get fuzzy bookmark & hermidata second priority because its slower
+    const fuzzyPromise = hasRelatedBookmarkCached(currentTab);
+
+    // get valid bookmark
+    const validBookmarks = await searchValidBookmarks(searchUrl);
+    if (validBookmarks.length > 0) {
+        currentBookmark = validBookmarks[0]
+        updateIcon(currentBookmark.url);
+    }else {
+        currentBookmark = null;
+        updateIcon(NewUrl, currentTab);
+    }
+    if (!currentBookmark) { // if dons't already have valid bookmark
+        // get fuzzy bookmark & hermidata | slower
+        const validFuzzyBookmarks = await fuzzyPromise;
         const isValid = validFuzzyBookmarks?.bookmarkSameChapter || validFuzzyBookmarks?.hermidataSameChapter || false;
-        const validEntry = validFuzzyBookmarks?.bookmark || validFuzzyBookmarks?.hermidata || false;
-        if (isValid) currentBookmark = validEntry;
-
-        else if (validBookmarks.length > 0) currentBookmark = validBookmarks[0]
-        else currentBookmark = null
-        
-        NewUrl = Url || currentBookmark?.url || currentBookmark?.currentUrl || '';
-        updateIcon(NewUrl);
-    });
+        const validEntry = validFuzzyBookmarks?.bookmark || validFuzzyBookmarks?.hermidata || null;
+        if (isValid && validEntry) {
+            currentBookmark = validEntry;
+            updateIcon(validEntry.url || validEntry.currentUrl || searchUrl);
+        }
+    }
 }
-/*
-TODO:
-1.
-do a fuzzy search comparason between all bookmarks and current tab [✓]
-do also a fuzzy search comparason between all Hermidata and current tab [✓]
-if detect same with 80% threshold go to point 2.
-2.
-do a check to see if the same chapter count if yes => color it
-*/
+async function hasRelatedBookmarkCached(tab) {
+    if (fuzzyCache.has(tab.url)) return fuzzyCache.get(tab.url);
+    const result = await hasRelatedBookmark(tab);
+    fuzzyCache.set(tab.url, result);
+    return result;
+}
+
 /**
  * Return the bookmark after a fuzzy search instead of a direct search
  * @param {*} currentTab 
@@ -671,7 +672,7 @@ async function detectFuzzyHermidata(currentTab, threshold = 0.8) {
             }
     }
 
-    
+    console.groupEnd();
     const hasValidFuzzyBookmark = fuzzyMatches.length > 0;
     return [hasValidFuzzyBookmark, fuzzyMatches];
 }
@@ -1119,6 +1120,8 @@ let lastAutoFeedCkeck = 0
 let lastFeedCkeck = 0;
 
 const CalcDiffCache = new Map();
+
+const fuzzyCache = new Map();
 
 let selectedIndex = -1;
 

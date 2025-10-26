@@ -993,7 +993,7 @@ function makeFooterSection() {
     const clearNotification = document.querySelector("#clear-notifications");
     clearNotification.addEventListener('click', () => {
         removeAllChildNodes(document.querySelector("#RSS-Notification")) // clear front-end
-        // TODO // clear back-end
+        setNotificationList(null, true) // clear back-end
     });
     // open RSS full page
     const FullpageRSSButton = document.querySelector(".fullpage-RSS-btn");
@@ -1637,24 +1637,58 @@ function makeItemHeader(parent_section) {
     parent_section.appendChild(container)
 
 }
+async function getLocalNotificationItem(key) {
+    return new Promise((resolve, reject) => {
+        browserAPI.storage.local.get("clearedNotification", (result) => {
+            if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
+            resolve(result?.clearedNotification?.[key] || false);
+        });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        console.log('Key',key,'\n');
+        return {};
+    })
+}
+async function setNotificationList(key, value) {
+    return new Promise((resolve, reject) => {
+        if (key === undefined || value === undefined) {
+            reject(new Error("setNotificationList: key and value are required"));
+            return;
+        }
+        browserAPI.storage.local.get("clearedNotification", (result) => {
+        const conbined = {...result?.clearedNotification};
+        conbined[key] = value;
+        browserAPI.storage.local.set({clearedNotification: conbined}, () => {
+            if (browserAPI.runtime.lastError) return reject(new Error(browserAPI.runtime.lastError));
+        });
+    });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        return {};
+    });
+}
 async function makefeedItem(parent_section, feedListLocal, seachable = false) {
-    Object.entries(feedListLocal).forEach(async key => {
-        const title = findByTitleOrAltV2(key[1]?.items?.[0]?.title || key[1].title, AllHermidata).title || key[1]?.items?.[0]?.title || key[1].title;
-        const url = key[1]?.items?.[0]?.link || key[1].url
-        const chapter = key[1]?.chapter?.latest || ( getChapterFromTitle(title, url) == '01'? '': getChapterFromTitle(title, url) )|| key[1]?.chapter?.current || '';
-        const currentHermidata = AllHermidata?.[key[0]]
+    for (const [key, value] of Object.entries(feedListLocal)) {
+        const title = findByTitleOrAltV2(value?.items?.[0]?.title || value.title, AllHermidata).title || value?.items?.[0]?.title || value.title;
+        const url = value?.items?.[0]?.link || value.url
+        const chapter = value?.chapter?.latest || ( getChapterFromTitle(title, url) == '01'? '': getChapterFromTitle(title, url) )|| value?.chapter?.current || '';
+        const currentHermidata = AllHermidata?.[key]
         const currentChapter = currentHermidata?.chapter?.current
+        const isRSSItem = parent_section.id == "All-RSS-entries";
+        const clearedNotification = await getLocalNotificationItem(key);
+        const isRead = !isRSSItem && (currentChapter === chapter)
+
         const settings = await getSettings();
         // removed && ( seachable || (chapter !== currentChapter ))
-        if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key[0]}`)) {
+        if ( parent_section && !document.querySelector(`#${parent_section.id} .TitleHash-${key}`) && !isRead && !clearedNotification) {
             const li = document.createElement("li");
             li.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item" : "RSS-Notification-item";
-            li.classList.add("hasRSS", `TitleHash-${key[0]}`, 'seachable');
+            li.classList.add("hasRSS", `TitleHash-${key}`, 'seachable');
             li.addEventListener('contextmenu', (e) => rightmouseclickonItem(e))
 
             const ElImage = document.createElement("img");
             ElImage.className = parent_section.id == "All-RSS-entries" ? "RSS-entries-item-image" : "RSS-Notification-item-image";
-            ElImage.src = key[1]?.rss?.image ||key[1]?.image || key[1]?.favicon || 'icons/icon48.png';
+            ElImage.src = value?.rss?.image ||value?.image || value?.favicon || 'icons/icon48.png';
             ElImage.sizes = "48x48";
             ElImage.style.width = "48px";
             ElImage.style.height = "48px";
@@ -1682,11 +1716,11 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 
             const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
             const AllItemChapterText = currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
-            const titleText = trimTitle(key[1]?.items?.[0]?.title || key[1].title);
+            const titleText = trimTitle(value?.items?.[0]?.title || value.title);
             const maxTitleCharLangth = 50;
             const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
             
-            const lastRead = AllHermidata[key[0]]?.chapter?.current || null;
+            const lastRead = AllHermidata[key]?.chapter?.current || null;
             const progress = lastRead ? ((Number.parseFloat(lastRead) / Number.parseFloat(chapter)) * 100 ).toPrecision(3) : '0';
 
             const ELTitle = document.createElement("div");
@@ -1722,10 +1756,10 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
                 Elfooter.appendChild(tagDicContainer)
             }
             Elfooter.className =  parent_section.id == "All-RSS-entries" ? "RSS-entries-item-footer" :"RSS-Notification-item-footer";
-            const domain = key[1]?.domain || key[1].url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
+            const domain = value?.domain || value.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
             Elfooter.textContent = `${domain}`;
             
-            li.onclick = () => browser.tabs.create({ url: key[1]?.items?.[0]?.link || key[1].url || key[1]?.rss.latestItem?.link });
+            li.onclick = () => browser.tabs.create({ url: value?.items?.[0]?.link || value.url || value?.rss.latestItem?.link });
             
             // const pubDate = document.createElement("p");
             // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
@@ -1735,7 +1769,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
             // li.appendChild(pubDate);
             parent_section.appendChild(li);
         }
-    });
+    }
 }
 function rightmouseclickonItem(e) {
     e.preventDefault(); // stop the browser’s default context menu
@@ -1835,6 +1869,8 @@ function clearNotification(target) {
     // find id of list item
     const item = getNotificationItem(target);
     item.remove()
+    const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
+    setNotificationList(hashItem, true)
     // remove from back-end
 }
 async function addAltTitle(target) {
@@ -2003,14 +2039,49 @@ async function loadSavedFeedsViaSavedFeeds() {
 async function loadSavedFeeds() {
     const feedList = {};
     AllHermidata = await getAllHermidata();
+    const AllFeeds = await loadSavedFeedsViaSavedFeeds();
     
     
     for (const [id, feed] of Object.entries(AllHermidata)) {
         if ( feed?.rss ) {
-            feedList[id] = feed;
+            const updatedFeed = await updateFeed(feed, AllFeeds);
+            feedList[id] = updatedFeed;
         }
     }
     return feedList;
+}
+async function updateFeed(feed, allFeeds) {
+    const rssInfo = feed.rss;
+    if (!rssInfo?.url) return feed;
+    const currentFeedTitle = trimTitle(rssInfo?.items?.[0]?.title || feed.title);
+    const matchFeed = Object.values(allFeeds).find(f => {
+        const sameDomain = f.domain === rssInfo.domain;
+        const sameTitle = trimTitle(f?.items?.[0]?.title || f.title) === currentFeedTitle;
+        return sameDomain && sameTitle;
+    });
+    if (!matchFeed) return feed; // no match
+
+    const latestFetchedItem = matchFeed.items?.[0];
+    const currentLatestItem = rssInfo.latestItem;
+    const isNew = latestFetchedItem && (!currentLatestItem || latestFetchedItem.link !== currentLatestItem.link);
+
+    // Update feed info
+    feed.rss = {
+        ...rssInfo,
+        title: matchFeed.title || rssInfo.title,
+        url: matchFeed.url || rssInfo.url,
+        image: matchFeed.image || rssInfo.image,
+        domain: matchFeed.domain || rssInfo.domain,
+        lastFetched: new Date().toISOString(),
+        latestItem: latestFetchedItem
+    };
+    // Optionally update latest chapter if we can parse it
+    const latestChapter = getChapterFromTitle(latestFetchedItem.title, matchFeed.url);
+    if (latestChapter) {
+        feed.chapter.latest = latestChapter;
+        feed.meta.updated = new Date().toISOString();
+    }
+    return feed;
 }
 /**
  * 

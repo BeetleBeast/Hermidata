@@ -91,7 +91,6 @@
 
 - [ ] alt names need to be manualy set-up if not wil result in out-of-sync duplicate entry.
 
-
 ## TO-DO
 
 - [ ] select saving option:
@@ -99,8 +98,6 @@
   - Browser sync
   - google sheet
   - ( FUTURE: Browser database ) <- maybe
-- [ ] prep work for RSS
-- [ ] RSS implemetation
 
 ## 🧪 To-Do List
 
