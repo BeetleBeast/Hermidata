@@ -391,20 +391,22 @@ function deactivateother() {
     document.querySelectorAll(".HDRSS").forEach(a => {
         a.style.pointerEvents = 'none';
     });
-    document.querySelector(".HDRSS").style.opacity = 0;
-    document.querySelector(".HDClassic").style.opacity = 0.2;
+    const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
+    document.querySelector(".HDRSS").style.opacity = classicCurrentActive ? 0 : 0.2;
+    document.querySelector(".HDClassic").style.opacity = classicCurrentActive ? 0.2 : 0;
 }
 function activateother() {
-    // deactivate links in classic
+    const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
+    // de/activate links in classic depending on current active
     document.querySelectorAll(".HDClassic").forEach(a => {
-        a.style.pointerEvents = 'auto';
+        a.style.pointerEvents = classicCurrentActive ? 'auto' : 'none';
     });
-    // deactivate links in HDRSS
+    // de/activate links in HDRSS depending on current active
     document.querySelectorAll(".HDRSS").forEach(a => {
-        a.style.pointerEvents = 'none';
+        a.style.pointerEvents =  classicCurrentActive ? 'none' : 'auto';
     });
-    document.querySelector(".HDRSS").style.opacity = 0;
-    document.querySelector(".HDClassic").style.opacity = 1;
+    document.querySelector(".HDRSS").style.opacity = classicCurrentActive ? 0 : 1;
+    document.querySelector(".HDClassic").style.opacity = classicCurrentActive ? 1 : 0;
 }
 function customPrompt(msg, defaultInput) {
     return new Promise((resolve) => {
@@ -416,6 +418,7 @@ function customPrompt(msg, defaultInput) {
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
+            container.style.height = `${document.body.offsetHeight / 2}px`;
             label.style.display = 'block';
             input.style.display = 'block';
             btn1.style.display = 'block';
@@ -461,6 +464,7 @@ function customConfirm(msg) {
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
+            container.style.height = `${document.body.offsetHeight / 2}px`;
             label.style.display = 'block';
             btn1.style.display = 'block';
             btn2.style.display = 'block';
@@ -973,7 +977,7 @@ async function getAllHermidata() {
     return allHermidata;
 }
 
-function makeRSSPage() {
+async function makeRSSPage() {
     // subscribe section
     makeSubscibeBtn();
     // sort section
@@ -2369,7 +2373,6 @@ async function autoMergeDuplicate(idA, idB) {
         `\n older hash: ${olderHashType}`
     );
     // check if Hash is the old way
-    // TODO
     // Use your existing migrateHermidataV5 logic
     const merged = await migrateHermidataV5(newer, older,
         olderHashType === 'old' ? 'OLD' : 'DEFAULT',

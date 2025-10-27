@@ -212,13 +212,17 @@ async function saveBulkEdit() {
     const newStatus = document.getElementById('bulkEditStatus').value;
     const newTags = document.getElementById('bulkEditTags').value.split(',').map(tag => tag.trim());
 
+    const isdifferent = (newItem, OldItem, index) => {
+        if (newItem[index] !== OldItem[index] && newItem[index] !== undefined )  return true;
+        return false;
+    }
     const selectedIds = getSelectedIds();
     for (const id of selectedIds) {
         const item = DATA.find(d => d.id === id);
         if (item) {
-            item.type = newType;
-            item.status = newStatus;
-            item.meta.tags = newTags;
+            item.type = isdifferent(newType, item.type, 'type') ? newType : item.type;
+            item.status = isdifferent(newType, item.type, 'status') ? newStatus : item.status;
+            item.meta.tags = isdifferent(newType, item.type, 'meta.tags') ? newTags : item.meta.tags;
             await saveData(item);
         }
     }

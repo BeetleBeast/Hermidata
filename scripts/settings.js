@@ -213,6 +213,7 @@ async function saveTagColoring(tagColoringInput) {
 async function loadTagColoring() {
     chrome.storage.sync.get(["Settings"], async (result) => {
         Object.assign(tagColoring, result.Settings.tagColoring || await createDefaultTagColor());
+        await updateTagColor(result.Settings.tagColoring);
         buildTagColoringForm();
     });
 }
@@ -224,6 +225,15 @@ async function createDefaultTagColor() {
         defaultTagColor[f] = defaultColor
     })
     return defaultTagColor
+}
+async function updateTagColor(alreadyExist) {
+    const allTags = Array.from(new Set(Object.values(await getAllHermidata()).flatMap(item => item.meta?.tags || [])));
+    allTags.forEach(f => {
+        if (!alreadyExist[f]) {
+            tagColoring[f] = 'white'
+        }
+    })
+    tagColoring
 }
 async function getAllHermidata() {
     const allData = await new Promise((resolve, reject) => {
