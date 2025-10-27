@@ -37,6 +37,8 @@ const Testing = false;
 
 const CalcDiffCache = new Map();
 
+const preloadCache = new Map();
+
 let AllHermidata;
 let selectedIndex = -1;
 
@@ -71,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("save").addEventListener("click", async () => await saveSheet());
     document.getElementById("HDClassicBtn").addEventListener("click", (e) => openClassic(e));
     document.getElementById("HDRSSBtn").addEventListener("click", (e) =>  openRSS(e));
+    document.getElementById("HDRSSBtn").addEventListener('mouseenter', (e) =>  enableHoverPreload(e));
     document.getElementById("openSettings").addEventListener("click", () => {
         try {
             browserAPI.runtime.openOptionsPage();
@@ -951,7 +954,16 @@ async function openRSS(e) {
         if (document.body.offsetWidth <= 300) document.body.style.width = '664px';
     }
     changePageToRSS(e);
-    makeRSSPage();
+
+    // If preloaded, use it instantly
+    if (preloadCache.has("RSSPage")) {
+        console.log("[Preload] Using preloaded RSS page");
+        const prebuilt = preloadCache.get("RSSPage");
+        document.querySelector("#All-RSS-entries").appendChild(prebuilt);
+        makeSortSection(document.querySelector("#sort-RSS-entries"));
+    } else {
+        await makeRSSPage(); // fallback if user clicks before hover
+    }
 }
 
 async function getAllHermidata() {
@@ -977,7 +989,8 @@ async function getAllHermidata() {
     return allHermidata;
 }
 
-async function makeRSSPage() {
+async function makeRSSPage(Preloading = false) {
+    let itemPreloadSection = null;
     // subscribe section
     makeSubscibeBtn();
     // sort section
@@ -986,10 +999,25 @@ async function makeRSSPage() {
     // item & notification section
     const NotificationSection = document.querySelector("#RSS-Notification")
     const AllItemSection = document.querySelector("#All-RSS-entries")
-    makeItemSection(NotificationSection, AllItemSection);
+    if (Preloading) {
+        itemPreloadSection = await makeItemSection(NotificationSection, AllItemSection, Preloading) 
+    } else makeItemSection(NotificationSection, AllItemSection);
     // footer
     makeFooterSection();
+    return itemPreloadSection
 }
+async function enableHoverPreload(e) {
+    // Avoid running twice
+    if (preloadCache.has("RSSPage")) return;
+
+    console.log("[Preload] Preparing RSS page in background...");
+
+    // Run the same logic that `openRSS` uses, but don't insert yet.
+    const preloadResult = await makeRSSPage(true);
+    console.log("[Preload] Preloaded RSS page", preloadResult);
+    preloadCache.set("RSSPage", preloadResult);
+}
+
 
 function makeFooterSection() {
     
@@ -1079,7 +1107,7 @@ async function reloadContent(NotificationSection,AllItemSection) {
     const feedListLocalReload = await loadSavedFeeds();
     makefeedItem(NotificationSection, feedListLocalReload);
     makeItemHeader(AllItemSection);
-    makefeedItem(AllItemSection, feedListLocalReload, true);
+    makefeedItem(AllItemSection, feedListLocalReload);
 }
 function makeSortSection(sortSection) {
     // makeSortHeader(sortSection);
@@ -1189,9 +1217,10 @@ function filterEntries(query, filtered = null) {
 }
 
 
-function sortOptionLogic(parent_section) {
+async function sortOptionLogic(parent_section) {
     // state object for filters
-    const filters = {
+    const lastSort = JSON.parse(localStorage.getItem("lastFilter"));
+    const filters = lastSort || {
         include: {}, // { type: ['Manga'], status: ['Ongoing'] }
         exclude: {},
         sort: ''
@@ -1200,7 +1229,7 @@ function sortOptionLogic(parent_section) {
     // find all custom checkboxes
     const checkboxes = parent_section.querySelectorAll(".custom-checkbox");
 
-    checkboxes.forEach(cb => {
+    for (const cb of checkboxes) {
         cb.addEventListener("click", () => {
             let state = Number.parseInt(cb.dataset.state || "0");
 
@@ -1230,12 +1259,7 @@ function sortOptionLogic(parent_section) {
                 }
 
                 // apply and persist
-                if (filters.sort) {
-                    applySortToEntries(filters.sort);
-                    localStorage.setItem("lastSort", filters.sort);
-                } else {
-                    localStorage.removeItem("lastSort");
-                }
+                if (filters.sort) applySortToEntries(filters.sort);
                 return;
             }
 
@@ -1252,9 +1276,44 @@ function sortOptionLogic(parent_section) {
             else if (state === 2) filters.exclude[section].push(label);
             // trigger filtering logic here
             applyFilterToEntries(filters);
+            localStorage.setItem("lastFilter", JSON.stringify(filters));
         });
-    });
+    };
+    const makeActiveState = (cb) => {
+        const label = cb.nextElementSibling?.textContent?.trim();
+        const section = cb.closest(".filter-section")?.firstChild?.textContent?.trim();
+        let state = 0;
+        
+        const includeSelection = filters?.include?.[section] || [];
+        const excludeSelection = filters?.exclude?.[section] || [];
+        if ( includeSelection.length === 0 && excludeSelection.length === 0 && filters?.sort === undefined) return state;
+        
+        if ( includeSelection.includes(label) ) state = 1;
+        else if ( excludeSelection.includes(label) ) state = 2;
+        else if ( filters?.sort === label ) state = 1;
+        return state;
+    }
+    // apply filters from local storage Visually
+    for (const cb of checkboxes) {
+        cb.dataset.state = makeActiveState(cb);
+    };
+    const hasAnyFilters = (filters) => {
+        return (
+            Object.values(filters.include || {}).some(v => v.length > 0) ||
+            Object.values(filters.exclude || {}).some(v => v.length > 0) ||
+            !!filters.sort
+        );
+    }
+
+    // apply filters from local storage Logically
+    setTimeout(() => {
+        if (hasAnyFilters(filters)) {
+            applyFilterToEntries(filters);
+            if (filters.sort) applySortToEntries(filters.sort);
+        }
+    }, 300);
 }
+
 
 function applySortToEntries(sortType) {
     const container = document.querySelector('#All-RSS-entries');
@@ -1671,7 +1730,8 @@ async function setNotificationList(key, value) {
         return {};
     });
 }
-async function makefeedItem(parent_section, feedListLocal, seachable = false) {
+async function makefeedItem(parent_section, feedListLocal, Preloading = false) {
+    let tempContainer = document.createElement("div");
     for (const [key, value] of Object.entries(feedListLocal)) {
         const title = findByTitleOrAltV2(value?.items?.[0]?.title || value.title, AllHermidata).title || value?.items?.[0]?.title || value.title;
         const url = value?.items?.[0]?.link || value.url
@@ -1738,7 +1798,7 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
 
 
             ELTitle.textContent = `${titleTextTrunacted}`;
-            ELchapter.textContent = seachable ? `${AllItemChapterText}` : `${chapterText}`;
+            ELchapter.textContent = isRSSItem ? `${AllItemChapterText}` : `${chapterText}`;
             ELprogress.textContent = `${progress}%`;
 
 
@@ -1771,9 +1831,12 @@ async function makefeedItem(parent_section, feedListLocal, seachable = false) {
             li.appendChild(ElInfo);
             li.appendChild(Elfooter);
             // li.appendChild(pubDate);
-            parent_section.appendChild(li);
+            if (Preloading) tempContainer.appendChild(li);
+            else parent_section.appendChild(li);
         }
     }
+    if (Preloading) return tempContainer
+
 }
 function rightmouseclickonItem(e) {
     e.preventDefault(); // stop the browser’s default context menu
@@ -2006,13 +2069,19 @@ function getNotificationItem(el) {
     return getNotificationItem(el.parentElement)
 }
 
-async function makeItemSection(NotificationSection, AllItemSection) {
+async function makeItemSection(NotificationSection, AllItemSection, Preloading = false) {
     const feedFromHermidata = await loadSavedFeeds(); // actually subscribed
-
-    makeFeedHeader(NotificationSection);
-    makefeedItem(NotificationSection, feedFromHermidata);
-    makeItemHeader(AllItemSection);
-    makefeedItem(AllItemSection, AllHermidata, true);
+    if (Preloading) {
+        makeFeedHeader(NotificationSection);
+        makefeedItem(NotificationSection, feedFromHermidata);
+        makeItemHeader(AllItemSection);
+        return await makefeedItem(AllItemSection, AllHermidata, true);
+    } else {
+        makeFeedHeader(NotificationSection);
+        makefeedItem(NotificationSection, feedFromHermidata);
+        makeItemHeader(AllItemSection);
+        makefeedItem(AllItemSection, AllHermidata, true);
+    }
     // make the notification section
     // make the all items section
     // each item should have:
