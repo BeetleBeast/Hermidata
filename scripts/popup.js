@@ -578,8 +578,8 @@ async function migrateHermidataV5(newer, older, OLD_KEY = 'DEFAULT', NEW_KEY = '
                 [newer.title, older.title]
             ),
             added: older.meta?.added || base.meta.added,
-            updated: new Date().toISOString()
-            // add originalRelease
+            updated: new Date().toISOString(),
+            originalRelease: null // TODO
         }
     }
     // step 3. save & remove key
@@ -2210,7 +2210,8 @@ function makeHermidataV3(title, url, type = "Manga") {
             notes: "",
             altTitles: [Title],
             added: new Date().toISOString(),
-            updated: new Date().toISOString()
+            updated: new Date().toISOString(),
+            originalRelease: null
         }
     };
 }
