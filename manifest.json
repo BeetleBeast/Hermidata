@@ -2,7 +2,7 @@
     "name": "Hermidata",
     "author": "BeetleB",
     "description": "Organize your bookmarks more effectively using your google sheets & smart bookmarks.",
-    "version": "0.16.7",
+    "version": "0.16.8",
     "manifest_version": 3,
     "permissions": [
         "contextMenus",

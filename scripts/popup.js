@@ -1531,13 +1531,6 @@ function makeSortOptions(parent_section) {
             const label = document.createElement('label');
             label.textContent = itemText;
 
-            // Toggle on click
-            checkbox.addEventListener('click', () => {
-                let state = Number(checkbox.dataset.state);
-                state = state % 3; // cycle 0->1->2->0
-                checkbox.dataset.state = state.toString();
-            });
-
             itemContainer.appendChild(checkbox);
             itemContainer.appendChild(label);
             list.appendChild(itemContainer);
