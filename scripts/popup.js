@@ -1682,10 +1682,19 @@ function makeFeedHeader(parent_section) {
     if (document.querySelector('.containerHeader-feed')) return
     const container = document.createElement('div');
     container.className = 'containerHeader-feed'
+    container.style.cursor = 'pointer';
     const title = document.createElement('div');
     title.className = "titleHeader";
     title.textContent = 'Notifications'
     container.appendChild(title);
+    const feedHeadersymbol = document.createElement('div');
+        feedHeadersymbol.className = 'feed-header-symbol';
+        feedHeadersymbol.dataset.feedState = 'down';
+    container.addEventListener('click', () => {
+            feedHeadersymbol.dataset.feedState = feedHeadersymbol.dataset.feedState === 'down' ? 'up' : 'down';
+        });
+    title.appendChild(feedHeadersymbol);
+
     parent_section.appendChild(container)
 
 }
@@ -1822,8 +1831,7 @@ async function makefeedItem(parent_section, feedListLocal, Preloading = false) {
             Elfooter.className =  parent_section.id == "All-RSS-entries" ? "RSS-entries-item-footer" :"RSS-Notification-item-footer";
             const domain = value?.domain || value.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
             Elfooter.textContent = `${domain}`;
-            
-            li.onclick = () => browser.tabs.create({ url: value?.items?.[0]?.link || value.url || value?.rss.latestItem?.link });
+            li.onclick = () => clickOnItem(value);
             
             // const pubDate = document.createElement("p");
             // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
@@ -1838,8 +1846,13 @@ async function makefeedItem(parent_section, feedListLocal, Preloading = false) {
     if (Preloading) return tempContainer
 
 }
+function clickOnItem(value) {
+    if (document.querySelector('.feed-header-symbol').dataset.feedState === 'up') return;
+    browser.tabs.create({ url: value?.items?.[0]?.link || value.url || value?.rss.latestItem?.link });
+}
 function rightmouseclickonItem(e) {
     e.preventDefault(); // stop the browser’s default context menu
+    if (document.querySelector('.feed-header-symbol').dataset.feedState === 'up') return;
 
     // Remove any existing custom menu first
     document.querySelectorAll(".custom-context-menu").forEach(el => el.remove());

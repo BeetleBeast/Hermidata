@@ -195,8 +195,10 @@ select.autoInput {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 15px;
+    padding-top: 15px;
     padding-bottom: 15px;
+    -webkit-user-select: none;
+    user-select: none;
 }
 .ContainerHeader {
     width: 100%;
@@ -389,7 +391,38 @@ select.autoInput {
     border-bottom: 1px solid var(--Btn);
     padding-bottom: 0.3rem;
 }
-
+/* feedState*/
+.feed-header-symbol {
+	position: initial;
+	display: block;
+	height: 0.5rem;
+	width: 0.5rem;
+	transform: translateY(-100%) rotate(45deg);
+	transition-property: all;
+	transition-timing-function: cubic-bezier(0.4,0,0.2,1);
+	transition-duration: 0.2s;
+	content: "";
+	transform-origin: 75% 75%;
+	box-shadow: 2px 2px;
+	pointer-events: none;
+    margin-left: 10px;
+    margin-right: 5px;
+    margin-bottom: 0px;
+    margin-top: 10px;
+}
+.feed-header-symbol[data-feed-state="up"] {
+    transform: translateY(-50%) rotate(225deg);
+    
+}
+#RSS-Notification:has(
+    > .containerHeader-feed > .titleHeader > .feed-header-symbol[data-feed-state="up"]
+    ) > .RSS-Notification-item {
+    height: 0px;
+    padding: 0px;
+    margin: 0px;
+    transform: translateY(50%);
+    opacity: 0;
+}
 /* List of checkboxes under each filter */
 .filter-list {
     display: flex;
@@ -475,6 +508,7 @@ select.autoInput {
     color: var(--Text-color);
     transition: background-color 0.3s ease;
     height: 40px;
+    opacity: 1;
 }
 
 .RSS-entries-item:hover,
@@ -484,7 +518,6 @@ select.autoInput {
 }
 #RSS-entries,
 #RSS-Notification {
-    overflow: scroll;
     width: 100%;
 }
 .RSS-entries-item-footer,
@@ -502,7 +535,7 @@ select.autoInput {
 	padding: 2px;
     position: absolute;
     left: 5px;
-    padding-top: 15px;
+    padding-top: 8px;
     margin: 0;
 }
 .RSS-entries-item-info,
@@ -718,10 +751,7 @@ select.autoInput {
 .RSS-Notification-item-tag-container {
 	position: absolute;
 	margin-top: 25px;
-	right: 27em;
-}
-.tag-div {
-	padding-right: 25px;
+	right: clamp(56vw,65vw, 80vw);
 }
 .genericLabel {
     display: none;
