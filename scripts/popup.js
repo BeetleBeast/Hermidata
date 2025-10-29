@@ -962,7 +962,10 @@ async function openRSS(e) {
         document.querySelector("#All-RSS-entries").appendChild(prebuilt);
         makeSortSection(document.querySelector("#sort-RSS-entries"));
     } else {
-        await makeRSSPage(); // fallback if user clicks before hover
+        console.log("[Preload] Preloading fallback...");
+        setTimeout(async () => {
+            await makeRSSPage(); // fallback if user clicks before hover
+        }, 300);
     }
 }
 
