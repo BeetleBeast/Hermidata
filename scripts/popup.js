@@ -1238,7 +1238,7 @@ async function sortOptionLogic(parent_section) {
 
             // cycle 0→1→2→0
             state = (state + 1 ) % 3;
-            cb.dataset.state = state;
+            cb.dataset.state = state.toString();
 
             // find its label text (filter name)
             const label = cb.nextElementSibling?.textContent?.trim();
