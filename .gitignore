@@ -12,3 +12,5 @@ Secret*
 Zip-Files*
 # ignore all files inside Hidden
 Hidden*
+# ignore all output files
+output/*
