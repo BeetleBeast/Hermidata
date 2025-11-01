@@ -1028,7 +1028,7 @@ function makeFooterSection() {
     const clearNotification = document.querySelector("#clear-notifications");
     clearNotification.addEventListener('click', () => {
         removeAllChildNodes(document.querySelector("#RSS-Notification")) // clear front-end
-        setNotificationList(null, true) // clear back-end
+        setNotificationList(null) // clear back-end
     });
     // open RSS full page
     const FullpageRSSButton = document.querySelector(".fullpage-RSS-btn");
@@ -1717,10 +1717,10 @@ async function getLocalNotificationItem(key) {
         return {};
     })
 }
-async function setNotificationList(key, value) {
+async function setNotificationList(key, value = true) {
     return new Promise((resolve, reject) => {
-        if (key === undefined || value === undefined) {
-            reject(new Error("setNotificationList: key and value are required"));
+        if (key === undefined) {
+            reject(new Error("setNotificationList: key is required"));
             return;
         }
         browserAPI.storage.local.get("clearedNotification", (result) => {
@@ -1827,7 +1827,7 @@ async function makefeedItem(parent_section, feedListLocal, Preloading = false) {
             Elfooter.className =  parent_section.id == "All-RSS-entries" ? "RSS-entries-item-footer" :"RSS-Notification-item-footer";
             const domain = value?.domain || value.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
             Elfooter.textContent = `${domain}`;
-            li.onclick = () => clickOnItem(value);
+            li.onclick = () => clickOnItem(value, isRSSItem);
             
             // const pubDate = document.createElement("p");
             // pubDate.textContent = `Published: ${feed?.items?.[0]?.pubDate ? new Date(feed.items[0].pubDate).toLocaleString() : 'N/A'}`;
@@ -1842,9 +1842,9 @@ async function makefeedItem(parent_section, feedListLocal, Preloading = false) {
     if (Preloading) return tempContainer
 
 }
-function clickOnItem(value) {
-    if (document.querySelector('.feed-header-symbol').dataset.feedState === 'up') return;
-    browser.tabs.create({ url: value?.items?.[0]?.link || value.url || value?.rss.latestItem?.link });
+function clickOnItem(value, isRSSItem) {
+    if (document.querySelector('.feed-header-symbol').dataset.feedState === 'up' && !isRSSItem) return;
+    browser.tabs.create({ url: value?.rss?.latestItem?.link || value.url });
 }
 function rightmouseclickonItem(e) {
     e.preventDefault(); // stop the browser’s default context menu
@@ -1946,7 +1946,7 @@ function clearNotification(target) {
     const item = getNotificationItem(target);
     item.remove()
     const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
-    setNotificationList(hashItem, true)
+    setNotificationList(hashItem)
     // remove from back-end
 }
 async function addAltTitle(target) {
