@@ -933,8 +933,62 @@ async function sha1Hex(str) {
         .map(b => b.toString(16).padStart(2, "0"))
         .join("");
 }
+async function webSearch() {
+    // search the web for new releases
+    // TODO
 
+    // get the links to check
+    const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
+    const allHermidata = await getAllHermidata();
+
+    // get all url from allHermidata
+    const allRSSUrl =  Object.values(allHermidata).map(novel => novel?.rss?.url).filter(Boolean);
+    console.log(`[Hermidata] Web search - total RSS feeds to check: ${allRSSUrl.length}`);
+
+    // get all RSS feeds from allHermidata
+    const allnovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
+
+
+    for (const novel of allnovelRSS) {
+        const title = novel.latestItem?.title || novel.title || "Unknown";
+        const domain = novel.domain;
+        if (!domain || !title) continue;
+        feed = { title, domain, url: novel?.url };
+        console.log(`[Hermidata] Web search for ${title} in ${domain}`);
+        // TODO
+        // get the rss feed text
+        const feedText = await fetchFeedText(feed);
+        if (!feedText) continue;
+        
+        console.log(`[Hermidata] Fetched feed: ${feed.title}`);
+        console.log(`[Hermidata] Fetched feed: ${Object.values(feed)}`);
+        
+        // get the latest token
+        const token = getFeedLatestToken(feedText);
+        if (!token) continue;
+
+        console.log(`[Hermidata] Latest token: ${token}`);
+        // check if the feed is already in savedFeeds via token
+        const existingFeed = savedFeeds.find(f => f.lastToken === token);
+        const sameTitle = savedFeeds.find(f => f.items?.[0]?.title === feed?.title);
+        if (existingFeed && sameTitle) {
+            console.log(`[Hermidata] Feed already exists: ${existingFeed.items[0].title}`);
+            continue;
+        }
+        // update savedFeeds
+        const xml = parseXmlSafely(feedText, feed.title);
+        const items = parseItems(xml, feed.title);
+        if (items.length === 0) continue;
+
+        console.log(`[Hermidata] Adding feed: ${feed.title}`);
+        const newFeed = { ...feed, lastToken: token, lastFetched: Date.now(), items };
+        savedFeeds.push(newFeed);
+        await browser.storage.local.set({ savedFeeds });
+
+    }
+}
 async function checkFeedsForUpdates() {
+    await webSearch();
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
     const allHermidata = await getAllHermidata();
 

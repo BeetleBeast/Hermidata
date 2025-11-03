@@ -1262,7 +1262,10 @@ async function sortOptionLogic(parent_section) {
                 }
 
                 // apply and persist
-                if (filters.sort) applySortToEntries(filters.sort);
+                if (filters.sort) {
+                    applySortToEntries(filters.sort);
+                    applySortToNotification();
+                }
                 return;
             }
 
@@ -1312,7 +1315,10 @@ async function sortOptionLogic(parent_section) {
     setTimeout(() => {
         if (hasAnyFilters(filters)) {
             applyFilterToEntries(filters);
-            if (filters.sort) applySortToEntries(filters.sort);
+            if (filters.sort) {
+                applySortToEntries(filters.sort);
+                applySortToNotification()
+            }
         }
     }, 300);
 }
@@ -1364,6 +1370,58 @@ function applySortToEntries(sortType) {
     // Force DOM reflow even if order is same
     const frag = document.createDocumentFragment();
     entries.forEach(entry => frag.appendChild(entry));
+    container.appendChild(frag);
+
+    console.log(`[Hermidata] Sorted by ${sortType}`);
+}
+function applySortToNotification(sortType = "Alphabet") {
+    const container = document.querySelector('#RSS-Notification');
+    if (!container) return;
+    // Always sort all entries (even hidden), to keep global order consistent
+    const entries = Array.from(container.querySelectorAll('.RSS-Notification-item'));
+    if (!entries.length) return;
+
+    const getData = (entry) => {
+        const hash = entry.className.split('TitleHash-')[1]?.replace(' seachable','');
+        return AllHermidata[hash] || {};
+    };
+
+    const compareAlphabet = (a, b, reverse = false) => {
+        const titleA = getData(a).title?.toLowerCase() || '';
+        const titleB = getData(b).title?.toLowerCase() || '';
+        return reverse ? titleB.localeCompare(titleA) : titleA.localeCompare(titleB);
+    };
+
+    const compareDate = (a, b, key, reverse = false) => {
+        const dateA = new Date(getData(a).meta?.[key] || 0);
+        const dateB = new Date(getData(b).meta?.[key] || 0);
+        return reverse ? dateA - dateB : dateB - dateA;
+    };
+
+    // Normalize sort type
+    const reverse = sortType.startsWith("Reverse-");
+    const baseType = sortType.replace("Reverse-", "");
+
+    switch (baseType) {
+        case "Alphabet":
+            entries.sort((a, b) => compareAlphabet(a, b, reverse));
+            break;
+        case "Recently-Added":
+            entries.sort((a, b) => compareDate(a, b, "added", reverse));
+            break;
+        case "Latest-Updates":
+            entries.sort((a, b) => compareDate(a, b, "updated", reverse));
+            break;
+        default:
+            return;
+    }
+    // Force DOM reflow even if order is same
+    const frag = document.createDocumentFragment();
+    entries.forEach(entry => {
+        frag.appendChild(entry)
+        console.log('entry time log',  new Date(entry?.meta?.updated || 0))
+        }
+    );
     container.appendChild(frag);
 
     console.log(`[Hermidata] Sorted by ${sortType}`);
@@ -1569,6 +1627,7 @@ function makeSortOptions(parent_section) {
             localStorage.setItem('lastSort', sortType);
             // Apply sorting immediately
             applySortToEntries(sortType);
+            applySortToNotification();
         });
     });
 
@@ -1611,7 +1670,10 @@ function makeSortOptions(parent_section) {
     }
     document.querySelector('.autocompleteContainer').style.width = `${  document.querySelector('.search-input').offsetWidth}px`;
     const lastSort = localStorage.getItem("lastSort");
-    if (lastSort) applySortToEntries(lastSort);
+    if (lastSort) { 
+        applySortToEntries(lastSort);
+        applySortToNotification();
+    }
 }
 
 /**
