@@ -935,64 +935,110 @@ async function sha1Hex(str) {
 }
 async function webSearch() {
     // search the web for new releases
-    // TODO
 
     // get the links to check
-    const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
+    const { savedFeeds = [] } = await browser.storage.local.get("savedFeeds");
     const allHermidata = await getAllHermidata();
-
-    // get all url from allHermidata
-    const allRSSUrl =  Object.values(allHermidata).map(novel => novel?.rss?.url).filter(Boolean);
-    console.log(`[Hermidata] Web search - total RSS feeds to check: ${allRSSUrl.length}`);
-
-    // get all RSS feeds from allHermidata
     const allnovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
 
+    console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allnovelRSS.length}`);
+
+    const combined = [...savedFeeds];
 
     for (const novel of allnovelRSS) {
-        const title = novel.latestItem?.title || novel.title || "Unknown";
-        const domain = novel.domain;
-        if (!domain || !title) continue;
-        feed = { title, domain, url: novel?.url };
-        console.log(`[Hermidata] Web search for ${title} in ${domain}`);
-        // TODO
+        if (!novel.domain || !novel.latestItem?.title || !novel.url) {
+            console.groupEnd();
+            continue;
+        }
+        console.groupCollapsed(`[Hermidata] Web search for ${novel.latestItem?.title} in ${novel.domain}`);
+
         // get the rss feed text
-        const feedText = await fetchFeedText(feed);
-        if (!feedText) continue;
-        
-        console.log(`[Hermidata] Fetched feed: ${feed.title}`);
-        console.log(`[Hermidata] Fetched feed: ${Object.values(feed)}`);
+        const feedText = await fetchFeedText(novel);
+        if (!feedText) {
+            console.warn("No feed text found:", novel.url);
+            console.groupEnd();
+            continue;
+        }
         
         // get the latest token
         const token = getFeedLatestToken(feedText);
-        if (!token) continue;
-
-        console.log(`[Hermidata] Latest token: ${token}`);
-        // check if the feed is already in savedFeeds via token
-        const existingFeed = savedFeeds.find(f => f.lastToken === token);
-        const sameTitle = savedFeeds.find(f => f.items?.[0]?.title === feed?.title);
-        if (existingFeed && sameTitle) {
-            console.log(`[Hermidata] Feed already exists: ${existingFeed.items[0].title}`);
+        if (!token) {
+            console.warn("No token for feed:", novel.url);
+            console.groupEnd();
             continue;
         }
-        // update savedFeeds
-        const xml = parseXmlSafely(feedText, feed.title);
-        const items = parseItems(xml, feed.title);
-        if (items.length === 0) continue;
+        console.log(`[Hermidata] Latest token: ${token}`);
 
-        console.log(`[Hermidata] Adding feed: ${feed.title}`);
-        const newFeed = { ...feed, lastToken: token, lastFetched: Date.now(), items };
-        savedFeeds.push(newFeed);
-        await browser.storage.local.set({ savedFeeds });
+        // get the items
+        const xml = parseXmlSafely(feedText, novel.latestItem?.title);
+        const items = parseItems(xml, novel.latestItem?.title);
+        if (!items.length) {
+            console.warn("No items found in feed:", novel.url);
+            console.groupEnd();
+            continue;   
+        }
 
+        const newFeed = {
+            domain: novel.domain,
+            lastFetched: new Date().toISOString(),
+            lastToken: token,
+            items,
+            url: novel.url
+        };
+
+        // check if the feed is already in savedFeeds via token
+        // const existingFeed = savedFeeds.find(f => f.lastToken === token);
+        // if (existingFeed?.items?.[0]?.title === items[0].title) {
+        //     console.log(`[Hermidata] Feed already exists v1: ${existingFeed.items[0].title}`);
+        //     console.log(`[Hermidata] Feed already exists v2: ${items[0].title}`);
+        //     console.groupEnd();
+        //     continue;
+        // }
+        console.log(`[Hermidata] Adding feed title: ${items[0].title}`);
+        
+        const existingIndex = combined.findIndex(f => f.url === newFeed.url && f.url !== undefined);
+        console.log(`[Hermidata] existingIndex: ${existingIndex}`);
+        if (existingIndex === -1) {
+            combined.push(newFeed);
+            console.log(`[Hermidata] New feed added: ${newFeed.items[0].title}`);
+        } else {
+            // Existing feed → update if newer
+            const existing = combined[existingIndex];
+            console.log(`[Hermidata] Existing feed found: ${existing.items[0].title}`);
+            console.log(`[Hermidata] Existing feed lastFetched: ${existing.lastFetched}, New feed lastFetched: ${newFeed.lastFetched}`);
+            if (newFeed.lastFetched > existing.lastFetched) {
+                combined[existingIndex] = { ...existing, ...newFeed };
+                console.log(`[Hermidata] Updated feed: ${newFeed.items[0].title}`);
+            }
+        }
+        
+        
+        
+        console.groupEnd();
     }
+    browser.storage.local.set({ savedFeeds: combined }).then(() => {
+        console.log(`[Hermidata] ${savedFeeds.length} feeds saved to local storage`);
+    });
+    
+    const HermidataToUpdate = {};
+    for (const feed of combined) {
+        const related = Object.values(allHermidata).find(h => h.rss?.url === feed.url);
+        if (related?.rss) {
+            related.rss.lastFetched = feed.lastFetched;
+            related.rss.latestItem = feed.items[0];
+            HermidataToUpdate[related.id] = related;
+        }
+    }
+    for (const [key, value] of Object.entries(HermidataToUpdate)) {
+        await browser.storage.sync.set({ [key]: value });
+    };
+
+    console.groupEnd();
 }
 async function checkFeedsForUpdates() {
     await webSearch();
     const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
     const allHermidata = await getAllHermidata();
-
-    console.groupCollapsed(`[Hermidata] Checking ${savedFeeds.length} feeds`);
 
     if (Object.keys(allHermidata).length === 0) {
         console.log("[Hermidata] No Hermidata entries found, skipping feed check.");
@@ -1006,7 +1052,6 @@ async function checkFeedsForUpdates() {
             // Try to get HEAD metadata (ETag, Last-Modified)
             const meta = await fetchFeedHead(feed);
             if (isFeedUnchanged(feed, meta)) {
-                console.log(`[Hermidata] No change in ${feed.title} (etag+lastMod)`);
                 continue;
             }
 
@@ -1016,7 +1061,6 @@ async function checkFeedsForUpdates() {
 
             // Detect content changes via token or hash
             if (!await hasFeedChanged(feed, text)) {
-                console.log(`[Hermidata] No change in ${feed.title} | ${feed?.items[0]?.title} (token/hash)`);
                 continue;
             }
 
@@ -1028,7 +1072,6 @@ async function checkFeedsForUpdates() {
             // Save metadata
             saveFeedMetaData(feed, meta);
 
-            console.log(`[Hermidata] [✓] Updated feed: ${feed.title}`);
         } catch (err) {
             console.error(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
         }
@@ -1036,8 +1079,6 @@ async function checkFeedsForUpdates() {
 
     lastAutoFeedCkeck = Date.now();
     await browser.storage.local.set({ savedFeeds });
-    console.log("[Hermidata] Feed check completed.");
-    console.groupEnd();
 }
 // ==== feed helpers ====
 function shouldSkipFeed(feed, allHermidata) {

@@ -87,6 +87,12 @@
 
 ## problems
 
+## general problems
+
+- [ ] RSS is not efficient
+- [ ] Reincarnation of the hero party's grand mage RSS is stuck at 100 ( edge case )
+  - let it be able to exept out of it if notice current is bigger than latest
+
 ### RSS
 
 - [ ] alt names need to be manualy set-up if not wil result in out-of-sync duplicate entry.

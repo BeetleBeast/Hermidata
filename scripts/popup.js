@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     populateStatus()
     changePageToClassic();
     HermidataNeededKeys.Past = await getHermidata();
-
+    HermidataV3.chapter.current = getChapterFromTitleReturn(HermidataV3.title, HermidataNeededKeys.Page_Title, HermidataV3.chapter.current, HermidataV3.url) || HermidataV3.chapter.current;
     trycapitalizingTypesAndStatus();
     document.getElementById("Pagetitle").textContent = HermidataNeededKeys.Page_Title;
     document.getElementById("title").value =  HermidataNeededKeys.Past?.title || HermidataV3.title;
@@ -1233,6 +1233,7 @@ async function sortOptionLogic(parent_section) {
     const checkboxes = parent_section.querySelectorAll(".custom-checkbox");
 
     for (const cb of checkboxes) {
+        cb.removeEventListener("click", null);
         cb.addEventListener("click", () => {
             let state = Number.parseInt(cb.dataset.state || "0");
 
@@ -1374,7 +1375,7 @@ function applySortToEntries(sortType) {
 
     console.log(`[Hermidata] Sorted by ${sortType}`);
 }
-function applySortToNotification(sortType = "Alphabet") {
+function applySortToNotification(sortType = "Reverse-Latest-Updates") {
     const container = document.querySelector('#RSS-Notification');
     if (!container) return;
     // Always sort all entries (even hidden), to keep global order consistent
@@ -1384,12 +1385,6 @@ function applySortToNotification(sortType = "Alphabet") {
     const getData = (entry) => {
         const hash = entry.className.split('TitleHash-')[1]?.replace(' seachable','');
         return AllHermidata[hash] || {};
-    };
-
-    const compareAlphabet = (a, b, reverse = false) => {
-        const titleA = getData(a).title?.toLowerCase() || '';
-        const titleB = getData(b).title?.toLowerCase() || '';
-        return reverse ? titleB.localeCompare(titleA) : titleA.localeCompare(titleB);
     };
 
     const compareDate = (a, b, key, reverse = false) => {
@@ -1402,29 +1397,11 @@ function applySortToNotification(sortType = "Alphabet") {
     const reverse = sortType.startsWith("Reverse-");
     const baseType = sortType.replace("Reverse-", "");
 
-    switch (baseType) {
-        case "Alphabet":
-            entries.sort((a, b) => compareAlphabet(a, b, reverse));
-            break;
-        case "Recently-Added":
-            entries.sort((a, b) => compareDate(a, b, "added", reverse));
-            break;
-        case "Latest-Updates":
-            entries.sort((a, b) => compareDate(a, b, "updated", reverse));
-            break;
-        default:
-            return;
-    }
+    if (baseType === "Latest-Updates") entries.sort((a, b) => compareDate(a, b, "updated", reverse));
     // Force DOM reflow even if order is same
     const frag = document.createDocumentFragment();
-    entries.forEach(entry => {
-        frag.appendChild(entry)
-        console.log('entry time log',  new Date(entry?.meta?.updated || 0))
-        }
-    );
+    entries.forEach(entry => frag.appendChild(entry));
     container.appendChild(frag);
-
-    console.log(`[Hermidata] Sorted by ${sortType}`);
 }
 
 function getYearNumber(dateInput){
@@ -1797,15 +1774,23 @@ async function setNotificationList(key, value = true) {
         return {};
     });
 }
+function getChapterFromTitleReturn(correctTitle, title, chapter, url) {
+    const isNotPartOfTitle = title?.replace(correctTitle, '');
+    const finalChapter = url ? getChapterFromTitle(isNotPartOfTitle, url) : chapter;
+    return isNotPartOfTitle ? finalChapter : '';
+}
 async function makefeedItem(parent_section, feedListLocal, Preloading = false) {
     let tempContainer = document.createElement("div");
     for (const [key, value] of Object.entries(feedListLocal)) {
+        const isRSSItem = parent_section.id == "All-RSS-entries";
         const title = findByTitleOrAltV2(value?.items?.[0]?.title || value.title, AllHermidata).title || value?.items?.[0]?.title || value.title;
-        const url = value?.items?.[0]?.link || value.url
-        const chapter = value?.chapter?.latest || ( getChapterFromTitle(title, url) == '01'? '': getChapterFromTitle(title, url) )|| value?.chapter?.current || '';
+        const url = value?.items?.[0]?.link || value.url;
+
+        const useAutoDetectedChapter =  isRSSItem ? getChapterFromTitleReturn(value?.title, title, undefined, url) : '';
+        const chapter = value?.chapter?.latest || useAutoDetectedChapter || value?.chapter?.current || '';
+
         const currentHermidata = AllHermidata?.[key]
         const currentChapter = currentHermidata?.chapter?.current
-        const isRSSItem = parent_section.id == "All-RSS-entries";
         const clearedNotification = await getLocalNotificationItem(key);
         const isRead = !isRSSItem && (currentChapter === chapter)
 
@@ -2197,10 +2182,10 @@ async function loadSavedFeeds() {
 async function updateFeed(feed, allFeeds) {
     const rssInfo = feed.rss;
     if (!rssInfo?.url) return feed;
-    const currentFeedTitle = trimTitle(rssInfo?.items?.[0]?.title || feed.title);
+    const currentFeedTitle = findByTitleOrAltV2(rssInfo?.items?.[0]?.title || feed.title, AllHermidata);
     const matchFeed = Object.values(allFeeds).find(f => {
         const sameDomain = f.domain === rssInfo.domain;
-        const sameTitle = trimTitle(f?.items?.[0]?.title || f.title) === currentFeedTitle;
+        const sameTitle = findByTitleOrAltV2(f?.items?.[0]?.title || f.title, AllHermidata) === currentFeedTitle;
         return sameDomain && sameTitle;
     });
     if (!matchFeed) return feed; // no match
