@@ -33,6 +33,115 @@ let HermidataV3 = {
         altTitles: []
     }
 }
+
+class HermidataUtils {
+    constructor() {
+        this.id = '';
+        this.title = '';
+        this.type = novelType[0];
+        this.url = '';
+        this.source = '';
+        this.status = readStatus[0];
+        this.chapter = {
+            current: 0,
+            latest: null,
+            history: [],
+            lastChecked: new Date().toISOString()
+        };
+        this.rss = null;
+        this.import = null;
+        this.meta = {
+            tags: [],
+            notes: "",
+            added: new Date().toISOString(),
+            updated: new Date().toISOString(),
+            altTitles: []
+        };
+    }
+    getValues() {
+        return {
+            id: this.id,
+            title: this.title,
+            type: this.type,
+            url: this.url,
+            source: this.source,
+            status: this.status,
+            chapter: this.chapter,
+            rss: this.rss,
+            import: this.import,
+            meta: this.meta
+        };
+    }
+    setTitle(title) {
+        this.title = title;
+    }
+    getTitle() {
+        return this.title;
+    }
+    setType(type) {
+        this.type = type;
+    }
+    getType() {
+        return this.type;
+    }
+    setUrl(tab) {
+        this.url = tab.url || "NO URL";;
+    }
+    getUrl() {
+        return this.url;
+    }
+    setSource(source) {
+        this.source = source;
+    }
+    getSource() {
+        return this.source;
+    }
+    setStatus(status) {
+        this.status = status;
+    }
+    getStatus() {
+        return this.status;
+    }
+    setChapter(tab) {
+        this.chapter.current = getChapterFromTitleReturn(trimTitle(tab.title), tab.title, getChapterFromTitle(tab.title, tab.url) || 0, tab.url) || getChapterFromTitle(tab.title, tab.url) || 0;
+    }
+    getChapter() {
+        return this.chapter;
+    }
+    getChapterCurrent() {
+        return this.chapter.current;
+    }
+    setRss(rss) {
+        this.rss = rss;
+    }
+    getRss() {
+        return this.rss;
+    }
+    async getCurrentTab() {
+        return new Promise((resolve) => {
+            try {
+                browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    resolve(tabs[0]);
+                });
+            } catch (error) {
+                console.error('Extention error inside getCurrentTab: ',error)
+            }
+        });
+    }
+    async __post_init__() {
+        const tab = await this.getCurrentTab()
+        this.setTitle(trimTitle(tab.title));
+        this.setUrl(tab.url);
+        this.setType(novelType[0]);
+        this.setStatus(readStatus[0]);
+        this.setChapter(tab);
+    }
+}
+// const utils = new HermidataUtils();
+
+// await utils.__post_init__(); // initialize
+
+
 const Testing = false;
 
 const CalcDiffCache = new Map();
@@ -994,19 +1103,26 @@ async function getAllHermidata() {
 
 async function makeRSSPage(Preloading = false) {
     let itemPreloadSection = null;
-    // subscribe section
-    makeSubscibeBtn();
-    // sort section
     const sortSection = document.querySelector("#sort-RSS-entries")
-    makeSortSection(sortSection);
-    // item & notification section
     const NotificationSection = document.querySelector("#RSS-Notification")
     const AllItemSection = document.querySelector("#All-RSS-entries")
+
+    // subscribe section
+    makeSubscibeBtn();
+
     if (Preloading) {
+        // item & notification section
         itemPreloadSection = await makeItemSection(NotificationSection, AllItemSection, Preloading) 
-    } else makeItemSection(NotificationSection, AllItemSection);
+    } else {
+        // sort section
+        makeSortSection(sortSection);
+        // item & notification section
+        makeItemSection(NotificationSection, AllItemSection);
+    }
+
     // footer
     makeFooterSection();
+
     return itemPreloadSection
 }
 async function enableHoverPreload(e) {
@@ -1402,6 +1518,7 @@ function applySortToNotification(sortType = "Reverse-Latest-Updates") {
     const frag = document.createDocumentFragment();
     entries.forEach(entry => frag.appendChild(entry));
     container.appendChild(frag);
+    console.log(`[Hermidata] Notification Sorted by ${sortType}`);
 }
 
 function getYearNumber(dateInput){
