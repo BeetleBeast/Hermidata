@@ -1,3 +1,5 @@
+import { HermidataUtils } from './utils/util.js';
+
 const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 
 const HARDCAP_RUNAWAYGROWTH = 300;
@@ -10,13 +12,14 @@ let HermidataNeededKeys = {
     GoogleSheetURL: '',
     Past: {},
 }
-let HermidataV3 = {
+
+const defaultHermidata = {
     id: '',
     title: '',
-    type: novelType[0],
+    type: 'Manga',
     url: '',
     source: '',
-    status: readStatus[0],
+    status: 'Viewing',
     chapter: {
         current: 0,
         latest: null,
@@ -34,113 +37,10 @@ let HermidataV3 = {
     }
 }
 
-class HermidataUtils {
-    constructor() {
-        this.id = '';
-        this.title = '';
-        this.type = novelType[0];
-        this.url = '';
-        this.source = '';
-        this.status = readStatus[0];
-        this.chapter = {
-            current: 0,
-            latest: null,
-            history: [],
-            lastChecked: new Date().toISOString()
-        };
-        this.rss = null;
-        this.import = null;
-        this.meta = {
-            tags: [],
-            notes: "",
-            added: new Date().toISOString(),
-            updated: new Date().toISOString(),
-            altTitles: []
-        };
-    }
-    getValues() {
-        return {
-            id: this.id,
-            title: this.title,
-            type: this.type,
-            url: this.url,
-            source: this.source,
-            status: this.status,
-            chapter: this.chapter,
-            rss: this.rss,
-            import: this.import,
-            meta: this.meta
-        };
-    }
-    setTitle(title) {
-        this.title = title;
-    }
-    getTitle() {
-        return this.title;
-    }
-    setType(type) {
-        this.type = type;
-    }
-    getType() {
-        return this.type;
-    }
-    setUrl(tab) {
-        this.url = tab.url || "NO URL";;
-    }
-    getUrl() {
-        return this.url;
-    }
-    setSource(source) {
-        this.source = source;
-    }
-    getSource() {
-        return this.source;
-    }
-    setStatus(status) {
-        this.status = status;
-    }
-    getStatus() {
-        return this.status;
-    }
-    setChapter(tab) {
-        this.chapter.current = getChapterFromTitleReturn(trimTitle(tab.title), tab.title, getChapterFromTitle(tab.title, tab.url) || 0, tab.url) || getChapterFromTitle(tab.title, tab.url) || 0;
-    }
-    getChapter() {
-        return this.chapter;
-    }
-    getChapterCurrent() {
-        return this.chapter.current;
-    }
-    setRss(rss) {
-        this.rss = rss;
-    }
-    getRss() {
-        return this.rss;
-    }
-    async getCurrentTab() {
-        return new Promise((resolve) => {
-            try {
-                browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    resolve(tabs[0]);
-                });
-            } catch (error) {
-                console.error('Extention error inside getCurrentTab: ',error)
-            }
-        });
-    }
-    async __post_init__() {
-        const tab = await this.getCurrentTab()
-        this.setTitle(trimTitle(tab.title));
-        this.setUrl(tab.url);
-        this.setType(novelType[0]);
-        this.setStatus(readStatus[0]);
-        this.setChapter(tab);
-    }
-}
-// const utils = new HermidataUtils();
-
-// await utils.__post_init__(); // initialize
-
+/**
+ * @type {Hermidata}
+ */
+let hermidatav4 = null;
 
 const Testing = false;
 
@@ -156,28 +56,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log('Start of new Hermidata');
     const dups = await findPotentialDuplicates(0.9);
     if ( dups.length > 0) console.table(dups , 'potential duplicates table');
+    
+    const currentTab = await getCurrentTabV2();
+
+    hermidatav4 = new Hermidata();
+    hermidatav4.initFromCurrentTab(currentTab); // initialize
+
+    HermidataNeededKeys.Page_Title = currentTab.title || "Untitled Page";
+    HermidataNeededKeys.GoogleSheetURL = await getGoogleSheetURL();
+
+    HermidataNeededKeys.Past = await getHermidata();
 
     AllHermidata = await getAllHermidata();
-    HermidataV3 = await getCurrentTab();
-    HermidataV3.title = trimTitle(HermidataNeededKeys.Page_Title);
-    HermidataNeededKeys.GoogleSheetURL = await getGoogleSheetURL();
+
     populateType()
     populateStatus()
+
     changePageToClassic();
-    HermidataNeededKeys.Past = await getHermidata();
-    HermidataV3.chapter.current = getChapterFromTitleReturn(HermidataV3.title, HermidataNeededKeys.Page_Title, HermidataV3.chapter.current, HermidataV3.url) || HermidataV3.chapter.current;
+
     trycapitalizingTypesAndStatus();
+
     document.getElementById("Pagetitle").textContent = HermidataNeededKeys.Page_Title;
-    document.getElementById("title").value =  HermidataNeededKeys.Past?.title || HermidataV3.title;
-    document.getElementById("title_HDRSS").value = HermidataNeededKeys.Past?.title || HermidataV3.title;
-    document.getElementById("Type").value = HermidataNeededKeys.Past?.type || HermidataV3.type;
-    document.getElementById("Type_HDRSS").value = HermidataNeededKeys.Past?.type || HermidataV3.type;
-    document.getElementById("chapter").value = HermidataV3.chapter.current;
-    document.getElementById("url").value = HermidataV3.url;
-    document.getElementById("status").value =  HermidataNeededKeys.Past?.status || HermidataV3.status;
+    document.getElementById("title").value =  HermidataNeededKeys.Past?.title || hermidatav4.getTitle();
+    document.getElementById("title_HDRSS").value = HermidataNeededKeys.Past?.title || hermidatav4.getTitle();
+    document.getElementById("Type").value = HermidataNeededKeys.Past?.type || hermidatav4.getType();
+    document.getElementById("Type_HDRSS").value = HermidataNeededKeys.Past?.type || hermidatav4.getType();
+    document.getElementById("chapter").value = hermidatav4.getChapterCurrent();
+    document.getElementById("url").value = hermidatav4.getUrl();
+    document.getElementById("status").value =  HermidataNeededKeys.Past?.status || hermidatav4.getStatus();
     document.getElementById("date").value = new Intl.DateTimeFormat('en-GB').format(new Date()) || "";
-    document.getElementById("tags").value =  HermidataNeededKeys.Past?.meta?.tags || HermidataV3.meta.tags;
-    document.getElementById("notes").value = HermidataV3.meta.notes;
+    document.getElementById("tags").value =  HermidataNeededKeys.Past?.meta?.tags || hermidatav4.getTags();
+    document.getElementById("notes").value = hermidatav4.getNotes() || "";
     FixTableSize()
     document.getElementById("save").addEventListener("click", async () => await saveSheet());
     document.getElementById("HDClassicBtn").addEventListener("click", (e) => openClassic(e));
@@ -199,6 +108,112 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 });
 
+/**
+ * @constructor
+ */
+class Hermidata {
+    constructor(data = {}) {
+        Object.assign(this, structuredClone(defaultHermidata), data);
+    }
+    // Getters and Setters
+    setTitle(title) { this.title = title; }
+    getTitle() { return this.title; }
+    
+    setType(type) { this.type = type; }
+    getType() { return this.type; }
+    
+    setId() { this.id = HermidataUtils.returnHashedTitle(this.title, this.type); }
+    getId() { return this.id; }
+
+    setUrl(url) { this.url = url; }
+    getUrl() { return this.url; }
+
+    setSource(source) { this.source = source; }
+    getSource() { return this.source; }
+
+    setStatus(status) { this.status = status; }
+    getStatus() { return this.status; }
+
+    setChapter({tab, title = '', chapter = '', url = ''}) {
+        this.chapter.current = chapter || 
+            getChapterFromTitleReturn(
+                HermidataUtils.trimTitle( title || tab.title, url || tab.url), 
+                title || tab.title, 
+                getChapterFromTitle( title || tab.title, url || tab.url) || 0,
+                url || tab.url
+            ) || getChapterFromTitle( title || tab.title, url || tab.url) || 0;
+    }
+    getChapter() { return this.chapter; }
+    getChapterCurrent() { return this.chapter.current; }
+
+    setRss(rss) { this.rss = rss; }
+    getRss() { return this.rss; }
+
+    setNotes(notes) { this.meta.notes = notes; }
+    getNotes() { return this.meta.notes; }
+
+    setTags(tags) { this.meta.tags = tags; }
+    addTag(tag) { this.meta.tags.push(tag); }
+    getTags() { return this.meta.tags; }
+
+    /*
+        Storage Helpers
+    */
+    async saveToSync() {
+        if (!this.id) throw new Error('Cannot save Hermidata without an ID');
+        await browser.storage.sync.set({ [this.id]: this.toObject() });
+        console.log(`[Hermidata] Saved ${this.title} to sync storage`);
+    }
+
+    async saveToLocal() {
+        if (!this.id) throw new Error('Cannot save Hermidata without an ID');
+        await browser.storage.local.set({ [this.id]: this.toObject() });
+        console.log(`[Hermidata] Saved ${this.title} to local storage`);
+    }
+    
+    toObject() {
+        // convert class back into a plain object
+        return structuredClone(this);
+    }
+
+    /*
+        static utils
+    */
+    static fromObject(obj) {
+        return new Hermidata(obj);
+    }
+
+    static async fromStorage(id) {
+        const result = await browser.storage.sync.get(id);
+        return new Hermidata(result[id]);
+    }
+    initFromCurrentTab(tab) {
+        try {
+            this.setUrl(tab.url);
+            this.setTitle(HermidataUtils.trimTitle(tab.title, tab.url));
+            this.setType(novelType[0]);
+            this.setStatus(readStatus[0]);
+            this.setId();
+            this.setChapter({tab});
+            this.setNotes(HermidataUtils.getChapterTitle(tab.title, tab.url));
+            
+        } catch (error) {
+            console.error('Extention error inside initFromCurrentTab: ',error)
+        }
+    }
+}
+
+async function getCurrentTabV2() {
+    return new Promise((resolve) => {
+        try {
+            browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                resolve(tabs[0]);
+            });
+        } catch (error) {
+            console.error('Extention error inside getCurrentTab: ',error)
+        }
+    });
+}
 function removeKeysFromSync(key) {
     return new Promise((resolve, reject) => {
         browserAPI.storage.sync.remove(key, () => {
@@ -208,23 +223,6 @@ function removeKeysFromSync(key) {
                 resolve();
             }
         });
-    });
-}
-
-// Get active tab info
-function getCurrentTab() {
-    return new Promise((resolve) => {
-        try {
-            browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                const tab = tabs[0];
-                HermidataV3.chapter.current = getChapterFromTitle(tab.title, tab.url) || 0;
-                HermidataNeededKeys.Page_Title = tab.title || "Untitled Page";
-                HermidataV3.url = tab.url || "NO URL";
-                resolve(HermidataV3);
-            });
-        } catch (error) {
-            console.error('Extention error inside getCurrentTab: ',error)
-        }
     });
 }
 
@@ -301,9 +299,9 @@ try {
     let absoluteObj = {}
 
     // find title from alt
-    const TrueTitle = findByTitleOrAltV2(HermidataV3.title, allHermidata)?.title;
+    const TrueTitle = findByTitleOrAltV2(hermidatav4.getTitle(), allHermidata)?.title;
     // find title from fuzzy seach
-    const AltKeyNeeded = await detectAltTitleNeeded(HermidataV3.title, HermidataV3.type);
+    const AltKeyNeeded = await detectAltTitleNeeded(hermidatav4.getTitle(), hermidatav4.getType());
     const fuzzyKey = AltKeyNeeded?.relatedKey;
     // Generate all possible keys
     const possibleKeys = novelType.map(type => returnHashedTitle(TrueTitle, type));
@@ -319,8 +317,8 @@ try {
 
     // add alt title to Object
     if (AltKeyNeeded?.needAltTitle && fuzzyKey && possibleObj[fuzzyKey]) {
-        const confirmation = await customConfirm(`${AltKeyNeeded.reason}\nAdd "${HermidataV3.title}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
-        if (confirmation) await appendAltTitle(HermidataV3.title, possibleObj[fuzzyKey]);
+        const confirmation = await customConfirm(`${AltKeyNeeded.reason}\nAdd "${hermidatav4.getTitle()}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
+        if (confirmation) await appendAltTitle(hermidatav4.getTitle(), possibleObj[fuzzyKey]);
     }
 
     if ( Object.keys(possibleObj).length == 1 ) {
@@ -345,7 +343,7 @@ try {
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise getHermidata: ',error);
-        console.log('Key',key,'\n', '\n','HermidataV3', HermidataV3);
+        console.log('Key',key,'\n', '\n','HermidataV3', hermidatav4.toObject());
         return {};
     })
 } catch (err) {
@@ -404,7 +402,7 @@ async function migrationSteps(obj1, obj2, options = {}) {
 }
 async function tryToFindByOtherMeans(possibleObj) {
     // Try to find by URL domain or substring
-    const urlDomain = HermidataV3.url ? new URL(HermidataV3.url).hostname.replace(/^www\./, '') : "";
+    const urlDomain = hermidatav4.getUrl() ? new URL(hermidatav4.getUrl()).hostname.replace(/^www\./, '') : "";
     const byUrl = Object.values(possibleObj).find(item => {
         try {
             const storedDomain = new URL(item.url || "").hostname.replace(/^www\./, '');
@@ -415,18 +413,18 @@ async function tryToFindByOtherMeans(possibleObj) {
 
     // Try to find same title + newest date
     const sameTitleMatches = Object.values(possibleObj).filter(item => {
-        return trimTitle(item.title).toLowerCase() === trimTitle(HermidataV3.title).toLowerCase();
+        return trimTitle(item.title).toLowerCase() === trimTitle(hermidatav4.getTitle()).toLowerCase();
     });
     if (sameTitleMatches.length) {
         sameTitleMatches.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
         return sameTitleMatches[0];
     }
      // Prefer the same type if exists
-    const typeKey = returnHashedTitle(HermidataV3.title, HermidataV3.type);
+    const typeKey = returnHashedTitle(hermidatav4.getTitle(), hermidatav4.getType());
     if (possibleObj[typeKey]) return possibleObj[typeKey];
 
     // Fallback: old V1 hash (title only)
-    const fallbackKey = returnHashedTitle(HermidataV3.title);
+    const fallbackKey = returnHashedTitle(hermidatav4.getTitle());
     const fallbackObj = await getHermidataViaKey(fallbackKey);
     if (fallbackObj) return fallbackObj;
 
@@ -763,8 +761,8 @@ function returnHashedTitle(title,type) {
     : simpleHash(trimTitle(title).toLowerCase()) // V1
 }
 function makeHermidataKey() {
-    HermidataV3.id = returnHashedTitle(HermidataV3.title, HermidataV3.type);
-    return HermidataV3.id;
+    const ID = hermidatav4.getId();
+    return ID;
 }
 
 function simpleHash(str) {
@@ -799,117 +797,12 @@ function sheetUrlInput(resolve, reject) {
 function isValidGoogleSheetUrl(url) {
     return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
 }
-function trimTitle(title) {
-    let cleanString = (str) => {
-    if (!str) return "";
-    return str
-        // Remove all control characters (C0 + C1), zero-width chars, and formatting chars
-        .replace(/[\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F]/g, '')
-        // Normalize multiple spaces to a single space
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-}
-    if (!title) return "";
+const trimTitle = (title, url) => HermidataUtils.trimTitle(title, url || hermidatav4.getUrl());
 
-    // Extract domain name from url
-    const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataV3.url);
-    const siteName = siteMatch ? siteMatch[1] : "";
-
-    // Split title by common separators
-    let cleanstring = cleanString(title);
-    const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|,|\|) /g).map(p => p.trim()).filter(Boolean);
-
-    // "Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road"
-
-    // Regex patterns
-    const chapterRemoveRegexV2 = /(\b\d{1,4}(?:\.\d+)?[A-Z]*\b\s*)?(\b(?:Episode|chapter|chap|ch)\b\.?\s*)(\b\d{1,4}(?:\.\d+)?[A-Z]*\b)?/gi
-    
-    const chapterRegex = /\b(?:Episode|chapter|chap|ch)\.?\s*\d+[A-Z]*/gi;
-    const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
-    const junkRegex = /\b(all page|novel bin|online)\b/i;
-    const cleanTitleKeyword = (title) => {
-        return title
-        .replace(/^\s*(manga|novel|anime|tv-series)\b\s*/i, '') // start
-        .replace(/\s*\b(manga|novel|anime|tv-series)\s*$/i, '') // end
-        .trim();
-}
-    const siteNameRegex = new RegExp(`\\b${siteName}\\b`, 'i');
-    const flexibleSiteNameRegex = new RegExp(`\\b${siteName
-        .replace(/[-/\\^$*+?.()|[\]{}]/g, "").split("")
-        .map(ch => ch.replace(/\s+/, ""))
-        .map(ch => `${ch}[\\s._-]*`)
-        .join("")}\\b`, 'i');
-
-    // Remove junk and site name
-    let filtered = parts
-        .filter(p => !readRegex.test(p))
-        .filter(p => !junkRegex.test(p))
-        .filter(p => !siteNameRegex.test(p))
-        .filter(p => !flexibleSiteNameRegex.test(p))
-        .map(p => cleanTitleKeyword(p))
-        .map(p => p.replace(/^[\s:;,\-–—|]+/, "").trim()) // remove leading punctuation + spaces
-        .map(p => p.replace('#', '').trim()) // remove any '#' characters
-        .filter(Boolean)
-
-    // Remove duplicates
-    filtered = filtered.filter((item, idx, arr) =>
-        arr.findIndex(i => i.toLowerCase() === item.toLowerCase()) === idx
-    );
-
-    // Extract main title (remove chapter info)
-    let mainTitle = '';
-    let Url_filter_parts = HermidataV3.url.split('/')
-    let Url_filter = Url_filter_parts.at(-1).replace(/-/g,' ').toLowerCase().trim();
-    let MakemTitle = (filter) => {
-        if (!filter.length) return '';
-        // Edge case: if first looks like "chapter info" but second looks like a real title → swap them
-        if (
-            filter.length > 1 &&
-            /^\s*(chapter|ch\.?)\s*\d+/i.test(filter[0]) && // first is chapter info
-            !/^\s*(chapter|ch\.?)\s*\d+/i.test(filter[1])   // second is NOT chapter info
-        ) {
-            [filter[0], filter[1]] = [filter[1], filter[0]]; // swap
-        }
-        // if first el is chapter info place it at the end
-        if (filtered[0]?.replace(/\s*([–—-]|:|#|\|)\s*/g,' ').toLowerCase() === Url_filter) {// fip the first to last
-            filter[filter.length] = filter[0];
-            filter.shift();
-        }
-
-        mainTitle = filter[0]
-        .replace(chapterRemoveRegexV2, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
-        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
-        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
-        .trim();
-        if(mainTitle === '' ) return MakemTitle(filter.slice(1));
-        
-        if (filter.length < 2) return mainTitle;
-        let Chapter_Title = filter[1]
-        .replace(chapterRegex, '').trim() // remove 'chapter' and any variation
-        .replace(/\b\d+(\.\d+)?\b/g, "") // remove numbers
-        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
-        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
-        .trim();
-
-        if (Chapter_Title === '' && filter.length == 2) return mainTitle;
-        if (Chapter_Title === '') return [mainTitle, ...MakemTitle(filter.slice(1))];
-        HermidataV3.meta.notes = `Chapter Title: ${Chapter_Title}`;
-        return mainTitle;
-    }
-    mainTitle = MakemTitle(filtered);
-    return mainTitle.trim() || title;
-}
-function getCurrentDate() {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-    const year = now.getFullYear();
-    return `${day}/${month}/${year}`;
-}
 function populateType() {
     const folderSelect = document.getElementById("Type");
-    const folderSelect2 = document.getElementById("Type_HDRSS")
-    novelType.forEach(element => {
+    const folderSelect2 = document.getElementById("Type_HDRSS");
+    for (const element of novelType) {
         const option = document.createElement("option");
         option.value = element;
         option.textContent = element;
@@ -918,16 +811,16 @@ function populateType() {
         option2.value = element;
         option2.textContent = element;
         folderSelect2.appendChild(option2);
-    });
+    }
 }
 function populateStatus() {
     const folderSelect = document.getElementById("status");
-    readStatus.forEach(element => {
+    for (const element of readStatus) {
         const option = document.createElement("option");
         option.value = element;
         option.textContent = element;
         folderSelect.appendChild(option);
-    });
+    };
 }
 
 function capitalizeFirst(str) {
@@ -944,14 +837,17 @@ async function saveSheet() {
     const tags = document.getElementById("tags").value || "";
     const notes = document.getElementById("notes").value || "";
     const args = '';
-    const sheetList = [title, Type, Chapter, url, status, date, tags, notes]
-    HermidataV3.title = sheetList[0]
-    HermidataV3.type = sheetList[1]
-    HermidataV3.chapter.current = sheetList[2]
-    HermidataV3.url = sheetList[3]
-    HermidataV3.status = sheetList[4]
-    HermidataV3.meta.tags = sheetList[6]
-    HermidataV3.meta.notes = sheetList[7]
+
+    // update & HermidataV4
+
+    hermidatav4.setTitle(title)
+    hermidatav4.setType(Type)
+    hermidatav4.setChapter({chapter:Chapter})
+    hermidatav4.setUrl(url)
+    hermidatav4.setStatus(status)
+    hermidatav4.setNotes(notes)
+    tags.split(',').forEach(tag => hermidatav4.addTag(tag))
+
     // save to Browser in JSON format
     await updateChapterProgress(title, Type, Chapter);
     HermidataNeededKeys.Past = {};
@@ -1196,7 +1092,7 @@ async function makeSubscibeBtn() {
     subscribeBtn.ariaLabel = "this site doesn't have a RSS link";
 
     let feedItemTitle;
-    const currentTitle = document.getElementById("title_HDRSS").value || HermidataV3.title;
+    const currentTitle = document.getElementById("title_HDRSS").value || hermidatav4.getTitle();
 
     Object.values(feedListGLobal).forEach(feed => {
         feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
@@ -1211,7 +1107,7 @@ async function makeSubscibeBtn() {
         Object.values(feedListGLobal).forEach(feed => {
             feedItemTitle = trimTitle(feed?.items?.[0]?.title || feed.title)
             if (currentTitle == feedItemTitle) {
-                const currentType = document.getElementById("Type_HDRSS").value || HermidataV3.type;
+                const currentType = document.getElementById("Type_HDRSS").value || hermidatav4.getType();
                 linkRSSFeed(feedItemTitle, currentType, feed);
                 reloadContent(NotificationSection, AllItemSection)
                 console.log('linked RSS to extention')
@@ -2277,7 +2173,7 @@ async function loadSavedFeedsViaSavedFeeds() {
         if ( feed.domain !=  Object.values(AllHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
         const type = Object.values(AllHermidata).find(novel => novel.title == trimTitle(feed?.items?.[0]?.title))?.type || novelType[0]
         const typeV2 = findByTitleOrAltV2(trimTitle(feed?.items?.[0]?.title || feed.title), AllHermidata)?.type || novelType[0]
-        feedList[returnHashedTitle(feed?.items?.[0]?.title || feed.title || HermidataV3.title, (typeV2 || type ) || HermidataV3.type) ] = feed;
+        feedList[returnHashedTitle(feed?.items?.[0]?.title || feed.title || hermidatav4.getTitle(), (typeV2 || type ) || hermidatav4.getType()) ] = feed;
     }
     return feedList;
 }
@@ -2405,7 +2301,7 @@ async function updateChapterProgress(title, type, newChapterNumber) {
     let entry = {};
     if (data[key]) entry = data[key]
     else if (Object.entries(Hermidata).length > 0) entry = Hermidata
-    else entry = makeHermidataV3(title, HermidataV3.url, HermidataV3.type);
+    else entry = makeHermidataV3(title, hermidatav4.getUrl(), hermidatav4.getType());
 
     if (!entry) {
         console.warn(`[HermidataV3] No entry found for ${title}`);
@@ -2416,10 +2312,9 @@ async function updateChapterProgress(title, type, newChapterNumber) {
         entry.id = key;
         entry.chapter.history.push(entry.chapter.current);
         entry.chapter.current = newChapterNumber;
-        entry.status = HermidataV3.status;
-        entry.type = HermidataV3.type;
-        const rawTags = HermidataV3.meta.tags;
-        entry.meta.tags = Array.isArray(rawTags) ? rawTags : rawTags.split(',').map(tag => tag.trim()).filter(Boolean);
+        entry.status = hermidatav4.getStatus();
+        entry.type = hermidatav4.getType();
+        entry.meta.tags = hermidatav4.getTags();
         entry.chapter.lastChecked = new Date().toISOString();
         entry.meta.updated = new Date().toISOString();
         await browser.storage.sync.set({ [key]: entry });
@@ -2456,7 +2351,7 @@ async function linkRSSFeed(title, type, rssData) {
         }
     }
 
-    if (!entry) makeHermidataV3(title, HermidataV3.url, type);
+    if (!entry) makeHermidataV3(title, hermidatav4.getUrl(), type);
 
     entry.rss = {
         title: rssData.title,
@@ -2724,7 +2619,7 @@ async function findPotentialDuplicates(threshold = 0.9) {
  * returns an Object with inside the argument of the input needs an alt name
  * @param {String} title - Input title
  * @param {String} type - Input type
- * @param {String} source - Input source - default HermidataV3.source
+ * @param {String} source - Input source - default HermidataV4.getSource()
  * @param {Float} threshold  - float number of height to probality it is the same novel - default 0.85
  * @returns {Premise<{
  *  needAltTitle: boolean,
@@ -2734,7 +2629,7 @@ async function findPotentialDuplicates(threshold = 0.9) {
  *  relatedTitle: String|null
  * }>}
  */
-async function detectAltTitleNeeded(title, type, source = HermidataV3.source, threshold = 0.85) {
+async function detectAltTitleNeeded(title, type, source = hermidatav4.getSource(), threshold = 0.85) {
     const data = AllHermidata || await getAllHermidata();
     if (!data) return { needAltTitle: false, reason: "No data loaded" };
 
