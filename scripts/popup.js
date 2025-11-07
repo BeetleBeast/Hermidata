@@ -784,7 +784,7 @@ function trimTitle(title) {
         .trim();
 
         if (Chapter_Title === '' && filter.length == 2) return mainTitle;
-        if (Chapter_Title === '') return [mainTitle, ...MakemTitle(filter.slice(1))];
+        if (Chapter_Title === '') return `${mainTitle} ${MakemTitle(filter.slice(1))}`;
         HermidataV3.meta.notes = `Chapter Title: ${Chapter_Title}`;
         return mainTitle;
     }
