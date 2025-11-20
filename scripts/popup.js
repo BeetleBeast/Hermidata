@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     HermidataNeededKeys.Past = await getHermidata();
     HermidataV3.chapter.current = getChapterFromTitleReturn(HermidataV3.title, HermidataNeededKeys.Page_Title, HermidataV3.chapter.current, HermidataV3.url) || HermidataV3.chapter.current;
     trycapitalizingTypesAndStatus();
+    document.getElementById('isNewHermidata').textContent = HermidataNeededKeys.Past ? '' : 'New Hermidata!';
     document.getElementById("Pagetitle").textContent = HermidataNeededKeys.Page_Title;
     document.getElementById("title").value =  HermidataNeededKeys.Past?.title || HermidataV3.title;
     document.getElementById("title_HDRSS").value = HermidataNeededKeys.Past?.title || HermidataV3.title;
