@@ -150,11 +150,17 @@ select.autoInput {
     justify-content: space-between;
 }
 #isNewHermidata {
-    align-items: center;
+    position: absolute;
+    
     display: flex;
+    align-items: center;
     justify-content: center;
+
+    width: fit-content;
+
     margin: 0;
-    margin-top: -25px;
+    margin-top: -22px;
+    margin-left: 40%;
 }
 #openSettings {
     position: absolute;
