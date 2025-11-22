@@ -1,6 +1,6 @@
 // content.js
-(async () => {
-    console.log("[Hermidata] content.js loaded on", window.location.href);
+try {
+    console.log("[Hermidata] content.js loaded on", globalThis.location.href);
 
     const GlobalFeeds = [];
 
@@ -125,4 +125,6 @@
         }
     }
 
-})();
+} catch (err) {
+    console.error(err);
+};

@@ -233,7 +233,6 @@ async function updateTagColor(alreadyExist) {
             tagColoring[f] = 'white'
         }
     })
-    tagColoring
 }
 async function getAllHermidata() {
     const allData = await new Promise((resolve, reject) => {
@@ -352,7 +351,7 @@ function exportSettings() {
         a.download = "Hermidata_Settings_export.json";
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        a.remove();
         URL.revokeObjectURL(url);
     });
 }
@@ -395,7 +394,7 @@ async function exportHermidata() {
         a.download = "Hermidata_export.json";
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        a.remove();
         URL.revokeObjectURL(url);
     } catch (error) {
         console.error("Extension error: Failed exportHermidata: ", error)
@@ -493,52 +492,12 @@ async function exportRSSBtn() { // possible rss
         a.download = "RSS_export.json";
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        a.remove();
         URL.revokeObjectURL(url);
     } catch (error) {
         console.error("Extension error: Failed exportHermidata: ", error)
     }
 }
-
-/* Hermidata Example Data ( my structure )
-  "54164983": {
-    "Page_Title": "The Nebula's Civilization chapter 108 - Read Manga Online",
-    "Title": "The Nebula's Civilization",
-    "Type": "Manga",
-    "Chapter": "108",
-    "Url": "https://mangafire.to/read/the-nebulas-civilizationn.zx6z3/en/chapter-108",
-    "Status": "Viewing",
-    "Date": "20/09/2025",
-    "Tag": "",
-    "Notes": "",
-    "GoogleSheetURL": "https://docs.google.com/spreadsheets/d/1vba4LmwLAVTzHPYnLZzLGnFITfu7fAfHAxAAMcl_ivs/edit?gid=0#gid=0",
-    "Past": {},
-    "Hash": "2060126163"
-  },
-    one site xml export example
-  <manga>
-    <manga_mangadb_id>111225</manga_mangadb_id>
-            <manga_title><![CDATA[ The Unwanted Undead Adventurer ]]></manga_title>
-            <my_read_volumes>0</my_read_volumes>
-            <my_read_chapters>63</my_read_chapters>
-            <my_status>Reading</my_status>
-            <update_on_import>1</update_on_import>
-  </manga>
-  save Feeds Example Data ( my  RSS structure )
-  "savedFeeds": [
-    {
-      "title": "Updates for The Wandering Fairy [LitRPG World-Hopping]",
-      "url": "https://www.royalroad.com/syndication/94680",
-      "domain": "royalroad.com",
-      "lastFetched": "2025-10-06T20:19:30.384Z",
-      "items": [
-        {
-          "title": "The Wandering Fairy [LitRPG World-Hopping] - Chapter 230: Soul Alchemy Research",
-          "link": "https://www.royalroad.com/fiction/chapter/2653899",
-          "pubDate": "2025-10-05T19:08:45.000Z"
-        },
-*/
-
 
 function AllowContextMenu(event) {
     const isChecked = event.target.checked;

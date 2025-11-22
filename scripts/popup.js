@@ -1450,8 +1450,7 @@ function getYearNumber(dateInput){
 function applyFilterToEntries(filters) {
     const entries = document.querySelectorAll(".RSS-entries-item");
 
-    
-    entries.forEach(entry => {
+    for (const entry of entries) {
         const hashItem = entry.className.split('TitleHash-')[1].replace(' seachable','');
         const entryData = AllHermidata[hashItem];
         const type = entryData.type;
@@ -1537,7 +1536,7 @@ function applyFilterToEntries(filters) {
         visible
             ? entry.classList.add('seachable')
             : entry.classList.remove('seachable');
-    });
+    };
 }
 
 

@@ -14,7 +14,7 @@
 */
 
 // Minimal interactive template — wire into your extension back-end as needed
-(async () => {
+try {
   const browserAPI = typeof browser !== "undefined" ? browser : chrome;
   const novelType = ['Manga','Manhwa','Manhua','Novel','Webnovel','Anime','TV-Series'];
   const novelStatus = ['Viewing','Finished','On-hold','Dropped','Planned'];
@@ -213,8 +213,7 @@ async function saveBulkEdit() {
     const newTags = document.getElementById('bulkEditTags').value.split(',').map(tag => tag.trim());
 
     const isdifferent = (newItem, OldItem, index) => {
-        if (newItem[index] !== OldItem[index] && newItem[index] !== undefined )  return true;
-        return false;
+        return !!(newItem[index] !== OldItem[index] && newItem[index] !== undefined);
     }
     const selectedIds = getSelectedIds();
     for (const id of selectedIds) {
@@ -277,4 +276,6 @@ async function saveBulkEdit() {
     addEntry: async (entry)=>{ entry.id = entry.id || String(Date.now()); DATA.push(entry); saveData(entry); await renderList(); }
   };
 
-})();
+} catch (error) {
+    console.error("Extension error: Failed init:", error);
+}

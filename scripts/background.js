@@ -419,7 +419,7 @@ async function searchValidBookmarks(query = {}) {
     const all = await searchBookmarks(query);
 
     return all.filter(b => {
-        return b.url && b.parentId !== trashId && typeof b.parentId !== "undefined";
+        return b.url && b.parentId !== trashId && b.parentId !== "undefined";
     });
 }
 /**
