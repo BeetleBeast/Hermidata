@@ -99,7 +99,6 @@
 
 ## TO-DO
 
-- [ ] filter auto remember choice
 - [ ] select saving option:
   - Browser bookmark
   - Browser sync

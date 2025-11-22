@@ -599,8 +599,8 @@ async function hasRelatedBookmark(currentTab) {
     let sameChapter;
     const finalObj = {};
     if ( hasValidFuzzyBookmark === true) {
-        sameChapter = isSameChapterCount(fuzzyBookmarkMatches, currentTab);
-        finalObj.bookmark = fuzzyBookmarkMatches;
+        sameChapter = isSameChapterCount(fuzzyBookmarkMatches[0], currentTab);
+        finalObj.bookmark = fuzzyBookmarkMatches[0];
         finalObj.bookmarkSameChapter = sameChapter
     }
     else if ( hasValidFuzzyHermidata === true) {
@@ -611,33 +611,32 @@ async function hasRelatedBookmark(currentTab) {
     return finalObj
 }
 function isSameChapterCount(a,b) {
+    const getChapterFromTitle = (title, url) => {
+        try {
+            if (!title || !url) return '';
+            // Regex to find the first number (optionally after "chapter", "chap", "ch")
+            const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
+    
+            // create chapter based on URL
+            const parts = url?.split("/") || [];
+            const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0] || ''
+            // create chapter based on title
+            const titleParts = title?.split(/[-–—|:]/).map(p => p.trim());
+            const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
+            // create chapter based on title regex
+            const chapterPartV3 = (titleParts
+            .find(p => chapterNumberRegex.test(p)) || ""
+            ).replace(/([A-Z])/gi, '').replace(/[^\d.]/g, '').trim();
+            // If no chapter found, use empty string
+            return chapterPartV2 || chapterPartV3 || chapterPartV1 || "";
+        } catch (error) {
+            console.error('[Hermidata] error in getChapterFromTitle for isSameChapter function', error)
+        }
+    }
     let isSameNummber = false;
 
-    const fuzzyUrl = a.fuzzySearchUrl;
-    const fuzzytitle = trimTitle(a.bookmarkTitle, fuzzyUrl);
-
-    const currentTabUrl = b.url;
-    const currentTab = trimTitle(b.title, currentTabUrl);
-
-    const getChapterFromTitle = (title, url) => {
-        // Regex to find the first number (optionally after "chapter", "chap", "ch")
-        const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
-
-        // create chapter based on URL
-        const parts = url?.split("/") || [];
-        const chapterPartV1 = parts.at(-1).match(/[\d.]+/)?.[0] || ''
-        // create chapter based on title
-        const titleParts = title?.split(/[-–—|:]/).map(p => p.trim());
-        const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p));
-        // create chapter based on title regex
-        const chapterPartV3 = (titleParts
-        .find(p => chapterNumberRegex.test(p)) || ""
-        ).replace(/([A-Z])/gi, '').replace(/[^\d.]/g, '').trim();
-        // If no chapter found, use empty string
-        return chapterPartV2 || chapterPartV3 || chapterPartV1 || "";
-    }
-    const fuzzychapter = a.chapter || getChapterFromTitle(fuzzytitle, fuzzyUrl)
-    const curentTabChapter = getChapterFromTitle(currentTab, currentTabUrl)
+    const fuzzychapter = a.chapter || getChapterFromTitle(a.bookmarkTitle, a.fuzzySearchUrl)
+    const curentTabChapter = getChapterFromTitle(b.title, b.url)
 
 
 
@@ -1036,49 +1035,53 @@ async function webSearch() {
     console.groupEnd();
 }
 async function checkFeedsForUpdates() {
-    await webSearch();
-    const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
-    const allHermidata = await getAllHermidata();
+    try {
+        await webSearch();
+        const { savedFeeds } = await browser.storage.local.get({ savedFeeds: [] });
+        const allHermidata = await getAllHermidata();
 
-    if (Object.keys(allHermidata).length === 0) {
-        console.log("[Hermidata] No Hermidata entries found, skipping feed check.");
-        return;
-    }
-
-    for (const feed of savedFeeds) {
-        try {
-            if (shouldSkipFeed(feed, allHermidata)) continue;
-
-            // Try to get HEAD metadata (ETag, Last-Modified)
-            const meta = await fetchFeedHead(feed);
-            if (isFeedUnchanged(feed, meta)) {
-                continue;
-            }
-
-            // Fetch the full feed
-            const text = await fetchFeedText(feed);
-            if (!text) continue;
-
-            // Detect content changes via token or hash
-            if (!await hasFeedChanged(feed, text)) {
-                continue;
-            }
-
-            // Parse and handle feed contents
-            const xml = parseXmlSafely(text, feed.title);
-            const items = parseItems(xml, feed.title);
-            compareLastSeen(items, feed);
-
-            // Save metadata
-            saveFeedMetaData(feed, meta);
-
-        } catch (err) {
-            console.error(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
+        if (Object.keys(allHermidata).length === 0) {
+            console.log("[Hermidata] No Hermidata entries found, skipping feed check.");
+            return;
         }
-    }
 
-    lastAutoFeedCkeck = Date.now();
-    await browser.storage.local.set({ savedFeeds });
+        for (const feed of savedFeeds) {
+            try {
+                if (shouldSkipFeed(feed, allHermidata)) continue;
+
+                // Try to get HEAD metadata (ETag, Last-Modified)
+                const meta = await fetchFeedHead(feed);
+                if (isFeedUnchanged(feed, meta)) {
+                    continue;
+                }
+
+                // Fetch the full feed
+                const text = await fetchFeedText(feed);
+                if (!text) continue;
+
+                // Detect content changes via token or hash
+                if (!await hasFeedChanged(feed, text)) {
+                    continue;
+                }
+
+                // Parse and handle feed contents
+                const xml = parseXmlSafely(text, feed.title);
+                const items = parseItems(xml, feed.title);
+                compareLastSeen(items, feed);
+
+                // Save metadata
+                saveFeedMetaData(feed, meta);
+
+            } catch (err) {
+                console.error(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
+            }
+        }
+
+        lastAutoFeedCkeck = Date.now();
+        await browser.storage.local.set({ savedFeeds });
+    } catch (err) {
+        console.error(`[Hermidata] [✕] Failed to check feeds:`, err);
+    }
 }
 // ==== feed helpers ====
 function shouldSkipFeed(feed, allHermidata) {

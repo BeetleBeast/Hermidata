@@ -81,10 +81,6 @@ footer {
     justify-content:flex-start;
     align-items:center;
 }
-.fullpage-btn {
-    position: absolute;
-    right: 0;
-}
 #ParentPreview{
     max-width: 10000px;
     overflow-x: hidden;
@@ -148,7 +144,18 @@ select.autoInput {
     color: var(--Text-color);
     background-color: var(--bg-color);
 }
-
+#Btn-Parent {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+#isNewHermidata {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    margin-top: -25px;
+}
 #openSettings {
     position: absolute;
     right: 10px;
