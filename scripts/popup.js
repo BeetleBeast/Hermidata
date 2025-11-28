@@ -197,7 +197,14 @@ try {
     let absoluteObj = {}
 
     // find title from alt
-    const TrueTitle = findByTitleOrAltV2(HermidataV3.title, allHermidata)?.title;
+    const posibleTitleV2 = HermidataV3.meta.notes.replace('Chapter Title: ', '');
+    let TrueTitle;
+    if  (findByTitleOrAltV2(HermidataV3.title, allHermidata)?.title) {
+        TrueTitle = findByTitleOrAltV2(HermidataV3.title, allHermidata)?.title;
+    } else if (findByTitleOrAltV2(posibleTitleV2, allHermidata)?.title) {
+        TrueTitle = findByTitleOrAltV2(posibleTitleV2, allHermidata)?.title;
+        HermidataV3.meta.notes = '';
+    }
     // find title from fuzzy seach
     const AltKeyNeeded = await detectAltTitleNeeded(HermidataV3.title, HermidataV3.type);
     const fuzzyKey = AltKeyNeeded?.relatedKey;
@@ -783,8 +790,8 @@ function trimTitle(title) {
         let Chapter_Title = filter[1]
         .replace(chapterRegex, '').trim() // remove 'chapter' and any variation
         .replace(/\b\d+(\.\d+)?\b/g, "") // remove numbers
-        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
-        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
+        .replace(/^[\s:;,.\-–—|]+/, "").trim() // remove leading punctuation + spaces
+        .replace(/[:;,.\-–—|]+$/,"") // remove trailing punctuation
         .trim();
 
         if (Chapter_Title === '' && filter.length == 2) return mainTitle;
