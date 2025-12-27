@@ -1,4 +1,5 @@
 // content.js
+async function addFeedToGlobalMain() {
 try {
     console.log("[Hermidata] content.js loaded on", globalThis.location.href);
 
@@ -120,7 +121,7 @@ try {
     }
 
     function addFeedToGlobal(feed, globalArr) {
-        if (!globalArr.find(f => f.url === feed.url)) {
+        if (!globalArr.some(f => f.url === feed.url)) {
             globalArr.push(feed);
         }
     }
@@ -128,3 +129,5 @@ try {
 } catch (err) {
     console.error(err);
 };
+}
+addFeedToGlobalMain();

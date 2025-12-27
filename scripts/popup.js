@@ -736,12 +736,12 @@ function trimTitle(title) {
         .replace(/\s*\b(manga|novel|anime|tv-series)\s*$/i, '') // end
         .trim();
 }
-    const siteNameRegex = new RegExp(`\\b${siteName}\\b`, 'i');
-    const flexibleSiteNameRegex = new RegExp(`\\b${siteName
+    const siteNameRegex = new RegExp(String.raw`\b${siteName}\b`, 'i');
+    const flexibleSiteNameRegex = new RegExp(String.raw`\b${siteName
         .replace(/[-/\\^$*+?.()|[\]{}]/g, "").split("")
         .map(ch => ch.replace(/\s+/, ""))
-        .map(ch => `${ch}[\\s._-]*`)
-        .join("")}\\b`, 'i');
+        .map(ch => String.raw`${ch}[\s._-]*`)
+        .join("")}\b`, 'i');
 
     // Remove junk and site name
     let filtered = parts
