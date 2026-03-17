@@ -4,4 +4,4 @@
 // Tell TS these globals may exist
 declare const browser: typeof chrome | undefined
 
-export const ext: typeof chrome = ( typeof browser !== 'undefined' ? browser : chrome )
+export const ext: typeof chrome = ( typeof browser === 'undefined' ? chrome : browser )
