@@ -1,3 +1,5 @@
+import type { Feed } from "./rssType";
+
 /**
  * @fileoverview Types
  * - RegexConfig is a oject definition for regex patterns used in the TrimTitle class
@@ -18,5 +20,50 @@ export type RegexConfig = {
  */
 export type TrimmedTitle = {
     title: string,
-    note: string
+    note?: string
 }
+
+export type NovelType =  'Manga' | 'Manhwa' | 'Manhua' | 'Novel' | 'Webnovel' | 'Anime' | "TV-Series";
+export const novelTypes: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
+
+export type NovelStatus = 'Ongoing' | 'Completed' | 'Hiatus' | 'Canceled';
+export const novelStatus: NovelStatus[] = ['Ongoing', 'Completed', 'Hiatus', 'Canceled'];
+
+export type ReadStatus = 'Viewing' | 'Finished' | 'On-hold' | 'Dropped' | 'Planned';
+export const readStatus: ReadStatus[] = ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'];
+
+export interface Hermidata {
+    id: string;
+    title: string;
+    type: NovelType;
+    url: string;
+    source: string;
+    status: ReadStatus;
+    chapter: {
+        current: number;
+        latest: number;
+        history: number[];
+        lastChecked: string;
+    };
+    rss: Feed | null;
+    import: string | null;
+    meta: {
+        tags: string[];
+        notes: string;
+        added: string;
+        updated: string;
+        altTitles: string[];
+        originalRelease: string | null;
+    };
+}
+
+// FIXME: History should be an array of NUMBERS NOT STRINGS
+// FIXME: make sure oginalRelease is there
+
+export type HermidataDateType = 'added' | 'updated';
+export type HermidataSortType = 'pubDate';
+
+// old version
+// export type AllHermidata = ({ [s: string]: Hermidata; });
+// best for chrome.storage
+export type AllHermidata = Record<string, Hermidata>;

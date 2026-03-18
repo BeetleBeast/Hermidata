@@ -1,7 +1,6 @@
-import type { Hermidata } from '../popup/in/main';
 import { ext } from '../shared/BrowserCompat';
 import { getElement } from '../utils/Selection';
-import type { RegexConfig, TrimmedTitle } from './types/type';
+import type { Hermidata, RegexConfig, TrimmedTitle } from './types/type';
 
 export function getChapterFromTitle(title: string, url: string): number {
     // Regex to find the first number (optionally after "chapter", "chap", "ch")
@@ -25,7 +24,7 @@ export function getChapterFromTitle(title: string, url: string): number {
     return chapterNumberPartV2 || chapterNumberPartV3 || Number.NaN;
 }
 
-export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number, url: string) {
+export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number | undefined, url: string) {
     const isNotPartOfTitle = title?.replace(correctTitle, '');
     const finalChapter = url ? getChapterFromTitle(isNotPartOfTitle, url) : chapter;
     return isNotPartOfTitle ? finalChapter : '';
@@ -85,9 +84,6 @@ export function returnHashedTitle(title: string, type: string, url: string = '' 
     ? simpleHash(`${type}:${TrimTitle.trimTitle(title, url).title.toLowerCase()}`) // V2
     : simpleHash(TrimTitle.trimTitle(title, url).title.toLowerCase()) // V1
 }
-export function makeHermidataKey(title: string, type: string, url: string = '') {
-    return returnHashedTitle(title, type, url);
-}
 
 export function simpleHash(str: string) {
     let hash = 0, i, chr;
@@ -106,8 +102,6 @@ export class TrimTitle {
     private static title: string;
 
     private static HermidataUrl: string;
-
-    private static HermidataNotes: string | null;
     
     private static CleanString(str: string) {
         if (!str) return "";
@@ -220,8 +214,9 @@ export class TrimTitle {
         return Url_filter
     }
 
-    private static makeTitle(filter: string[], regexUsed: RegexConfig): string | null {
+    private static makeTitle(filter: string[], regexUsed: RegexConfig): TrimmedTitle | null {
         if (!filter.length) return null;
+        let finalTrimmedTitle: TrimmedTitle | undefined;
         const filtered = filter;
 
         const Url_filter = this.extractChapterInfo();
@@ -249,7 +244,10 @@ export class TrimTitle {
         .trim();
         if(mainTitle === '' ) return this.makeTitle(filter.slice(1), regexUsed);
         
-        if (filter.length < 2) return mainTitle;
+        if (filter.length < 2) {
+            finalTrimmedTitle = { title: mainTitle };
+            return finalTrimmedTitle;
+        }
         let Chapter_Title = filter[1]
         .replace(regexUsed.chapterRegex, '').trim() // remove 'chapter' and any variation
         .replaceAll(/\b\d+(\.\d+)?\b/g, "") // remove numbers
@@ -257,10 +255,16 @@ export class TrimTitle {
         .replace(/[:;,.\-–—|]+$/,"") // remove trailing punctuation
         .trim();
 
-        if (Chapter_Title === '' && filter.length == 2) return mainTitle;
-        if (Chapter_Title === '') return `${mainTitle} ${this.makeTitle(filter.slice(1), regexUsed)}`;
-        this.HermidataNotes = `Chapter Title: ${Chapter_Title}`;
-        return mainTitle;
+        if (Chapter_Title === '' && filter.length == 2) {
+            finalTrimmedTitle = { title: mainTitle };
+            return finalTrimmedTitle;
+        }
+        if (Chapter_Title === '') {
+            finalTrimmedTitle = { title: `${mainTitle} ${this.makeTitle(filter.slice(1), regexUsed)}` };
+            return finalTrimmedTitle;
+        }
+        finalTrimmedTitle = { title: mainTitle, note: `Chapter Title: ${Chapter_Title}` };
+        return finalTrimmedTitle;
     }
 
     public static trimTitle(title: string, HermidataUrl: string): TrimmedTitle {
@@ -268,7 +272,6 @@ export class TrimTitle {
         
         this.title = title;
         this.HermidataUrl = HermidataUrl
-        this.HermidataNotes = null;
 
         const siteName = this.extractDomainFromUrl()
     
@@ -283,12 +286,14 @@ export class TrimTitle {
         // Remove junk and site name
         // can return an empty array wich causes makeTitle to return null
         const filtered = this.removeJunkAndSiteName(parts, regexUsed);
+
+        const trimmedTitleOnly = this.makeTitle(filtered, regexUsed);
         
         const trimmedTitle: TrimmedTitle = {
-            title: this.makeTitle(filtered, regexUsed)?.trim() || title,
-            note: this.HermidataNotes || ''
+            title: trimmedTitleOnly?.title.trim() || title,
+            note: trimmedTitleOnly?.note || ''
         }
-        
+
         return trimmedTitle;
     }
 }
