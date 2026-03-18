@@ -1,14 +1,16 @@
 import type { NovelType, ReadStatus } from "./type";
 
 export interface DefaultChoice {
-    Type : string,
-    chapter : string,
-    status : string,
-    tags : string,
+    Type : NovelType,
+    chapter : number,
+    status : ReadStatus,
+    tags : string[],
     notes : string
 }
 
-export interface Settings {
+type FolderEntry = { path: string }
+
+export interface SettingsInput {
     DefaultChoice: DefaultChoice,
     DefaultChoiceText_Menu: DefaultChoice,
 
@@ -20,25 +22,25 @@ export interface Settings {
     READ_STATUS_OPTIONS_V2: string[],
     tagColoring: Record<string, string>,
     // FolderMapping: Record< TypeOptions, Record<StatusOptions, Record<string, path>>>
-    FolderMapping: Record<string, Record<string, Record<string, string>>>,
+    FolderMapping: Record<string, Record<string, FolderEntry>>,
 
     AllowContextMenu: boolean
 }
 
 
-export const defaultSettings: Settings = {
+export const defaultSettings: SettingsInput = {
         DefaultChoice : {
             Type : 'Manga',
-            chapter : '0',
+            chapter : 0,
             status : 'Viewing',
-            tags : '',
+            tags : [''],
             notes : ''
         },
         DefaultChoiceText_Menu : {
             Type : 'Manga',
-            chapter : '0',
+            chapter : 0,
             status : 'Planned',
-            tags : '',
+            tags : [''],
             notes : ''
         },
         TYPE_OPTIONS : ["Manga", "Novel", "Anime", "TV-Series"],

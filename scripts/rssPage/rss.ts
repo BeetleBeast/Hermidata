@@ -266,7 +266,7 @@ class RssPage {
         });
         this.searchEl.addEventListener('input', e=> this.renderList((e.target as HTMLInputElement).value));
         getElement('#saveDetail').addEventListener('click', this.saveDetails);
-        // getElement('#deleteDetail').addEventListener('click', this.deleteDetails);
+        // getElement('#deleteDetail').addEventListener('click', this.deleteDetails); // TEMP: disabled deletion for safety
         getElement('#saveSelectors').addEventListener('click', this.saveSelectors);
         getElement('#siteDomain').addEventListener('change', ()=>{/* optionally prefill */});
         getElement('#desktopNotify').addEventListener('change', this.updateNotificationPreview);

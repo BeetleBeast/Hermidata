@@ -32,7 +32,7 @@ export type RawFeed = {
     url: string,
     domain: string,
     lastFetched: string,
-    lastBuildDate: string,
+    lastBuildDate: Date,
     image: string,
     items: FeedItem[],
     lastToken: string | null

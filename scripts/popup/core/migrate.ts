@@ -4,7 +4,6 @@ import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
 import { getHermidataViaKey } from "../../shared/types/Storage";
 import { ext } from "../../shared/BrowserCompat";
 import { makeHermidataV3 } from "./save";
-import type { Settings } from "../../shared/types/settings";
 
 /**
  *  Detect if two Hermidata entries refer to the same series (by title similarity)
@@ -155,7 +154,7 @@ export async function migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD
             ),
             added: older.meta?.added || base.meta.added,
             updated: new Date().toISOString(),
-            originalRelease: null // TODO
+            originalRelease: null // TODO: do something with it
         }
     }
     // step 3. save & remove key

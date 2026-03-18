@@ -128,18 +128,17 @@ export function customConfirm(msg: string) {
             btn1.style.display = 'none';
             btn2.style.display = 'none';
         }
-        const cleanup = () => {
+        const onYes = () => {
             deactivateConfirmSetup();
             btn1.removeEventListener('click', onYes);
             btn2.removeEventListener('click', onNo);
-        };
-        const onYes = () => {
-            cleanup();
             resolve(true);
         };
 
         const onNo = () => {
-            cleanup();
+            deactivateConfirmSetup();
+            btn1.removeEventListener('click', onYes);
+            btn2.removeEventListener('click', onNo);
             resolve(false);
         };
 

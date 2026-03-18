@@ -2,12 +2,12 @@ import { CalcDiff, PastHermidata } from "../popup/core/Past";
 import { browser, ext } from "../shared/BrowserCompat";
 import { getChapterFromTitle, TrimTitle } from "../shared/StringOutput";
 import type { Feed, FeedItem, RawFeed } from "../shared/types/rssType";
-import type { Settings } from "../shared/types/settings";
+import type { SettingsInput as Settings, SettingsInput} from "../shared/types/settings";
 import { getAllHermidata, getAllRawFeeds, getSettings } from "../shared/types/Storage";
 import type { Hermidata, NovelType, ReadStatus } from "../shared/types/type";
 
 function getToken(callback: Function) {
-    chrome.storage.local.get(["googleAccessToken", "googleTokenExpiry","userEmail"], (items: BackgroundStorageItems) => {
+    ext.storage.local.get(["googleAccessToken", "googleTokenExpiry","userEmail"], (items: BackgroundStorageItems) => {
         const now = Date.now();
 
         if (items.googleAccessToken && items.googleTokenExpiry > now) {
@@ -15,7 +15,7 @@ function getToken(callback: Function) {
             return callback(items.googleAccessToken);
         }
         const clientId = '10068474315-qegara9du372dg55gv3tur6keuegke4n.apps.googleusercontent.com';
-        const redirectUri = chrome.identity.getRedirectURL();
+        const redirectUri = ext.identity.getRedirectURL();
         console.log(redirectUri)
         const scope = 'https://www.googleapis.com/auth/spreadsheets';
         const loginHintParam = items.userEmail ? `&login_hint=${encodeURIComponent(items.userEmail)}` : "";
@@ -27,11 +27,11 @@ function getToken(callback: Function) {
             `&scope=${encodeURIComponent(scope)}` + 
             loginHintParam;
 
-        chrome.identity.launchWebAuthFlow(
+        ext.identity.launchWebAuthFlow(
             { url: authUrl, interactive: true },
             (redirectUrl) => {
-            if (chrome.runtime.lastError || !redirectUrl) {
-                console.error('Auth failed:', chrome.runtime.lastError?.message || 'No redirect URL returned');
+            if (ext.runtime.lastError || !redirectUrl) {
+                console.error('Auth failed:', ext.runtime.lastError?.message || 'No redirect URL returned');
                 return;
             }
 
@@ -65,7 +65,7 @@ function getToken(callback: Function) {
                 updatedStorage.userEmail = items.userEmail;
             }
 
-            chrome.storage.local.set(updatedStorage, () => {
+            ext.storage.local.set(updatedStorage, () => {
                 callback(token);
             });
         });
@@ -78,7 +78,7 @@ function updateIcon(Url: string | null = null, currentTabParameter: chrome.tabs.
     const currentTabId = currentTab?.id || currentTabParameter?.id;
 
     if (Url) {
-        chrome.tabs.query({active : true}, (tabs) => {
+        ext.tabs.query({active : true}, (tabs) => {
             const matchedTab = tabs.find(t => t.url === Url);
             if (!matchedTab) {
                 console.warn("No tab found with matching URL");
@@ -135,8 +135,8 @@ function setIconAndTitle(actionApi: ActionApi, tabId: number) {
         path: iconPath,
         tabId: tabId
     }, () => {
-        if (chrome.runtime.lastError) {
-            console.warn("setIcon error:", chrome.runtime.lastError.message);
+        if (ext.runtime.lastError) {
+            console.warn("setIcon error:", ext.runtime.lastError.message);
         }
     });
 
@@ -144,8 +144,8 @@ function setIconAndTitle(actionApi: ActionApi, tabId: number) {
         title: currentBookmark ? 'Already bookmarkt!' : 'Bookmark it!',
         tabId: tabId
     }, () => {
-        if (chrome.runtime.lastError) {
-            console.warn("setTitle error:", chrome.runtime.lastError.message);
+        if (ext.runtime.lastError) {
+            console.warn("setTitle error:", ext.runtime.lastError.message);
         }
     });
 }
@@ -173,21 +173,21 @@ async function writeToBookmarks(dataArray: InputArrayType) {
         console.log("Skipping bookmark entry.");
     }
 }
-function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<chrome.bookmarks.BookmarkTreeNode>[] | any, isSheet = true) {
+function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<chrome.bookmarks.BookmarkTreeNode>[] | string[][], isSheet = true) {
     const [title,, chapter, url,, date,] = newEntry;
-    let oldTitle, oldUrl, oldDate, id;
+    let oldTitle, oldUrl: string | undefined, oldDate, id;
 
     for (let i = 0; i < existingRows.length; i++) {
         if (isSheet) {
-            [oldTitle,,,,, oldUrl,,, oldDate,,,,] = existingRows[i];
+            [oldTitle,,,,, oldUrl,,, oldDate,,,,] = existingRows[i] as string[];
         } else {
             const row = existingRows[i] as Partial<chrome.bookmarks.BookmarkTreeNode>;
-            ({ title: oldTitle, url: oldUrl, date: oldDate, id } = row);
+            ({ title: oldTitle, url: oldUrl, dateAdded: oldDate, id } = row);
         }
             
         const SameTrimedTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();
 
-        const { title: OldTitleParsed, chapter: oldChapterParsed } = parseMangaFireUrl(oldUrl);
+        const { title: OldTitleParsed, chapter: oldChapterParsed } = parseMangaFireUrl(oldUrl ?? '');
         const  { title: TitleParsed, chapter: ChapterParsed } = parseMangaFireUrl(url);
         
         const SameTitle = OldTitleParsed === TitleParsed;
@@ -196,9 +196,12 @@ function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<ch
         if (isSame) {
             const chapterChanged = chapter !== oldChapterParsed;
             const chapterChangedURL = ChapterParsed !== oldChapterParsed;
+
+            const oldDateStr = oldDate?.toString()
+
             if (chapterChanged) {
                 return { action: "replace", rowIndex: i + 2, replacedURL: oldUrl, replaceID: id };
-            } else if (date > oldDate && oldDate !== undefined) {
+            } else if (oldDateStr !== undefined && date > oldDateStr) {
                 return { action: "alert" };
             } else {
                 return { action: "skip" };
@@ -208,7 +211,7 @@ function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<ch
 
     return { action: "append" };
 }
-async function addBookmark([title, type, chapter, url, status, date, tags, notes]: InputArrayType) {
+async function addBookmark([title, type, chapter, url, status,,]: InputArrayType) {
     const settings = await getSettings();
     const baseType = resolveBaseType(type);
     const baseStatus = resolveBaseStatus(status);
@@ -217,13 +220,11 @@ async function addBookmark([title, type, chapter, url, status, date, tags, notes
         console.warn("Folder mapping not found for", type, status);
         return;
     }
-    const Browserroot = typeof browser !== "undefined" && navigator.userAgent.includes("Firefox")
+    const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Bookmarks";
     const pathSegments = folderInfo.path.split('/').filter(Boolean);
-    const finalFolderId: string = await new Promise((resolve) => {
-        createNestedFolders(pathSegments, Browserroot, resolve);
-    });
+    const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
     const bookmark = await createBookmark({
         parentId: finalFolderId,
@@ -235,12 +236,12 @@ async function addBookmark([title, type, chapter, url, status, date, tags, notes
     console.log('Change Icon');
 }
 async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<typeof shouldReplaceOrBlock>) {
-    const { rowIndex, replacedURL: OldURL, replaceID: OldID } = decision;
+    const { replacedURL: OldURL, replaceID: OldID } = decision;
     const [title, type, chapter, url, status, date, tags, notes] = dataArray;
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
     
-    const settings = await new Promise((resolve) => {
-        chrome.storage.sync.get(["Settings"], (result) => resolve(result.Settings));
+    const settings: SettingsInput = await new Promise((resolve) => {
+        ext.storage.sync.get(["Settings"], (result: { Settings: SettingsInput }) => resolve(result.Settings));
     });
     const baseType = resolveBaseType(type)
     const baseStatus = resolveBaseStatus(status)
@@ -255,9 +256,7 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
     : "Bookmarks";
     const pathSegments = folderInfo.path.split('/').filter(Boolean);
 
-    const finalFolderId: string = await new Promise<string>((resolve) => {
-        return createNestedFolders(pathSegments, Browserroot, resolve);
-    });
+    const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const freshBookmarks = await searchValidBookmarks();
     const bookmarkToUpdate = freshBookmarks.find(b => b.url === OldURL);
     const bookmarkToUpdateTest = freshBookmarks.find(b => b.id === OldID);
@@ -283,7 +282,7 @@ function extractSpreadsheetId(url: string) {
     return match ? match[1] : null;
 }
 function writeToSheet(token: number, dataArray: InputArrayType) {
-    readSheet(token, (rows: any) => {
+    readSheet(token, (rows: string[][]) => {
         const decision = shouldReplaceOrBlock(dataArray, rows, true);
 
         if (decision.action === "append") {
@@ -301,8 +300,8 @@ function writeToSheet(token: number, dataArray: InputArrayType) {
  * @param {number} token - The parameter for the authorization 
  * @returns {number} The callback for the result
  */
-function readSheet(token: number, callback: Function) {
-    chrome.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
+function readSheet(token: number, callback: Function): void {
+    ext.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
         const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
         const range = "Sheet1!A2:H"; // Adjust if more columns are added
 
@@ -322,7 +321,7 @@ function readSheet(token: number, callback: Function) {
     });
 }
 function appendRow(token: number, dataArray: InputArrayType) {
-    chrome.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
+    ext.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
         const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
         const range = "Sheet1!A2";
         fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=RAW`, {
@@ -340,7 +339,7 @@ function appendRow(token: number, dataArray: InputArrayType) {
 }
 
 function updateRow(token: number, rowIndex: number, dataArray: InputArrayType) {
-    chrome.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
+    ext.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
         const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
         const range = `Sheet1!A${rowIndex}:H${rowIndex}`; // assumes 8 columns
         fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
@@ -379,30 +378,19 @@ async function createMissingFolders(baseId: string, pathSegments: string[], inde
     const children = await getBookmarkChildren(baseId);
     let folder = children.find(child => !child.url && child.title === pathSegments[index]);
     
-    if (!folder) {
-        folder = await createBookmark({ parentId: baseId, title: pathSegments[index] });
-    }
+    folder ??= await createBookmark({ parentId: baseId, title: pathSegments[index] });
     
     return createMissingFolders(folder.id, pathSegments, index + 1);
 }
 // Main entry point
-async function createNestedFolders(pathSegments: string[], rootTitle: string, callback: (folderId: string) => (string)): Promise<string | null> {
-    try {
-        const rootId = await getRootByTitle(rootTitle);
-        if (!rootId) throw new Error(`Root folder "${rootTitle}" not found`);
-        const existingFolder = await findFolderPath(rootId, pathSegments);
-        if (existingFolder) {
-            callback(existingFolder.id);
-            return existingFolder.id;
-        }
+async function createNestedFolders(pathSegments: string[], rootTitle: string): Promise<string> {
+    const rootId = await getRootByTitle(rootTitle);
+    if (!rootId) throw new Error(`Root folder "${rootTitle}" not found`);
+    const existingFolder = await findFolderPath(rootId, pathSegments);
+    if (existingFolder) return existingFolder.id;
 
-        const createdFolderId = await createMissingFolders(rootId, pathSegments);
-        callback(createdFolderId);
-        return createdFolderId;
-    } catch (err) {
-        console.error("Error in createNestedFolders:", err);
-        return null;
-    }
+    return createMissingFolders(rootId, pathSegments);
+
 }
 function getCurrentDate() {
     const now = new Date();
@@ -411,12 +399,12 @@ function getCurrentDate() {
     const year = now.getFullYear();
     return `${day}/${month}/${year}`;
 }
-function parseMangaFireUrl(url: string) {
+function parseMangaFireUrl(url: string): { title: string, chapter: number } {
     try {
         const parts = new URL(url).pathname.split('/').filter(Boolean);
         const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
-        if (!titleSlug) return { title: "Unknown", chapter: "0" }
-        const chapter = parts.at(-1)?.includes('chapter') ?  parts.at(-1)?.replace('chapter-', '') : '0';
+        if (!titleSlug) return { title: "Unknown", chapter: 0 }
+        const chapter = parts.at(-1)?.includes('chapter') ? Number.parseFloat(parts.at(-1)?.replace('chapter-', '') || '0') : 0;
         const title = titleSlug
             .split('.')[0]             // remove Site's ID code (.yvov1)
             .replace(/(.)\1$/, '$1')   // Remove last char if second to last is the same
@@ -430,7 +418,7 @@ function parseMangaFireUrl(url: string) {
         };
     } catch (err) {
         console.error("Invalid URL", err);
-        return { title: "Unknown", chapter: "0" };
+        return { title: "Unknown", chapter: 0 };
     }
 }
 /**
@@ -453,7 +441,7 @@ async function searchValidBookmarks(query: string = "") {
  */
 async function getTrashFolderId(): Promise<string | null> {
     return new Promise((resolve) => {
-        chrome.bookmarks.getTree((nodes) => {
+        ext.bookmarks.getTree((nodes) => {
             const trashNode = 
                 findNodeByTitle(nodes[0], "trash") ||
                 findNodeByTitle(nodes[0], "Other bookmarks") ||
@@ -493,74 +481,74 @@ async function getRootByTitle(title: string) {
     return rootNode.id;
 }
 async function searchBookmarks(query: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
-    if (browser !== undefined && browser.bookmarks?.search) {
+    if (browser?.bookmarks?.search) {
         const Results = await browser.bookmarks.search(query)
         return Results;
     }
     return await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
-        chrome.bookmarks.search(query, (results) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
+        ext.bookmarks.search(query, (results) => {
+        if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
         else resolve(results);
         });
     });
 }
 function updateBookmark(id: string, changes: Partial<chrome.bookmarks.BookmarkTreeNode>): Promise<chrome.bookmarks.BookmarkTreeNode> {
-    if (browser !== undefined && browser.bookmarks?.update) {
+    if (browser?.bookmarks?.update) {
         return browser.bookmarks.update(id, changes);
     }
     return new Promise((resolve, reject) => {
-        chrome.bookmarks.update(id, changes, (result) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
+        ext.bookmarks.update(id, changes, (result) => {
+        if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
         else resolve(result);
         });
     });
 }
 function getAllBookmarks(id: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
-    if (browser !== undefined && browser.bookmarks?.getSubTree) {
+    if (browser?.bookmarks?.getSubTree) {
         return browser.bookmarks.getSubTree(id);
     }
     return new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
-        chrome.bookmarks.getSubTree(id, (result) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
+        ext.bookmarks.getSubTree(id, (result) => {
+        if (ext.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
         else resolve(result);
         });
     });
 }
 function moveBookmark(id: string, parentId: string) {
-    if (browser !== undefined && browser.bookmarks?.move) {
+    if (browser?.bookmarks?.move) {
         return browser.bookmarks.move(id, { parentId });
     }
     return new Promise((resolve, reject) => {
-        chrome.bookmarks.move(id, { parentId }, (result) => {
-            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
+        ext.bookmarks.move(id, { parentId }, (result) => {
+            if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
             else resolve(result);
         });
     });
 }
 function createBookmark(bookmarkObj: Partial<chrome.bookmarks.BookmarkTreeNode>): Promise<chrome.bookmarks.BookmarkTreeNode> {
-    if (browser !== undefined && browser.bookmarks?.create) {
+    if (browser?.bookmarks?.create) {
         return browser.bookmarks.create(bookmarkObj);
     }
     return new Promise((resolve, reject) => {
-        chrome.bookmarks.create(bookmarkObj, (result) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
+        ext.bookmarks.create(bookmarkObj, (result) => {
+        if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
         else resolve(result);
         });
     });
 }
 function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
-    if (browser !== undefined && browser.bookmarks?.getChildren) {
+    if (browser?.bookmarks?.getChildren) {
         return browser.bookmarks.getChildren(parentId);
     }
     return new Promise((resolve, reject) => {
-        chrome.bookmarks.getChildren(parentId, (children) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
+        ext.bookmarks.getChildren(parentId, (children) => {
+        if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
         else resolve(children);
         });
     });
 }
 async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
-    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
     if (!currentTab && Url == null) return;
     // initialize currentBookmark
     let searchUrl = Url ?? currentTab.url;
@@ -619,7 +607,7 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab) {
     const resultFuzzyBookmark = await detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot);
     const ressultFuzzyHermidata = await detectFuzzyHermidata(currentTab);
     let sameChapter;
-    const finalObj: { bookmark?: fuzzyBookmarkMatches, bookmarkSameChapter?: boolean, hermidataSameChapter?: boolean, hermidata?: fuzzyHermidataMatches} = {};
+    const finalObj: { bookmark?: FuzzyBookmarkMatches, bookmarkSameChapter?: boolean, hermidataSameChapter?: boolean, hermidata?: FuzzyHermidataMatches} = {};
     if ( resultFuzzyBookmark.hasValidFuzzyBookmark ) {
         sameChapter = isSameChapterCount(resultFuzzyBookmark.fuzzyMatches[0], currentTab);
         finalObj.bookmark = resultFuzzyBookmark.fuzzyMatches[0];
@@ -632,10 +620,10 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab) {
     }
     return finalObj
 }
-function isSameChapterCount(a: (fuzzyBookmarkMatches | fuzzyHermidataMatches),b: chrome.tabs.Tab) {
+function isSameChapterCount(a: (FuzzyBookmarkMatches | FuzzyHermidataMatches),b: chrome.tabs.Tab) {
     let isSameNummber = false;
 
-    const fuzzychapter = (a as fuzzyHermidataMatches).chapter ?? getChapterFromTitle(a.bookmarkTitle, a.fuzzySearchUrl)
+    const fuzzychapter = (a as FuzzyHermidataMatches).chapter ?? getChapterFromTitle(a.bookmarkTitle, a.fuzzySearchUrl)
     if (!b.title || !b.url) return isSameNummber
     const curentTabChapter = getChapterFromTitle(b.title, b.url)
 
@@ -644,8 +632,8 @@ function isSameChapterCount(a: (fuzzyBookmarkMatches | fuzzyHermidataMatches),b:
     if ( fuzzychapter === curentTabChapter) isSameNummber = true
     return isSameNummber
 }
-async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8): Promise<{hasValidFuzzyHermidata: boolean, fuzzyMatches: fuzzyHermidataMatches[]}> {
-    const fuzzyMatches: fuzzyHermidataMatches[] = [];
+async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8): Promise<{hasValidFuzzyHermidata: boolean, fuzzyMatches: FuzzyHermidataMatches[]}> {
+    const fuzzyMatches: FuzzyHermidataMatches[] = [];
     const allHermidata = PastHermidata.AllHermidata ?? await getAllHermidata();
     console.groupCollapsed("Fuzzy Bookmark Detection");
     if (!currentTab.title || !currentTab.url) throw new Error("No title or url");
@@ -677,16 +665,15 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
     return {hasValidFuzzyHermidata, fuzzyMatches};
 }
 async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, flatmapFolderInfo: Record<string, any>[], Browserroot: string, threshold = 0.8): 
-    Promise<{hasValidFuzzyBookmark: boolean, fuzzyMatches: fuzzyBookmarkMatches[]}> {
-    const fuzzyMatches: fuzzyBookmarkMatches[] = [];
+    Promise<{hasValidFuzzyBookmark: boolean, fuzzyMatches: FuzzyBookmarkMatches[]}> {
+    const fuzzyMatches: FuzzyBookmarkMatches[] = [];
     
 
     for (const element of flatmapFolderInfo) {
         const folder = element;
         folder.pathSegments = folder.path.split('/').filter(Boolean);
-        folder.finalFolderId = await new Promise((resolve) => {
-            createNestedFolders(folder.pathSegments, Browserroot, resolve);
-        });
+
+        folder.finalFolderId = await createNestedFolders(folder.pathSegments, Browserroot);
         folder.bookmarks = await getBookmarkChildren(folder.finalFolderId);
 
         for (const bookmark of folder.bookmarks) {
@@ -767,7 +754,8 @@ async function webSearch() {
 
     console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allnovelRSS.length}`);
 
-    const combined = Object.values(savedFeeds).flatMap(f => f?.items).filter(Boolean);
+    const combined = Object.values(savedFeeds)
+    //const test = Object.values(savedFeeds).flatMap(f => f?.items).filter(Boolean);
 
     for (const novel of allnovelRSS) {
         if (!novel) continue;
@@ -796,19 +784,22 @@ async function webSearch() {
 
         // get the items
         const xml = parseXmlSafely(feedText, novel.latestItem?.title);
-        const items = parseItems(xml, novel.latestItem?.title);
+        const items: FeedItem[] = parseItems(xml, novel.latestItem?.title);
         if (!items.length) {
             console.warn("No items found in feed:", novel.url);
             console.groupEnd();
             continue;   
         }
 
-        const newFeed: Partial<RawFeed> = {
+        const newFeed: RawFeed = {
+            title: novel.latestItem?.title,
+            url: novel.url,
             domain: novel.domain,
             lastFetched: new Date().toISOString(),
+            lastBuildDate: novel.lastBuildDate ?? new Date(),
+            image: novel.image || "",
+            items: items,
             lastToken: token,
-            items,
-            url: novel.url
         };
 
         // check if the feed is already in savedFeeds via token
@@ -821,7 +812,7 @@ async function webSearch() {
         // }
         console.log(`[Hermidata] Adding feed title: ${items[0].title}`);
         
-        const existingIndex = combined.findIndex(f => f.link === newFeed.url && f.link !== undefined);
+        const existingIndex = combined.findIndex(f => f.url === newFeed.url && f.url !== undefined);
         console.log(`[Hermidata] existingIndex: ${existingIndex}`);
         if (existingIndex === -1) {
             combined.push(newFeed);
@@ -845,7 +836,7 @@ async function webSearch() {
         console.log(`[Hermidata] ${Object.keys(savedFeeds).length} feeds saved to local storage`);
     });
     
-    const HermidataToUpdate = {};
+    const HermidataToUpdate: Record<string, Hermidata> = {};
     for (const feed of combined) {
         const related = Object.values(allHermidata).find(h => h.rss?.url === feed.url);
         if (related?.rss) {
@@ -934,11 +925,11 @@ function isFeedUnchanged(feed: RawFeed, meta: Meta) {
     return (
         meta.etag &&
         meta.lastModified &&
-        feed.etag === meta.etag &&
-        feed.lastModified === meta.lastModified
+        feed.lastToken === meta.etag &&
+        feed.lastBuildDate.getDate() === new Date(meta.lastModified).getDate() // FIXME: check this out, bullsh*t
     );
 }
-async function fetchFeedText(feed: Feed) {
+async function fetchFeedText(feed: RawFeed | Feed) {
     const response = await fetch(feed.url);
     if (!response.ok) {
         console.warn(`[Hermidata] Feed GET failed: ${feed.url} (${response.status})`);
@@ -957,9 +948,9 @@ async function hasFeedChanged(feed: RawFeed, text: string) {
         // fallback: hash of first 5KB
         const snippet = text.slice(0, 5000);
         const hash = await sha1Hex(snippet);
-        if (feed.lastHash !== hash) {
+        if (feed.lastToken !== hash) {
             feedChanged = true;
-            feed.lastHash = hash;
+            feed.lastToken = hash;
         }
     }
 
@@ -977,7 +968,7 @@ function parseXmlSafely(text: string, title: string) {
     return xml;
 }
 
-function parseItems(xml: Document, title: string) {
+function parseItems(xml: Document, title: string): FeedItem[] {
     const entries = [...xml.querySelectorAll("item, entry")];
     if (!entries.length) {
         console.warn(`[Hermidata] No <item> or <entry> elements found in ${title}.`);
@@ -991,7 +982,7 @@ function parseItems(xml: Document, title: string) {
             item.querySelector("link")?.textContent ??
             ""
         ).trim(),
-        pubDate: item.querySelector("pubDate, updated, published")?.textContent.trim() ?? "",
+        pubDate: new Date(item.querySelector("pubDate, updated, published")?.textContent.trim() ?? new Date().toISOString()),
         guid:
         item.querySelector("guid")?.textContent ??
         item.querySelector("id")?.textContent ??
@@ -1001,22 +992,23 @@ function parseItems(xml: Document, title: string) {
 }
 
 function saveFeedMetaData(feed: RawFeed, meta: Meta) {
-    feed.etag = meta.etag;
-    feed.lastModified = meta.lastModified;
-    feed.lastChecked = new Date().toISOString();
+    if (meta.lastModified) feed.lastBuildDate = new Date(meta.lastModified);
+    feed.lastFetched = new Date().toISOString();
 }
 
 function compareLastSeen(items: FeedItem[], feed: RawFeed) {
     if (!items.length) return feed;
     const latest = items[0];
-    if (latest.guid !== feed.lastSeenGuid || latest.pubDate !== feed.lastSeenDate) {
+    // FIXME: this was bullsh*t redo it
+    /*
+    if (latest.guid !== feed.lastToken || latest.pubDate !== feed.lastBuildDate) {
         const newCount = items.findIndex(i => i.guid === feed.lastSeenGuid && i.pubDate === feed.lastSeenDate);
         const newItems = newCount === -1 ? items : items.slice(0, newCount);
         notifyUser(feed, newItems);
 
-        feed.lastSeenGuid = latest.guid;
-        feed.lastSeenDate = latest.pubDate;
+        const Foo = latest.pubDate;
     }
+    */
 
     return feed;
 }
@@ -1037,12 +1029,8 @@ async function notifyUser(feed: RawFeed, newItems: FeedItem[]) {
 let currentBookmark: chrome.bookmarks.BookmarkTreeNode | null = null;
 let currentTab: chrome.tabs.Tab | null = null;
 
-let generalFuzzyBookmark = null;
-
 let lastAutoFeedCkeck = 0
 let lastFeedCkeck = 0;
-
-const CalcDiffCache = new Map();
 
 const fuzzyCache = new Map();
 
@@ -1050,16 +1038,7 @@ type Meta = {
     etag: string | null;
     lastModified: string | null
 }
-type InputArray = [{
-    title: string, 
-    type: NovelType, 
-    chapter: number,
-    url: string,
-    status: ReadStatus,
-    date: string,
-    tags: string[],
-    notes: string
-}]
+
 type BackgroundStorageItems = {
     googleAccessToken: string;
     googleTokenExpiry: number;
@@ -1067,14 +1046,14 @@ type BackgroundStorageItems = {
 }
 
 
-interface fuzzyBookmarkMatches {
+interface FuzzyBookmarkMatches {
     folderPath: string;
     bookmarkTitle: string;
     fuzzySearchUrl: string;
     currentUrl: string | undefined;
     similarity: number;
 }
-interface fuzzyHermidataMatches {
+interface FuzzyHermidataMatches {
     bookmarkTitle: string,
     fuzzySearchUrl: string,
     chapter: number,
@@ -1086,16 +1065,14 @@ type InputArrayType = [string, NovelType, number, string, ReadStatus, string, st
 
 type ActionApi = typeof ext.action | typeof ext.browserAction;
 
-let selectedIndex = -1;
-
 let allHermidataCashed: Record<string, Hermidata>;
 let settingsCashed: Settings;
 
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.sync.get<Record<string, Settings>>([ "Settings" ], (result) => {
+ext.runtime.onInstalled.addListener(() => {
+    ext.storage.sync.get<Record<string, Settings>>([ "Settings" ], (result) => {
         const Settings = result.Settings;
         if (Settings?.AllowContextMenu) {
-            chrome.contextMenus.create({
+            ext.contextMenus.create({
                 id: "Hermidata",
                 title: "Save to Hermidata",
                 contexts: ["link"]
@@ -1104,9 +1081,9 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 // Context-Menu Listener
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+ext.contextMenus.onClicked.addListener((info) => {
     if (info.menuItemId === "Hermidata") {
-        chrome.storage.sync.get<Record<string, Settings>>([ "Settings" ], (result) => {
+        ext.storage.sync.get<Record<string, Settings>>([ "Settings" ], (result) => {
             if (result.AllowContextMenu) {
                 const Settings = result.Settings
                 // Send tab info to your saving logic
@@ -1121,8 +1098,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
                     let status = Settings.DefaultChoiceText_Menu.status;
                     let tags = Settings.DefaultChoiceText_Menu.tags;
                     let notes = Settings.DefaultChoiceText_Menu.notes;
-                    const data = [title, type, chapter, url, status, date, tags, notes];
-                    getToken((token: string) => {
+                    const data: InputArrayType = [title, type, chapter, url, status, date, tags, notes];
+                    getToken((token: number) => {
                         writeToSheet(token, data);
                         writeToBookmarks(data);
                         updateCurrentBookmarkAndIcon(url)
@@ -1136,20 +1113,20 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 setInterval(checkFeedsForUpdates, 30 * 60 * 1000); // run every 30 min
 
-chrome.runtime.onStartup.addListener(() => {
+ext.runtime.onStartup.addListener(() => {
     updateCurrentBookmarkAndIcon();
     checkFeedsForUpdates();
 });
 
-chrome.tabs.onActivated.addListener(() => {
+ext.tabs.onActivated.addListener(() => {
     updateCurrentBookmarkAndIcon();
 });
 
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+ext.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     if (changeInfo.status === 'complete') {
         allHermidataCashed ??= await getAllHermidata();
         // Only update if this tab is active in the current window
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        ext.tabs.query({active: true, currentWindow: true}, (tabs) => {
             if (tabs.length && tabs[0].id === tabId) {
                 updateCurrentBookmarkAndIcon();
             }
@@ -1157,19 +1134,19 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     }
 });
 // open settings fix bug from V
-chrome.runtime.onInstalled.addListener((details) => {
+ext.runtime.onInstalled.addListener((details) => {
     checkFeedsForUpdates();
 
-    chrome.storage.sync.get([ "Settings" ], (result) => {
+    ext.storage.sync.get([ "Settings" ], (result) => {
         const settings = result?.Settings;
         if (details.reason === "install") {
             // Open settings on first install to fix bug from V?
-            if (!settings) chrome.runtime.openOptionsPage();
+            if (!settings) ext.runtime.openOptionsPage();
         } else if (details.reason === "update") {
-            const thisVersion = chrome.runtime.getManifest().version;
+            const thisVersion = ext.runtime.getManifest().version;
             console.log(`Updated to version ${thisVersion}`);
             // open settings after an update to fix bug from V?
-            if (!settings) chrome.runtime.openOptionsPage();
+            if (!settings) ext.runtime.openOptionsPage();
         }
         
     });
@@ -1178,9 +1155,9 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 
 // usage from popup
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.type === "SAVE_NOVEL") {
-        getToken((token) => {
+        getToken((token: number) => {
             writeToSheet(token, msg.data);
             writeToBookmarks(msg.data);
         });
@@ -1191,7 +1168,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (now - lastFeedCkeck >= 1000 *60 * 2) { // 2min passed
             lastFeedCkeck = now;
             checkFeedsForUpdates();
-            chrome.runtime.sendMessage({ type: "SYNC_COMPLETED" });
+            ext.runtime.sendMessage({ type: "SYNC_COMPLETED" });
         } else {
             console.log('Skipping - already checked recently')
         }
