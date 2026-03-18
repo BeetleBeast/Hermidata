@@ -34,11 +34,13 @@ export type RawFeed = {
     lastFetched: string,
     lastBuildDate: string,
     image: string,
-    items: FeedItem[]
+    items: FeedItem[],
+    lastToken: string
 }
-
+// FIXME: lastToken && guid have been added; sheck if it works
 export type FeedItem = {
     title: string,
     link: string,
-    pubDate: Date
+    pubDate: Date,
+    guid: string
 }

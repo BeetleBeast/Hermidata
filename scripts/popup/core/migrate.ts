@@ -166,15 +166,6 @@ export async function migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD
     return merged;
 }
 
-export async function getSettings(): Promise<Settings> {
-    return await new Promise((resolve, reject) => {
-        ext.storage.sync.get("Settings", (result: { Settings: Settings }) => {
-            if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
-            else resolve(result.Settings || {});
-        });
-    });
-}
-
 export function detectHashType(obj: Hermidata) {
     if (!obj?.title || !obj?.type || !obj?.id) return "unknown";
 

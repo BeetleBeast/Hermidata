@@ -1,6 +1,7 @@
 import type { Hermidata } from "./type";
 import { ext } from "../BrowserCompat";
 import type { RawFeed } from "./rssType";
+import type { Settings } from "./settings";
 
 export async function getHermidataViaKey(key: string): Promise<Hermidata | null> {
     return new Promise<Hermidata | null>((resolve, reject) => {
@@ -102,6 +103,15 @@ export function removeKeysFromSync(key: string): Promise<void> {
         ext.storage.sync.remove(key, () => {
             if(ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
             else { console.log("Removed key:", key); }
+        });
+    });
+}
+
+export async function getSettings(): Promise<Settings> {
+    return await new Promise((resolve, reject) => {
+        ext.storage.sync.get("Settings", (result: { Settings: Settings }) => {
+            if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
+            else resolve(result.Settings || {});
         });
     });
 }

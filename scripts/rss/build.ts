@@ -4,12 +4,10 @@ import { novelStatus, novelTypes, readStatus,
     type NovelType, type ReadStatus } from "../shared/types/type";
 import { getElement } from "../utils/Selection";
 import { linkRSSFeed, loadSavedFeeds, loadSavedFeedsViaSavedFeeds } from "./load";
-import { findByTitleOrAltV2, getChapterFromTitle, getChapterFromTitleReturn, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
-import { getAllHermidata, getHermidataViaKey, getLocalNotificationItem, removeKeysFromSync } from "../shared/types/Storage";
+import { findByTitleOrAltV2, getChapterFromTitleReturn, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
+import { getAllHermidata, getHermidataViaKey, getLocalNotificationItem, removeKeysFromSync, getSettings } from "../shared/types/Storage";
 import { PastHermidata } from "../popup/core/Past";
-import { AllSorts, type AllsortsType, type MenuOption, type separator } from "../shared/types/rssBuildType";
-import type { Feed, RawFeed } from "../shared/types/rssType";
-import { getSettings } from "../popup/core/migrate";
+import { AllSorts, type AllsortsType, type MenuOption } from "../shared/types/rssBuildType";
 import { customConfirm, customPrompt } from "../popup/frontend/confirm";
 
 export type Filters = {
@@ -92,13 +90,13 @@ export class BuildRSS {
         }
     }
 
-    public makeSortSection(sortSection: HTMLDivElement) {
+    public makeSortSection(sortSection: HTMLElement) {
         // makeSortHeader(sortSection);
         this.makeSortOptions(sortSection);
         this.sortOptionLogic(sortSection);
     }
 
-    public makeFeedHeader(parent_section: HTMLDivElement) {
+    public makeFeedHeader(parent_section: HTMLElement) {
         if (getElement('.containerHeader-feed')) return
         const lastDirection = JSON.parse(localStorage.getItem('notificationLastDirection') ?? '"down"');
         const container = document.createElement('div');
@@ -151,11 +149,11 @@ export class BuildRSS {
         });
     }
 
-    private removeAllChildNodes(parent: HTMLDivElement) {
+    private removeAllChildNodes(parent: HTMLElement) {
         while (parent.firstChild) parent.lastChild!.remove();
     }
 
-    private async reloadContent(NotificationSection: HTMLDivElement,AllItemSection: HTMLDivElement) {
+    private async reloadContent(NotificationSection: HTMLElement,AllItemSection: HTMLElement) {
         this.removeAllChildNodes(NotificationSection) // clear front-end
         this.removeAllChildNodes(AllItemSection) // clear front-end
 
@@ -270,7 +268,7 @@ export class BuildRSS {
             else item.classList.remove('seachable');
         });
     }
-    private async sortOptionLogic(parent_section: HTMLDivElement) {
+    private async sortOptionLogic(parent_section: HTMLElement) {
         // state object for filters
         const lastSort = JSON.parse(localStorage.getItem("lastFilter") || "{}");
         const filters: Filters = lastSort || {
@@ -523,7 +521,7 @@ export class BuildRSS {
         visible ? entry.classList.add('seachable') : entry.classList.remove('seachable');
     };
 
-    private makeSortOptions(parent_section: HTMLDivElement) {
+    private makeSortOptions(parent_section: HTMLElement) {
         if (getElement('.mainContainerHeader')) return;
 
         const mainContainer = document.createElement('div');
