@@ -35,7 +35,7 @@ export type RawFeed = {
     lastBuildDate: string,
     image: string,
     items: FeedItem[],
-    lastToken: string
+    lastToken: string | null
 }
 // FIXME: lastToken && guid have been added; sheck if it works
 export type FeedItem = {
