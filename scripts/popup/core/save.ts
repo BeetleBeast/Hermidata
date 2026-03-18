@@ -53,7 +53,7 @@ export async function updateChapterProgress(title: string, type: string, newChap
 }
 
 
-export function makeHermidataV3(title: string, url: string, type = "Manga"): Hermidata {
+export function makeHermidataV3(title: string, url: string, type: NovelType = "Manga"): Hermidata {
     const Title = TrimTitle.trimTitle(title, url);
     const hash = returnHashedTitle(title, type, url);
     const source = new URL(url).hostname.replace(/^www\./, "");
@@ -61,7 +61,7 @@ export function makeHermidataV3(title: string, url: string, type = "Manga"): Her
     return {
         id: hash,
         title: Title.title,
-        type: type as NovelType,
+        type,
         url,
         source,
         status: "Viewing",

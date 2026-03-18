@@ -1,11 +1,10 @@
 
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
-import { Duplicate } from '../../utils/dupplication';
+import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
 import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus, type TrimmedTitle } from '../../shared/types/type';
 import { getElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
-import { makeDefaultHermidata } from '../../utils/dupplication';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
 
@@ -131,8 +130,8 @@ class HermidataController {
         getElement("#Pagetitle").textContent = this.pageTitle || '';
 
         getElement<HTMLInputElement>('#title').value = display.title;
-        (document.getElementById('Type') as HTMLSelectElement).value = display.type;
-        (document.getElementById('status') as HTMLSelectElement).value = display.status;
+        getElement<HTMLSelectElement>('#Type').value = display.type;
+        getElement<HTMLSelectElement>('#status').value = display.status;
         getElement<HTMLInputElement>('#chapter').value  = String(this.hermidata.chapter.current);
         getElement<HTMLInputElement>('#url').value  = this.hermidata.url;
         getElement<HTMLInputElement>("#date").value = new Intl.DateTimeFormat('en-GB').format(new Date()) || "";
@@ -240,10 +239,10 @@ class HermidataController {
     private async saveSheet(): Promise<void> { 
 
         const title = getElement<HTMLInputElement>("#title").value;
-        const Type = (document.getElementById('Type') as HTMLSelectElement).value as NovelType;
+        const Type = getElement<HTMLSelectElement>('#Type').value as NovelType;
         const Chapter = getElement<HTMLInputElement>("#chapter").value;
         const url = getElement<HTMLInputElement>("#url").value;
-        const status = (document.getElementById('status') as HTMLSelectElement).value as ReadStatus;
+        const status = getElement<HTMLSelectElement>('#status').value as ReadStatus;
         const date = getElement<HTMLInputElement>("#date").value;
         const tags = getElement<HTMLInputElement>("#tags").value || "";
         const notes = getElement<HTMLInputElement>("#notes").value || "";
