@@ -8,6 +8,7 @@
     "build":     "vite build && vite build --config vite.content.config.ts",
     "typecheck": "tsc --noEmit"
   },
+  "type": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",

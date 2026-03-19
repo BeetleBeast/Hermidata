@@ -2,20 +2,23 @@ import { defineConfig } from 'vite'
 import { resolve } from 'node:path'
 
 export default defineConfig({
-    root: resolve(__dirname, 'pages'),
     build: {
         outDir: 'dist',
         rollupOptions: {
-        input: {
-            background: resolve(__dirname, 'scripts/background/background.ts'),
-            popup:      resolve(__dirname, 'scripts/popup/in/main.ts'),
-            settings:   resolve(__dirname, 'scripts/settings/Settings.ts'),
-            RSS:        resolve(__dirname, 'scripts/rssPage/RSS.ts'),
-        },
-        output: {
-            format: 'es',
-            entryFileNames: 'scripts/popup/in/main.ts',
-        }
+            input: {
+                // HTML pages — Vite finds the .ts files inside them automatically
+                popup:      resolve(__dirname, 'pages/popup.html'),
+                settings:   resolve(__dirname, 'pages/settings.html'),
+                RSS:        resolve(__dirname, 'pages/RSSFullpage.html'),
+                // Background has no HTML, so it's listed directly
+                background: resolve(__dirname, 'scripts/background/background.ts'),
+            },
+            output: {
+                format: 'es',
+                entryFileNames: 'scripts/[name].js',
+                chunkFileNames: 'scripts/chunks/[name].js',
+                assetFileNames: 'assets/[name].[ext]',
+            }
         }
     }
 })
