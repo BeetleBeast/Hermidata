@@ -1,6 +1,3 @@
-import { ext } from '../shared/BrowserCompat';
-import { getElement, setElement } from '../utils/Selection';
-import { getSpreadsheetUrl } from './types/Storage';
 import type { Hermidata, RegexConfig, TrimmedTitle } from './types/type';
 
 export function getChapterFromTitle(title: string, url: string): number {
@@ -17,12 +14,25 @@ export function getChapterFromTitle(title: string, url: string): number {
     const chapterPartV3 = (titleParts
     .find(p => chapterNumberRegex.test(p)) || ""
     ).replaceAll(/([A-Z])/gi, '').replaceAll(/[^\d.]/g, '').trim();
-    // If no chapter found, use empty string
+    // create chapter based on title regex & chapter keywords position
+    const chapterKeywords = ['episode', 'chapter', 'chap', 'ch'];
+    const chapterKeywordPattern = chapterKeywords.join('|');
+    const chapterRemoveRegexV3 = new RegExp(
+        String.raw`(\b\d{1,5}(?:\.\d+)?[A-Z]*\b\s*)?` + // group 1: optional leading number [ id 2]
+        String.raw`(\b(?:${chapterKeywordPattern})\b\.?\s*)` + // group 2: keyword (required) [ id 1]
+        String.raw`(\b\d{1,5}(?:\.\d+)?[A-Z]*\b)?`,         // group 3: optional trailing number [ id 3]
+        'gi'
+    );
+    const chapterPartV4List = chapterRemoveRegexV3.exec(title) || '';
+    const chapterPartV4 = chapterPartV4List[3] || chapterPartV4List[2] || '';
     // parse string to int
     const chapterNumberPartV1 = Number.parseFloat(chapterPartV1);
     const chapterNumberPartV2 = Number.parseFloat(chapterPartV2);
     const chapterNumberPartV3 = Number.parseFloat(chapterPartV3);
-    return chapterNumberPartV2 || chapterNumberPartV3 || Number.NaN;
+    const chapterNumberPartv4 = Number.parseFloat(chapterPartV4);
+
+    const candidates = [chapterNumberPartv4, chapterNumberPartV2, chapterNumberPartV3, chapterNumberPartV1];
+    return candidates.find(n => !Number.isNaN(n) && n >= 0) ?? Number.NaN;
 }
 
 export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number | undefined, url: string) {
@@ -33,42 +43,6 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
 // input
 // HermidataV3.chapter.current = getChapterFromTitleReturn(HermidataV3.title, HermidataNeededKeys.Page_Title, HermidataV3.chapter.current, HermidataV3.url) || HermidataV3.chapter.current;
 
-
-// Get GoogleSheet URL
-export async function getGoogleSheetURL(): Promise<string> {
-    const spreadsheetUrl = await getSpreadsheetUrl();
-    if (spreadsheetUrl && isValidGoogleSheetUrl(spreadsheetUrl)) return spreadsheetUrl;
-
-    return sheetUrlInput();
-}
-
-export function isValidGoogleSheetUrl(url: string) {
-    return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
-}
-
-export function sheetUrlInput(): Promise<string> {
-
-    return new Promise((resolve, reject) => {
-        
-
-        setElement("#spreadsheetPrompt", el => el.style.display = "block");
-        // document.getElementById('body').style.display = 'none';
-        const saveBtn = getElement("#saveSheetUrlBtn");
-        if (!saveBtn) return reject(new Error("Could not find save button."));
-
-        saveBtn.onclick = () => {
-            const url = getElement<HTMLInputElement>("#sheetUrlInput")?.value.trim();
-
-            if (!url) return reject(new Error("Please enter a valid URL."));
-
-            if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
-
-            setElement("#spreadsheetPrompt", el => el.style.display = "none")
-            setElement("#body", el => el.style.display = 'block');
-            ext.storage.sync.set({ spreadsheetUrl: url }, () => resolve(url) );
-        };    
-    });
-}
 
 export function findByTitleOrAltV2(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
     title = TrimTitle.trimTitle(title, '').title;
@@ -113,22 +87,22 @@ export class TrimTitle {
     private static extractDomainFromUrl(HermidataUrl: string): string {
         // Extract domain name from url
         const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataUrl);
-        const siteName = siteMatch ? siteMatch[1] : "";
+        const siteName = siteMatch ? siteMatch[1] : "DummySite";
 
         return siteName
     }
     private static splitTitleByCommonSeparators(title: string): string[] {
         // Split title by common separators
-        const cleanstring = this.CleanString(title);
+        const cleanstring = TrimTitle.CleanString(title);
         const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|,|\|) /g).map(p => p.trim()).filter(Boolean);
         return parts
     }
     private static setRegexConfig(siteName: string): RegexConfig {
         // Keep words lowercase; the /gi flag handles case-insensitive matching.
-        const chapterKeywords = ['episode', 'chapter', 'chap', 'ch'];
+        const chapterKeywords = ['episode', 'chapter', 'chap', 'ch', 'vol', 'volume'];
         const chapterKeywordPattern = chapterKeywords.join('|');
 
-        const junkKeyWords = ['all page', 'novel', 'bin', 'online'];
+        const junkKeyWords = ['all page', 'bin', 'page'];
         const junkKeywordPattern = junkKeyWords.join('|');
 
         const keyword = ['manga', 'novel', 'anime', 'tv-series'];
@@ -143,9 +117,9 @@ export class TrimTitle {
          * Group 3 — optional number AFTER the keyword   (e.g. "3A")
          */
         const chapterRemoveRegexV3 = new RegExp(
-        String.raw`(\b\d{1,4}(?:\.\d+)?[A-Z]*\b\s*)?` + // group 1: optional leading number
+        String.raw`(\b\d{1,5}(?:\.\d+)?[A-Z]*\b\s*)?` + // group 1: optional leading number
         String.raw`(\b(?:${chapterKeywordPattern})\b\.?\s*)` + // group 2: keyword (required)
-        String.raw`(\b\d{1,4}(?:\.\d+)?[A-Z]*\b)?`,         // group 3: optional trailing number
+        String.raw`(\b\d{1,5}(?:\.\d+)?[A-Z]*\b)?`,         // group 3: optional trailing number
         'gi'
         );
 
@@ -194,7 +168,9 @@ export class TrimTitle {
             .filter(p => !regexUsed.flexibleSiteNameRegex.test(p))
             .map(p => p.replace(regexUsed.cleanTitleKeywordStart, '').replace(regexUsed.cleanTitleKeywordEnd, '').trim())
             .map(p => p.replace(/^[\s:;,\-–—|]+/, "").trim()) // remove leading punctuation + spaces
-            .map(p => p.replace('#', '').trim()) // remove any '#' characters
+            .map(p => p.replace('#', ' ').trim()) // remove any '#' characters
+            .map(p => p.replace('／', " ").trim()) // remove trailing punctuation + spaces
+            .map(p => p.replace('•', " ").trim()) // remove trailing punctuation + spaces
             .filter(Boolean)
 
         // Remove duplicates
@@ -214,14 +190,19 @@ export class TrimTitle {
         let finalTrimmedTitle: TrimmedTitle | undefined;
         const filtered = filter;
 
-        const Url_filter = this.extractChapterInfo(HermidataUrl);
+        const Url_filter = TrimTitle.extractChapterInfo(HermidataUrl);
 
         let mainTitle = '';
         // Edge case: if first looks like "chapter info" but second looks like a real title → swap them
+        const isChapterLike = (s: string) => /^\s*(chapter|ch\.?)\s*\d+/i.test(s);
+
+        const isSpecialMarker = (s: string) => /^\s*(prologue|epilogue|interlude|extra|bonus|side\s*story|omake)\b/i.test(s);
+
+        const isSubTitle = (s: string) => isChapterLike(s) || isSpecialMarker(s);
         if (
             filter.length > 1 &&
-            /^\s*(chapter|ch\.?)\s*\d+/i.test(filter[0]) && // first is chapter info
-            !/^\s*(chapter|ch\.?)\s*\d+/i.test(filter[1])   // second is NOT chapter info
+            isSubTitle(filter[0]) &&   // first part looks like a subtitle
+            !isSubTitle(filter[1])     // second part looks like a real title
         ) {
             [filter[0], filter[1]] = [filter[1], filter[0]]; // swap
         }
@@ -233,11 +214,11 @@ export class TrimTitle {
 
         mainTitle = filter[0]
         .replace(regexUsed.chapterRemoveRegexV3, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
-        .replace(/^\d{1,4}(?:\.\d+)?\s*/, '') // strip stray leading chapter number // TODO: check if this is needed
+        .replace(/^\d{1,4}(?:\.\d+)?\s*/, '') // strip stray leading chapter number
         .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();
-        if(mainTitle === '' ) return this.makeTitle(filter.slice(1), regexUsed, HermidataUrl);
+        if(mainTitle === '' ) return TrimTitle.makeTitle(filter.slice(1), regexUsed, HermidataUrl);
         
         if (filter.length < 2) {
             finalTrimmedTitle = { title: mainTitle };
@@ -249,13 +230,12 @@ export class TrimTitle {
         .replace(/^[\s:;,.\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,.\-–—|]+$/,"") // remove trailing punctuation
         .trim();
-
         if (Chapter_Title === '' && filter.length == 2) {
             finalTrimmedTitle = { title: mainTitle };
             return finalTrimmedTitle;
         }
         if (Chapter_Title === '') {
-            finalTrimmedTitle = { title: `${mainTitle} ${this.makeTitle(filter.slice(1), regexUsed, HermidataUrl)}` };
+            finalTrimmedTitle = { title: mainTitle };
             return finalTrimmedTitle;
         }
         finalTrimmedTitle = { title: mainTitle, note: `Chapter Title: ${Chapter_Title}` };
@@ -266,21 +246,21 @@ export class TrimTitle {
         if (!title) return {title: '', note: ''};
 
 
-        const siteName = this.extractDomainFromUrl(HermidataUrl)
+        const siteName = TrimTitle.extractDomainFromUrl(HermidataUrl);
     
-        const parts = this.splitTitleByCommonSeparators(title);
+        const parts = TrimTitle.splitTitleByCommonSeparators(title);
         
         // examples
         // "Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road"
 
         // --- Regex config ---
-        const regexUsed: RegexConfig = this.setRegexConfig(siteName);
+        const regexUsed: RegexConfig = TrimTitle.setRegexConfig(siteName);
 
         // Remove junk and site name
         // can return an empty array wich causes makeTitle to return null
-        const filtered = this.removeJunkAndSiteName(parts, regexUsed);
+        const filtered = TrimTitle.removeJunkAndSiteName(parts, regexUsed);
 
-        const trimmedTitleOnly = this.makeTitle(filtered, regexUsed, HermidataUrl);
+        const trimmedTitleOnly = TrimTitle.makeTitle(filtered, regexUsed, HermidataUrl);
         
         const trimmedTitle: TrimmedTitle = {
             title: trimmedTitleOnly?.title.trim() || title,

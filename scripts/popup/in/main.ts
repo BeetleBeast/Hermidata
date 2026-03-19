@@ -7,6 +7,7 @@ import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
+import { getGoogleSheetURL } from '../../shared/types/Storage';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -40,7 +41,7 @@ class HermidataController {
         this.forceSetClassic()
         const [ CurrentTabInfo, googleSheetURL ]: [CurrentTab, string] = await Promise.all([
             this.getCurrentTabInfo(),
-            StringOutput.getGoogleSheetURL(),
+            getGoogleSheetURL(),
         ])
 
         this.googleSheetURL = googleSheetURL;

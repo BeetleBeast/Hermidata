@@ -2,6 +2,7 @@ import type { Hermidata } from "./type";
 import { ext } from "../BrowserCompat";
 import type { RawFeed } from "./rssType";
 import { defaultSettings, type SettingsInput as Settings } from "./settings";
+import { getElement, setElement } from "../../utils/Selection";
 
 export async function getHermidataViaKey(key: string): Promise<Hermidata | null> {
     return new Promise<Hermidata | null>((resolve, reject) => {
@@ -125,5 +126,41 @@ export async function getSpreadsheetUrl(): Promise<string> {
             if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
             else resolve(result.spreadsheetUrl || "");
         });
+    });
+}
+
+// Get GoogleSheet URL
+export async function getGoogleSheetURL(): Promise<string> {
+    const spreadsheetUrl = await getSpreadsheetUrl();
+    if (spreadsheetUrl && isValidGoogleSheetUrl(spreadsheetUrl)) return spreadsheetUrl;
+
+    return sheetUrlInput();
+}
+
+export function isValidGoogleSheetUrl(url: string) {
+    return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
+}
+
+export function sheetUrlInput(): Promise<string> {
+
+    return new Promise((resolve, reject) => {
+        
+
+        setElement("#spreadsheetPrompt", el => el.style.display = "block");
+        // document.getElementById('body').style.display = 'none';
+        const saveBtn = getElement("#saveSheetUrlBtn");
+        if (!saveBtn) return reject(new Error("Could not find save button."));
+
+        saveBtn.onclick = () => {
+            const url = getElement<HTMLInputElement>("#sheetUrlInput")?.value.trim();
+
+            if (!url) return reject(new Error("Please enter a valid URL."));
+
+            if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
+
+            setElement("#spreadsheetPrompt", el => el.style.display = "none")
+            setElement("#body", el => el.style.display = 'block');
+            ext.storage.sync.set({ spreadsheetUrl: url }, () => resolve(url) );
+        };    
     });
 }

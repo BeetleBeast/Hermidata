@@ -11,5 +11,3 @@ export function setElement<T extends HTMLElement>( selector: string, callback: (
     const el = getElement<T>(selector, parent);
     if (el) callback(el);
 }
-
-//FIXME: if element is not found instead of boolian false returns a error
