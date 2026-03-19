@@ -594,8 +594,9 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab) {
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
         ? "Bookmarks Menu"
         : "Bookmarks";
-    const settings = settingsCashed || await getSettings();
-    if (!settingsCashed) settingsCashed = settings;
+    const settings = settingsCashed ?? await getSettings();
+    settingsCashed ??= settings;
+    if (!settings) return { hasValidFuzzyBookmark: false, hasValidFuzzyHermidata: false };
     let flatmapFolderInfo = []
     for (const element of Object.values(settings?.FolderMapping)) {
         const element1 = element;
@@ -603,7 +604,6 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab) {
             const element2 = element;
                 flatmapFolderInfo.push(element2)
         }
-        
     }
     
     const resultFuzzyBookmark = await detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot);
@@ -1068,7 +1068,7 @@ type InputArrayType = [string, NovelType, number, string, ReadStatus, string, st
 type ActionApi = typeof ext.action | typeof ext.browserAction;
 
 let allHermidataCashed: Record<string, Hermidata>;
-let settingsCashed: Settings;
+let settingsCashed: Settings | null = null;
 
 ext.runtime.onInstalled.addListener(() => {
     ext.storage.sync.get<Record<string, Settings>>([ "Settings" ], (result) => {

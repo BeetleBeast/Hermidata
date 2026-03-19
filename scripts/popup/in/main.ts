@@ -37,6 +37,7 @@ class HermidataController {
     private readonly Testing = false;
 
     public async init(): Promise<void> {
+        this.forceSetClassic()
         const [ CurrentTabInfo, googleSheetURL ]: [CurrentTab, string] = await Promise.all([
             this.getCurrentTabInfo(),
             StringOutput.getGoogleSheetURL(),
@@ -60,15 +61,33 @@ class HermidataController {
         this.bindEvents();
     }
 
+    private forceSetClassic() {
+        setElement("#HDRSSBtn", el => el.classList = "Btn");
+        setElement(".HDRSS", el => el.style.opacity = '0');
+        setElement(".HDRSS", el => el.style.display = 'none');
+        setElement(".HDClassic", el => el.style.opacity = '1');
+        setElement(".HDClassic", el => el.style.overflow = 'hidden');
+        
+        // deactivate links in classic
+        document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
+            a.style.pointerEvents = 'none';
+        });
+        // activate links in RSS
+        document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
+            a.style.pointerEvents = 'auto';
+        });
+        document.body.style.height = '';
+    }
+
     
     async getCurrentTabInfo(): Promise<CurrentTab> {
         // Get active tab info
-        const promise: Promise<CurrentTab> = new Promise((resolve) => {
+        const promise: Promise<CurrentTab> = new Promise((resolve, reject) => {
             ext.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const tab = tabs[0];
-                if (!tab.title || !tab.url) throw new Error('No title or url found'); 
+                if (!tab.title || !tab.url) reject(new Error(ext.runtime.lastError?.message)); 
                 const currentTab: CurrentTab = {
-                    currentChapter: StringOutput.getChapterFromTitle(tab.title, tab.url) || 0,
+                    currentChapter: StringOutput.getChapterFromTitle(tab.title!, tab.url!) || 0,
                     pageTitle: tab.title || "Untitled Page",
                     url: tab.url || "NO URL FOUND"
                 };

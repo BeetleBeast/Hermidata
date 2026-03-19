@@ -79,6 +79,7 @@ export class RSS {
     public changePageToClassic() {
         setElement("#HDRSSBtn", el => el.classList = "Btn");
         setElement(".HDRSS", el => el.style.opacity = String(0));
+        setElement(".HDRSS", el => el.style.display = 'none');
         setElement(".HDClassic", el => el.style.opacity = String(1));
         setElement(".HDClassic", el => el.style.overflow = 'hidden');
         
@@ -151,6 +152,7 @@ export class RSS {
         target.classList = "active Btn";
         setElement("#HDClassicBtn", el => el.classList = "Btn");
         setElement(".HDClassic", el => el.style.opacity = '0');
+        setElement(".HDRSS", el => el.style.display = 'block');
         setElement(".HDRSS", el => el.style.opacity = '1');
         // deactivate links in classic
         document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {

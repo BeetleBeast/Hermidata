@@ -1,7 +1,7 @@
 import type { Hermidata } from "./type";
 import { ext } from "../BrowserCompat";
 import type { RawFeed } from "./rssType";
-import type { SettingsInput as Settings } from "./settings";
+import { defaultSettings, type SettingsInput as Settings } from "./settings";
 
 export async function getHermidataViaKey(key: string): Promise<Hermidata | null> {
     return new Promise<Hermidata | null>((resolve, reject) => {
@@ -111,7 +111,7 @@ export async function getSettings(): Promise<Settings> {
     return await new Promise((resolve, reject) => {
         ext.storage.sync.get("Settings", (result: { Settings: Settings }) => {
             if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
-            else resolve(result.Settings || {});
+            else resolve(result.Settings ?? defaultSettings);
         });
     });
 }

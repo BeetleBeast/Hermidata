@@ -764,10 +764,10 @@ export class BuildRSS {
         });
     }
 
-    public async makefeedItem(feedListLocal: Record<string, Hermidata>, isRSSItem = false) {
+    public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false) {
         // FIXME: make it smaller
         const fragment = document.createDocumentFragment();
-        for (const [key, value] of Object.entries(feedListLocal)) {
+        for (const [key, value] of Object.entries(hermidataList)) {
 
             const title = findByTitleOrAltV2(value.title, this.AllHermidata)?.title || value.title;
             const url = value.rss?.latestItem.link || value.url;
@@ -818,9 +818,14 @@ export class BuildRSS {
 
                 const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
                 const AllItemChapterText = currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
-                const titleText = TrimTitle.trimTitle(value?.rss?.latestItem.title || value.title, value?.rss?.latestItem.link || value.url).title;
+                const titleV1 = title;
+                const titleV2 = TrimTitle.trimTitle(title, url).title;
+                const titleV3 = TrimTitle.trimTitle(value?.rss?.latestItem.title || value.title, value?.rss?.latestItem.link || value.url).title;
+                const titleText = titleV2;
                 const maxTitleCharLangth = 50;
                 const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
+
+                console.log('Title: ', titleV1, 'Trimmed title V1: ', titleV2, 'What i had before: ', titleV3);
                 
                 const lastRead = this.AllHermidata[key]?.chapter?.current || null;
                 const progress = lastRead ? ((lastRead / chapter) * 100 ).toPrecision(3) : '0';

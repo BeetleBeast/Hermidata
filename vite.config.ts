@@ -5,6 +5,8 @@ export default defineConfig({
     base: './',  // ← this is the fix, makes all asset paths relative
     build: {
         outDir: 'dist',
+        sourcemap: true,       // ← adds .js.map files next to each .js
+        minify: false,         // ← keeps function names readable during dev
         rollupOptions: {
             input: {
                 // HTML pages — Vite finds the .ts files inside them automatically

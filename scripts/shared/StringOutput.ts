@@ -1,5 +1,6 @@
 import { ext } from '../shared/BrowserCompat';
 import { getElement, setElement } from '../utils/Selection';
+import { getSpreadsheetUrl } from './types/Storage';
 import type { Hermidata, RegexConfig, TrimmedTitle } from './types/type';
 
 export function getChapterFromTitle(title: string, url: string): number {
@@ -34,46 +35,49 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
 
 
 // Get GoogleSheet URL
-export function getGoogleSheetURL(): Promise<string> {
-    return new Promise((resolve, reject) => {
-        try {
-            ext.storage.sync.get(["spreadsheetUrl"], (result: any) => {
-                let url = result?.spreadsheetUrl?.trim();
-                if (url && isValidGoogleSheetUrl(url)) return resolve(url);
-                return sheetUrlInput(resolve, reject);
-            });
-        } catch (error) {
-            console.error('Extention error inside getGoogleSheetURL: ',error)
-        }
-    });
+export async function getGoogleSheetURL(): Promise<string> {
+    const spreadsheetUrl = await getSpreadsheetUrl();
+    if (spreadsheetUrl && isValidGoogleSheetUrl(spreadsheetUrl)) return spreadsheetUrl;
+
+    return sheetUrlInput();
 }
 
 export function isValidGoogleSheetUrl(url: string) {
     return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
 }
 
-export function sheetUrlInput(resolve: (url: string) => void, reject: (error: Error) => void) {
-    setElement("#spreadsheetPrompt", el => el.style.display = "block");
-    // document.getElementById('body').style.display = 'none';
-    const saveBtn = getElement("#saveSheetUrlBtn");
-    if (!saveBtn) return;
-    saveBtn.onclick = () => {
-        const url = getElement<HTMLInputElement>("#sheetUrlInput")?.value.trim();
-        if (!url) return reject(new Error("Please enter a valid URL."));
-        if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
-        try {
-            ext.storage.sync.set({ spreadsheetUrl: url }, () => {
-                setElement("#spreadsheetPrompt", el => el.style.display = "none")
-                setElement("#body", el => el.style.display = 'block');
-                return resolve(url)
-            });
-        } catch (error) {
-            console.error('Extention error inside sheetUrlInput: ',error)
-        }
-    };
+export function sheetUrlInput(): Promise<string> {
+
+    return new Promise((resolve, reject) => {
+        
+
+        setElement("#spreadsheetPrompt", el => el.style.display = "block");
+        // document.getElementById('body').style.display = 'none';
+        const saveBtn = getElement("#saveSheetUrlBtn");
+        if (!saveBtn) return reject(new Error("Could not find save button."));
+
+        saveBtn.onclick = () => {
+            const url = getElement<HTMLInputElement>("#sheetUrlInput")?.value.trim();
+
+            if (!url) return reject(new Error("Please enter a valid URL."));
+
+            if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
+
+            try {
+                ext.storage.sync.set({ spreadsheetUrl: url }, () => {
+                    setElement("#spreadsheetPrompt", el => el.style.display = "none")
+                    setElement("#body", el => el.style.display = 'block');
+                    return resolve(url)
+                });
+            } catch (error) {
+                console.error('Extention error inside sheetUrlInput: ',error)
+                return reject(error);
+            }
+        };    
+    });
 }
 
-export function findByTitleOrAltV2(title: string, allData: { [key: string]: Hermidata }) {
+export function findByTitleOrAltV2(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
     title = TrimTitle.trimTitle(title, '').title;
     return Object.values(allData).find(novel => 
         TrimTitle.trimTitle(novel.title, novel.url).title === title ||
