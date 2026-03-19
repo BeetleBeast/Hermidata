@@ -1,10 +1,12 @@
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
-import { browser, ext } from "../shared/BrowserCompat";
+import { ext } from "../shared/BrowserCompat";
 import { getChapterFromTitle, TrimTitle } from "../shared/StringOutput";
 import type { Feed, FeedItem, RawFeed } from "../shared/types/rssType";
 import type { SettingsInput as Settings, SettingsInput} from "../shared/types/settings";
 import { getAllHermidata, getAllRawFeeds, getSettings } from "../shared/types/Storage";
 import type { Hermidata, NovelType, ReadStatus } from "../shared/types/type";
+
+declare const browser: typeof chrome | undefined;
 
 function getToken(callback: Function) {
     ext.storage.local.get(["googleAccessToken", "googleTokenExpiry","userEmail"], (items: BackgroundStorageItems) => {

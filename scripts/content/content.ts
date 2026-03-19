@@ -1,7 +1,7 @@
 // must be a self-contained IIFE bundle
 
 // --- Types ---
-export type RawFeed = {
+type RawFeed = {
     title: string,
     url: string,
     domain: string,
@@ -11,7 +11,7 @@ export type RawFeed = {
     items: FeedItem[],
     lastToken: string | null
 }
-export type FeedItem = {
+type FeedItem = {
     title: string,
     link: string,
     pubDate: Date,
@@ -25,7 +25,7 @@ const ext: typeof chrome = ( browser ?? chrome );
 
 
 // content.js
-await addFeedToGlobalMain();
+addFeedToGlobalMain();
 
 
 async function getAllRawFeeds(): Promise<Record<string, RawFeed>> {

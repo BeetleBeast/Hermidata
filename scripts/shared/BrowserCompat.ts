@@ -2,6 +2,6 @@
 // In MV3 Chrome also supports promises, but not everywhere yet
 
 // Tell TS these globals may exist
-export declare const browser: typeof chrome | undefined
+declare const browser: typeof chrome | undefined
 
 export const ext: typeof chrome = ( browser ?? chrome )
