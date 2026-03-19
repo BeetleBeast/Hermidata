@@ -1,5 +1,5 @@
 import type { Hermidata } from "../../shared/types/type";
-import { getElement } from "../../utils/Selection";
+import { getElement, setElement } from "../../utils/Selection";
 
 /**
  *  Create a clear confirmation message for user
@@ -42,8 +42,8 @@ function deactivateother() {
         a.style.pointerEvents = 'none';
     });
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
-    getElement(".HDRSS").style.opacity = String(classicCurrentActive ? 0 : 0.2);
-    getElement(".HDClassic").style.opacity = String(classicCurrentActive ? 0.2 : 0);
+    setElement(".HDRSS", el => el.style.opacity = String(classicCurrentActive ? 0 : 0.2));
+    setElement(".HDClassic", el => el.style.opacity = String(classicCurrentActive ? 0.2 : 0));
 }
 function activateother() {
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
@@ -55,8 +55,8 @@ function activateother() {
     document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
         a.style.pointerEvents =  classicCurrentActive ? 'none' : 'auto';
     });
-    getElement(".HDRSS").style.opacity = String(classicCurrentActive ? 0 : 1);
-    getElement(".HDClassic").style.opacity = String(classicCurrentActive ? 1 : 0);
+    setElement(".HDRSS", el => el.style.opacity = String(classicCurrentActive ? 0 : 1));
+    setElement(".HDClassic", el => el.style.opacity = String(classicCurrentActive ? 1 : 0));
 }
 
 
@@ -67,6 +67,8 @@ export function customPrompt(msg: string, defaultInput: string): Promise<string 
         const label = getElement('.genericLabel');
         const btn1 = getElement('.genericButton1');
         const btn2 = getElement('.genericButton2');
+
+        if (!container || !input || !label || !btn1 || !btn2) return resolve(false);
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
@@ -113,6 +115,9 @@ export function customConfirm(msg: string) {
         const label = getElement('.genericLabel');
         const btn1 = getElement('.genericButton1');
         const btn2 = getElement('.genericButton2');
+
+        if (!container || !label || !btn1 || !btn2) return resolve(false);
+
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';

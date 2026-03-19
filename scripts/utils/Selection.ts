@@ -1,7 +1,15 @@
-export function getElement<T extends HTMLElement>(selector: string, parent: Document | HTMLElement = document): T {
-    const el = parent.querySelector(selector);
+export function getElement<T extends HTMLElement>(selector: string, parent: Document | HTMLElement = document): T | null {
+    const el = parent.querySelector<T>(selector);
     if (!el) {
-        throw new Error(`Element not found: ${selector}`);
+        console.warn(`Element not found: ${selector}`);
+        return null;
     }
-    return el as T;
+    return el;
 }
+
+export function setElement<T extends HTMLElement>( selector: string, callback: (el: T) => void, parent: Document | HTMLElement = document ): void {
+    const el = getElement<T>(selector, parent);
+    if (el) callback(el);
+}
+
+//FIXME: if element is not found instead of boolian false returns a error

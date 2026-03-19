@@ -17,7 +17,7 @@ import { ext } from "../shared/BrowserCompat";
 import { returnHashedTitle } from "../shared/StringOutput";
 import { getAllHermidata } from "../shared/types/Storage";
 import { novelTypes, readStatus, type Hermidata, type NovelType, type ReadStatus } from "../shared/types/type";
-import { getElement } from "../utils/Selection";
+import { getElement, setElement } from "../utils/Selection";
 
 // Minimal interactive template — wire into your extension back-end as needed
 
@@ -45,9 +45,10 @@ class RssPage {
     }
 
     private showToast(msg: string, t: number =2000){
+        if(!this.toast) return;
         this.toast.textContent = msg;
         this.toast.classList.add('show');
-        setTimeout(()=> this.toast.classList.remove('show'), t);
+        setTimeout(()=> setElement('#toast', el => el.classList.remove('show')), t);
     }
     // persistence helpers (local only for template)
     private async loadData(): Promise<Map<string, Hermidata>> {
@@ -68,16 +69,21 @@ class RssPage {
     }
     // rendering
     private renderFilters(): void {
+        if(!this.filterType || !this.filterStatus) return;
         this.filterType.innerHTML = '<option value="">All types</option>';
-        novelTypes.forEach(t=> this.filterType.appendChild(new Option(t,t)));
+        
+
+        novelTypes.forEach(t=> setElement('#filterType', el => el.appendChild(new Option(t,t))));
         this.filterStatus.innerHTML = '<option value="">All status</option>';
-        readStatus.forEach(s=> this.filterStatus.appendChild(new Option(s,s)));
+        readStatus.forEach(s=> setElement('#filterStatus', el => el.appendChild(new Option(s,s))));
+        if (!this.detailType || !this.detailStatus) return;
         this.detailType.innerHTML = '';
         this.detailStatus.innerHTML = '';
-        novelTypes.forEach(t=> this.detailType.appendChild(new Option(t,t)));
-        readStatus.forEach(s=> this.detailStatus.appendChild(new Option(s,s)));
+        novelTypes.forEach(t=> setElement('#detailType', el => el.appendChild(new Option(t,t))));
+        readStatus.forEach(s=>setElement('#detailStatus', el => el.appendChild(new Option(s,s))));
     }
     private async renderList(filterQuery: string =''){
+        if(!this.entriesEl) return;
         this.entriesEl.innerHTML = '';
         const q = filterQuery.trim().toLowerCase();
         this.DATA.forEach(item => {
@@ -104,6 +110,7 @@ class RssPage {
             actions.append(openBtn, editBtn);
 
             li.append(cb, meta, actions);
+            if (!this.entriesEl) throw new Error('Element not found');
             this.entriesEl.appendChild(li);
         });
     }
@@ -112,15 +119,17 @@ class RssPage {
         const item = this.DATA.get(id);
         if(!item) return;
         
-        getElement<HTMLInputElement>('#detailTitle').value = item.title;
-        getElement<HTMLInputElement>('#detailUrl').value = item.url;
-        getElement<HTMLInputElement>('#detailCurrent').value = String(item.chapter.current);
-        getElement<HTMLInputElement>('#detailNotes').value = item.meta?.notes || '';
+        setElement<HTMLInputElement>('#detailTitle', el => el.value = item.title);
+        setElement<HTMLInputElement>('#detailUrl', el => el.value = item.url);
+        setElement<HTMLInputElement>('#detailCurrent', el => el.value = String(item.chapter.current));
+        setElement<HTMLInputElement>('#detailNotes', el => el.value = item.meta?.notes || '');
+        if (!this.detailType || !this.detailStatus) return;
         this.detailType.value = item.type;
         this.detailStatus.value = item.status;
 
         // history
         const hist = getElement('#chapterHistory');
+        if (!hist) return;
         hist.innerHTML = '';
         (item.chapter.history || []).slice().reverse().forEach(h=>{
             const li = document.createElement('li');
@@ -128,39 +137,46 @@ class RssPage {
             hist.appendChild(li);
         });
         // store editing id
-        getElement('#editForm').dataset.editing = id;
+        setElement('#editForm', el => el.dataset.editing = id);
         this.showToast('Opened details', 900);
     }
 
     private async saveDetails(){
-        const id = getElement('#editForm').dataset.editing;
+        const id = getElement('#editForm')?.dataset.editing;
         if(!id) return;
 
         const item = this.DATA.get(id);
         if(!item) return;
         
         const prev = item.chapter.current;
-        const newCurrent = Number(getElement<HTMLInputElement>('#detailCurrent').value) || 0;
+        const newCurrent = Number(getElement<HTMLInputElement>('#detailCurrent')?.value) || 0;
         if(newCurrent > prev){
         item.chapter.history = [...(item.chapter.history||[]), prev];
         }
-        item.title = getElement<HTMLInputElement>('#detailTitle').value.trim();
-        item.url = getElement<HTMLInputElement>('#detailUrl').value.trim();
+        const title = getElement<HTMLInputElement>('#detailTitle')?.value.trim();
+        const url = getElement<HTMLInputElement>('#detailUrl')?.value.trim();
+        if (title) item.title = title;
+        if (url) item.url = url;
+    
+        if (!this.detailType || !this.detailStatus) return;
         item.type = this.detailType.value as NovelType;
         item.status = this.detailStatus.value as ReadStatus;
         item.chapter.current = newCurrent;
         item.meta = item.meta || {};
-        item.meta.notes = getElement<HTMLInputElement>('#detailNotes').value;
+        const notes = getElement<HTMLInputElement>('#detailNotes')?.value;
+        if (notes) item.meta.notes = notes;
         await this.saveData(item);
+        if (!this.searchEl) return;
         await this.renderList(this.searchEl.value);
         this.showToast('Saved', 900);
     }
 
     private deleteDetails(): void {
-        const id = getElement('#editForm').dataset.editing;
+        const id = getElement('#editForm')?.dataset.editing;
         if(!id) return;
         this.DATA.delete(id);
         this.removeData(id);
+        if (!this.searchEl) return;
         this.renderList(this.searchEl.value);
         this.showToast('Deleted', 1000);
     }
@@ -182,6 +198,7 @@ class RssPage {
             item.chapter.current = item.chapter.latest || item.chapter.current; // simple heuristic
             await this.saveData(item);
         }
+        if (!this.searchEl) return;
         await this.renderList(this.searchEl.value);
         this.showToast(`${ids.length} marked as read`);
     }
@@ -205,19 +222,19 @@ class RssPage {
         if (!firstItemOfList) return;
         const firstItem = this.DATA.get(firstItemOfList);
         if (!firstItem) return;
-        getElement<HTMLSelectElement>('#bulkEditType').value = firstItem.type;
-        getElement<HTMLSelectElement>('#bulkEditStatus').value = firstItem.status;
-        getElement<HTMLInputElement>('#bulkEditTags').value = firstItem.meta?.tags.join(', ') || '';
-        getElement('#bulkEditPanel').style.display = 'block';
+        setElement<HTMLSelectElement>('#bulkEditType', el => el.value = firstItem.type);
+        setElement<HTMLSelectElement>('#bulkEditStatus', el => el.value = firstItem.status);
+        setElement<HTMLInputElement>('#bulkEditTags', el => el.value = firstItem.meta?.tags.join(', ') || '');
+        setElement('#bulkEditPanel', el => el.style.display = 'block');
     }
     private isdifferent(newItem: NovelType | ReadStatus | string[], OldItem: NovelType | ReadStatus | string[]): boolean {
         return !!(newItem !== OldItem && newItem !== undefined);
     }
     private async saveBulkEdit() {
         // selector save (site-specific RSS selectors)
-        const newType = getElement<HTMLSelectElement>('#bulkEditType').value as NovelType;
-        const newStatus = getElement<HTMLSelectElement>('#bulkEditStatus').value as ReadStatus;
-        const newTags = getElement<HTMLInputElement>('#bulkEditTags').value.split(',').map(tag => tag.trim());
+        const newType = getElement<HTMLSelectElement>('#bulkEditType')?.value as NovelType;
+        const newStatus = getElement<HTMLSelectElement>('#bulkEditStatus')?.value as ReadStatus;
+        const newTags = getElement<HTMLInputElement>('#bulkEditTags')?.value.split(',').map(tag => tag.trim()) as string[];
 
         
         const selectedIds = this.getSelectedIds();
@@ -231,13 +248,14 @@ class RssPage {
                 await this.saveData(item);
             }
         }
+        if (!this.searchEl) return;
         await this.renderList(this.searchEl.value);
         this.showToast(`${selectedIds.length} items updated.`);
     }
     private saveSelectors(){
-        const domain = getElement<HTMLInputElement>('#siteDomain').value.trim();
-        const rssSel = getElement<HTMLInputElement>('#rssSelector').value.trim();
-        const itemSel = getElement<HTMLInputElement>('#itemSelector').value.trim();
+        const domain = getElement<HTMLInputElement>('#siteDomain')?.value.trim();
+        const rssSel = getElement<HTMLInputElement>('#rssSelector')?.value.trim();
+        const itemSel = getElement<HTMLInputElement>('#itemSelector')?.value.trim();
         if(!domain || !rssSel) return this.showToast('Domain & RSS selector required',1200);
         const all = JSON.parse(localStorage.getItem('site_selectors')||'{}');
         all[domain] = { rss: rssSel, items: itemSel };
@@ -246,31 +264,34 @@ class RssPage {
     }
     // notifications (simple preview)
     private updateNotificationPreview(){
-        const desktop = getElement<HTMLInputElement>('#desktopNotify').checked;
-        const email = getElement<HTMLInputElement>('#emailNotify').checked;
+        const desktop = getElement<HTMLInputElement>('#desktopNotify')?.checked;
+        const email = getElement<HTMLInputElement>('#emailNotify')?.checked;
         const p = getElement('#notificationPreview');
+        if(!p) return;
         p.textContent = `Desktop: ${desktop ? 'ON':'OFF'} • Email: ${email ? 'ON':'OFF'}`;
     }
 
     private eventListeners() {
         // wire events
-        getElement('#bulkMarkRead').addEventListener('click', this.bulkMarkRead);
-        getElement('#bulkOpen').addEventListener('click', this.bulkOpen);
-        getElement('#bulkEditButton').addEventListener('click', this.openBulkEditPanel);
-        getElement('#saveBulkEditButton').addEventListener('click', this.saveBulkEdit);
-        getElement('.CancelBulkEdit').addEventListener('click',() => getElement('#bulkEditPanel').style.display='none')
-        getElement('#reloadData').addEventListener('click', async ()=> { 
+        getElement('#bulkMarkRead')?.addEventListener('click', this.bulkMarkRead);
+        getElement('#bulkOpen')?.addEventListener('click', this.bulkOpen);
+        getElement('#bulkEditButton')?.addEventListener('click', this.openBulkEditPanel);
+        getElement('#saveBulkEditButton')?.addEventListener('click', this.saveBulkEdit);
+        getElement('.CancelBulkEdit')?.addEventListener('click',() => setElement('#bulkEditPanel', el => el.style.display='none'));
+        getElement('#reloadData')?.addEventListener('click', async ()=> { 
+            if (!this.searchEl) return;
             await this.loadData();
             await this.renderList(this.searchEl.value);
             this.showToast('Reloaded');
         });
+        if (!this.searchEl) return;
         this.searchEl.addEventListener('input', e=> this.renderList((e.target as HTMLInputElement).value));
-        getElement('#saveDetail').addEventListener('click', this.saveDetails);
-        // getElement('#deleteDetail').addEventListener('click', this.deleteDetails); // TEMP: disabled deletion for safety
-        getElement('#saveSelectors').addEventListener('click', this.saveSelectors);
-        getElement('#siteDomain').addEventListener('change', ()=>{/* optionally prefill */});
-        getElement('#desktopNotify').addEventListener('change', this.updateNotificationPreview);
-        getElement('#emailNotify').addEventListener('change', this.updateNotificationPreview);
+        getElement('#saveDetail')?.addEventListener('click', this.saveDetails);
+        // getElement('#deleteDetail')?.addEventListener('click', this.deleteDetails); // TEMP: disabled deletion for safety
+        getElement('#saveSelectors')?.addEventListener('click', this.saveSelectors);
+        getElement('#siteDomain')?.addEventListener('change', ()=>{/* optionally prefill */});
+        getElement('#desktopNotify')?.addEventListener('change', this.updateNotificationPreview);
+        getElement('#emailNotify')?.addEventListener('change', this.updateNotificationPreview);
     }
     public async init() {
         this.renderFilters();

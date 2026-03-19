@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import { resolve } from 'node:path'
 
 export default defineConfig({
+    base: './',  // ← this is the fix, makes all asset paths relative
     build: {
         outDir: 'dist',
         rollupOptions: {

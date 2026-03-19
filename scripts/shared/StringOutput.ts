@@ -1,5 +1,5 @@
 import { ext } from '../shared/BrowserCompat';
-import { getElement } from '../utils/Selection';
+import { getElement, setElement } from '../utils/Selection';
 import type { Hermidata, RegexConfig, TrimmedTitle } from './types/type';
 
 export function getChapterFromTitle(title: string, url: string): number {
@@ -53,16 +53,18 @@ export function isValidGoogleSheetUrl(url: string) {
 }
 
 export function sheetUrlInput(resolve: (url: string) => void, reject: (error: Error) => void) {
-    getElement("#spreadsheetPrompt").style.display = "block";
+    setElement("#spreadsheetPrompt", el => el.style.display = "block");
     // document.getElementById('body').style.display = 'none';
     const saveBtn = getElement("#saveSheetUrlBtn");
+    if (!saveBtn) return;
     saveBtn.onclick = () => {
-        const url = getElement<HTMLInputElement>("#sheetUrlInput").value.trim();
+        const url = getElement<HTMLInputElement>("#sheetUrlInput")?.value.trim();
+        if (!url) return reject(new Error("Please enter a valid URL."));
         if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
         try {
             ext.storage.sync.set({ spreadsheetUrl: url }, () => {
-                getElement("#spreadsheetPrompt").style.display = "none";
-                getElement('#body').style.display = 'block';
+                setElement("#spreadsheetPrompt", el => el.style.display = "none")
+                setElement("#body", el => el.style.display = 'block');
                 return resolve(url)
             });
         } catch (error) {
@@ -98,10 +100,6 @@ export function simpleHash(str: string) {
 
 
 export class TrimTitle {
-
-    private static title: string;
-
-    private static HermidataUrl: string;
     
     private static CleanString(str: string) {
         if (!str) return "";
@@ -115,9 +113,9 @@ export class TrimTitle {
 
         return cleanString
     }
-    private static extractDomainFromUrl(): string {
+    private static extractDomainFromUrl(HermidataUrl: string): string {
         // Extract domain name from url
-        const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(this.HermidataUrl);
+        const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataUrl);
         const siteName = siteMatch ? siteMatch[1] : "";
 
         return siteName
@@ -207,19 +205,19 @@ export class TrimTitle {
 
         return filtered
     }
-    private static extractChapterInfo(): string {
+    private static extractChapterInfo(HermidataUrl: string): string {
         // Extract main title (remove chapter info)
-        const Url_filter_parts = this.HermidataUrl.split('/')
+        const Url_filter_parts = HermidataUrl.split('/')
         const Url_filter = Url_filter_parts.at(-1)?.replaceAll('-',' ').toLowerCase().trim() || '';
         return Url_filter
     }
 
-    private static makeTitle(filter: string[], regexUsed: RegexConfig): TrimmedTitle | null {
+    private static makeTitle(filter: string[], regexUsed: RegexConfig, HermidataUrl: string): TrimmedTitle | null {
         if (!filter.length) return null;
         let finalTrimmedTitle: TrimmedTitle | undefined;
         const filtered = filter;
 
-        const Url_filter = this.extractChapterInfo();
+        const Url_filter = this.extractChapterInfo(HermidataUrl);
 
         let mainTitle = '';
         // Edge case: if first looks like "chapter info" but second looks like a real title → swap them
@@ -242,7 +240,7 @@ export class TrimTitle {
         .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();
-        if(mainTitle === '' ) return this.makeTitle(filter.slice(1), regexUsed);
+        if(mainTitle === '' ) return this.makeTitle(filter.slice(1), regexUsed, HermidataUrl);
         
         if (filter.length < 2) {
             finalTrimmedTitle = { title: mainTitle };
@@ -260,7 +258,7 @@ export class TrimTitle {
             return finalTrimmedTitle;
         }
         if (Chapter_Title === '') {
-            finalTrimmedTitle = { title: `${mainTitle} ${this.makeTitle(filter.slice(1), regexUsed)}` };
+            finalTrimmedTitle = { title: `${mainTitle} ${this.makeTitle(filter.slice(1), regexUsed, HermidataUrl)}` };
             return finalTrimmedTitle;
         }
         finalTrimmedTitle = { title: mainTitle, note: `Chapter Title: ${Chapter_Title}` };
@@ -269,13 +267,11 @@ export class TrimTitle {
 
     public static trimTitle(title: string, HermidataUrl: string): TrimmedTitle {
         if (!title) return {title: '', note: ''};
-        
-        this.title = title;
-        this.HermidataUrl = HermidataUrl
 
-        const siteName = this.extractDomainFromUrl()
+
+        const siteName = this.extractDomainFromUrl(HermidataUrl)
     
-        const parts = this.splitTitleByCommonSeparators(this.title);
+        const parts = this.splitTitleByCommonSeparators(title);
         
         // examples
         // "Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road"
@@ -287,7 +283,7 @@ export class TrimTitle {
         // can return an empty array wich causes makeTitle to return null
         const filtered = this.removeJunkAndSiteName(parts, regexUsed);
 
-        const trimmedTitleOnly = this.makeTitle(filtered, regexUsed);
+        const trimmedTitleOnly = this.makeTitle(filtered, regexUsed, HermidataUrl);
         
         const trimmedTitle: TrimmedTitle = {
             title: trimmedTitleOnly?.title.trim() || title,

@@ -3,7 +3,7 @@ import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
 import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
 import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus, type TrimmedTitle } from '../../shared/types/type';
-import { getElement } from '../../utils/Selection';
+import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
@@ -82,6 +82,8 @@ class HermidataController {
         const folderSelect = getElement("#Type");
         const folderSelect2 = getElement("#Type_HDRSS")
 
+        if (!folderSelect || !folderSelect2) return;
+
         novelTypes.forEach(element => {
             const option = document.createElement("option");
             option.value = element;
@@ -95,6 +97,8 @@ class HermidataController {
     }
     private populateStatus() {
         const folderSelect = getElement("#status");
+
+        if (!folderSelect) return;
 
         readStatus.forEach(element => {
             const option = document.createElement("option");
@@ -127,33 +131,33 @@ class HermidataController {
         // backward compatibility for past hermidata
         this.trycapitalizingTypesAndStatus();
 
-        getElement("#Pagetitle").textContent = this.pageTitle || '';
+        setElement("#Pagetitle", el => el.textContent = this.pageTitle || '');
 
-        getElement<HTMLInputElement>('#title').value = display.title;
-        getElement<HTMLSelectElement>('#Type').value = display.type;
-        getElement<HTMLSelectElement>('#status').value = display.status;
-        getElement<HTMLInputElement>('#chapter').value  = String(this.hermidata.chapter.current);
-        getElement<HTMLInputElement>('#url').value  = this.hermidata.url;
-        getElement<HTMLInputElement>("#date").value = new Intl.DateTimeFormat('en-GB').format(new Date()) || "";
-        getElement<HTMLInputElement>("#tags").value = display.meta.tags.toString();
-        getElement<HTMLInputElement>('#notes').value = this.hermidata.meta.notes;
+        setElement<HTMLInputElement>('#title', el => el.value = display.title);
+        setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
+        setElement<HTMLSelectElement>('#status', el => el.value = display.status);
+        setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
+        setElement<HTMLInputElement>('#url', el => el.value  = this.hermidata.url);
+        setElement<HTMLInputElement>("#date", el => el.value = new Intl.DateTimeFormat('en-GB').format(new Date()) || "");
+        setElement<HTMLInputElement>("#tags", el => el.value = display.meta.tags.toString());
+        setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
-        getElement('#isNewHermidata').textContent = this.pastHermidata?.title ? '' : 'New!';
+        setElement('#isNewHermidata', el => el.textContent = this.pastHermidata?.title ? '' : 'New!');
         this.FixTableSize()
         
         // HDR RSS
-        getElement<HTMLInputElement>("#title_HDRSS").value = display.title;
-        getElement<HTMLInputElement>("#Type_HDRSS").value = display.type;
+        setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
+        setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.type);
     }
 
     private bindEvents(): void {
-        getElement('#save').addEventListener('click', () => this.saveSheet());
-        getElement('#HDRSSBtn').addEventListener('mouseenter', () => this.RSS?.preloadRSS());
+        getElement('#save')?.addEventListener('click', () => this.saveSheet());
+        getElement('#HDRSSBtn')?.addEventListener('mouseenter', () => this.RSS?.preloadRSS());
 
-        getElement("#HDClassicBtn").addEventListener("click", (e) => this.RSS?.openClassic(e));
-        getElement("#HDRSSBtn").addEventListener("click", async (e) => await this.RSS?.openRSS(e));
+        getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e));
+        getElement("#HDRSSBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e));
 
-        getElement('#openSettings').addEventListener('click', () => {
+        getElement('#openSettings')?.addEventListener('click', () => {
             ext.runtime.openOptionsPage()
             .catch((error) => console.error('Extention error trying open extention settings: ',error)); 
         });
@@ -192,6 +196,10 @@ class HermidataController {
                 }
                 const textWidth = measureText(value, input);
                 const parent = getElement('#ParentPreview');
+                if (!parent) {
+                    input.style.width = '42px'; // no parent = no width
+                    return;
+                }
                 const parentMaxWidth = 10000; // same as your CSS
                 const parentStyle = getComputedStyle(parent);
                 const parentPadding = Number.parseFloat(parentStyle.paddingLeft) + Number.parseFloat(parentStyle.paddingRight);
@@ -238,17 +246,19 @@ class HermidataController {
 
     private async saveSheet(): Promise<void> { 
 
-        const title = getElement<HTMLInputElement>("#title").value;
-        const Type = getElement<HTMLSelectElement>('#Type').value as NovelType;
-        const Chapter = getElement<HTMLInputElement>("#chapter").value;
-        const url = getElement<HTMLInputElement>("#url").value;
-        const status = getElement<HTMLSelectElement>('#status').value as ReadStatus;
-        const date = getElement<HTMLInputElement>("#date").value;
-        const tags = getElement<HTMLInputElement>("#tags").value || "";
-        const notes = getElement<HTMLInputElement>("#notes").value || "";
+        const title = getElement<HTMLInputElement>("#title")?.value;
+        const Type = getElement<HTMLSelectElement>('#Type')?.value as NovelType;
+        const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
+        const url = getElement<HTMLInputElement>("#url")?.value;
+        const status = getElement<HTMLSelectElement>('#status')?.value as ReadStatus;
+        const date = getElement<HTMLInputElement>("#date")?.value;
+        const tags = getElement<HTMLInputElement>("#tags")?.value || "";
+        const notes = getElement<HTMLInputElement>("#notes")?.value || "";
         const args = '';
 
         const tagsArray = tags.split(',').map((tag) => tag.trim());
+
+        if (!title || !Type || !Chapter || !url || !status) throw new Error('Missing required fields');
 
         this.hermidata.title = title;
         this.hermidata.type = Type;

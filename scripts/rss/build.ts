@@ -2,7 +2,7 @@ import { ext } from "../shared/BrowserCompat";
 import { novelStatus, novelTypes, readStatus, 
     type AllHermidata, type Hermidata, type HermidataDateType, type HermidataSortType, 
     type NovelType, type ReadStatus } from "../shared/types/type";
-import { getElement } from "../utils/Selection";
+import { getElement, setElement } from "../utils/Selection";
 import { linkRSSFeed, loadSavedFeeds, loadSavedFeedsViaSavedFeeds } from "./load";
 import { findByTitleOrAltV2, getChapterFromTitleReturn, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
 import { getAllHermidata, getHermidataViaKey, getLocalNotificationItem, removeKeysFromSync, getSettings } from "../shared/types/Storage";
@@ -37,19 +37,23 @@ export class BuildRSS {
         
         // clear notification
         const clearNotification = getElement("#clear-notifications");
+        if (!clearNotification) throw new Error('Element not found');
         clearNotification.addEventListener('click', () => {
-            this.removeAllChildNodes(getElement("#RSS-Notification")) // clear front-end
+            const rssNotificationContainer = getElement("#RSS-Notification");
+            if (!rssNotificationContainer) throw new Error('Element not found');
+            this.removeAllChildNodes(rssNotificationContainer) // clear front-end
             this.setNotificationListAllToNull(null) // clear back-end
         });
         // open RSS full page
         const FullpageRSSButton = getElement(".fullpage-RSS-btn");
+        if (!FullpageRSSButton) throw new Error('Element not found');
         FullpageRSSButton.addEventListener('click', () => open('./RSSFullpage.html'))
         
         // sync text & button
         this.SyncTextAndButtonOfRSS()
 
         // manifest version
-        getElement("#version").innerHTML = chrome.runtime.getManifest().version;
+        setElement("#version", el => el.innerHTML = chrome.runtime.getManifest().version);
     }
 
 
@@ -59,6 +63,8 @@ export class BuildRSS {
         const NotificationSection = getElement("#RSS-Notification");
         const AllItemSection = getElement("#All-RSS-entries");
 
+        if (!subscribeBtn || !NotificationSection || !AllItemSection) throw new Error('Element not found');
+
         subscribeBtn.className = "Btn";
         subscribeBtn.textContent = "Subscribe to RSS Feed";
         subscribeBtn.disabled = true;
@@ -66,7 +72,7 @@ export class BuildRSS {
         subscribeBtn.ariaLabel = "this site doesn't have a RSS link";
 
         let feedItemTitle;
-        const currentTitle = getElement<HTMLInputElement>("#title_HDRSS").value || this.hermidata.title;
+        const currentTitle = getElement<HTMLInputElement>("#title_HDRSS")?.value || this.hermidata.title;
 
         Object.values(feedListGLobal).forEach(feed => {
             feedItemTitle = TrimTitle.trimTitle(feed?.items?.[0]?.title || feed.title, feed.url).title
@@ -81,7 +87,7 @@ export class BuildRSS {
             Object.values(feedListGLobal).forEach(feed => {
                 feedItemTitle = TrimTitle.trimTitle(feed?.items?.[0]?.title || feed.title, feed.url).title
                 if (currentTitle == feedItemTitle) {
-                    const currentType = getElement<HTMLInputElement>("#Type_HDRSS").value as NovelType || this.hermidata.type;
+                    const currentType = getElement<HTMLInputElement>("#Type_HDRSS")?.value as NovelType || this.hermidata.type;
                     linkRSSFeed(feedItemTitle, currentType, this.hermidata.url,  feed);
                     this.reloadContent(NotificationSection, AllItemSection)
                     console.log('linked RSS to extention')
@@ -118,7 +124,9 @@ export class BuildRSS {
         parent_section.appendChild(container)
     }
     public makeItemHeader(): Node {
-        if (getElement('.containerHeader-item')) return getElement('.containerHeader-item');
+        const containerAlreadyExist = getElement('.containerHeader-item')
+        if (containerAlreadyExist) return containerAlreadyExist;
+
         const container = document.createElement('div');
         container.className = 'containerHeader-item'
         const title = document.createElement('div');
@@ -132,6 +140,8 @@ export class BuildRSS {
     private SyncTextAndButtonOfRSS(): void {
         const latestRSSSync = getElement("#RSS-latest-sync-div");
         const latestSyncSpan = getElement("#lastSync");
+
+        if (!latestRSSSync || !latestSyncSpan) throw new Error('Element not found');
         
         chrome.runtime.sendMessage({ type: "GET_LAST_SYNC" }, (response) => {
             latestSyncSpan.textContent = "hasn't sync yet";
@@ -141,6 +151,7 @@ export class BuildRSS {
             else latestSyncSpan.textContent = `synced: ${response.minutesAgo} minute${languageSuffix} ago`
         });
         const ManualSyncBtn = getElement("#RSS-sync-Manual");
+        if (!ManualSyncBtn) throw new Error('Element not found');
         ManualSyncBtn.addEventListener("click", () => {
             ext.runtime.sendMessage({ type: "RELOAD_RSS_SYNC" });
         });
@@ -167,6 +178,8 @@ export class BuildRSS {
 
     private setupSearchBar(e_: KeyboardEvent, suggestionBox: HTMLDivElement) {
         const searchInput = getElement<HTMLInputElement>('.search-input');
+
+        if (!searchInput) throw new Error('Element not found');
 
         const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
         if (!items.length) return;
@@ -662,7 +675,7 @@ export class BuildRSS {
             if (calcWidth && elFilter) elFilter.style.minWidth = `${calcWidth}px`;
             else console.log('mimnimum width not added for: ',elFilter,'\n', 'calcWidth is: ',calcWidth)
         }
-        getElement('.autocompleteContainer').style.width = `${  getElement('.search-input').offsetWidth}px`;
+        setElement('.autocompleteContainer', el => el.style.width = `${  getElement('.search-input')?.offsetWidth}px`);
         const lastSort = localStorage.getItem("lastSort");
         if (lastSort) { 
             this.applySortToEntries(lastSort);
@@ -726,7 +739,7 @@ export class BuildRSS {
         return uniqueBuckets;
     }
     private async setNotificationListAllToNull(value: any = null): Promise<Record<string, boolean>> {
-        return new Promise<Record<string, boolean>>((resolve, reject) => {
+        return new Promise<Record<string, boolean>>((_resolve, reject) => {
             ext.storage.local.set({"clearedNotification": value}, () => {
                 if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
             });
@@ -737,7 +750,7 @@ export class BuildRSS {
     }
 
     private async setNotificationList(key: string, value = true): Promise<Record<string, boolean>> {
-        return new Promise<Record<string, boolean>>((resolve, reject) => {
+        return new Promise<Record<string, boolean>>((_resolve, reject) => {
             ext.storage.local.get("clearedNotification", (result: { clearedNotification: Record<string, boolean> }) => {
             const conbined = {...result?.clearedNotification};
             conbined[key] = value;
@@ -759,7 +772,7 @@ export class BuildRSS {
             const title = findByTitleOrAltV2(value.title, this.AllHermidata)?.title || value.title;
             const url = value.rss?.latestItem.link || value.url;
 
-            const useAutoDetectedChapter = getChapterFromTitleReturn(value?.title, title, undefined, url);
+            const useAutoDetectedChapter = getChapterFromTitleReturn(title, value?.title, undefined, url);
             const chapter = value?.chapter?.latest || useAutoDetectedChapter || value?.chapter?.current;
 
             const currentHermidata =this.AllHermidata?.[key]
@@ -879,12 +892,12 @@ export class BuildRSS {
         }
     }
     private clickOnItem(value: Hermidata, isRSSItem: boolean) {
-        if (getElement('.feed-header-symbol').dataset.feedState === 'up' && !isRSSItem) return;
+        if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
         ext.tabs.create({ url: value?.rss?.latestItem?.link || value.url });
     }
     private async rightmouseclickonItem(e: MouseEvent, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
-        if (getElement('.feed-header-symbol').dataset.feedState === 'up' && !isRSSItem) return;
+        if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
 
         // Remove any existing custom menu first
         document.querySelectorAll(".custom-context-menu").forEach(el => el.remove());
@@ -962,6 +975,7 @@ export class BuildRSS {
             const title1 = getElement(`.RSS-Notification-item-title.${target.className}`);
             const title2 = getElement(`.RSS-entries-item-title.${target.className}`);
             const title = title0 || ( title1 || title2 )
+            if (!title) throw new Error('title not found');
             navigator.clipboard.writeText(title.textContent.trim());
             console.log("Copied:", title.textContent.trim());
         }
@@ -1106,7 +1120,9 @@ export class BuildRSS {
         
         const NotificationSection = getElement("#RSS-Notification")
         const AllItemSection = getElement("#All-RSS-entries")
-    
+
+        if (!NotificationSection || !AllItemSection) throw new Error('Element not found');
+
         await this.unLinkRSSFeed({hash:hashItem });
         console.log('un-link RSS to extention')
         this.reloadContent(NotificationSection, AllItemSection)

@@ -2,7 +2,7 @@ import { ext } from "../shared/BrowserCompat";
 import { defaultSettings, type SettingsInput } from "../shared/types/settings";
 import { getAllHermidata, getSettings, getSpreadsheetUrl } from "../shared/types/Storage";
 import { novelTypes, readStatus, type Hermidata } from "../shared/types/type";
-import { getElement } from "../utils/Selection";
+import { getElement, setElement } from "../utils/Selection";
 
 
 
@@ -56,24 +56,24 @@ class Settings {
     private readonly STATUS_OPTIONS = readStatus;
 
 
-    private readonly input = getElement<HTMLInputElement>("#spreadsheetUrl").value.trim();
+    private readonly input = getElement<HTMLInputElement>("#spreadsheetUrl")?.value.trim();
     private readonly status = getElement("#statusSheetURL");
     private readonly status_Input = getElement('#statusSaveDefaultInput');
     private readonly statusTextMenu = getElement('#statusSaveDefaultInputInputTextMenu');
     private readonly elements: ElmentsWithInputAndMenu = {
         input: {
-            Type: getElement("#Type"),
-            Status: getElement("#Status"),
-            tags: getElement("#tags"),
-            notes: getElement("#notes"),
-            saveButton: getElement("#saveDefaultInput")
+            Type: getElement("#Type") as HTMLSelectElement,
+            Status: getElement("#Status") as HTMLSelectElement,
+            tags: getElement("#tags") as HTMLInputElement,
+            notes: getElement("#notes") as HTMLInputElement,
+            saveButton: getElement("#saveDefaultInput") as HTMLButtonElement
         },
         menu: {
-            Type: getElement("#TypeTextMenu"),
-            Status: getElement("#StatusTextMenu"),
-            tags: getElement("#tagsTextMenu"),
-            notes: getElement("#notesTextMenu"),
-            saveButton: getElement("#saveDefaultInputTextMenu")
+            Type: getElement("#TypeTextMenu") as HTMLSelectElement,
+            Status: getElement("#StatusTextMenu") as HTMLSelectElement,
+            tags: getElement("#tagsTextMenu") as HTMLInputElement,
+            notes: getElement("#notesTextMenu") as HTMLInputElement,
+            saveButton: getElement("#saveDefaultInputTextMenu") as HTMLButtonElement
         }
     };
 
@@ -91,16 +91,17 @@ class Settings {
     private loadSettings() {
         this.ensureSettingsUpToDate((settings) => {
             this.buildFolderMappingForm(settings);
-            getElement<HTMLInputElement>("#AllowContextMenu").checked = !!settings.AllowContextMenu;
+            setElement<HTMLInputElement>("#AllowContextMenu", el => el.checked = !!settings.AllowContextMenu);
         });
         this.loadTagColoring();
     }
 
     private addEventListener() {
-        getElement("#save").addEventListener("click", () => {
+        getElement("#save")?.addEventListener("click", () => {
             ext.storage.sync.set({ spreadsheetUrl: this.input }, () => {
+                if (!this.status) return;
                 this.status.textContent = "Saved!";
-                setTimeout(() => this.status.textContent = "", 2000);
+                setTimeout(() => setElement('#statusSheetURL', el => el.textContent = ""), 2000);
             });
         });
         // Save table Input
@@ -113,19 +114,19 @@ class Settings {
             const values = this.getValuesFromElements(this.elements.menu);
             this.saveSettings("DefaultChoiceText_Menu", values, this.statusTextMenu);
         });
-        getElement("#ResetAuth").addEventListener("click", this.ResetLoginAuth);
+        getElement("#ResetAuth")?.addEventListener("click", this.ResetLoginAuth);
         
-        getElement("#exportBtn").addEventListener("click", this.exportSettings);
-        getElement("#importBtn").addEventListener("change", this.importSettings);
+        getElement("#exportBtn")?.addEventListener("click", this.exportSettings);
+        getElement("#importBtn")?.addEventListener("change", this.importSettings);
         
-        getElement("#exportDataBtn").addEventListener("click", this.exportHermidata );
-        getElement("#importDataBtn").addEventListener("change", this.importHermidata );
+        getElement("#exportDataBtn")?.addEventListener("click", this.exportHermidata );
+        getElement("#importDataBtn")?.addEventListener("change", this.importHermidata );
 
-        getElement("#exportRSSBtn").addEventListener("click", this.exportRSSBtn );
-        getElement("#importRSSBtn").addEventListener("change", this.importRSSBtn );
+        getElement("#exportRSSBtn")?.addEventListener("click", this.exportRSSBtn );
+        getElement("#importRSSBtn")?.addEventListener("change", this.importRSSBtn );
 
-        getElement("#AllowContextMenu").addEventListener("change", this.AllowContextMenu);
-        getElement("#saveFolderMapping").addEventListener("click", this.saveSettingsFolderPath);
+        getElement("#AllowContextMenu")?.addEventListener("change", this.AllowContextMenu);
+        getElement("#saveFolderMapping")?.addEventListener("click", this.saveSettingsFolderPath);
     }
 
 
@@ -178,7 +179,7 @@ class Settings {
 
         // Load spreadsheetUrl value
         const result = await getSpreadsheetUrl();
-        getElement<HTMLInputElement>("#spreadsheetUrl").value = result;
+        setElement<HTMLInputElement>("#spreadsheetUrl", el => el.value = result);
         // load table input
         const localSettings = await getSettings()
         this.ensureSettingsUpToDate((Settings) => {
@@ -201,7 +202,7 @@ class Settings {
             input.type = "color";
             input.value = this.tagColoring[tag];
             input.dataset.tag = tag;
-
+            if (!container) return;
             container.appendChild(label);
             container.appendChild(input);
             container.appendChild(document.createElement("br"));
@@ -461,6 +462,7 @@ class Settings {
 
     private buildFolderMappingForm(settings: SettingsInput) {
         const container = getElement("#folderMappingContainer");
+        if (!container) return;
         container.innerHTML = "";
 
         const mapping = settings.FolderMapping;
@@ -487,6 +489,7 @@ class Settings {
     private saveSettingsFolderPath() {
         this.ensureSettingsUpToDate((settings) => {
             const container = getElement("#folderMappingContainer");
+            if (!container) return;
             const inputs = container.querySelectorAll("input");
 
             inputs.forEach(input => {

@@ -2,7 +2,7 @@ import { PastHermidata } from "../popup/core/Past";
 import type { RSSData, RSSDOM } from "../shared/types/rssType";
 import { getAllHermidata } from "../shared/types/Storage";
 import type { Hermidata } from "../shared/types/type";
-import { getElement } from "../utils/Selection";
+import { getElement, setElement } from "../utils/Selection";
 import { BuildRSS } from "./build";
 import { loadSavedFeeds } from "./load";
 
@@ -56,8 +56,10 @@ export class RSS {
         const notification = getElement("#RSS-Notification")
         const allSec = getElement("#All-RSS-entries");
 
+        if (!sortSection || !notification || !allSec) throw new Error('Element not found');
+
         // If preloaded, use it instantly
-        const dom = await rssPreloadPromise || await this.preloadRSS();
+        const dom = await rssPreloadPromise ?? await this.preloadRSS();
         
         this.BuildRSS.makeSubscibeBtn();
 
@@ -75,10 +77,10 @@ export class RSS {
         this.BuildRSS.makeFooterSection();
     }
     public changePageToClassic() {
-        getElement("#HDRSSBtn").classList = "Btn";
-        getElement(".HDRSS").style.opacity = String(0);
-        getElement(".HDClassic").style.opacity = String(1);
-        getElement(".HDClassic").style.overflow = 'hidden';
+        setElement("#HDRSSBtn", el => el.classList = "Btn");
+        setElement(".HDRSS", el => el.style.opacity = String(0));
+        setElement(".HDClassic", el => el.style.opacity = String(1));
+        setElement(".HDClassic", el => el.style.overflow = 'hidden');
         
         // deactivate links in classic
         document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
@@ -147,9 +149,9 @@ export class RSS {
     private changePageToRSS(e: PointerEvent) {
         const target = e.target as HTMLButtonElement;
         target.classList = "active Btn";
-        getElement("#HDClassicBtn").classList = "Btn";
-        getElement(".HDClassic").style.opacity = '0';
-        getElement(".HDRSS").style.opacity = '1';
+        setElement("#HDClassicBtn", el => el.classList = "Btn");
+        setElement(".HDClassic", el => el.style.opacity = '0');
+        setElement(".HDRSS", el => el.style.opacity = '1');
         // deactivate links in classic
         document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
             a.style.pointerEvents = 'none';
