@@ -102,7 +102,10 @@ export function removeKeysFromSync(key: string): Promise<void> {
     return new Promise((resolve, reject) => {
         ext.storage.sync.remove(key, () => {
             if(ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
-            else { console.log("Removed key:", key); }
+            else { 
+                console.log("Removed key:", key);
+                resolve();
+            }
         });
     });
 }

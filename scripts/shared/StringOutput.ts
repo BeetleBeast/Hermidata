@@ -63,16 +63,9 @@ export function sheetUrlInput(): Promise<string> {
 
             if (!isValidGoogleSheetUrl(url)) return reject(new Error("Invalid URL format."));
 
-            try {
-                ext.storage.sync.set({ spreadsheetUrl: url }, () => {
-                    setElement("#spreadsheetPrompt", el => el.style.display = "none")
-                    setElement("#body", el => el.style.display = 'block');
-                    return resolve(url)
-                });
-            } catch (error) {
-                console.error('Extention error inside sheetUrlInput: ',error)
-                return reject(error);
-            }
+            setElement("#spreadsheetPrompt", el => el.style.display = "none")
+            setElement("#body", el => el.style.display = 'block');
+            ext.storage.sync.set({ spreadsheetUrl: url }, () => resolve(url) );
         };    
     });
 }
