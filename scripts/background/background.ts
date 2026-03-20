@@ -636,7 +636,7 @@ function isSameChapterCount(a: (FuzzyBookmarkMatches | FuzzyHermidataMatches),b:
 }
 async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8): Promise<{hasValidFuzzyHermidata: boolean, fuzzyMatches: FuzzyHermidataMatches[]}> {
     const fuzzyMatches: FuzzyHermidataMatches[] = [];
-    const allHermidata = PastHermidata.AllHermidata ?? await getAllHermidata();
+    const allHermidata = await PastHermidata.getAllHermidata();
     console.groupCollapsed("Fuzzy Bookmark Detection");
     if (!currentTab.title || !currentTab.url) throw new Error("No title or url");
     console.log("Current tab:", currentTab.title);
@@ -1000,9 +1000,9 @@ function saveFeedMetaData(feed: RawFeed, meta: Meta) {
 
 function compareLastSeen(items: FeedItem[], feed: RawFeed) {
     if (!items.length) return feed;
-    const latest = items[0];
     // FIXME: this was bullsh*t redo it
     /*
+    const latest = items[0];
     if (latest.guid !== feed.lastToken || latest.pubDate !== feed.lastBuildDate) {
         const newCount = items.findIndex(i => i.guid === feed.lastSeenGuid && i.pubDate === feed.lastSeenDate);
         const newItems = newCount === -1 ? items : items.slice(0, newCount);

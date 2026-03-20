@@ -1,6 +1,5 @@
 import { PastHermidata } from "../popup/core/Past";
 import type { RSSData, RSSDOM } from "../shared/types/rssType";
-import { getAllHermidata } from "../shared/types/Storage";
 import type { Hermidata } from "../shared/types/type";
 import { getElement, setElement } from "../utils/Selection";
 import { BuildRSSController } from "./build";
@@ -132,7 +131,7 @@ export class RSS {
 
     private async loadRSSData(): Promise<RSSData> {
         const feeds = await loadSavedFeeds();
-        const AllHermidata = PastHermidata.AllHermidata ?? await getAllHermidata();
+        const AllHermidata = await PastHermidata.getAllHermidata();
         return { feeds, hermidata: AllHermidata };
     }
 

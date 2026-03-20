@@ -1,6 +1,5 @@
 import { type AllHermidata, type Hermidata } from "../shared/types/type";
 import {  loadSavedFeeds } from "./load";
-import { getAllHermidata } from "../shared/types/Storage";
 import { PastHermidata } from "../popup/core/Past";
 
 import { FeedItem } from "./build/feed";
@@ -19,7 +18,7 @@ export abstract class RssBuild {
         this.AllHermidata = AllHermidata;
     }
     public static async init(): Promise<AllHermidata> {
-        return PastHermidata.AllHermidata ?? await getAllHermidata();
+        return await PastHermidata.getAllHermidata();
     }
     protected removeAllChildNodes(parent: HTMLElement) {
         while (parent.firstChild) parent.lastChild!.remove();

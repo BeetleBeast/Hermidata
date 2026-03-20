@@ -33,16 +33,14 @@ export const makeDefaultHermidata = (): Hermidata => ({
 
 export class Duplicate  {
 
-    private AllHermidata: AllHermidata;
+    private AllHermidata: AllHermidata | undefined;
     
-    constructor() {
-        this.AllHermidata = PastHermidata.AllHermidata ?? {};
-    }
     public async init() {
-        this.AllHermidata = PastHermidata.AllHermidata ?? await getAllHermidata();
+        this.AllHermidata = await PastHermidata.getAllHermidata();
     }
 
     public async findPotentialDuplicates(threshold = 0.9) {
+        
         const data = this.AllHermidata || await getAllHermidata();
         const entries = Object.entries(data);
         const duplicates = [];

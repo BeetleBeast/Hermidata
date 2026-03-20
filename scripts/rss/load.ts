@@ -4,14 +4,14 @@ import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
 import type { RawFeed } from "../shared/types/rssType";
-import { getAllHermidata, getAllRawFeeds, getHermidataViaKey } from "../shared/types/Storage";
+import { getAllRawFeeds, getHermidataViaKey } from "../shared/types/Storage";
 import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/type";
 
 export async function loadSavedFeedsViaSavedFeeds(): Promise<Record<string, RawFeed>> {
     const feedList: Record<string, RawFeed> = {};
 
     const savedFeeds: Record<string, RawFeed> = await getAllRawFeeds();
-    const AllHermidata = PastHermidata.AllHermidata || await getAllHermidata();
+    const AllHermidata = await PastHermidata.getAllHermidata();
     
 
     for (const key in savedFeeds) {
@@ -31,11 +31,10 @@ export async function loadSavedFeedsViaSavedFeeds(): Promise<Record<string, RawF
 // isn't utilised
 export async function loadSavedFeeds(): Promise<Record<string, Hermidata>> {
     const feedList: Record<string, Hermidata> = {};
-    PastHermidata.AllHermidata = await getAllHermidata();
+    const AllHermidata = await PastHermidata.getAllHermidata();
     const AllFeeds = await loadSavedFeedsViaSavedFeeds();
     
-    
-    for (const [id, feed] of Object.entries(PastHermidata.AllHermidata)) {
+    for (const [id, feed] of Object.entries(AllHermidata)) {
         if ( feed?.rss ) {
             const updatedFeed = await updateFeed(feed, AllFeeds);
             feedList[id] = updatedFeed;
@@ -48,10 +47,11 @@ export async function loadSavedFeeds(): Promise<Record<string, Hermidata>> {
 export async function updateFeed(feed: Hermidata , allFeeds: Record<string, RawFeed>): Promise<Hermidata> {
     const rssInfo = feed.rss;
     if (!rssInfo?.url) return feed;
-    const currentFeedTitle = findByTitleOrAltV2(rssInfo?.latestItem.title || feed.title, PastHermidata.AllHermidata ?? {});
+    const AllHermidata = await PastHermidata.getAllHermidata();
+    const currentFeedTitle = findByTitleOrAltV2(rssInfo?.latestItem.title || feed.title, AllHermidata);
     const matchFeed = Object.values(allFeeds).find(f => {
         const sameDomain = f.domain === rssInfo.domain;
-        const sameTitle = findByTitleOrAltV2(f?.items?.[0]?.title || f.title, PastHermidata.AllHermidata ?? {}) === currentFeedTitle;
+        const sameTitle = findByTitleOrAltV2(f?.items?.[0]?.title || f.title, AllHermidata) === currentFeedTitle;
         return sameDomain && sameTitle;
     });
     if (!matchFeed) return feed; // no match
@@ -90,7 +90,7 @@ export async function updateFeed(feed: Hermidata , allFeeds: Record<string, RawF
 export async function linkRSSFeed(title: string, type: NovelType, url: string, rssData: RawFeed) {
     // check if new entry is inside database
     const altCheck = await detectAltTitleNeeded(title, type, rssData.domain, url);
-    const AllHermidata = PastHermidata.AllHermidata || await getAllHermidata();
+    const AllHermidata = await PastHermidata.getAllHermidata();
     const titleOrAlt = findByTitleOrAltV2(title, AllHermidata)?.title || title
     const key = returnHashedTitle( titleOrAlt, type);
 

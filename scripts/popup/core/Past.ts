@@ -13,7 +13,18 @@ let AllHermidataCashe: AllHermidata;
 
 export class PastHermidata {
     
-    public static AllHermidata: AllHermidata | undefined;
+    private static _allHermidata: AllHermidata | undefined;
+
+    // Lazy cache — fetches once, returns cached after that
+    public static async getAllHermidata(): Promise<AllHermidata> {
+        PastHermidata._allHermidata ??= await getAllHermidata();
+        return PastHermidata._allHermidata;
+    }
+
+    // Call this when you know the data has changed (e.g. after a save)
+    public static invalidateCache(): void {
+        PastHermidata._allHermidata = undefined;
+    }
 
     public pastHermidata: Hermidata | null = null;
 
@@ -32,14 +43,14 @@ export class PastHermidata {
         // ojective => find if the Hermidata already exists in the browser storage
 
         // get all Hermidata
-        PastHermidata.AllHermidata = AllHermidataCashe ?? await getAllHermidata();
+        const AllHermidata = await PastHermidata.getAllHermidata();
         // update cashe
-        if (AllHermidataCashe && Object.keys(AllHermidataCashe).length != Object.keys(PastHermidata.AllHermidata).length) {
-            AllHermidataCashe = PastHermidata.AllHermidata
+        if (AllHermidataCashe && Object.keys(AllHermidataCashe).length != Object.keys(AllHermidata).length) {
+            AllHermidataCashe = AllHermidata
         }
 
         // find title from alt ( includes main title and alt title )
-        const potentialTrueTitle = this.getTitleFromAlt(PastHermidata.AllHermidata) || '';
+        const potentialTrueTitle = this.getTitleFromAlt(AllHermidata) || '';
 
         // find title from fuzzy seach
         const { possibleObj, AltKeyNeeded, fuzzyKey } = await this.getTitleFromFuzzy(potentialTrueTitle);
@@ -137,7 +148,7 @@ export class PastHermidata {
 }
 
 export async function detectAltTitleNeeded(title: string, type: NovelType, source: string, url: string, threshold = 0.85): Promise<AltCheck> {
-    const data = PastHermidata.AllHermidata ?? await getAllHermidata();
+    const data = await PastHermidata.getAllHermidata();
     if (!data) return { needAltTitle: false, reason: "No data loaded" };
 
     const normalizedTitle = TrimTitle.trimTitle(title, url).title;
