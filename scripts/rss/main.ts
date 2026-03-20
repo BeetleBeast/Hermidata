@@ -3,7 +3,7 @@ import type { RSSData, RSSDOM } from "../shared/types/rssType";
 import { getAllHermidata } from "../shared/types/Storage";
 import type { Hermidata } from "../shared/types/type";
 import { getElement, setElement } from "../utils/Selection";
-import { BuildRSS } from "./build";
+import { BuildRSSController } from "./build";
 import { loadSavedFeeds } from "./load";
 
 
@@ -34,11 +34,10 @@ let rssDOMCache = null;
 
 export class RSS {
 
-    private readonly BuildRSS: BuildRSS;
-    
+    private readonly BuildRSS: BuildRSSController;
 
     constructor(hermidata: Hermidata) {
-        this.BuildRSS = new BuildRSS(hermidata);
+        this.BuildRSS = new BuildRSSController(hermidata);
     }
 
     public openClassic(e: PointerEvent) {
@@ -61,20 +60,20 @@ export class RSS {
         // If preloaded, use it instantly
         const dom = await rssPreloadPromise ?? await this.preloadRSS();
         
-        this.BuildRSS.makeSubscibeBtn();
-
         notification.innerHTML = "";
         allSec.innerHTML = "";
 
-        this.BuildRSS.makeFeedHeader(notification);
+        await this.BuildRSS.makeSubscibeBtn();
+
+        await this.BuildRSS.makeFeedHeader(notification);
 
         this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
 
-        this.BuildRSS.makeSortSection(sortSection);
+        await this.BuildRSS.makeSortSection(sortSection);
 
         await this.BuildRSS.attachEventListeners()
 
-        this.BuildRSS.makeFooterSection();
+        await this.BuildRSS.makeFooterSection();
     }
     public changePageToClassic() {
         setElement("#HDRSSBtn", el => el.classList = "Btn");
@@ -110,7 +109,7 @@ export class RSS {
         rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makefeedItem(feeds, false));
 
         // Build all items header
-        rssDomPackage.allItems.header.appendChild(this.BuildRSS.makeItemHeader());
+        rssDomPackage.allItems.header.appendChild(await this.BuildRSS.makeItemHeader());
 
         // Build full items list
         rssDomPackage.allItems.items.appendChild(await this.BuildRSS.makefeedItem(hermidata, true));

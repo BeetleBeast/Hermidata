@@ -3,9 +3,9 @@ import { appendAltTitle, makeHermidataV3 } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
-import type { Feed, RawFeed } from "../shared/types/rssType";
+import type { RawFeed } from "../shared/types/rssType";
 import { getAllHermidata, getAllRawFeeds, getHermidataViaKey } from "../shared/types/Storage";
-import { novelTypes, type Hermidata, type NovelType } from "../shared/types/type";
+import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/type";
 
 export async function loadSavedFeedsViaSavedFeeds(): Promise<Record<string, RawFeed>> {
     const feedList: Record<string, RawFeed> = {};
@@ -59,6 +59,7 @@ export async function updateFeed(feed: Hermidata , allFeeds: Record<string, RawF
     const latestFetchedItem = matchFeed.items?.[0];
     const currentLatestItem = rssInfo.latestItem;
     const isNew = latestFetchedItem && (latestFetchedItem.link !== currentLatestItem?.link);
+    console.log("Latest item changed?", isNew, latestFetchedItem, currentLatestItem);
 
     // Update feed info
     feed.rss = {
@@ -102,25 +103,8 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
         if (!obj) continue;
         stored[key] = obj;
     }
-    let entry: Hermidata;
 
-    entry = stored[key]
-    if (!entry) {
-        if (altCheck.relatedKey) entry = stored[altCheck.relatedKey]
-        
-    }
-
-    if (altCheck.needAltTitle && altCheck.relatedKey) {
-        const relatedEntry = stored[altCheck.relatedKey];
-        if (relatedEntry) {
-            const confirmation = await customConfirm(
-                `${altCheck.reason}\nAdd "${title}" as an alt title for "${relatedEntry.title}"?`
-            );
-            if (confirmation) await appendAltTitle(title, relatedEntry);
-        }
-    }
-
-    if (!entry) makeHermidataV3(title, url, type);
+    const entry: Hermidata = await getEntry(title, stored, altCheck, type, url, key);
 
     entry.rss = {
         title: rssData.title,
@@ -136,4 +120,23 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
     if (latestChapter) entry.chapter.latest = latestChapter;
 
     await ext.storage.sync.set({ [key]: entry });
+}
+
+async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: NovelType, url: string, key: string): Promise<Hermidata> {
+    let entry = stored[key];
+    if (altCheck.relatedKey && !entry) entry = stored[altCheck.relatedKey]
+
+    if (altCheck.needAltTitle && altCheck.relatedKey) {
+        const relatedEntry = stored[altCheck.relatedKey];
+        if (relatedEntry) {
+            const confirmation = await customConfirm(
+                `${altCheck.reason}\nAdd "${title}" as an alt title for "${relatedEntry.title}"?`
+            );
+            if (confirmation) await appendAltTitle(title, relatedEntry);
+        }
+    }
+
+    if (!entry) entry = makeHermidataV3(title, url, type);
+
+    return entry;
 }

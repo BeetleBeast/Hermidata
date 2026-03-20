@@ -64,15 +64,15 @@ function filterDataFromStorage(allData: Record<string, unknown>): Record<string,
 
 
 
-export async function getLocalNotificationItem(key: string) {
-    return new Promise((resolve, reject) => {
+export async function getLocalNotificationItem(key: string): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
         ext.storage.local.get("clearedNotification", (result: { clearedNotification: Record<string, boolean> }) => {
             if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError?.message));
             resolve(result?.clearedNotification?.[key] || false);
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise getHermidata key: ',key,' error: ',error);
-        return {};
+        return false;
     })
 }
 
@@ -164,3 +164,18 @@ export function sheetUrlInput(): Promise<string> {
         };    
     });
 }
+
+export async function setNotificationList(key: string, value = true): Promise<Record<string, boolean>> {
+        return new Promise<Record<string, boolean>>((_resolve, reject) => {
+            ext.storage.local.get("clearedNotification", (result: { clearedNotification: Record<string, boolean> }) => {
+            const conbined = {...result?.clearedNotification};
+            conbined[key] = value;
+            ext.storage.local.set({clearedNotification: conbined}, () => {
+                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+            });
+        });
+        }).catch(error => {
+            console.error('Extention error: Failed Premise getHermidata: ',error);
+            return {};
+        });
+    }

@@ -67,3 +67,28 @@ export type HermidataSortType = 'pubDate';
 // export type AllHermidata = ({ [s: string]: Hermidata; });
 // best for chrome.storage
 export type AllHermidata = Record<string, Hermidata>;
+
+
+
+export type AltCheck = {
+    needAltTitle: boolean;
+    reason: string;
+    existingKey?: undefined;
+    similarity?: undefined;
+    relatedKey?: undefined;
+    relatedTitle?: undefined;
+} | {
+    needAltTitle: boolean;
+    reason: string;
+    existingKey: string;
+    similarity?: undefined;
+    relatedKey?: undefined;
+    relatedTitle?: undefined;
+} | {
+    needAltTitle: boolean;
+    reason: string;
+    similarity: number;
+    relatedKey: string | null;
+    relatedTitle: string | null;
+    existingKey?: undefined;
+}

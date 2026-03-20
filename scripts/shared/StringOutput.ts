@@ -35,10 +35,10 @@ export function getChapterFromTitle(title: string, url: string): number {
     return candidates.find(n => !Number.isNaN(n) && n >= 0) ?? Number.NaN;
 }
 
-export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number | undefined, url: string) {
+export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number | undefined, url: string): number {
     const isNotPartOfTitle = title?.replace(correctTitle, '');
     const finalChapter = url ? getChapterFromTitle(isNotPartOfTitle, url) : chapter;
-    return isNotPartOfTitle ? finalChapter : '';
+    return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
 // input
 // HermidataV3.chapter.current = getChapterFromTitleReturn(HermidataV3.title, HermidataNeededKeys.Page_Title, HermidataV3.chapter.current, HermidataV3.url) || HermidataV3.chapter.current;

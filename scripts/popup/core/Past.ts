@@ -1,6 +1,6 @@
 import { getAllHermidata, getHermidataViaKey } from "../../shared/types/Storage";
 import { TrimTitle, findByTitleOrAltV2, returnHashedTitle } from "../../shared/StringOutput";
-import { type Hermidata, type NovelType, type AllHermidata, novelTypes } from "../../shared/types/type";
+import { type Hermidata, type NovelType, type AllHermidata, novelTypes, type AltCheck } from "../../shared/types/type";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
 import { migrateCopy } from "./migrate";
@@ -136,7 +136,7 @@ export class PastHermidata {
     }
 }
 
-export async function detectAltTitleNeeded(title: string, type: NovelType, source: string, url: string, threshold = 0.85) {
+export async function detectAltTitleNeeded(title: string, type: NovelType, source: string, url: string, threshold = 0.85): Promise<AltCheck> {
     const data = PastHermidata.AllHermidata ?? await getAllHermidata();
     if (!data) return { needAltTitle: false, reason: "No data loaded" };
 
