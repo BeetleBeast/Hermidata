@@ -14,12 +14,11 @@ export abstract class Sort extends RssBuild {
         if (!container) return;
 
         // Always sort all entries (even hidden), to keep global order consistent
-        const entries = Array.from(container.querySelectorAll<HTMLDivElement>('.RSS-entries-item'));
+        const entries = Array.from(container.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="false"]'));
         if (!entries.length) return;
 
         const getData = (entry: HTMLDivElement) => {
-            // FIXME: set hash in dataset instead of class
-            const hash = entry.className.split('TitleHash-')[1]?.replace(' seachable','');
+            const hash = this.GetHashItem(entry);
             return this.AllHermidata[hash] || {};
         };
 
@@ -63,11 +62,11 @@ export abstract class Sort extends RssBuild {
         const container = getElement('#RSS-Notification');
         if (!container) return;
         // Always sort all entries (even hidden), to keep global order consistent
-        const entries = Array.from(container.querySelectorAll<HTMLDivElement>('.RSS-Notification-item'));
+        const entries = Array.from(container.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="true"]'));
         if (!entries.length) return;
 
         const getData = (entry: HTMLDivElement) => {
-            const hash = entry.className.split('TitleHash-')[1]?.replace(' seachable','');
+            const hash = this.GetHashItem(entry);
             return this.AllHermidata[hash] || {};
         };
 

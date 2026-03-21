@@ -116,7 +116,7 @@ export class SortLogic extends Sort {
     };
 
     private applyFilterToEntries(filters: Filters) {
-        const entries = document.querySelectorAll<HTMLDivElement>(".RSS-entries-item");
+        const entries = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"]`);
 
         for (const entry of entries) {
             this.applyInividualFilterToEntries(entry, filters);
@@ -124,7 +124,7 @@ export class SortLogic extends Sort {
     }
 
     private applyInividualFilterToEntries(entry: HTMLDivElement, filters: Filters): void {
-        const hashItem = entry.className.split('TitleHash-')[1].replace(' seachable','');
+        const hashItem = this.GetHashItem(entry);
         const entryData = this.AllHermidata[hashItem];
         const Type = entryData.type;
         const Status = entryData.status;
@@ -146,7 +146,7 @@ export class SortLogic extends Sort {
         }
 
         entry.style.display = visible ? "" : "none";
-        visible ? entry.classList.add('seachable') : entry.classList.remove('seachable');
+        entry.dataset.seachable = visible ? 'true' : 'false';
     };
 
     private matchingFilter(filters: Filters, inputs: (string | string[])[], filterType: 'include' | 'exclude'): boolean {
@@ -155,7 +155,7 @@ export class SortLogic extends Sort {
 
         let visible = true;
 
-        for (const [section, values] of Object.entries(loopEntries)) {
+        for (const [, values] of Object.entries(loopEntries)) {
             if (values.length === 0) continue;
 
                     
@@ -175,8 +175,10 @@ export class SortLogic extends Sort {
     private setState(values: string[], input: (string | string[])[] ): string | void {
         for (const value of values) { // value is the filter value
             for (const type of input) {
-                if (value === type || (value === 'Date' && type === 'DateFilter')) {
+                if (value === type) {
                     return type
+                } else if (Array.isArray(type) && type.includes(value)) {
+                    return type[type.indexOf(value)];
                 }
             }
         }

@@ -452,7 +452,7 @@ select.autoInput {
 }
 #RSS-Notification:has(
     > .containerHeader-feed > .titleHeader > .feed-header-symbol[data-feed-state="up"]
-    ) > .RSS-Notification-item {
+    ) > .hermidata-item[data-is-notification-item="true"] {
     height: 0px;
     padding: 0px;
     margin: 0px;
@@ -534,8 +534,7 @@ select.autoInput {
 }
 
 
-.RSS-entries-item,
-.RSS-Notification-item {
+.hermidata-item {
     border: 1px solid var(--Btn);
     background-color: var(--bg-color);
     border-radius: 4px;
@@ -551,8 +550,7 @@ select.autoInput {
 
 }
 
-.RSS-entries-item:hover,
-.RSS-Notification-item:hover {
+.hermidata-item:hover{
     background-color: var(--Btn_hover);
     cursor: pointer;
 }

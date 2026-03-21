@@ -1,5 +1,5 @@
-import { AllSorts, filterClassName, filterName, type AllsortsType } from "../../shared/types/rssBuildType";
-import { getLastSortOption, setLastSortOption } from "../../shared/types/Storage";
+import { AllSorts, filterClassName, filterName } from "../../shared/types/rssBuildType";
+import { getLastSortOption } from "../../shared/types/Storage";
 import { novelStatus, novelTypes, readStatus, type Hermidata } from "../../shared/types/type";
 import { getElement, setElement } from "../../utils/Selection";
 import { Sort } from "./Sort";
@@ -13,7 +13,7 @@ export class SortOption extends Sort {
         
         // --- 1. Search bar & filter ---
         const mainContainer = this.CreateMainContainer();
-        await this.setLastSortOneTime();
+        this.setLastSortOneTime();
         
         parent_section.appendChild(mainContainer);
         
@@ -208,13 +208,13 @@ export class SortOption extends Sort {
     }
 
     private filterEntries(query: string, filtered: Hermidata[] | null = null) {
-        const allItems = document.querySelectorAll<HTMLDivElement>('.RSS-entries-item');
+        const allItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"]`);
 
         allItems.forEach(item => {
             const titleEl = getElement('.RSS-entries-item-title', item);
             const ItemTitleText = titleEl?.textContent?.toLowerCase() || '';
 
-            const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
+            const hashItem = this.GetHashItem(item);
             const titleText = this.AllHermidata[hashItem]?.title?.toLowerCase() || ItemTitleText;
 
             const match = ( filtered
@@ -222,8 +222,7 @@ export class SortOption extends Sort {
             : !query ) || titleText.includes(query);
 
             item.style.display = match ? '' : 'none';
-            if (match) item.classList.add('seachable')
-            else item.classList.remove('seachable');
+            item.dataset.seachable = match ? 'true' : 'false';
         });
     }
     private applySearchSelection(input: HTMLInputElement, suggestionBox: HTMLDivElement, value: string) {

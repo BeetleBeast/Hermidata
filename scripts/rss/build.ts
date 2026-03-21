@@ -31,4 +31,10 @@ export abstract class RssBuild {
         AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());
         AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(feedListLocalReload, true));
     }
+    protected GetHashItem(item: HTMLElement): string {
+        const newVersion = item.dataset.hashKey;
+        if(!newVersion) throw new Error('hash not found');
+
+        return newVersion;
+    }
 }

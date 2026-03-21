@@ -3,7 +3,6 @@ import { type Hermidata } from "../shared/types/type";
 import { RssBuild } from "./build";
 
 import { Subscribe } from "./build/Subscribe";
-import { Sort } from "./build/Sort";
 import { FeedItem } from "./build/feed";
 import { Footer } from "./build/footer";
 import { EventListener } from "./build/EventListener";

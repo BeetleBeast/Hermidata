@@ -14,19 +14,19 @@ export class EventListener extends RssBuild {
 
     public async attachEventListeners(): Promise<void> {
         // parents
-        const notificationFeed = document.querySelectorAll<HTMLDivElement>('.RSS-Notification-item');
-        const allItems = document.querySelectorAll<HTMLDivElement>('.RSS-entries-item');
+        const notificationFeed = document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="true"]');
+        const allItems = document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="false"]');
 
         const feedListLocalReload = await loadSavedFeeds();
 
         for (let feed of notificationFeed) {
             feed.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, false));
-            const hashItem = feed.className.split('TitleHash-')[1].replace(' seachable','');
+            const hashItem = this.GetHashItem(feed);
             feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], false);
         }
         for (let items of allItems) {
             items.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, true));
-            const hashItem = items.className.split('TitleHash-')[1].replace(' seachable','');
+            const hashItem = this.GetHashItem(items);
             items.onclick = () => this.clickOnItem(this.AllHermidata[hashItem], true);
         }
     }
@@ -104,12 +104,10 @@ export class EventListener extends RssBuild {
     private copyTitle(target: HTMLDivElement | null) {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
-        const nameClass = item.className.split(' ')[0] == 'RSS-entries-item' 
+        const nameClass = item.dataset.isNotificationItem == 'false'
             ? 'RSS-entries-item-title'
             : 'RSS-Notification-item-title';
-        // RSS-entries-item hasRSS TitleHash--1692575891 seachable
-        console.log('seachable',item.className.split(' ')[item.className.split(' ').length -1])
-        if (item.className.split(' ')[item.className.split(' ').length -1] == 'seachable') {
+        if (item.dataset.seachable == 'true') {
             const title0 = item.querySelector(`.${nameClass}`)
             const title1 = getElement(`.RSS-Notification-item-title.${target.className}`);
             const title2 = getElement(`.RSS-entries-item-title.${target.className}`);
@@ -142,7 +140,7 @@ export class EventListener extends RssBuild {
             return;
         }
         item.remove()
-        const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
+        const hashItem = this.GetHashItem(item);
         setNotificationList(hashItem)
         // remove from back-end
     }
@@ -153,7 +151,7 @@ export class EventListener extends RssBuild {
             console.log('isn\'t a entries item');
             return;
         }
-        const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
+        const hashItem = this.GetHashItem(item);
         const entry = this.AllHermidata[hashItem];
         if (!entry) {
             console.warn("Entry not found for hash:", hashItem);
@@ -181,7 +179,7 @@ export class EventListener extends RssBuild {
             console.log('isn\'t a entries item');
             return;
         }
-        const oldKey = item.className.split('TitleHash-')[1].replace(' seachable','');
+        const oldKey = this.GetHashItem(item);
         const oldData = this.AllHermidata[oldKey]
         if (!oldData) {
             console.warn("No data found for this item");
@@ -225,7 +223,7 @@ export class EventListener extends RssBuild {
             console.log('isn\'t a entries item');
             return;
         }
-        const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
+        const hashItem = this.GetHashItem(item);
         const toBeRemovedItem = this.AllHermidata[hashItem]
         const confirmation = await customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
         if ( confirmation) {
@@ -242,7 +240,7 @@ export class EventListener extends RssBuild {
             console.log('isn\'t a notification item');
             return;
         }
-        const hashItem = item.className.split('TitleHash-')[1].replace(' seachable','');
+        const hashItem = this.GetHashItem(item);
         
         const NotificationSection = getElement("#RSS-Notification")
         const AllItemSection = getElement("#All-RSS-entries")
@@ -267,14 +265,14 @@ export class EventListener extends RssBuild {
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined
     
-        if (el.parentElement?.id === 'All-RSS-entries' &&  el.className?.split(' ')[0] === 'RSS-entries-item' ) return el
+        if (el.parentElement?.id === 'All-RSS-entries' &&  el.dataset.isNotificationItem === 'false' ) return el
     
         return this.getEntriesItem(el.parentElement)
     }
     private getNotificationItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined
     
-        if (el.parentElement?.id === 'RSS-Notification' &&  el.className?.split(' ')[0] === 'RSS-Notification-item' ) return el
+        if (el.parentElement?.id === 'RSS-Notification' &&  el.dataset.isNotificationItem === 'true' ) return el
     
         return this.getNotificationItem(el.parentElement)
     }

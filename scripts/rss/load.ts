@@ -59,7 +59,7 @@ export async function updateFeed(feed: Hermidata , allFeeds: Record<string, RawF
     const latestFetchedItem = matchFeed.items?.[0];
     const currentLatestItem = rssInfo.latestItem;
     const isNew = latestFetchedItem && (latestFetchedItem.link !== currentLatestItem?.link);
-    console.log("Latest item changed?", isNew, latestFetchedItem, currentLatestItem);
+    if (isNew) console.log("Latest item changed?", latestFetchedItem, currentLatestItem);
 
     // Update feed info
     feed.rss = {

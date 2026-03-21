@@ -57,7 +57,6 @@ export interface Hermidata {
     };
 }
 
-// FIXME: History should be an array of NUMBERS NOT STRINGS
 // FIXME: make sure oginalRelease is there
 
 export type HermidataDateType = 'added' | 'updated';

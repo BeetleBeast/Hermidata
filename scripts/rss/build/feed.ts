@@ -1,4 +1,4 @@
-import { findByTitleOrAltV2, getChapterFromTitleReturn, TrimTitle } from "../../shared/StringOutput";
+import { findByTitleOrAltV2, getChapterFromTitleReturn } from "../../shared/StringOutput";
 import type { SettingsInput } from "../../shared/types/settings";
 import { getLocalNotificationItem, getSettings } from "../../shared/types/Storage";
 import type { AllHermidata, Hermidata } from "../../shared/types/type";
@@ -32,8 +32,7 @@ export class FeedItem {
             const itemInfo = await this.getItemInfo(key, item, isRSSItem);
 
             const settings = await getSettings();
-            // removed && ( seachable || (chapter !== currentChapter ))
-            if ( getElement(`.TitleHash-${key}`) && itemInfo.isRead && itemInfo.clearedNotification) continue;
+            if ( getElement(`[data-hash-key="${key}"]`)?.dataset.hashKey && itemInfo.isRead && itemInfo.clearedNotification) continue;
 
             const li = this.createItemContainer(key, isRSSItem);
 
@@ -45,7 +44,7 @@ export class FeedItem {
             
             const ItemInfoContainer = this.createItemInfoContainer(key, item, itemInfo, itemImage, isRSSItem);
 
-            const Elfooter = this.createItemFooter(itemInfo.currentHermidata, item, isRSSItem);
+            const Elfooter = this.createItemFooter(item, isRSSItem);
             
             
             li.append(ElTagContainer, ItemInfoContainer, Elfooter);
@@ -106,34 +105,19 @@ export class FeedItem {
         pubDate.textContent = `Published: ${item.rss?.latestItem.pubDate ? item.rss?.latestItem.pubDate.toLocaleString() : 'N/A'}`;
         return pubDate
     }
-    private createItemFooter(currentHermidata: Hermidata, item: Hermidata, isRSSItem: boolean): HTMLElement {
+    private createItemFooter(item: Hermidata, isRSSItem: boolean): HTMLElement {
         const Elfooter = document.createElement("div");
 
-        // TODO: add tags a second time?
-        if ( currentHermidata?.meta?.tags?.length > 0) {
-            const tagDicContainer = document.createElement('div')
-            tagDicContainer.className = "tag-div-container"
-            for (const tag in currentHermidata?.meta?.tags) {
-                const tagDiv = document.createElement('div');
-                tagDiv.textContent = tag;
-                tagDiv.className = 'tag-div';
-                tagDicContainer.appendChild(tagDiv)
-            }
-            Elfooter.appendChild(tagDicContainer)
-        }
         Elfooter.className =  isRSSItem ? "RSS-entries-item-footer" :"RSS-Notification-item-footer";
         const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
         Elfooter.textContent = `${domain}`;
         return Elfooter
     }
-    private createItemTitle(title: string, url: string, item: Hermidata, isRSSItem = false): HTMLElement {
+    private createItemTitle(title: string, isRSSItem = false): HTMLElement {
         const ELTitle = document.createElement("div");
-        
         ELTitle.className = isRSSItem ? "RSS-entries-item-title" : "RSS-Notification-item-title";
-            
-        const titleTextTrunacted = this.createTitleText(title, url, item);
-            
-        ELTitle.textContent = `${titleTextTrunacted}`;
+
+        ELTitle.textContent = this.createTitleText(title);
         
         return ELTitle
     }
@@ -149,18 +133,10 @@ export class FeedItem {
 
         return ELchapter
     }
-    private getItemTitle(title: string, url: string, item: Hermidata): string {
-        const titleV1 = title;
-        const titleV2 = TrimTitle.trimTitle(title, url).title;
-        const titleV3 = TrimTitle.trimTitle(item?.rss?.latestItem.title || item.title, item?.rss?.latestItem.link || item.url).title;
-        
-        console.log('Title: ', titleV1, 'Trimmed title V1: ', titleV2, 'What i had before: ', titleV3);
-        return titleV2
-    }
-    private createTitleText(title: string, url: string, item: Hermidata): string {
-        const titleText = this.getItemTitle(title, url, item);
+    private createTitleText(title: string): string {
+        const titleText = title;
         const maxTitleCharLangth = 50;
-        const titleTextTrunacted = titleText.length > maxTitleCharLangth ? titleText.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
+        const titleTextTrunacted = titleText.length > maxTitleCharLangth ? title.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
 
         return titleTextTrunacted
     }
@@ -173,14 +149,12 @@ export class FeedItem {
         return ELprogress
     }
     private createItemTags(currentHermidata: Hermidata, settings: SettingsInput, isRSSItem = false): HTMLElement {
-        // TODO: creates tags a first time
         const ElTagContainer = document.createElement("div");
         ElTagContainer.className =  isRSSItem ? "RSS-entries-item-tag-container" : "RSS-Notification-item-tag-container";
         if ( currentHermidata.meta?.tags.length > 0 ) {
             const tags = currentHermidata.meta?.tags as (string[] | string);
             const allTags = Array.isArray(tags) ? tags : tags?.split(',');
-            for (let index in allTags) {
-                const tagName = allTags[index]
+            for (const tagName of allTags) {
                 const tagDiv = document.createElement('div');
                 tagDiv.classList = `tag-div tag-div-${tagName}`;
                 tagDiv.textContent = `[${tagName}]`;
@@ -188,6 +162,7 @@ export class FeedItem {
                 tagDiv.dataset.TagColor = settings.tagColoring?.[tagName] || 'white';
                 ElTagContainer.append(tagDiv)
             }
+            ElTagContainer.dataset.tags = JSON.stringify(allTags);
         }
         return ElTagContainer
     }
@@ -195,7 +170,7 @@ export class FeedItem {
         const ElInfo = document.createElement("div");
         ElInfo.className =  isRSSItem ? "RSS-entries-item-info" : "RSS-Notification-item-info";
 
-        const itemTitle = this.createItemTitle(itemInfo.title, itemInfo.url, item, isRSSItem);
+        const itemTitle = this.createItemTitle(itemInfo.title, isRSSItem);
         const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem);
         const ELprogress = this.createItemChapterProgress(key, itemInfo.chapter, isRSSItem);
         const pubdate = this.createItemPubDate(item, isRSSItem);
@@ -220,8 +195,11 @@ export class FeedItem {
 
     private createItemContainer(key: string, isRSSItem: boolean = false): HTMLElement {
         const li = document.createElement("li");
-        li.className = isRSSItem ? "RSS-entries-item" : "RSS-Notification-item";
-        li.classList.add("hasRSS", `TitleHash-${key}`, 'seachable');
+        li.dataset.isNotificationItem = isRSSItem ? 'false' : 'true';
+        li.dataset.hashKey = key;
+        li.dataset.hasRSS = 'true';
+        li.dataset.seachable = 'true';
+        li.classList.add('hermidata-item');
     
         return li
     }
