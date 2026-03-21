@@ -2,7 +2,7 @@ import { PastHermidata } from "../popup/core/Past";
 import type { RSSData, RSSDOM } from "../shared/types/rssType";
 import type { Hermidata } from "../shared/types/type";
 import { getElement, setElement } from "../utils/Selection";
-import { BuildRSSController } from "./build";
+import { BuildRSSController } from "./controller";
 import { loadSavedFeeds } from "./load";
 
 

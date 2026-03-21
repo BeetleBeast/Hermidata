@@ -52,7 +52,7 @@ body::after {
     margin-bottom: 10px;
 }
 .HDRSS {
-    opacity: 0;
+    display: none;
     position: absolute;
     top: 50px;
     width: 98vw;
@@ -435,6 +435,9 @@ select.autoInput {
     margin: 0px;
     transform: translateY(50%);
     opacity: 0;
+    display: none;
+    transition: height 0.3s ease, padding 0.3s ease, margin 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+    
 }
 /* List of checkboxes under each filter */
 .filter-list {
@@ -522,6 +525,7 @@ select.autoInput {
     transition: background-color 0.3s ease;
     height: 40px;
     opacity: 1;
+    
 }
 
 .RSS-entries-item:hover,
@@ -582,6 +586,14 @@ select.autoInput {
     padding-right: 10px;
     right: 0;
     position: absolute;
+}
+
+.RSS-entries-item-pubDate,
+.RSS-Notification-item-pubDate {
+    font-weight: bold;
+    font-size: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 #subscribeBtn {

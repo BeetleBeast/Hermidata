@@ -1,9 +1,8 @@
 import { findByTitleOrAltV2, getChapterFromTitleReturn, TrimTitle } from "../../shared/StringOutput";
 import type { SettingsInput } from "../../shared/types/settings";
 import { getLocalNotificationItem, getSettings } from "../../shared/types/Storage";
-import type { Hermidata } from "../../shared/types/type";
+import type { AllHermidata, Hermidata } from "../../shared/types/type";
 import { getElement } from "../../utils/Selection";
-import { RssBuild } from "../build";
 
 
 interface ItemInfo {
@@ -18,7 +17,13 @@ interface ItemInfo {
 
 
 
-export class FeedItem extends RssBuild {
+export class FeedItem {
+
+    protected AllHermidata: AllHermidata;
+    
+    constructor(AllHermidata: AllHermidata) {
+        this.AllHermidata = AllHermidata;
+    }
 
     public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false): Promise<DocumentFragment> {
         const fragment = document.createDocumentFragment();
@@ -42,9 +47,8 @@ export class FeedItem extends RssBuild {
 
             const Elfooter = this.createItemFooter(itemInfo.currentHermidata, item, isRSSItem);
             
-            const pubdate = this.createItemPubDate(item);
             
-            li.append(ElTagContainer, ItemInfoContainer, Elfooter, pubdate);
+            li.append(ElTagContainer, ItemInfoContainer, Elfooter);
 
             fragment.appendChild(li);
         }
@@ -97,8 +101,9 @@ export class FeedItem extends RssBuild {
         
         return { title, url, chapter, isRead, clearedNotification, currentChapter, currentHermidata };
     }
-    private createItemPubDate(item: Hermidata): HTMLElement {
+    private createItemPubDate(item: Hermidata, isRSSItem: boolean): HTMLElement {
         const pubDate = document.createElement("p");
+        pubDate.className = isRSSItem ? "RSS-entries-item-pubDate" : "RSS-Notification-item-pubDate";
         pubDate.textContent = `Published: ${item.rss?.latestItem.pubDate ? item.rss?.latestItem.pubDate.toLocaleString() : 'N/A'}`;
         return pubDate
     }
@@ -191,11 +196,12 @@ export class FeedItem extends RssBuild {
         const ElInfo = document.createElement("div");
         ElInfo.className =  isRSSItem ? "RSS-entries-item-info" : "RSS-Notification-item-info";
 
-        const itemTitle = this.createItemTitle(itemInfo.title, itemInfo.url, item);
+        const itemTitle = this.createItemTitle(itemInfo.title, itemInfo.url, item, isRSSItem);
         const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem);
         const ELprogress = this.createItemChapterProgress(key, itemInfo.chapter, isRSSItem);
+        const pubdate = this.createItemPubDate(item, isRSSItem);
 
-        ElInfo.append(itemImage, itemTitle, ELchapter, ELprogress);
+        ElInfo.append(itemImage, itemTitle, ELchapter, pubdate, ELprogress);
 
         return ElInfo
     }

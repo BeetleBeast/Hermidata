@@ -109,4 +109,6 @@
 
 - [ ] Allow editing, adding, or removing values inside `TYPE_OPTIONS`, `STATUS_OPTIONS`, and `FolderMapping` in Settings
 
+- [ ] able to see at aglace type of RSS ( basic local hermidata ( not linked ), linked hermidata with rss, other? )
+
 ---

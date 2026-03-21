@@ -1,19 +1,8 @@
 import type { HermidataDateType, HermidataSortType } from "../../shared/types/type";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
-import { SortLogic } from "./SortLogic";
-import { SortOption } from "./SortOption";
 
-export class Sort extends RssBuild {
-
-
-    public makeSortSection(sortSection: HTMLElement): void {
-        // makeSortHeader(sortSection);
-        new SortOption(this.hermidata, this.AllHermidata).makeSortOptions(sortSection);
-        new SortLogic(this.hermidata, this.AllHermidata).sortOptionLogic(sortSection);
-
-    }
-
+export abstract class Sort extends RssBuild {
 
     protected applySortToEntries(sortType: string) {
         const container = getElement('#All-RSS-entries');
