@@ -1,20 +1,32 @@
-import { AllSorts, type AllsortsType } from "../../shared/types/rssBuildType";
+import { AllSorts, filterClassName, filterName, type AllsortsType } from "../../shared/types/rssBuildType";
+import { getLastSortOption, setLastSortOption } from "../../shared/types/Storage";
 import { novelStatus, novelTypes, readStatus, type Hermidata } from "../../shared/types/type";
 import { getElement, setElement } from "../../utils/Selection";
 import { Sort } from "./Sort";
-
 export class SortOption extends Sort {
 
     private selectedIndex: number = -1;
 
-    public makeSortOptions(parent_section: HTMLElement): void {
-
+    
+    public async makeSortOptions(parent_section: HTMLElement): Promise<void> {
         if (getElement('.mainContainerHeader')) return;
-
-        const mainContainer = document.createElement('div');
-        mainContainer.className = 'mainContainerHeader';
-
-        // 0. Search bar
+        
+        // --- 1. Search bar & filter ---
+        const mainContainer = this.CreateMainContainer();
+        await this.setLastSortOneTime();
+        
+        parent_section.appendChild(mainContainer);
+        
+        this.setMinimumWidthOfFilter(mainContainer);
+        
+        
+        const lastSort = await getLastSortOption();
+        if (lastSort) { 
+            this.applySortToEntries(lastSort);
+            this.applySortToNotification();
+        }
+    }
+    private CreateSearchBar(): HTMLDivElement {
         const searchContainer = document.createElement('div');
         searchContainer.className = 'search-container';
         const searchInput = document.createElement('input');
@@ -28,62 +40,45 @@ export class SortOption extends Sort {
         searchInput.addEventListener('input', (e) => this.handleSearchInput(e, autocompleteContainer));
         searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer));
 
-        searchContainer.appendChild(searchInput);
-        searchContainer.appendChild(autocompleteContainer);
-        mainContainer.appendChild(searchContainer);
+        const filterSectionTitle = this.CreateFilterButtonTitle();
 
-        // Helper to create a filter section
-        const createFilterSection = (title: string, items: string[], className: string) => {
-            const section = document.createElement('div');
-            section.className = `filter-section ${className}`;
-            section.style.width = 'fit-content';
-            const headerContainer = document.createElement('div');
-            headerContainer.className = 'filter-header-container';
-            headerContainer.style.cursor = 'pointer';
+        searchContainer.append(searchInput, autocompleteContainer, filterSectionTitle);
 
-            const headersymbol = document.createElement('div');
-            headersymbol.className = 'filter-header-symbol';
-            headersymbol.dataset.filterState = 'down';
-
-            const header = document.createElement('h4');
-            header.textContent = title;
-            header.className = 'filter-header-text'
-            
-            
-            
-            const list = document.createElement('div');
-            list.className = 'filter-list';
-            
-            headerContainer.addEventListener('click', () => {
-                headersymbol.dataset.filterState = headersymbol.dataset.filterState === 'down' ? 'up' : 'down';
-            });
-            headerContainer.append(header,headersymbol);
-            section.appendChild(headerContainer)
-
-            items.forEach(itemText => {
-                const itemContainer = document.createElement('div');
-                itemContainer.className = 'filter-item-container';
-
-                // Custom checkbox div
-                const checkbox = document.createElement('div');
-                checkbox.className = 'custom-checkbox';
-                checkbox.dataset.state = '0'; // 0=neutral, 1=include, 2=exclude
-
-                // Label
-                const label = document.createElement('label');
-                label.textContent = itemText;
-
-                itemContainer.appendChild(checkbox);
-                itemContainer.appendChild(label);
-                list.appendChild(itemContainer);
-            });
-
-            section.appendChild(list);
-            return section;
-        };
+        return searchContainer
+    }
+    private CreateFilter(): HTMLDivElement {
         const filterSection = document.createElement('div');
         filterSection.className = 'filter-section-container';
 
+        // 1. sort
+        const SortSection = this.createFilterSection(filterName.Sort, AllSorts, filterClassName.Sort);
+
+        // 2. Type
+        const typeSection = this.createFilterSection(filterName.Type, novelTypes, filterClassName.Type);
+
+        // 3. Status
+        const statusSection = this.createFilterSection(filterName.Status, readStatus, filterClassName.Status);
+
+        // 3.5. novels Status filter
+        const novelStatusSection = this.createFilterSection(filterName.NovelStatus, novelStatus, filterClassName.NovelStatus);
+
+        // 4. Source
+        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).map(item => item.source).filter(Boolean)));
+        const sourceSection = this.createFilterSection(filterName.Source, allSources, filterClassName.Source);
+
+        // 5. Tags
+        const allTags = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta?.tags || [])));
+        const tagSection = this.createFilterSection(filterName.Tag, allTags, filterClassName.Tag);
+
+        // 6. Dates
+        const allDates = this.generateDateFilterSection()
+        const dateSection = this.createFilterSection(filterName.Date, allDates, filterClassName.Date);
+
+        filterSection.append(SortSection, typeSection, statusSection, novelStatusSection, sourceSection, tagSection, dateSection);
+
+        return filterSection
+    }
+    private CreateFilterButtonTitle(): HTMLDivElement {
         const filterSectionTitle = document.createElement('h4');
         filterSectionTitle.className = 'filterSectionTitle';
         filterSectionTitle.classList.add('Btn');
@@ -92,70 +87,88 @@ export class SortOption extends Sort {
         filterSectionTitle.addEventListener('click', () => {
             filterSectionTitle.dataset.filterDisplay = filterSectionTitle.dataset.filterDisplay === 'none' ? 'flex' : 'none';
         });
-        searchContainer.appendChild(filterSectionTitle);
-        mainContainer.appendChild(filterSection);
+        return filterSectionTitle
+    }
+    private createFilterSection(title: string, items: string[], className: string): HTMLDivElement {
+        const section = document.createElement('div');
+        section.className = `filter-section ${className}`;
+        section.style.width = 'fit-content';
+        const headerContainer = document.createElement('div');
+        headerContainer.className = 'filter-header-container';
+        headerContainer.style.cursor = 'pointer';
 
-        // 1. Sort
-        const Allsorts: AllsortsType[] = AllSorts
-        const SortSection = createFilterSection('Sort', Allsorts, 'filter-sort');
-        filterSection.appendChild(SortSection);
-        // Add click listeners for sort options
-        SortSection.querySelectorAll<HTMLDivElement>('.filter-item-container').forEach(container => {
-            const label = getElement('label', container);
-            if (!label) return;
-            this.applySortToEntries(localStorage.getItem('lastSort') || 'Alphabet');
-            label.addEventListener('click', () => {
-                const sortType = label.textContent.trim();
-                localStorage.setItem('lastSort', sortType);
-                // Apply sorting immediately
-                this.applySortToEntries(sortType);
-                this.applySortToNotification();
-            });
+        const headersymbol = document.createElement('div');
+        headersymbol.className = 'filter-header-symbol';
+        headersymbol.dataset.filterState = 'down';
+
+        const header = document.createElement('h4');
+        header.textContent = title;
+        header.className = 'filter-header-text'
+        
+        
+        const list = document.createElement('div');
+        list.className = 'filter-list';
+        
+        headerContainer.addEventListener('click', () => {
+            headersymbol.dataset.filterState = headersymbol.dataset.filterState === 'down' ? 'up' : 'down';
+        });
+        headerContainer.append(header,headersymbol);
+        section.appendChild(headerContainer)
+
+        items.forEach(itemText => {
+            const itemContainer = document.createElement('div');
+            itemContainer.className = 'filter-item-container';
+
+            // Custom checkbox div
+            const checkbox = document.createElement('div');
+            checkbox.className = 'custom-checkbox';
+            checkbox.dataset.state = '0'; // 0=neutral, 1=include, 2=exclude
+
+            // Label
+            const label = document.createElement('label');
+            label.className = 'filter-item-label';
+            label.textContent = itemText;
+
+            itemContainer.appendChild(checkbox);
+            itemContainer.appendChild(label);
+            list.appendChild(itemContainer);
         });
 
+        section.appendChild(list);
+        return section;
+    };
+    private CreateMainContainer(): HTMLDivElement {
+        const mainContainer = document.createElement('div');
 
-        // 2. Type
-        const typeSection = createFilterSection('Type', novelTypes, 'filter-type');
-        filterSection.appendChild(typeSection);
+        mainContainer.className = 'mainContainerHeader';
 
-        // 3. Status
-        const statusSection = createFilterSection('Status', readStatus, 'filter-status');
-        filterSection.appendChild(statusSection);
+        // 1. Search bar
+        const searchContainer = this.CreateSearchBar();
 
-        // 3.5. novels Status filter
-        const novelStatusSection = createFilterSection('Novel-Status', novelStatus, 'filter-novel-status');
-        filterSection.appendChild(novelStatusSection);
+        // 2. filters & sort
+        const filterSection = this.CreateFilter();
 
-        // 4. Source
-        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).map(item => item.source).filter(Boolean)));
-        const sourceSection = createFilterSection('Source', allSources, 'filter-source');
-        filterSection.appendChild(sourceSection);
+        mainContainer.append(searchContainer, filterSection);
 
-        // 5. Tags
-        const allTags = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta?.tags || [])));
-        const tagSection = createFilterSection('Tag', allTags, 'filter-tag');
-        filterSection.appendChild(tagSection);
-
-        // 6. Dates
-        const allDates = this.generateDateFilterSection()
-        const dateSection = createFilterSection('Date', allDates, 'filter-date');
-        filterSection.appendChild(dateSection);
-
-        parent_section.appendChild(mainContainer);
-        const element = ['Type', 'Status', 'Novel-Status', 'Source', 'Tag', 'Date'];
-        for (let index = 0; index < element.length; index++) {
-            const elFilterClassName = ['filter-type', 'filter-status', 'filter-novel-status', 'filter-source', 'filter-tag', 'filter-date']
-            const elFilter = mainContainer.querySelector<HTMLDivElement>(`.${elFilterClassName[index]}`)
+        return mainContainer
+    }
+    private setMinimumWidthOfFilter(mainContainer: HTMLDivElement): void {
+        // set minimum width
+        for (let index = 0; index < Object.keys(filterName).length; index++) {
+            const elFilter = mainContainer.querySelector<HTMLDivElement>(`.${filterClassName[index]}`)
             const calcWidth = elFilter?.clientWidth || '';
             if (calcWidth && elFilter) elFilter.style.minWidth = `${calcWidth}px`;
             else console.log('mimnimum width not added for: ',elFilter,'\n', 'calcWidth is: ',calcWidth)
         }
-        setElement('.autocompleteContainer', el => el.style.width = `${  getElement('.search-input')?.offsetWidth}px`);
-        const lastSort = localStorage.getItem("lastSort");
-        if (lastSort) { 
-            this.applySortToEntries(lastSort);
-            this.applySortToNotification();
-        }
+        setElement('.autocompleteContainer', el => el.style.width = `${getElement('.search-input')?.offsetWidth}px`);
+    }
+    private setLastSortOneTime(): void {
+        // apply sort ( default to alphabet if not set )
+        getElement(`filter-section ${filterClassName.Sort}`)?.querySelectorAll<HTMLDivElement>('.filter-item-container').forEach(async container => {
+            const label = getElement('.filter-item-label', container);
+            if (!label) return;
+            this.applySortToEntries( await getLastSortOption() ?? 'Alphabet');
+        });
     }
 
     private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {
@@ -285,26 +298,4 @@ export class SortOption extends Sort {
             uniqueBuckets.sort((a, b) => sortOrder.indexOf(a) - sortOrder.indexOf(b));
             return uniqueBuckets;
         }
-
-
-    /**
-     * Converts a date (string, Date, or number) into a decade label bucket.
-     * @param {string|Date|number} dateInput
-     * @returns {string} decadeLabel
-    */
-    private getYearBucket(dateInput: string): string {
-        if (!dateInput) return "Unknown";
-        
-        const dacade = this.createYearBucket(dateInput) ?? '';
-        
-        return dacade;
-    }
-    private createYearBucket(dateInput: string): string | void {
-        const year = this.getYearNumber(dateInput)
-        if (Number.isNaN(year)) return;
-
-        const dacade = year.slice(0, -1).concat('0s');
-
-        return dacade;
-    }
 }

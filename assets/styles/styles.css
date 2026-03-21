@@ -210,13 +210,36 @@ select.autoInput {
     justify-content: center;
     padding-top: 15px;
     padding-bottom: 15px;
+}
+
+.containerHeader-feed
+.titleHeader {
     -webkit-user-select: none;
     user-select: none;
+    cursor: pointer;
 }
+
+
 .ContainerHeader {
     width: 100%;
     border-top: 1px solid var(--hr);
     border-bottom: 1px solid var(--hr);
+}
+
+.containerHeader-feed {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	margin: auto;
+}
+
+.containerHeader-item {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	margin: auto;
 }
 
 /* ---- sort ------ */
@@ -525,7 +548,7 @@ select.autoInput {
     transition: background-color 0.3s ease;
     height: 40px;
     opacity: 1;
-    
+
 }
 
 .RSS-entries-item:hover,

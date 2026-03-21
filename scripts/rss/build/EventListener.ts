@@ -1,3 +1,4 @@
+import { saveHermidataV3 } from "../../popup/core/save";
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
@@ -169,7 +170,7 @@ export class EventListener extends RssBuild {
         );
     
         // Save to storage
-        await ext.storage.sync.set({ [hashItem]: entry });
+        await saveHermidataV3(entry, hashItem);
     
         console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
     }

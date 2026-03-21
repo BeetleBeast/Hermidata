@@ -1,10 +1,15 @@
+import type { AllsortsType } from "../../shared/types/rssBuildType";
 import type { HermidataDateType, HermidataSortType } from "../../shared/types/type";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 
 export abstract class Sort extends RssBuild {
 
-    protected applySortToEntries(sortType: string) {
+
+    private ammountOfYearBuckets: number = 0;
+    private readonly maxYearBuckets: number = 15; 
+
+    protected applySortToEntries(sortType: AllsortsType = "Alphabet") {
         const container = getElement('#All-RSS-entries');
         if (!container) return;
 
@@ -13,6 +18,7 @@ export abstract class Sort extends RssBuild {
         if (!entries.length) return;
 
         const getData = (entry: HTMLDivElement) => {
+            // FIXME: set hash in dataset instead of class
             const hash = entry.className.split('TitleHash-')[1]?.replace(' seachable','');
             return this.AllHermidata[hash] || {};
         };
@@ -86,5 +92,33 @@ export abstract class Sort extends RssBuild {
         const isISOString = !!new Date(dateInput)?.getHours();
         const splitDatum = dateInput.split('/')[2]
         return isISOString ? dateInput.split('-')[0] : splitDatum || new Date()?.toISOString().split('-')[0];
+    }
+    /**
+     * Converts a date (string, Date, or number) into a decade label bucket.
+     * @param {string|Date|number} dateInput
+     * @returns {string} decadeLabel
+    */
+    protected getYearBucket(dateInput: string): string {
+        if (!dateInput) return "Unknown";
+        const year = this.getYearNumber(dateInput)
+        if (Number.isNaN(year)) return "Unknown";
+
+        let bucket;
+        
+        if (this.ammountOfYearBuckets >= this.maxYearBuckets) bucket = this.createDacadeBucket(year);
+        else bucket = this.createYearBucket(year);
+        
+        this.ammountOfYearBuckets++;
+        return bucket;
+    }
+    private createDacadeBucket(year: string): string {
+
+        const dacade = year.slice(0, -1).concat('0s');
+
+        return dacade;
+    }
+    private createYearBucket(year: string): string {
+
+        return year;
     }
 }

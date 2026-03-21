@@ -24,8 +24,8 @@ export class BuildRSSController {
 
     public async makeSortSection(sortSection: HTMLElement): Promise<void> {
         // makeSortHeader(sortSection);
-        new SortOption(this.hermidata, await RssBuild.init()).makeSortOptions(sortSection);
-        new SortLogic(this.hermidata, await RssBuild.init()).sortOptionLogic(sortSection);
+        await new SortOption(this.hermidata, await RssBuild.init()).makeSortOptions(sortSection);
+        await new SortLogic(this.hermidata, await RssBuild.init()).sortOptionLogic(sortSection);
     }
 
     public async makeFeedHeader(parent_section: HTMLElement): Promise<void> {

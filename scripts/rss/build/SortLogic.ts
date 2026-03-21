@@ -1,17 +1,13 @@
+import type { Filters, NormalSortsType } from "../../shared/types/rssBuildType";
+import { getLastFilter, setLastFilter, setLastSortOption } from "../../shared/types/Storage";
 import { Sort } from "./Sort";
-
-export type Filters = {
-    include: Record<string, string[]>; // { type: ['Manga'], status: ['Ongoing'] }
-    exclude: Record<string, string[]>;
-    sort: string;
-}
 
 export class SortLogic extends Sort {
 
     public async sortOptionLogic(parent_section: HTMLElement): Promise<void> {
         // state object for filters
-        const lastSort = JSON.parse(localStorage.getItem("lastFilter") || "{}");
-        const filters: Filters = lastSort || {
+        const lastSort: Filters | undefined = await getLastFilter();
+        const filters: Filters = lastSort ?? {
             include: {}, // { type: ['Manga'], status: ['Ongoing'] }
             exclude: {},
             sort: ''
@@ -88,14 +84,15 @@ export class SortLogic extends Sort {
             // Enable current one
             if (state === 1) {
                 cb.dataset.state = "1" 
-                filters.sort = label
+                filters.sort = label as NormalSortsType;
             } else if (state === 2) {
                 cb.dataset.state = "2";
-                filters.sort = `Reverse-${label}`
+                filters.sort = `Reverse-${label as NormalSortsType}`
             }
 
             // apply and persist
             if (filters.sort) {
+                setLastSortOption(filters.sort);
                 this.applySortToEntries(filters.sort);
                 this.applySortToNotification();
             }
@@ -115,7 +112,7 @@ export class SortLogic extends Sort {
         else if (state === 2) filters.exclude[section].push(label);
         // trigger filtering logic here
         this.applyFilterToEntries(filters);
-        localStorage.setItem("lastFilter", JSON.stringify(filters));
+        setLastFilter(filters);
     };
 
     private applyFilterToEntries(filters: Filters) {
@@ -133,7 +130,7 @@ export class SortLogic extends Sort {
         const Status = entryData.status;
         const Source = entryData.source;
         const Tag = entryData.meta.tags || "";
-        const DateFilter = this.getYearNumber(entryData.meta.added);
+        const DateFilter = this.getYearBucket(entryData.meta.added);
 
         const inputs = [Type, Status, Source, Tag, DateFilter];
 
@@ -162,23 +159,25 @@ export class SortLogic extends Sort {
             if (values.length === 0) continue;
 
                     
-            const val = this.setState(section, inputs) ?? 'Manga';
+            const val = this.setState(values, inputs) ?? 'none'; // error here
             
             const match = Array.isArray(val)
                 ? val.some(v => values.includes(v))
                 : values.includes(val);
 
-            if (!match) {
-                visible = !isInclude;
+            if ((!match && isInclude) ||( match && !isInclude)) {
+                visible = false;
                 break;
             }
         }
         return visible
     }
-    private setState(section: string, input: (string | string[])[] ): string | void {
-        for (const type of input) {
-            if (section === type || (section === 'Date' && type === 'DateFilter')) {
-                return type
+    private setState(values: string[], input: (string | string[])[] ): string | void {
+        for (const value of values) { // value is the filter value
+            for (const type of input) {
+                if (value === type || (value === 'Date' && type === 'DateFilter')) {
+                    return type
+                }
             }
         }
     }

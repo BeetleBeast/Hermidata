@@ -278,7 +278,7 @@ class HermidataController {
 
         const tagsArray = tags.split(',').map((tag) => tag.trim());
 
-        if (!title || !Type || !Chapter || !url || !status) throw new Error('Missing required fields');
+        if (!title || !Type || !Chapter || !url || !status || !date) throw new Error('Missing required fields');
 
         this.hermidata.title = title;
         this.hermidata.type = Type;
@@ -292,10 +292,13 @@ class HermidataController {
         await updateChapterProgress(title, Type, Number(Chapter), this.hermidata);
         this.past = null;
 
+        type InputArrayType = [string, NovelType, number, string, ReadStatus, string, string[], string]
+        const data: InputArrayType = [title, Type, Number(Chapter), url, status, date, tagsArray, notes]
+
         // save to google sheet & bookmark/replace bookmark
         ext.runtime.sendMessage({
             type: "SAVE_NOVEL",
-            data: [title, Type, Chapter, url, status, date, tags, notes],
+            data: data,
             args
         });
 

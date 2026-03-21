@@ -59,7 +59,6 @@ export class FeedItem {
         const lastDirection = JSON.parse(localStorage.getItem('notificationLastDirection') ?? '"down"');
         const container = document.createElement('div');
         container.className = 'containerHeader-feed'
-        container.style.cursor = 'pointer';
         const title = document.createElement('div');
         title.className = "titleHeader";
         title.textContent = 'Notifications'

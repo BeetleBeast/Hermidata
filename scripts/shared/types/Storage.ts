@@ -3,6 +3,7 @@ import { ext } from "../BrowserCompat";
 import type { RawFeed } from "./rssType";
 import { defaultSettings, type SettingsInput as Settings } from "./settings";
 import { getElement, setElement } from "../../utils/Selection";
+import type { AllsortsType, Filters } from "./rssBuildType";
 
 export async function getHermidataViaKey(key: string): Promise<Hermidata | null> {
     return new Promise<Hermidata | null>((resolve, reject) => {
@@ -166,16 +167,68 @@ export function sheetUrlInput(): Promise<string> {
 }
 
 export async function setNotificationList(key: string, value = true): Promise<Record<string, boolean>> {
-        return new Promise<Record<string, boolean>>((_resolve, reject) => {
-            ext.storage.local.get("clearedNotification", (result: { clearedNotification: Record<string, boolean> }) => {
-            const conbined = {...result?.clearedNotification};
-            conbined[key] = value;
-            ext.storage.local.set({clearedNotification: conbined}, () => {
-                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-            });
+    return new Promise<Record<string, boolean>>((_resolve, reject) => {
+        ext.storage.local.get("clearedNotification", (result: { clearedNotification: Record<string, boolean> }) => {
+        const conbined = {...result?.clearedNotification};
+        conbined[key] = value;
+        ext.storage.local.set({clearedNotification: conbined}, () => {
+            if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
         });
-        }).catch(error => {
-            console.error('Extention error: Failed Premise getHermidata: ',error);
-            return {};
+    });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        return {};
+    });
+}
+
+export async function getLastSortOption(): Promise<AllsortsType | undefined> {
+    return new Promise<AllsortsType | undefined>((resolve, reject) => {
+        ext.storage.local.get("lastFilter", (result: { lastFilter: Filters }) => {
+            if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+            resolve(result?.lastFilter?.sort ?? undefined);
         });
-    }
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        return undefined;
+    });
+    
+}
+export async function getLastFilter(): Promise<Filters | undefined> {
+    return new Promise<Filters | undefined>((resolve, reject) => {
+        ext.storage.local.get("lastFilter", (result: { lastFilter: Filters }) => {
+            if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+            resolve(result?.lastFilter ?? undefined);
+        });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        return undefined;
+    });
+}
+export async function setLastFilter(lastFilter: Filters): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+        ext.storage.local.set({"lastFilter": lastFilter}, () => {
+            if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+            resolve(true);
+        });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        return false;
+    });
+}
+export async function setLastSortOption(lastSortOption: AllsortsType): Promise<boolean> {
+    const lastFilter = await getLastFilter();
+    const newFilter: Filters = {
+        include: lastFilter?.include ?? {},
+        exclude: lastFilter?.exclude ?? {},
+        sort: lastSortOption
+    };
+    return new Promise<boolean>((resolve, reject) => {
+        ext.storage.local.set({"lastFilter": newFilter}, () => {
+            if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+            resolve(true);
+        });
+    }).catch(error => {
+        console.error('Extention error: Failed Premise getHermidata: ',error);
+        return false;
+    });
+}
