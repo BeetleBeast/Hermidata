@@ -7,47 +7,75 @@ import type { RawFeed } from "../shared/types/rssType";
 import { getAllRawFeeds, getHermidataViaKey } from "../shared/types/Storage";
 import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/type";
 
-export async function loadSavedFeedsViaSavedFeeds(): Promise<Record<string, RawFeed>> {
+export async function getRawFeedsRecord(AllHermidata: Record<string, Hermidata>): Promise<Record<string, RawFeed>> {
     const feedList: Record<string, RawFeed> = {};
 
     const savedFeeds: Record<string, RawFeed> = await getAllRawFeeds();
-    const AllHermidata = await PastHermidata.getAllHermidata();
     
+    const hermidataValues = Object.values(AllHermidata);
+    const domainMap = new Map<string, string>(
+        hermidataValues.map(novel => [novel.url, novel.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]])
+    );
+    const titleMap = new Map<string, Hermidata>(
+        hermidataValues.map(novel => [
+            TrimTitle.trimTitle(novel.title, novel.url).title, novel])
+    );
 
     for (const key in savedFeeds) {
         const feed = savedFeeds[key];
         if ( !feed.title || !feed.url ) continue;
 
-        // check same domain
-        if ( feed.domain !=  Object.values(AllHermidata).find(novel => novel.url.includes(feed.domain))?.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0] ) continue;
+        const matchedDomain = hermidataValues.find(n => n.url.includes(feed.domain));
+        if (feed.domain !== domainMap.get(matchedDomain?.url || '')) continue;
 
-        const type = Object.values(AllHermidata).find(novel => novel.title == TrimTitle.trimTitle(feed?.items?.[0]?.title, '').title)?.type || novelTypes[0];
-        const typeV2 = findByTitleOrAltV2(TrimTitle.trimTitle(feed?.items?.[0]?.title || feed.title, feed.url).title, AllHermidata)?.type || novelTypes[0];
+        const feedTitle = TrimTitle.trimTitle( feed?.items?.[0]?.title || feed.title, feed.url ).title;
+        const typeV2 = titleMap.get(feedTitle)?.type || novelTypes[0];
 
-        feedList[returnHashedTitle(feed?.items?.[0]?.title || feed.title, typeV2 || type, feed?.url) ] = feed;
+        feedList[returnHashedTitle( feed?.items?.[0]?.title || feed.title, typeV2, feed?.url )] = feed;
     }
     return feedList;
 }
 // isn't utilised
-export async function loadSavedFeeds(): Promise<Record<string, Hermidata>> {
-    const feedList: Record<string, Hermidata> = {};
+export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> {
+    console.group('getHermidataWithRss');
+    console.time('getAllHermidata');
     const AllHermidata = await PastHermidata.getAllHermidata();
-    const AllFeeds = await loadSavedFeedsViaSavedFeeds();
-    
-    for (const [id, feed] of Object.entries(AllHermidata)) {
-        if ( feed?.rss ) {
-            const updatedFeed = await updateFeed(feed, AllFeeds);
-            feedList[id] = updatedFeed;
-        }
-    }
-    return feedList;
+    console.timeEnd('getAllHermidata');
+    console.time('getRawFeedsRecord');
+    const AllFeeds = await getRawFeedsRecord(AllHermidata);
+    console.timeEnd('getRawFeedsRecord');
+    // Collect all entries that have RSS
+    console.time('filter entries with RSS');
+    const rssEntries = Object.entries(AllHermidata).filter(([_, feed]) => feed?.rss);
+    console.timeEnd('filter entries with RSS');
+    // Run all updateFeed calls in parallel
+    console.time('updateFeed');
+    const updated = await Promise.all(
+        rssEntries.map(async ([id, feed]) => ({
+            id,
+            feed: await updateFeed(feed, AllFeeds, AllHermidata),
+        }))
+    );
+    console.timeEnd('updateFeed');
+
+    // Reassemble into record
+    console.groupEnd();
+    return Object.fromEntries(updated.map(({ id, feed }) => [id, feed]));
+}
+// load.ts or wherever loadSavedFeeds is called from popup
+export async function getHermidataWithRssFromBackground(): Promise<Record<string, Hermidata>> {
+    return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({ type: 'GET_RSS' }, (response) => {
+            if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
+            else resolve(response.data);
+        });
+    });
 }
 
 
-export async function updateFeed(feed: Hermidata , allFeeds: Record<string, RawFeed>): Promise<Hermidata> {
+export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFeed>, AllHermidata: Record<string, Hermidata>): Promise<Hermidata> {
     const rssInfo = feed.rss;
     if (!rssInfo?.url) return feed;
-    const AllHermidata = await PastHermidata.getAllHermidata();
     const currentFeedTitle = findByTitleOrAltV2(rssInfo?.latestItem.title || feed.title, AllHermidata);
     const matchFeed = Object.values(allFeeds).find(f => {
         const sameDomain = f.domain === rssInfo.domain;

@@ -16,7 +16,11 @@ export type CurrentTab = {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    new HermidataController().init().catch(console.error);
+    const controller = new HermidataController();
+    controller.init().catch(console.error);
+
+    // After popup init — start quietly in the background
+    setTimeout(() => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
 });
 
 class HermidataController {
@@ -24,7 +28,7 @@ class HermidataController {
     
     public past: PastHermidataClass | null = null;
 
-    private RSS: RSS | null = null;
+    public RSS: RSS | null = null;
 
     private dupplicate: Duplicate | null = null;
 
@@ -180,7 +184,6 @@ class HermidataController {
 
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
-        getElement('#HDRSSBtn')?.addEventListener('mouseenter', () => this.RSS?.preloadRSS());
 
         getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e));
         getElement("#HDRSSBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e));

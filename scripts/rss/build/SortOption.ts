@@ -12,15 +12,17 @@ export class SortOption extends Sort {
         if (getElement('.mainContainerHeader')) return;
         
         // --- 1. Search bar & filter ---
-        const mainContainer = this.CreateMainContainer();
-        this.setLastSortOneTime();
-        
+        const [mainContainer, lastSort] = await Promise.all([
+            Promise.resolve(this.CreateMainContainer()),
+            getLastSortOption()
+        ]);
+
         parent_section.appendChild(mainContainer);
-        
+
         this.setMinimumWidthOfFilter(mainContainer);
+
         
-        
-        const lastSort = await getLastSortOption();
+        // --- 2. apply sort last, after DOM is stable ---
         if (lastSort) { 
             this.applySortToEntries(lastSort);
             this.applySortToNotification();
@@ -58,10 +60,10 @@ export class SortOption extends Sort {
 
         // 3. Status
         const statusSection = this.createFilterSection(filterName.Status, readStatus, filterClassName.Status);
-
+        
         // 3.5. novels Status filter
         const novelStatusSection = this.createFilterSection(filterName.NovelStatus, novelStatus, filterClassName.NovelStatus);
-
+    
         // 4. Source
         const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).map(item => item.source).filter(Boolean)));
         const sourceSection = this.createFilterSection(filterName.Source, allSources, filterClassName.Source);
@@ -73,7 +75,7 @@ export class SortOption extends Sort {
         // 6. Dates
         const allDates = this.generateDateFilterSection()
         const dateSection = this.createFilterSection(filterName.Date, allDates, filterClassName.Date);
-
+        
         filterSection.append(SortSection, typeSection, statusSection, novelStatusSection, sourceSection, tagSection, dateSection);
 
         return filterSection
@@ -144,7 +146,7 @@ export class SortOption extends Sort {
 
         // 1. Search bar
         const searchContainer = this.CreateSearchBar();
-
+        
         // 2. filters & sort
         const filterSection = this.CreateFilter();
 
@@ -153,22 +155,17 @@ export class SortOption extends Sort {
         return mainContainer
     }
     private setMinimumWidthOfFilter(mainContainer: HTMLDivElement): void {
-        // set minimum width
-        for (let index = 0; index < Object.keys(filterName).length; index++) {
+        // First pass — read all widths (browser calculates layout once)
+        const measurements = Object.keys(filterName).map(index => {
             const elFilter = mainContainer.querySelector<HTMLDivElement>(`.${filterClassName[index]}`)
-            const calcWidth = elFilter?.clientWidth || '';
-            if (calcWidth && elFilter) elFilter.style.minWidth = `${calcWidth}px`;
-            else console.log('mimnimum width not added for: ',elFilter,'\n', 'calcWidth is: ',calcWidth)
-        }
+            return { elFilter, width: elFilter?.clientWidth || 0 }
+        })
+        // Second pass — write all widths (browser paints once)
+        measurements.forEach(({ elFilter, width }) => {
+            if (elFilter && width) elFilter.style.minWidth = `${width}px`;
+        })
+
         setElement('.autocompleteContainer', el => el.style.width = `${getElement('.search-input')?.offsetWidth}px`);
-    }
-    private setLastSortOneTime(): void {
-        // apply sort ( default to alphabet if not set )
-        getElement(`filter-section ${filterClassName.Sort}`)?.querySelectorAll<HTMLDivElement>('.filter-item-container').forEach(async container => {
-            const label = getElement('.filter-item-label', container);
-            if (!label) return;
-            this.applySortToEntries( await getLastSortOption() ?? 'Alphabet');
-        });
     }
 
     private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {

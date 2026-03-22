@@ -1,4 +1,5 @@
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
+import { getHermidataWithRss } from "../rss/load";
 import { ext } from "../shared/BrowserCompat";
 import { getChapterFromTitle, TrimTitle } from "../shared/StringOutput";
 import type { Feed, FeedItem, RawFeed } from "../shared/types/rssType";
@@ -1182,4 +1183,42 @@ ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
         sendResponse({ minutesAgo: diffMinutes });
     }
+});
+
+
+// background.ts
+let rssCache: Record<string, Hermidata> | null = null;
+let rssCachePromise: Promise<Record<string, Hermidata>> | null = null;
+
+// Start loading the moment the service worker wakes up
+rssCachePromise = getHermidataWithRss().then(result => {
+    rssCache = result;
+    return result;
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type === 'GET_RSS') {
+        if (rssCache) {
+            // Already ready — respond instantly
+            sendResponse({ status: 'ready', data: rssCache });
+        } else {
+            // Still loading — wait for it
+            rssCachePromise?.then(data => {
+                sendResponse({ status: 'ready', data });
+            });
+            return true; // ← tells chrome to keep the channel open for async response
+        }
+    }
+
+    if (message.type === 'INVALIDATE_RSS') {
+        // Call this after user subscribes/unsubscribes
+        rssCache = null;
+        rssCachePromise = getHermidataWithRss().then(result => {
+            rssCache = result;
+            return result;
+        });
+        sendResponse({ status: 'ok' });
+    }
+
+    return true;
 });

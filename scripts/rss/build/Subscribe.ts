@@ -1,13 +1,14 @@
+import { PastHermidata } from "../../popup/core/Past";
 import { TrimTitle } from "../../shared/StringOutput";
 import type { NovelType } from "../../shared/types/type";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
-import { linkRSSFeed, loadSavedFeedsViaSavedFeeds } from "../load";
+import { linkRSSFeed, getRawFeedsRecord } from "../load";
 
 export class Subscribe extends RssBuild {
 
     public async makeSubscibeBtn(): Promise<void> {
-            const feedListGLobal = await loadSavedFeedsViaSavedFeeds();
+            const feedListGLobal = await getRawFeedsRecord(await PastHermidata.getAllHermidata());
             const subscribeBtn = getElement<HTMLButtonElement>("#subscribeBtn");
             const NotificationSection = getElement("#RSS-Notification");
             const AllItemSection = getElement("#All-RSS-entries");

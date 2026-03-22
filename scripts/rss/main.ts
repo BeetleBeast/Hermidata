@@ -3,20 +3,12 @@ import type { RSSData, RSSDOM } from "../shared/types/rssType";
 import type { Hermidata } from "../shared/types/type";
 import { getElement, setElement } from "../utils/Selection";
 import { BuildRSSController } from "./controller";
-import { loadSavedFeeds } from "./load";
+import { getHermidataWithRssFromBackground } from "./load";
 
 
-let rssPreloadPromise: Promise<{
-    notifications: {
-        items: DocumentFragment;
-    };
-    allItems: {
-        header: DocumentFragment;
-        items: DocumentFragment;
-    }
-}> | null = null;
+let rssPreloadPromise: Promise<RSSDOM> | null = null;
 
-let rssDOMCache = null;
+let rssDOMCache: RSSDOM | null = null;
 
 /*
 0. Cashe constants
@@ -57,19 +49,20 @@ export class RSS {
         if (!sortSection || !notification || !allSec) throw new Error('Element not found');
 
         // If preloaded, use it instantly
-        const dom = await rssPreloadPromise ?? await this.preloadRSS();
-        
+        const dom = await (rssPreloadPromise ?? this.preloadRSS());
+
         notification.innerHTML = "";
         allSec.innerHTML = "";
-
-        await this.BuildRSS.makeSubscibeBtn();
-
-        await this.BuildRSS.makeFeedHeader(notification);
-
+        
         this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
-
+        
+        await this.BuildRSS.makeSubscibeBtn();
+        
+        await this.BuildRSS.makeFeedHeader(notification);
+        
+        
         await this.BuildRSS.makeSortSection(sortSection);
-
+        
         await this.BuildRSS.attachEventListeners()
 
         await this.BuildRSS.makeFooterSection();
@@ -130,9 +123,11 @@ export class RSS {
     // --- Private ---
 
     private async loadRSSData(): Promise<RSSData> {
-        const feeds = await loadSavedFeeds();
-        const AllHermidata = await PastHermidata.getAllHermidata();
-        return { feeds, hermidata: AllHermidata };
+        const [feeds, hermidata] = await Promise.all([
+            getHermidataWithRssFromBackground(),
+            PastHermidata.getAllHermidata()
+        ]);
+        return { feeds, hermidata };
     }
 
     private insertRSSPage(dom: RSSDOM, {notifSec, allSec}: { notifSec: Element; allSec: Element; }) {

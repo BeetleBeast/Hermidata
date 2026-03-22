@@ -1,7 +1,7 @@
 export function getElement<T extends HTMLElement>(selector: string, parent: Document | HTMLElement = document): T | null {
     const el = parent.querySelector<T>(selector);
     if (!el) {
-        console.warn(`Element not found: ${selector}`);
+        // console.warn(`Element not found: ${selector}`);
         return null;
     }
     return el;

@@ -1,5 +1,5 @@
 import { type AllHermidata, type Hermidata } from "../shared/types/type";
-import {  loadSavedFeeds } from "./load";
+import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
 
 import { FeedItem } from "./build/feed";
@@ -24,8 +24,10 @@ export abstract class RssBuild {
         this.removeAllChildNodes(AllItemSection) // clear front-end
 
         new FeedItem(this.AllHermidata).makeFeedHeader(NotificationSection);
+        
+        await chrome.runtime.sendMessage({ type: 'INVALIDATE_RSS' });
 
-        const feedListLocalReload = await loadSavedFeeds();
+        const feedListLocalReload = await getHermidataWithRssFromBackground();
     
         NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(feedListLocalReload, false));
         AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());

@@ -28,7 +28,7 @@ export interface FilterName {
     Date: string
 }
 export interface FilterClassName {
-    [key: number]: string;
+    [key: string]: string;
     Sort: string,
     Type: string ,
     Status: string ,

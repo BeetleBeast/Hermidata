@@ -7,7 +7,7 @@ import { getHermidataViaKey, removeKeysFromSync, setNotificationList } from "../
 import type { Hermidata } from "../../shared/types/type";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
-import { loadSavedFeeds } from "../load";
+import { getHermidataWithRssFromBackground } from "../load";
 
 export class EventListener extends RssBuild {
     
@@ -17,7 +17,7 @@ export class EventListener extends RssBuild {
         const notificationFeed = document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="true"]');
         const allItems = document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="false"]');
 
-        const feedListLocalReload = await loadSavedFeeds();
+        const feedListLocalReload = await getHermidataWithRssFromBackground();
 
         for (let feed of notificationFeed) {
             feed.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, false));
