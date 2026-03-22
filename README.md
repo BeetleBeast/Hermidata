@@ -91,6 +91,8 @@
 
 - [ ] alt names need to be manualy set-up if not wil result in out-of-sync duplicate entry.
 
+- [ ] the latest chapter gets captured in the background but isn't set in front-end.
+
 ## TO-DO
 
 - [ ] select saving option:
