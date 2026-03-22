@@ -34,8 +34,9 @@ export class PastHermidata {
         this.hermidata = hermidata;
     }
 
-    public async init() {
+    public async init(): Promise<Hermidata | null> {
         this.pastHermidata = await this.getPastHermidata();
+        return this.pastHermidata;
     }
 
 

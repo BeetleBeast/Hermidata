@@ -50,9 +50,9 @@ class HermidataController {
 
         this.googleSheetURL = googleSheetURL;
         this.past = new PastHermidata(this.hermidata);
-        this.past.init().catch(console.error);
+        const pastHermidata = await this.past.init();
 
-        await this.setHermidata(CurrentTabInfo);
+        await this.setHermidata(CurrentTabInfo, pastHermidata);
 
         await this.checkForDuplicates();
         
@@ -133,16 +133,16 @@ class HermidataController {
             folderSelect.appendChild(option);
         });
     }
-    private async setHermidata(currentTabInfo: CurrentTab) {
+    private async setHermidata(currentTabInfo: CurrentTab, pastHermidata: Hermidata | null): Promise<void> {
 
-        if(this.pastHermidata) this.hermidata = this.pastHermidata;
+        if(pastHermidata) this.hermidata = pastHermidata;
 
 
         this.pageTitle = currentTabInfo.pageTitle;
         this.hermidata.url = currentTabInfo.url;
         this.hermidata.chapter.current = currentTabInfo.currentChapter;
         
-        if (!this.pastHermidata) {
+        if (!pastHermidata) {
             // set title & notes
             const trimmedTitle: TrimmedTitle = StringOutput.TrimTitle.trimTitle( currentTabInfo.pageTitle, currentTabInfo.url );
             this.hermidata.title = trimmedTitle.title;
