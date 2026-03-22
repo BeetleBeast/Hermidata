@@ -15,8 +15,8 @@
 
 import { ext } from "../shared/BrowserCompat";
 import { returnHashedTitle } from "../shared/StringOutput";
-import { getAllHermidata } from "../shared/types/Storage";
-import { novelTypes, readStatus, type Hermidata, type NovelType, type ReadStatus } from "../shared/types/type";
+import { getAllHermidata } from "../shared/Storage";
+import { novelTypes, readStatus, type Hermidata, type NovelType, type ReadStatus } from "../shared/types/popupType";
 import { getElement, setElement } from "../utils/Selection";
 
 // Minimal interactive template — wire into your extension back-end as needed

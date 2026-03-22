@@ -1,7 +1,7 @@
 import { ext } from "../shared/BrowserCompat";
 import { defaultSettings, type SettingsInput } from "../shared/types/settings";
-import { getAllHermidata, getSettings, getSpreadsheetUrl } from "../shared/types/Storage";
-import { novelTypes, readStatus, type Hermidata } from "../shared/types/type";
+import { getAllHermidata, getSettings, getSpreadsheetUrl } from "../shared/Storage";
+import { novelTypes, readStatus, type Hermidata } from "../shared/types/popupType";
 import { getElement, setElement } from "../utils/Selection";
 
 

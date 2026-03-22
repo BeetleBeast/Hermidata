@@ -1,6 +1,6 @@
 import { PastHermidata } from "../popup/core/Past";
 import type { RSSData, RSSDOM } from "../shared/types/rssType";
-import type { Hermidata } from "../shared/types/type";
+import type { Hermidata } from "../shared/types/popupType";
 import { getElement, setElement } from "../utils/Selection";
 import { BuildRSSController } from "./controller";
 import { getHermidataWithRssFromBackground } from "./load";

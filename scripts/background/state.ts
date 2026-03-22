@@ -1,5 +1,5 @@
 import type { SettingsInput } from "../shared/types/settings"
-import type { Hermidata } from "../shared/types/type"
+import type { Hermidata } from "../shared/types/popupType"
 
 // state.ts
 export let currentBookmark: chrome.bookmarks.BookmarkTreeNode | null = null

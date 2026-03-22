@@ -1,8 +1,8 @@
 
 import { TrimTitle, returnHashedTitle } from "../../shared/StringOutput";
-import type {  Hermidata, NovelType } from "../../shared/types/type";
+import type {  Hermidata, NovelType } from "../../shared/types/popupType";
 import { ext } from "../../shared/BrowserCompat";
-import { getHermidataViaKey } from "../../shared/types/Storage";
+import { getHermidataViaKey } from "../../shared/Storage";
 import { PastHermidata } from "./Past";
 
 

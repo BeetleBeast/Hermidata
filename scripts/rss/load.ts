@@ -4,8 +4,8 @@ import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
 import type { RawFeed } from "../shared/types/rssType";
-import { getAllRawFeeds, getHermidataViaKey } from "../shared/types/Storage";
-import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/type";
+import { getAllRawFeeds, getHermidataViaKey } from "../shared/Storage";
+import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/popupType";
 
 export async function getRawFeedsRecord(AllHermidata: Record<string, Hermidata>): Promise<Record<string, RawFeed>> {
     const feedList: Record<string, RawFeed> = {};

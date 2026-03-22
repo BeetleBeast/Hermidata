@@ -1,7 +1,7 @@
 import { ext } from "../shared/BrowserCompat";
 import type { SettingsInput } from "../shared/types/settings";
-import { getSettings } from "../shared/types/Storage";
-import type { InputArrayType } from "../shared/types/type";
+import { getSettings } from "../shared/Storage";
+import type { InputArrayType } from "../shared/types/popupType";
 import { parseMangaFireUrl } from "./feeds";
 import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";

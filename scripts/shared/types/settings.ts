@@ -1,4 +1,4 @@
-import type { NovelType, ReadStatus } from "./type";
+import type { NovelType, ReadStatus } from "./popupType";
 
 export interface DefaultChoice {
     Type : NovelType,

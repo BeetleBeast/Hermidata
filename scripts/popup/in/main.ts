@@ -2,12 +2,12 @@
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
 import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
-import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus, type TrimmedTitle } from '../../shared/types/type';
+import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus, type TrimmedTitle } from '../../shared/types/popupType';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
-import { getGoogleSheetURL } from '../../shared/types/Storage';
+import { getGoogleSheetURL } from '../../shared/Storage';
 
 export type CurrentTab = {
     currentChapter: number;

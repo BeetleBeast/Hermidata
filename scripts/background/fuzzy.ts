@@ -1,6 +1,6 @@
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
 import { getChapterFromTitle, TrimTitle } from "../shared/StringOutput";
-import { getSettings } from "../shared/types/Storage";
+import { getSettings } from "../shared/Storage";
 import { createNestedFolders, getBookmarkChildren } from "./bookmarks";
 import { setState, settingsCashed } from "./state";
 

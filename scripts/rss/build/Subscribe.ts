@@ -1,6 +1,6 @@
 import { PastHermidata } from "../../popup/core/Past";
 import { TrimTitle } from "../../shared/StringOutput";
-import type { NovelType } from "../../shared/types/type";
+import type { NovelType } from "../../shared/types/popupType";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 import { linkRSSFeed, getRawFeedsRecord } from "../load";

@@ -1,6 +1,6 @@
-import { getAllHermidata, getHermidataViaKey } from "../../shared/types/Storage";
+import { getAllHermidata, getHermidataViaKey } from "../../shared/Storage";
 import { TrimTitle, findByTitleOrAltV2, returnHashedTitle } from "../../shared/StringOutput";
-import { type Hermidata, type NovelType, type AllHermidata, novelTypes, type AltCheck } from "../../shared/types/type";
+import { type Hermidata, type NovelType, type AllHermidata, novelTypes, type AltCheck } from "../../shared/types/popupType";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
 import { migrateCopy } from "./migrate";

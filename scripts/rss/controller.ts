@@ -1,4 +1,4 @@
-import { type Hermidata } from "../shared/types/type";
+import { type Hermidata } from "../shared/types/popupType";
 
 import { RssBuild } from "./build";
 

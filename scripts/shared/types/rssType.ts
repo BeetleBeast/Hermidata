@@ -1,4 +1,4 @@
-import type { AllHermidata } from "./type";
+import type { AllHermidata } from "./popupType";
 
 export type RSSDOM = {
     notifications: {

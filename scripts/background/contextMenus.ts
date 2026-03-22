@@ -1,6 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
 import type { SettingsInput } from "../shared/types/settings";
-import type { InputArrayType } from "../shared/types/type";
+import type { InputArrayType } from "../shared/types/popupType";
 import { getCurrentDate, parseMangaFireUrl } from "./feeds";
 import { handleSaveNovel } from "./rssCache";
 
