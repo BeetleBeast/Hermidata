@@ -111,8 +111,6 @@
 
 - [ ] able to see at aglace type of RSS ( basic local hermidata ( not linked ), linked hermidata with rss, other? )
 
-- [ ] icon doesn't get picked up if it needs to be red
-
 - [ ] upgrade background.ts ( in particular the web )
 
 ---

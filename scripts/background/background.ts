@@ -129,9 +129,7 @@ function resolveBaseStatus(status: string) {
 }
 // Helper function to set icon and title
 function setIconAndTitle(actionApi: ActionApi, tabId: number) {
-    const iconPath = currentBookmark
-        ? { 48: "assets/icon_red48.png" }
-        : { 48: "assets/icon48.png" };
+    const iconPath = currentBookmark ? "assets/icon/icon_red48.png" : "assets/icon/icon48.png";
 
     actionApi.setIcon({
         path: iconPath,
