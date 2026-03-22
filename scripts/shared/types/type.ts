@@ -91,3 +91,5 @@ export type AltCheck = {
     relatedTitle: string | null;
     existingKey?: undefined;
 }
+
+export type InputArrayType = [string, NovelType, number, string, ReadStatus, string, string[], string]
