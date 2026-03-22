@@ -141,7 +141,7 @@ export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Par
  * @param {*} query 
  * @returns {Promise<Array>} Returns a promise that resolves to an array of valid bookmarks.
  */
-async function searchValidBookmarks(query: string = "") {
+async function searchValidBookmarks(query: object | string = {}) {
     const trashId = await getTrashFolderId();
     const all = await searchBookmarks(query);
 
@@ -195,7 +195,7 @@ async function getRootByTitle(title: string) {
     }
     return rootNode.id;
 }
-async function searchBookmarks(query: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
+async function searchBookmarks(query: object | string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
     if (browser?.bookmarks?.search) {
         const Results = await browser.bookmarks?.search(query);
         if (Results) return Results;
@@ -264,7 +264,7 @@ export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.Bo
 }
 export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
     const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
-    if (!currentTab && Url == null) return;
+    if (!currentTab || !Url) return;
     // initialize currentBookmark
     let searchUrl = Url ?? currentTab.url;
     let NewUrl;
