@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat";
-import type { InputArrayType } from "../shared/types/popupType";
+import type { InputArraySheetType, InputArrayType } from "../shared/types/popupType";
 import { shouldReplaceOrBlock } from "./bookmarks";
 
 
@@ -9,9 +9,20 @@ import { shouldReplaceOrBlock } from "./bookmarks";
 // U = Update | updateRow()
 // D = Delete | N/A
 
-export function writeToSheet(token: number, dataArray: InputArrayType) {
+function makeSureTagsISNotAnArray(dataArray: InputArrayType | InputArraySheetType): InputArraySheetType {
+    const tags = (Array.isArray(dataArray[6]) ? dataArray[6].join(", ") : dataArray[6])
+    const newArray: InputArraySheetType = [dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], dataArray[5], tags, dataArray[7]]
+    return newArray
+    
+}
+
+export function writeToSheet(token: number, dataArray: InputArrayType | InputArraySheetType) {
     readSheet(token, (rows: string[][]) => {
-        const decision = shouldReplaceOrBlock(dataArray, rows, true);
+        const decision = shouldReplaceOrBlock(dataArray as InputArrayType, rows, true);
+
+        // make sure tags is NOT an list and is instead a string
+
+        dataArray = makeSureTagsISNotAnArray(dataArray)
 
         if (decision.action === "append") {
             appendRow(token, dataArray);
@@ -48,7 +59,7 @@ function readSheet(token: number, callback: Function): void {
         .catch(err => console.error("Error reading sheet:", err));
     });
 }
-function appendRow(token: number, dataArray: InputArrayType) {
+function appendRow(token: number, dataArray: InputArraySheetType) {
     ext.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
         const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
         const range = "Sheet1!A2";
@@ -66,7 +77,7 @@ function appendRow(token: number, dataArray: InputArrayType) {
     });
 }
 
-function updateRow(token: number, rowIndex: number, dataArray: InputArrayType) {
+function updateRow(token: number, rowIndex: number, dataArray: InputArraySheetType) {
     ext.storage.sync.get<{ spreadsheetUrl: string }>(["spreadsheetUrl"], (result) => {
         const spreadsheetId = extractSpreadsheetId(result.spreadsheetUrl);
         const range = `Sheet1!A${rowIndex}:H${rowIndex}`; // assumes 8 columns

@@ -99,14 +99,22 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
 
 export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<chrome.bookmarks.BookmarkTreeNode>[] | string[][], isSheet = true) {
     const [title,, chapter, url,, date,] = newEntry;
-    let oldTitle, oldUrl: string | undefined, oldDate, id;
+    let oldTitle, oldNovelType, oldChapter: number,  oldUrl: string | undefined, oldReadStatus,  oldDate, id, notes, tags;
 
     for (let i = 0; i < existingRows.length; i++) {
         if (isSheet) {
-            [oldTitle,,,,, oldUrl,,, oldDate,,,,] = existingRows[i] as string[];
+/* 
+0: "Ougon no Keikenchi"​​​
+1: "Manga"
+2: "21.2"
+3: "https://mangafire.to/read/ougon-no-keikenchii.np6vm/en/chapter-21.2"
+4: "Viewing",
+5: "01/03/2026"
+*/
+            [oldTitle, oldNovelType, oldChapter, oldUrl, oldReadStatus, oldDate, tags, notes] = existingRows[i] as InputArrayType;
         } else {
-            const row = existingRows[i] as Partial<chrome.bookmarks.BookmarkTreeNode>;
-            ({ title: oldTitle, url: oldUrl, dateAdded: oldDate, id } = row);
+            const row: { title: string, url: string, id: string} = existingRows[i] as { title: string, url: string, id: string };
+            ({ title: oldTitle, url: oldUrl, id } = row);
         }
             
         const SameTrimedTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();

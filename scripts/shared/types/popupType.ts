@@ -93,3 +93,4 @@ export type AltCheck = {
 }
 
 export type InputArrayType = [string, NovelType, number, string, ReadStatus, string, string[], string]
+export type InputArraySheetType = [string, NovelType, number, string, ReadStatus, string, string, string]
