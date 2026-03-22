@@ -87,6 +87,10 @@
 
 ## problems
 
+### background
+
+- [ ] the icon never get's red indicating it has found the bookmark of the current page
+
 ### RSS
 
 - [ ] alt names need to be manualy set-up if not wil result in out-of-sync duplicate entry.
