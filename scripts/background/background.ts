@@ -18,7 +18,6 @@ function getToken(callback: Function) {
         }
         const clientId = '10068474315-qegara9du372dg55gv3tur6keuegke4n.apps.googleusercontent.com';
         const redirectUri = ext.identity.getRedirectURL();
-        console.log(redirectUri)
         const scope = 'https://www.googleapis.com/auth/spreadsheets';
         const loginHintParam = items.userEmail ? `&login_hint=${encodeURIComponent(items.userEmail)}` : "";
         const authUrl =
@@ -189,7 +188,7 @@ function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<ch
             
         const SameTrimedTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();
 
-        const { title: OldTitleParsed, chapter: oldChapterParsed } = parseMangaFireUrl(oldUrl ?? '');
+        const { title: OldTitleParsed, chapter: oldChapterParsed } = parseMangaFireUrl(oldUrl ?? ''); // FIXME: this isn't a url but a date string
         const  { title: TitleParsed, chapter: ChapterParsed } = parseMangaFireUrl(url);
         
         const SameTitle = OldTitleParsed === TitleParsed;
@@ -484,8 +483,8 @@ async function getRootByTitle(title: string) {
 }
 async function searchBookmarks(query: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
     if (browser?.bookmarks?.search) {
-        const Results = await browser.bookmarks.search(query)
-        return Results;
+        const Results = await browser.bookmarks?.search(query);
+        if (Results) return Results;
     }
     return await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
         ext.bookmarks.search(query, (results) => {

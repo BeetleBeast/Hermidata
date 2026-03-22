@@ -50,16 +50,18 @@ class HermidataController {
 
         await this.setHermidata(CurrentTabInfo);
 
-        this.dupplicate = new Duplicate();
-        await this.dupplicate.init();
-
-        const dups = await this.dupplicate.findPotentialDuplicates(0.9);
-        if (dups.length > 0) console.table(dups, ['potential duplicates']);
-
+        await this.checkForDuplicates();
+        
         this.RSS = new RSS(this.hermidata);
 
         this.populateUI();
         this.bindEvents();
+    }
+    private async checkForDuplicates(): Promise<void> {
+        this.dupplicate = new Duplicate();
+        await this.dupplicate.init();
+        const dups = await this.dupplicate.findPotentialDuplicates(0.9);
+        if (dups.length > 0) console.table(dups, ['potential duplicates']);
     }
 
     private forceSetClassic() {
@@ -128,14 +130,20 @@ class HermidataController {
         });
     }
     private async setHermidata(currentTabInfo: CurrentTab) {
+
+        if(this.pastHermidata) this.hermidata = this.pastHermidata;
+
+
         this.pageTitle = currentTabInfo.pageTitle;
         this.hermidata.url = currentTabInfo.url;
         this.hermidata.chapter.current = currentTabInfo.currentChapter;
         
-        // set title & notes
-        const trimmedTitle: TrimmedTitle = StringOutput.TrimTitle.trimTitle( currentTabInfo.pageTitle, currentTabInfo.url );
-        this.hermidata.title = trimmedTitle.title;
-        this.hermidata.meta.notes = trimmedTitle.note ?? '';
+        if (!this.pastHermidata) {
+            // set title & notes
+            const trimmedTitle: TrimmedTitle = StringOutput.TrimTitle.trimTitle( currentTabInfo.pageTitle, currentTabInfo.url );
+            this.hermidata.title = trimmedTitle.title;
+            this.hermidata.meta.notes = trimmedTitle.note ?? '';
+        }
     }
     
     private populateUI(): void {
