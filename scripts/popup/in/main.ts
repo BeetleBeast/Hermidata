@@ -49,6 +49,10 @@ class HermidataController {
         ])
 
         this.googleSheetURL = googleSheetURL;
+
+        // initialize Hermidata with current tab info
+        await this.setHermidata(CurrentTabInfo);
+
         this.past = new PastHermidata(this.hermidata);
         const pastHermidata = await this.past.init();
 
@@ -133,7 +137,7 @@ class HermidataController {
             folderSelect.appendChild(option);
         });
     }
-    private async setHermidata(currentTabInfo: CurrentTab, pastHermidata: Hermidata | null): Promise<void> {
+    private async setHermidata(currentTabInfo: CurrentTab, pastHermidata: Hermidata | null = null): Promise<void> {
 
         if(pastHermidata) this.hermidata = pastHermidata;
 
