@@ -1,8 +1,9 @@
 import { ext } from "../shared/BrowserCompat";
 import type { SettingsInput } from "../shared/types/settings";
 import type { InputArrayType } from "../shared/types/popupType";
-import { getCurrentDate, parseMangaFireUrl } from "./feeds";
+import { getCurrentDate } from "./feeds";
 import { handleSaveNovel } from "./rssCache";
+import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
 
 export function initContextMenus() {
     ext.contextMenus.onClicked.addListener((info) => {
@@ -22,7 +23,7 @@ function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Sett
     fetch(info.linkUrl, { method: "HEAD" })
     .then(response => {
         const finalUrl = response.url;
-        let { title, chapter } = parseMangaFireUrl(finalUrl);
+        let { title, chapter } = getTitleAndChapterFromUrl(finalUrl);
         let url = finalUrl;
         let date = getCurrentDate(); // yyyy-mm-dd
         let type = Settings.DefaultChoiceText_Menu.Type;

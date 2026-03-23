@@ -353,25 +353,3 @@ export function getCurrentDate() {
     const year = now.getFullYear();
     return `${day}/${month}/${year}`;
 }
-export function parseMangaFireUrl(url: string): { title: string, chapter: number } {
-    try {
-        const parts = new URL(url).pathname.split('/').filter(Boolean);
-        const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
-        if (!titleSlug) return { title: "Unknown", chapter: 0 }
-        const chapter = parts.at(-1)?.includes('chapter') ? Number.parseFloat(parts.at(-1)?.replace('chapter-', '') || '0') : 0;
-        const title = titleSlug
-            .split('.')[0]             // remove Site's ID code (.yvov1)
-            .replace(/(.)\1$/, '$1')   // Remove last char if second to last is the same
-            // .split('-')[0]             // remove possible advert's 
-            .replaceAll('-', ' ')        // hyphens to spaces
-            .replaceAll(/\b\w/g, c => c.toUpperCase()); // capitalize words
-
-        return {
-            title,
-            chapter
-        };
-    } catch (err) {
-        console.error("Invalid URL", err);
-        return { title: "Unknown", chapter: 0 };
-    }
-}

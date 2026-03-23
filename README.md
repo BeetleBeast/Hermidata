@@ -89,13 +89,15 @@
 
 ### background
 
-- [ ] the icon never get's red indicating it has found the bookmark of the current page
-
 ### RSS
 
 - [ ] alt names need to be manualy set-up if not wil result in out-of-sync duplicate entry.
 
 - [ ] the latest chapter gets captured in the background but isn't set in front-end.
+
+- [ ] if there is an empty but existing list of strings it will show it EVEN IF IT IS EMPTY.
+
+- [ ] still lags a bit
 
 ## TO-DO
 

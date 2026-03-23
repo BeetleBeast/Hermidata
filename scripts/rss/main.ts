@@ -54,12 +54,11 @@ export class RSS {
         notification.innerHTML = "";
         allSec.innerHTML = "";
         
-        this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
-        
         await this.BuildRSS.makeSubscibeBtn();
         
         await this.BuildRSS.makeFeedHeader(notification);
         
+        this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
         
         await this.BuildRSS.makeSortSection(sortSection);
         

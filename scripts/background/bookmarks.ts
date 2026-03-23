@@ -2,10 +2,10 @@ import { ext } from "../shared/BrowserCompat";
 import type { SettingsInput } from "../shared/types/settings";
 import { getSettings } from "../shared/Storage";
 import type { InputArrayType } from "../shared/types/popupType";
-import { parseMangaFireUrl } from "./feeds";
 import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";
+import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
 
 declare const browser: typeof chrome | undefined;
 
@@ -119,8 +119,8 @@ export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Par
             
         const SameTrimedTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();
 
-        const { title: OldTitleParsed, chapter: oldChapterParsed } = parseMangaFireUrl(oldUrl ?? ''); // FIXME: this isn't a url but a date string
-        const  { title: TitleParsed, chapter: ChapterParsed } = parseMangaFireUrl(url);
+        const { title: OldTitleParsed, chapter: oldChapterParsed } = getTitleAndChapterFromUrl(oldUrl ?? ''); // FIXME: this isn't a url but a date string
+        const  { title: TitleParsed, chapter: ChapterParsed } = getTitleAndChapterFromUrl(url);
         
         const SameTitle = OldTitleParsed === TitleParsed;
         const isSame = isSheet ? SameTrimedTitle : SameTitle;
@@ -272,7 +272,7 @@ export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.Bo
 }
 export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
     const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
-    if (!currentTab || !Url) return;
+    if (!currentTab && !Url) return;
     // initialize currentBookmark
     let searchUrl = Url ?? currentTab.url;
     let NewUrl;

@@ -1,11 +1,7 @@
 import { ext } from "../shared/BrowserCompat"
 import { getAllHermidata } from "../shared/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks";
-import { allHermidataCashed, setState } from "./state";
-
-
-let currentBookmark: chrome.bookmarks.BookmarkTreeNode | null = null;
-let currentTab: chrome.tabs.Tab | null = null;
+import { allHermidataCashed, currentBookmark, currentTab, setState } from "./state";
 
 type ActionApi = typeof ext.action | typeof ext.browserAction;
 
@@ -46,9 +42,11 @@ export function updateIcon(Url: string | null = null, currentTabParameter: chrom
     }
 }
 
-function setIconAndTitle(actionApi: ActionApi, tabId: number) {
-    const path = currentBookmark ? "assets/icon/icon_red48.png" : "assets/icon/icon48.png";
-    const title = currentBookmark ? 'Already bookmarkt!' : 'Bookmark it!';
+async function setIconAndTitle(actionApi: ActionApi, tabId: number) {
+
+    const path =  currentBookmark  ? "assets/icon/icon_red48.png" : "assets/icon/icon48.png";
+    const iconPath = currentBookmark  ? { 48: "assets/icon/icon_red48.png" } : { 48: "assets/icon/icon48.png" };
+    const title = currentBookmark  ? 'Already bookmarkt!' : 'Bookmark it!';
 
     actionApi.setIcon({ path, tabId }, () => {
         if (ext.runtime.lastError) console.warn("setIcon error:", ext.runtime.lastError.message);
