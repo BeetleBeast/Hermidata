@@ -3,6 +3,7 @@ import type { Feed, FeedItem, RawFeed } from "../shared/types/rssType";
 import { getAllHermidata, getAllRawFeeds } from "../shared/Storage";
 import type { Hermidata } from "../shared/types/popupType";
 import { allHermidataCashed, setState } from "./state";
+import { TrimTitle } from "../shared/StringOutput";
 
 
 type Meta = {
@@ -114,7 +115,7 @@ async function webSearch() {
         }
 
         const newFeed: RawFeed = {
-            title: novel.latestItem?.title,
+            title: TrimTitle.trimTitle(novel.latestItem?.title, novel.url).title,
             url: novel.url,
             domain: novel.domain,
             lastFetched: new Date().toISOString(),

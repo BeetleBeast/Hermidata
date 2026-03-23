@@ -30,8 +30,9 @@ export async function getRawFeedsRecord(AllHermidata: Record<string, Hermidata>)
 
         const feedTitle = TrimTitle.trimTitle( feed?.items?.[0]?.title || feed.title, feed.url ).title;
         const typeV2 = titleMap.get(feedTitle)?.type || novelTypes[0];
+        const id = returnHashedTitle(feedTitle, typeV2, feed?.url );
 
-        feedList[returnHashedTitle( feed?.items?.[0]?.title || feed.title, typeV2, feed?.url )] = feed;
+        feedList[id] = feed;
     }
     return feedList;
 }
@@ -76,10 +77,13 @@ export async function getHermidataWithRssFromBackground(): Promise<Record<string
 export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFeed>, AllHermidata: Record<string, Hermidata>): Promise<Hermidata> {
     const rssInfo = feed.rss;
     if (!rssInfo?.url) return feed;
-    const currentFeedTitle = findByTitleOrAltV2(rssInfo?.latestItem.title || feed.title, AllHermidata);
+    const currentFeedTitle = findByTitleOrAltV2(TrimTitle.trimTitle(rssInfo?.latestItem.title || feed.title, rssInfo.url || feed.url).title, AllHermidata);
+    // FIXME: allFeeds is not correct here see here
+    console.log(`[Hermidata] allFeeds: ${Object.values(allFeeds)}`);
+    console.log(`[Hermidata] currentFeed: ${feed}`);
     const matchFeed = Object.values(allFeeds).find(f => {
         const sameDomain = f.domain === rssInfo.domain;
-        const sameTitle = findByTitleOrAltV2(f?.items?.[0]?.title || f.title, AllHermidata) === currentFeedTitle;
+        const sameTitle = findByTitleOrAltV2(TrimTitle.trimTitle(f?.items?.[0]?.title || f.title, f.url).title, AllHermidata) === currentFeedTitle;
         return sameDomain && sameTitle;
     });
     if (!matchFeed) return feed; // no match

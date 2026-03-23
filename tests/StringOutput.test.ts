@@ -1,6 +1,6 @@
 // scripts/shared/titleUtils.test.ts
 import { describe, it, expect } from 'vitest'
-import { TrimTitle, getChapterFromTitle } from '../scripts/shared/StringOutput';
+import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../scripts/shared/StringOutput';
 
 // TODO: test urls'
 
@@ -92,3 +92,19 @@ describe('getChapterFromTitle', () => {
         expect(getChapterFromTitle(input, '')).toBe(expected)
     })
 })
+
+describe('getTitleAndChapterFromUrl', () => {
+    it.each([
+        ['SSS-Class Revival Hunter - Chapter 154', {title: `SSS-Class Revival Hunter`, chapter: 154}],
+        ['https://mangafire.to/read/sss-class-suicide-hunterr.krq9/en/chapter-154', {title: `SSS-Class Revival Hunter`, chapter: 154}],
+        [`www.destinyunchain.online/chapter/222`, {title: `The Wandering Fairy [LitRPG World-Hopping]`, chapter: 222}],
+        [`www.destinyunchain.online/chapter/1`, {title: `My Villainous Family Won't Let Me Be`, chapter: 1}],
+        [`www.destinyunchain.online/chapter/98`, {title: `Destiny Unchain Online Remake`, chapter: 98}],
+        [`www.destinyunchain.online/chapter/15`, {title: `The Maid is a Vampire`, chapter: 15}],
+        [`www.destinyunchain.online/chapter/150`, {title: `The Novel's Extra`, chapter: 150}],
+        [`www.destinyunchain.online/chapter/3`, {title: `Lord of the Mysteries (2025)`, chapter: 3}],
+        ])('getTitleAndChapterFromUrl(%s) → %s', (input, expected) => {
+        expect(getTitleAndChapterFromUrl(input)).toBe(expected)
+    })
+})
+getTitleAndChapterFromUrl

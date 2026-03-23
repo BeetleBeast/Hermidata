@@ -97,6 +97,8 @@
 
 - [ ] still lags a bit
 
+- [ ] same tags but not well written ( like fav, favorite, favorites ) are sepperate tags instead of the same one
+
 ## TO-DO
 
 - [ ] select saving option:
