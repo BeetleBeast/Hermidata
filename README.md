@@ -95,8 +95,6 @@
 
 - [ ] the latest chapter gets captured in the background but isn't set in front-end.
 
-- [ ] if there is an empty but existing list of strings it will show it EVEN IF IT IS EMPTY.
-
 - [ ] still lags a bit
 
 ## TO-DO

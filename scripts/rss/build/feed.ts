@@ -159,6 +159,7 @@ export class FeedItem {
             const tags = currentHermidata.meta?.tags as (string[] | string);
             const allTags = Array.isArray(tags) ? tags : tags?.split(',');
             for (const tagName of allTags) {
+                if (tagName === '') continue;
                 const tagDiv = document.createElement('div');
                 tagDiv.classList = `tag-div tag-div-${tagName}`;
                 tagDiv.textContent = `[${tagName}]`;

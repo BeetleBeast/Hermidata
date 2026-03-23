@@ -117,7 +117,8 @@ export class SortOption extends Sort {
         headerContainer.append(header,headersymbol);
         section.appendChild(headerContainer)
 
-        items.forEach(itemText => {
+        for (const item of items) {
+            if (item === '') continue;
             const itemContainer = document.createElement('div');
             itemContainer.className = 'filter-item-container';
 
@@ -129,12 +130,12 @@ export class SortOption extends Sort {
             // Label
             const label = document.createElement('label');
             label.className = 'filter-item-label';
-            label.textContent = itemText;
+            label.textContent = item;
 
             itemContainer.appendChild(checkbox);
             itemContainer.appendChild(label);
             list.appendChild(itemContainer);
-        });
+        }
 
         section.appendChild(list);
         return section;
