@@ -7,54 +7,94 @@ import type { RawFeed } from "../shared/types/rssType";
 import { getAllRawFeeds, getHermidataViaKey } from "../shared/Storage";
 import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/popupType";
 
-export async function getRawFeedsRecord(AllHermidata: Record<string, Hermidata>): Promise<Record<string, RawFeed>> {
-    const feedList: Record<string, RawFeed> = {};
-
-    const savedFeeds: Record<string, RawFeed> = await getAllRawFeeds();
+export async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
+    const rawFeeds: Record<string, RawFeed> = await getAllRawFeeds();
     
     const hermidataValues = Object.values(AllHermidata);
-    const domainMap = new Map<string, string>(
-        hermidataValues.map(novel => [novel.url, novel.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]])
-    );
-    const titleMap = new Map<string, Hermidata>(
-        hermidataValues.map(novel => [
-            TrimTitle.trimTitle(novel.title, novel.url).title, novel])
-    );
 
-    for (const key in savedFeeds) {
-        const feed = savedFeeds[key];
-        if ( !feed.title || !feed.url ) continue;
+    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeeds, hermidataValues) ?? rawFeeds;
 
-        const matchedDomain = hermidataValues.find(n => n.url.includes(feed.domain));
-        if (feed.domain !== domainMap.get(matchedDomain?.url || '')) continue;
-
-        const feedTitle = TrimTitle.trimTitle( feed?.items?.[0]?.title || feed.title, feed.url ).title;
-        const typeV2 = titleMap.get(feedTitle)?.type || novelTypes[0];
-        const id = returnHashedTitle(feedTitle, typeV2, feed?.url );
-
-        feedList[id] = feed;
-    }
     return feedList;
 }
-// isn't utilised
+function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, Hermidata[]> {
+    // Map domain → all Hermidata entries on that domain
+        const domainToHermidata = new Map<string, Hermidata[]>();
+        
+        for (const novel of hermidataValues) {
+            const domain = novel.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+            if (!domainToHermidata.has(domain)) domainToHermidata.set(domain, []);
+            domainToHermidata.get(domain)!.push(novel);
+        }
+        
+        return domainToHermidata;
+}
+
+function filterRawFeeds(rawFeeds: Record<string, RawFeed>, hermidataValues: Hermidata[]): Record<string, RawFeed> {
+
+    const filteredRawFeeds: Record<string, RawFeed> = {};
+    
+    const allNONmaches: RawFeed[] = [];
+    
+    const domainToHermidata = getAllDomainFromHermidata(hermidataValues);
+
+    // Map trimmed hermidata title → Hermidata entry
+    // trim once here so we compare like-for-like
+    const titleMap = new Map<string, Hermidata>();
+    for (const novel of hermidataValues) {
+        const trimmed = TrimTitle.trimTitle(novel.title, novel.url).title;
+        titleMap.set(trimmed, novel);
+    }
+
+    for (const key in rawFeeds) {
+        const feed = rawFeeds[key];
+        if (!feed.title || !feed.url ||!feed) continue;
+
+        // Get all Hermidata entries for this feed's domain
+        const domainCandidates = domainToHermidata.get(feed.domain);
+        if (!domainCandidates?.length) continue;
+
+        // Trim the feed title the same way as the titleMap keys
+        const rawFeedTitle = feed?.items?.[0]?.title || feed.title;
+        const feedTitle = TrimTitle.trimTitle(rawFeedTitle, feed.url).title;
+
+        // Find the matching Hermidata entry by trimmed title among domain candidates only
+        const matched = domainCandidates.find( n => TrimTitle.trimTitle(n.title, n.url).title === feedTitle );
+        if (!matched) {
+            allNONmaches.push(feed);
+            continue;
+        }
+
+        const type = matched?.type ?? novelTypes[0];
+        const id = returnHashedTitle(feedTitle, type, feed.url);
+        if (!key) continue;
+        filteredRawFeeds[id] = Object.freeze({ ...feed, items: [...(feed.items ?? [])] });
+        // filteredRawFeeds[id] = feed;
+    }
+
+    console.log('filterRawFeeds result size', Object.keys(filteredRawFeeds).length);
+    console.log('rawFeeds input size', Object.keys(rawFeeds).length);
+    console.log('domainCandidates misses', allNONmaches.length);
+    return filteredRawFeeds;
+}
+
 export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> {
     console.group('getHermidataWithRss');
     console.time('getAllHermidata');
     const AllHermidata = await PastHermidata.getAllHermidata();
     console.timeEnd('getAllHermidata');
     console.time('getRawFeedsRecord');
-    const AllFeeds = await getRawFeedsRecord(AllHermidata);
+    const RawFeeds = await getRawFeedsRecord({ ...AllHermidata }); // ← shallow copy so mutations don't bleed back
     console.timeEnd('getRawFeedsRecord');
     // Collect all entries that have RSS
     console.time('filter entries with RSS');
-    const rssEntries = Object.entries(AllHermidata).filter(([_, feed]) => feed?.rss);
+    const hermidataWRSS = Object.entries(AllHermidata).filter(([_, feed]) => feed?.rss);
     console.timeEnd('filter entries with RSS');
     // Run all updateFeed calls in parallel
     console.time('updateFeed');
     const updated = await Promise.all(
-        rssEntries.map(async ([id, feed]) => ({
+        hermidataWRSS.map(async ([id, feed]) => ({
             id,
-            feed: await updateFeed(feed, AllFeeds, AllHermidata),
+            feed: await updateFeed(feed, RawFeeds, AllHermidata),
         }))
     );
     console.timeEnd('updateFeed');
@@ -78,9 +118,6 @@ export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFe
     const rssInfo = feed.rss;
     if (!rssInfo?.url) return feed;
     const currentFeedTitle = findByTitleOrAltV2(TrimTitle.trimTitle(rssInfo?.latestItem.title || feed.title, rssInfo.url || feed.url).title, AllHermidata);
-    // FIXME: allFeeds is not correct here see here
-    console.log(`[Hermidata] allFeeds: ${Object.values(allFeeds)}`);
-    console.log(`[Hermidata] currentFeed: ${feed}`);
     const matchFeed = Object.values(allFeeds).find(f => {
         const sameDomain = f.domain === rssInfo.domain;
         const sameTitle = findByTitleOrAltV2(TrimTitle.trimTitle(f?.items?.[0]?.title || f.title, f.url).title, AllHermidata) === currentFeedTitle;
@@ -93,23 +130,35 @@ export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFe
     const isNew = latestFetchedItem && (latestFetchedItem.link !== currentLatestItem?.link);
     if (isNew) console.log("Latest item changed?", latestFetchedItem, currentLatestItem);
 
-    // Update feed info
-    feed.rss = {
-        ...rssInfo,
-        title: matchFeed.title || rssInfo.title,
-        url: matchFeed.url || rssInfo.url,
-        image: matchFeed.image || rssInfo.image,
-        domain: matchFeed.domain || rssInfo.domain,
-        lastFetched: new Date().toISOString(),
-        latestItem: latestFetchedItem
-    };
-    // Optionally update latest chapter if we can parse it
     const latestChapter = getChapterFromTitle(latestFetchedItem.title, matchFeed.url);
+
     if (latestChapter) {
         feed.chapter.latest = latestChapter;
         feed.meta.updated = new Date().toISOString();
     }
-    return feed;
+
+    // Update feed info
+    const newFeed = {
+        ...feed,
+        rss: {
+            ...rssInfo,
+            title: matchFeed.title || rssInfo.title,
+            url: matchFeed.url || rssInfo.url,
+            image: matchFeed.image || rssInfo.image,
+            domain: matchFeed.domain || rssInfo.domain,
+            lastFetched: new Date().toISOString(),
+            latestItem: latestFetchedItem
+        },
+        chapter: {
+            ...feed.chapter,
+            latest: latestChapter ?? feed.chapter.latest
+        },
+        meta: {
+            ...feed.meta,
+            updated: latestChapter ? new Date().toISOString() : feed.meta.updated
+        }
+    };
+    return newFeed;
 }
 
 

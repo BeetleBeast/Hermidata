@@ -81,7 +81,7 @@ export async function getAllRawFeeds(): Promise<Record<string, RawFeed>> {
     return new Promise<Record<string, RawFeed>>((resolve, reject) => {
         ext.storage.local.get("savedFeeds", (result: { savedFeeds: Record<string, RawFeed> }) => {
             if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError?.message));
-            resolve(result?.savedFeeds || {});
+            resolve(JSON.parse(JSON.stringify(result?.savedFeeds || {})));
         });
     }).catch(error => {
         console.error('Extention error: Failed Premise savedFeeds: ',error);

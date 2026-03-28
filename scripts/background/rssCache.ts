@@ -12,9 +12,9 @@ let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
 
 export function initRssCache() {
     rssCachePromise = getHermidataWithRss().then(result => {
-        rssCache = result
-        return result
-    })
+        rssCache = JSON.parse(JSON.stringify(result)); // deep copy into cache
+        return result;
+    });
 }
 
 export function handleGetRSS(sendResponse: (r: unknown) => void): true {
