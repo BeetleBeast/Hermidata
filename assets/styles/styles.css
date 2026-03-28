@@ -52,7 +52,7 @@ body::after {
     margin-bottom: 10px;
 }
 .HDRSS {
-    opacity: 0;
+    display: none;
     position: absolute;
     top: 50px;
     width: 98vw;
@@ -210,13 +210,36 @@ select.autoInput {
     justify-content: center;
     padding-top: 15px;
     padding-bottom: 15px;
+}
+
+.containerHeader-feed
+.titleHeader {
     -webkit-user-select: none;
     user-select: none;
+    cursor: pointer;
 }
+
+
 .ContainerHeader {
     width: 100%;
     border-top: 1px solid var(--hr);
     border-bottom: 1px solid var(--hr);
+}
+
+.containerHeader-feed {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	margin: auto;
+}
+
+.containerHeader-item {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	margin: auto;
 }
 
 /* ---- sort ------ */
@@ -429,12 +452,15 @@ select.autoInput {
 }
 #RSS-Notification:has(
     > .containerHeader-feed > .titleHeader > .feed-header-symbol[data-feed-state="up"]
-    ) > .RSS-Notification-item {
+    ) > .hermidata-item[data-is-notification-item="true"] {
     height: 0px;
     padding: 0px;
     margin: 0px;
     transform: translateY(50%);
     opacity: 0;
+    display: none;
+    transition: height 0.3s ease, padding 0.3s ease, margin 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+    
 }
 /* List of checkboxes under each filter */
 .filter-list {
@@ -508,8 +534,7 @@ select.autoInput {
 }
 
 
-.RSS-entries-item,
-.RSS-Notification-item {
+.hermidata-item {
     border: 1px solid var(--Btn);
     background-color: var(--bg-color);
     border-radius: 4px;
@@ -522,10 +547,10 @@ select.autoInput {
     transition: background-color 0.3s ease;
     height: 40px;
     opacity: 1;
+
 }
 
-.RSS-entries-item:hover,
-.RSS-Notification-item:hover {
+.hermidata-item:hover{
     background-color: var(--Btn_hover);
     cursor: pointer;
 }
@@ -582,6 +607,14 @@ select.autoInput {
     padding-right: 10px;
     right: 0;
     position: absolute;
+}
+
+.RSS-entries-item-pubDate,
+.RSS-Notification-item-pubDate {
+    font-weight: bold;
+    font-size: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 #subscribeBtn {

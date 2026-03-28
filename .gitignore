@@ -4,6 +4,10 @@
 .hintrc
 .gitignore
 .vscode*
+node_modules
+
+# ignore dist files
+dist*
 
 # ignore all files inside SecretTokenCodes
 SecretTokenCodes*
