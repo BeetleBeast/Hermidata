@@ -107,7 +107,6 @@ export class RSS {
 
         return rssDomPackage;
     }
-    // FIXME: on enter it lags hard if there are alot of items ( freezes whole extention ) ( lags about 2 times: 1 on hover second 2 seconds after click )
     public async preloadRSS(): Promise<RSSDOM> {
         if (rssPreloadPromise) return rssPreloadPromise;
 
@@ -126,7 +125,9 @@ export class RSS {
             getHermidataWithRssFromBackground(),
             PastHermidata.getAllHermidata()
         ]);
-        return { feeds, hermidata };
+        const merged = { ...hermidata, ...feeds }; // Overwrite stale hermidata entries with the updated RSS ones
+
+        return { feeds, hermidata: merged };
     }
 
     private insertRSSPage(dom: RSSDOM, {notifSec, allSec}: { notifSec: Element; allSec: Element; }) {

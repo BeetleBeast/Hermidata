@@ -12,7 +12,7 @@ let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
 
 export function initRssCache() {
     rssCachePromise = getHermidataWithRss().then(result => {
-        rssCache = JSON.parse(JSON.stringify(result)); // deep copy into cache
+        rssCache = structuredClone(result); // deep copy into cache
         return result;
     });
 }

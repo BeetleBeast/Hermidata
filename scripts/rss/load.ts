@@ -9,10 +9,11 @@ import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../sh
 
 export async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
     const rawFeeds: Record<string, RawFeed> = await getAllRawFeeds();
+    const rawFeedsValues = Object.values({...rawFeeds});
     
     const hermidataValues = Object.values(AllHermidata);
 
-    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeeds, hermidataValues) ?? rawFeeds;
+    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues);
 
     return feedList;
 }
@@ -29,7 +30,7 @@ function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, He
         return domainToHermidata;
 }
 
-function filterRawFeeds(rawFeeds: Record<string, RawFeed>, hermidataValues: Hermidata[]): Record<string, RawFeed> {
+function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Record<string, RawFeed> {
 
     const filteredRawFeeds: Record<string, RawFeed> = {};
     
@@ -45,8 +46,7 @@ function filterRawFeeds(rawFeeds: Record<string, RawFeed>, hermidataValues: Herm
         titleMap.set(trimmed, novel);
     }
 
-    for (const key in rawFeeds) {
-        const feed = rawFeeds[key];
+    for (const feed of rawFeeds) {
         if (!feed.title || !feed.url ||!feed) continue;
 
         // Get all Hermidata entries for this feed's domain
@@ -66,7 +66,7 @@ function filterRawFeeds(rawFeeds: Record<string, RawFeed>, hermidataValues: Herm
 
         const type = matched?.type ?? novelTypes[0];
         const id = returnHashedTitle(feedTitle, type, feed.url);
-        if (!key) continue;
+
         filteredRawFeeds[id] = Object.freeze({ ...feed, items: [...(feed.items ?? [])] });
         // filteredRawFeeds[id] = feed;
     }
