@@ -7,7 +7,8 @@ import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
-import { getGoogleSheetURL } from '../../shared/Storage';
+import { getAllTags, getGoogleSheetURL, getSuggestedTags } from '../../shared/Storage';
+import { customPrompt } from '../frontend/confirm';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -62,7 +63,7 @@ class HermidataController {
         
         this.RSS = new RSS(this.hermidata);
 
-        this.populateUI();
+        this.populateUI(await PastHermidata.getAllHermidata());
         this.bindEvents();
     }
     private async checkForDuplicates(): Promise<void> {
@@ -137,6 +138,99 @@ class HermidataController {
             folderSelect.appendChild(option);
         });
     }
+    private initTags(AllHermidata: Record<string, Hermidata>): void {
+        const select = getElement<HTMLSelectElement>('#tags');
+        if (!select) return;
+
+        const allTags = getAllTags(AllHermidata);
+        const currentTags = this.hermidata.meta.tags ?? [];
+
+        // Clear and rebuild
+        select.innerHTML = '';
+
+        // Default none option
+        const noneOption = document.createElement('option');
+        noneOption.value = '';
+        noneOption.textContent = 'None';
+        select.appendChild(noneOption);
+
+        // Existing tags
+        for (const [tag, count] of allTags.entries()) {
+            const option = document.createElement('option');
+            option.value = tag;
+            option.textContent = `${tag} (${count})`;
+            option.selected = currentTags.includes(tag);
+            select.appendChild(option);
+        }
+
+        // Divider
+        select.appendChild(document.createElement('hr'));
+
+        // New tag option
+        const newOption = document.createElement('option');
+        newOption.value = '__new__';
+        newOption.textContent = '+ New tag...';
+        select.appendChild(newOption);
+
+        // Handle selection
+        select.addEventListener('change', () => {
+            if (select.value === '__new__') {
+                this.promptNewTag(select, allTags);
+                return;
+            }
+            if (select.value === '') {
+                this.hermidata.meta.tags = [];
+                return;
+            }
+            // AND selection — toggle tag in/out of selected list
+            if (this.hermidata.meta.tags.includes(select.value)) {
+                this.hermidata.meta.tags = this.hermidata.meta.tags.filter(t => t !== select.value);
+            } else {
+                this.hermidata.meta.tags.push(select.value);
+            }
+            this.updateTagDisplay(select);
+        });
+    }
+
+    private async promptNewTag( select: HTMLSelectElement, allTags: Map<string, number> ): Promise<void> {
+        
+        const newTag = await customPrompt('Enter new tag name:', 'Tag...');
+        if (!newTag) return;
+
+        // Reset select back so it doesn't stay on "+ New tag..."
+        select.value = newTag && this.hermidata.meta.tags.includes(newTag)
+            ? newTag
+            : (this.hermidata.meta.tags[0] ?? '');
+
+        if (!newTag) return;
+        if (allTags.has(newTag)) {
+            // Tag already exists — just select it
+            this.hermidata.meta.tags.push(newTag);
+            this.updateTagDisplay(select);
+            return;
+        }
+
+        // Add new tag as option and select it
+        const option = document.createElement('option');
+        option.value = newTag;
+        option.textContent = `${newTag} (1)`;
+        option.selected = true;
+        // Insert before the hr + new tag option (last 2 elements)
+        select.insertBefore(option, select.options[select.options.length - 2]);
+        this.hermidata.meta.tags.push(newTag);
+        select.value = newTag;
+    }
+
+    private updateTagDisplay(select: HTMLSelectElement): void {
+        // Visually mark selected tags with a checkmark
+        for (const option of select.options) {
+            if (this.hermidata.meta.tags.includes(option.value)) {
+                option.textContent = `✓ ${option.value.replace(/^✓ /, '')}`;
+            } else {
+                option.textContent = option.textContent.replace(/^✓ /, '');
+            }
+        }
+    }
     private async setHermidata(currentTabInfo: CurrentTab, pastHermidata: Hermidata | null = null): Promise<void> {
 
         if(pastHermidata) this.hermidata = pastHermidata;
@@ -154,7 +248,7 @@ class HermidataController {
         }
     }
     
-    private populateUI(): void {
+    private populateUI(AllHermidata: Record<string, Hermidata>): void {
         // All the getElementById calls live here
         const display = this.pastHermidata ?? this.hermidata;
 
@@ -163,6 +257,7 @@ class HermidataController {
 
         this.populateType();
         this.populateStatus();
+        this.initTags(AllHermidata);
 
         // backward compatibility for past hermidata
         this.trycapitalizingTypesAndStatus();
@@ -175,11 +270,9 @@ class HermidataController {
         setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
         setElement<HTMLInputElement>('#url', el => el.value  = this.hermidata.url);
         setElement<HTMLInputElement>("#date", el => el.value = new Intl.DateTimeFormat('en-GB').format(new Date()) || "");
-        setElement<HTMLInputElement>("#tags", el => el.value = display.meta.tags.toString());
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
         setElement('#isNewHermidata', el => el.textContent = this.pastHermidata?.title ? '' : 'New!');
-        this.FixTableSize()
         
         // HDR RSS
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
@@ -201,64 +294,6 @@ class HermidataController {
             ext.tabs.create({ url: this.googleSheetURL })
             .catch((error) => console.error('Extention error trying to open new tab GoogleSheetURL: ',error));
         });
-    }
-    private FixTableSize() {
-        const inputs = document.querySelectorAll<HTMLInputElement>('input.autoInput');
-        inputs.forEach(input => {
-            const td = input.closest('td');
-            const table = input.closest('table');
-            const columnIndex = td?.cellIndex ?? -1;
-            const th = table?.querySelectorAll('th')[columnIndex];
-            if (!th) return;
-
-            const measureText = (text: string, inputEl: Element) => {
-                const span = document.createElement('span');
-                span.style.position = 'absolute';
-                span.style.visibility = 'hidden';
-                span.style.whiteSpace = 'pre';
-                span.style.font = getComputedStyle(inputEl).font;
-                span.textContent = text || '';
-                document.body.appendChild(span);
-                const width = span.offsetWidth;
-                span.remove();
-                return width;
-            };
-            const resize = () => {
-                const value = input.value;
-                if (!value) {
-                    input.style.width = '42px'; // empty = no width
-                    return;
-                }
-                const textWidth = measureText(value, input);
-                const parent = getElement('#ParentPreview');
-                if (!parent) {
-                    input.style.width = '42px'; // no parent = no width
-                    return;
-                }
-                const parentMaxWidth = 10000; // same as your CSS
-                const parentStyle = getComputedStyle(parent);
-                const parentPadding = Number.parseFloat(parentStyle.paddingLeft) + Number.parseFloat(parentStyle.paddingRight);
-                // Actual usable space in the parent
-                const maxContainerWidth = (document.body.offsetWidth, parentMaxWidth) - parentPadding;
-                // Get all first-row cells and subtract other columns' widths
-                const row = table.rows[0];
-                const cells = row.cells;
-                let otherColsWidth = 0;
-                for (let i = 0; i < cells.length; i++) {
-                    if (i !== columnIndex) {
-                        otherColsWidth += cells[i].offsetWidth;
-                    }
-                }
-                // Remaining space available for this input
-                const availableWidth = maxContainerWidth - otherColsWidth - 200; // no clue what 200 is 
-                // Clamp final width
-                const clampedWidth = Math.min(textWidth + 12, availableWidth, this.HARDCAP_RUNAWAYGROWTH);
-                input.style.width = `${clampedWidth}px`;
-            };
-            // Defer initial call to allow proper layout
-            requestAnimationFrame(() => resize());
-                input.addEventListener('input', resize);
-        })
     }
     private trycapitalizingTypesAndStatus() {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {

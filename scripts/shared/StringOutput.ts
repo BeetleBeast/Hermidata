@@ -1,3 +1,4 @@
+import { getAllTags } from './Storage';
 import type { Hermidata, RegexConfig, TrimmedTitle } from './types/popupType';
 
 export function getChapterFromTitle(title: string, url: string): number {
@@ -87,6 +88,13 @@ export function getTitleAndChapterFromUrl(url: string): { title: string, chapter
     };
 }
 
+export function setAllTags(allHermidata: Record<string, Hermidata>): string[] {
+    
+    const outputAllTags: string[] = [];
+    const tagCount = getAllTags(allHermidata);
+    
+    return outputAllTags;
+}
 
 export class TrimTitle {
     
