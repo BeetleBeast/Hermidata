@@ -174,6 +174,7 @@ Source maps are included in dev builds. Each background module registers its own
 - [ ] Choose which save targets are active per entry (bookmark only, sheet only, or both)
 - [ ] Edit type and status options directly from Settings
 - [ ] Manual alternate title entry for out-of-sync RSS matches
+- [ ] auto link RSS to entry without setting it manually
 
 ---
 
