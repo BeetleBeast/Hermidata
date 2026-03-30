@@ -7,7 +7,7 @@ import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
-import { getAllTags, getGoogleSheetURL, getSuggestedTags } from '../../shared/Storage';
+import { getAllTags, getGoogleSheetURL } from '../../shared/Storage';
 import { customPrompt } from '../frontend/confirm';
 
 export type CurrentTab = {
@@ -37,8 +37,6 @@ class HermidataController {
 
     public googleSheetURL: string | undefined;
     public pageTitle: string | undefined;
-
-    private readonly HARDCAP_RUNAWAYGROWTH = 300;
 
     private readonly Testing = false;
 

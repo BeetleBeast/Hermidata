@@ -57,7 +57,7 @@ async function addBookmark([title, type, chapter, url, status,,]: InputArrayType
 }
 async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<typeof shouldReplaceOrBlock>) {
     const { replacedURL: OldURL, replaceID: OldID } = decision;
-    const [title, type, chapter, url, status, date, tags, notes] = dataArray;
+    const [title, type, chapter, url, status] = dataArray;
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
     
     const settings: SettingsInput = await new Promise((resolve) => {
@@ -99,11 +99,11 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
 
 export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<chrome.bookmarks.BookmarkTreeNode>[] | string[][], isSheet = true) {
     const [title,, chapter, url,, date,] = newEntry;
-    let oldTitle, oldNovelType, oldChapter: number,  oldUrl: string | undefined, oldReadStatus,  oldDate, id, notes, tags;
+    let oldTitle, oldUrl: string | undefined,  oldDate, id;
 
     for (let i = 0; i < existingRows.length; i++) {
         if (isSheet) {
-            [oldTitle, oldNovelType, oldChapter, oldUrl, oldReadStatus, oldDate, tags, notes] = existingRows[i] as InputArrayType;
+            [oldTitle,,, oldUrl,, oldDate] = existingRows[i] as InputArrayType;
         } else {
             const row: { title: string, url: string, id: string} = existingRows[i] as { title: string, url: string, id: string };
             ({ title: oldTitle, url: oldUrl, id } = row);
@@ -111,15 +111,14 @@ export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Par
             
         const SameTrimedTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();
 
-        const { title: OldTitleParsed, chapter: oldChapterParsed } = getTitleAndChapterFromUrl(oldUrl ?? ''); // FIXME: this isn't a url but a date string
-        const  { title: TitleParsed, chapter: ChapterParsed } = getTitleAndChapterFromUrl(url);
+        const { title: OldTitleParsed, chapter: oldChapterParsed } = getTitleAndChapterFromUrl(oldUrl ?? '');
+        const  TitleParsed = getTitleAndChapterFromUrl(url).title;
         
         const SameTitle = OldTitleParsed === TitleParsed;
         const isSame = isSheet ? SameTrimedTitle : SameTitle;
 
         if (isSame) {
             const chapterChanged = chapter !== oldChapterParsed;
-            const chapterChangedURL = ChapterParsed !== oldChapterParsed;
 
             const oldDateStr = oldDate?.toString()
 
@@ -214,17 +213,6 @@ function updateBookmark(id: string, changes: Partial<chrome.bookmarks.BookmarkTr
     return new Promise((resolve, reject) => {
         ext.bookmarks.update(id, changes, (result) => {
         if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError?.message));
-        else resolve(result);
-        });
-    });
-}
-function getAllBookmarks(id: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
-    if (browser?.bookmarks?.getSubTree) {
-        return browser.bookmarks.getSubTree(id);
-    }
-    return new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
-        ext.bookmarks.getSubTree(id, (result) => {
-        if (ext.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
         else resolve(result);
         });
     });

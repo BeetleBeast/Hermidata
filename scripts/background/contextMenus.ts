@@ -30,7 +30,7 @@ function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Sett
         let status = Settings.DefaultChoiceText_Menu.status;
         let tags = Settings.DefaultChoiceText_Menu.tags;
         let notes = Settings.DefaultChoiceText_Menu.notes;
-        const data: InputArrayType = [title, type, chapter, url, status, date, tags, notes];
+        const data: InputArrayType = [title ?? "", type, chapter, url, status, date, tags, notes];
         handleSaveNovel(data);
     })
     .catch(err => console.error("Failed to resolve redirect:", err));

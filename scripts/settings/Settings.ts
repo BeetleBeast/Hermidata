@@ -134,31 +134,36 @@ class Settings {
         const settings: SettingsInput = defaultSettings;
         return settings;
     }
+
+    private deepMerge( target: SettingsInput, source: SettingsInput ): boolean {
+        let updated = false;
+
+        const t = target as Record<string, any>;
+        const s = source as Record<string, any>;
+
+        for (const key in s) {
+            if (!(key in t)) {
+                t[key] = s[key];
+                updated = true;
+            } else if ( 
+                (typeof t[key] === "object" && typeof s[key] === "object" 
+                    && t[key] !== null && s[key] !== null 
+                    && !Array.isArray(t[key])
+                ) && this.deepMerge(t[key], s[key])
+            ) {
+                updated = true;
+            }
+        }
+
+        return updated;
+    }
     private async ensureSettingsUpToDate(callback: (settings: SettingsInput) => void) {
         const storedSettings = await getSettings();
         const defaultSettings = this.getDefaultSettings();
 
         let updated = false;
 
-        // FIXME: this is a hack
-
-        /*
-        function deepMerge(target: SettingsInput, source: SettingsInput) {
-            for (const key in source) {
-                if (!(key in target)) {
-                    target[key] = source[key];
-                    updated = true;
-                } else if (
-                    typeof target[key] === "object" &&
-                    typeof source[key] === "object"
-                ) {
-                    deepMerge(target[key], source[key]);
-                }
-            }
-        }
-        */
-
-        // deepMerge(storedSettings, defaultSettings);
+        this.deepMerge(storedSettings, defaultSettings);
 
         if (updated) {
             chrome.storage.sync.set({ Settings: storedSettings }, () => {

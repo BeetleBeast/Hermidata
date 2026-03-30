@@ -2,8 +2,6 @@
 import { describe, it, expect } from 'vitest'
 import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../scripts/shared/StringOutput';
 
-// TODO: test urls'
-
 describe('trimTitle', () => {
     it.each([
         [`Destiny Unchain Online chapter 99 - Read Manga Online`, `Destiny Unchain Online`],
@@ -95,16 +93,34 @@ describe('getChapterFromTitle', () => {
 
 describe('getTitleAndChapterFromUrl', () => {
     it.each([
-        ['SSS-Class Revival Hunter - Chapter 154', {title: `SSS-Class Revival Hunter`, chapter: 154}],
-        ['https://mangafire.to/read/sss-class-suicide-hunterr.krq9/en/chapter-154', {title: `SSS-Class Revival Hunter`, chapter: 154}],
-        [`www.destinyunchain.online/chapter/222`, {title: `The Wandering Fairy [LitRPG World-Hopping]`, chapter: 222}],
-        [`www.destinyunchain.online/chapter/1`, {title: `My Villainous Family Won't Let Me Be`, chapter: 1}],
-        [`www.destinyunchain.online/chapter/98`, {title: `Destiny Unchain Online Remake`, chapter: 98}],
-        [`www.destinyunchain.online/chapter/15`, {title: `The Maid is a Vampire`, chapter: 15}],
-        [`www.destinyunchain.online/chapter/150`, {title: `The Novel's Extra`, chapter: 150}],
-        [`www.destinyunchain.online/chapter/3`, {title: `Lord of the Mysteries (2025)`, chapter: 3}],
-        ])('getTitleAndChapterFromUrl(%s) → %s', (input, expected) => {
-        expect(getTitleAndChapterFromUrl(input)).toBe(expected)
-    })
-})
-getTitleAndChapterFromUrl
+        ['https://mangafire.to/read/sss-class-suicide-hunterr.krq9/en/chapter-154',{ title: 'Sss Class Suicide Hunter', chapter: 154 }],
+        ['https://www.royalroad.com/fiction/94680/the-wandering-fairy-litrpg-world-hopping/chapter/1822766/chapter-2-record',{ title: 'The Wandering Fairy Litrpg World Hopping', chapter: 2 }],
+        ['https://mangafire.to/read/nano-machinee.m2y8v/en/chapter-304',{ title: 'Nano Machine', chapter: 304 }],
+        ['https://mangafire.to/read/destiny-unchain-onlinee.yk9n1/en/chapter-98',{ title: 'Destiny Unchain Online', chapter: 98 }],
+        ['https://weebcentral.com/chapters/01KHYAF03QVF3MSD15Z2861F8Q',{ title: null, chapter: Number.NaN }],
+        ['https://example.com/chapters/ABC123XYZ',{ title: null, chapter: Number.NaN }],
+        ['https://example.com/read/solo-leveling-2/en/chapter-10',{ title: 'Solo Leveling 2', chapter: 10 }],
+        ['https://example.com/read/overlord-ln',{ title: 'Overlord Ln', chapter: Number.NaN }],
+        ['https://example.com/',{ title: null, chapter: Number.NaN }],
+        ['https://mangafire.to/read/helloo.abcd/en/chapter-1',{ title: 'Hello', chapter: 1 }],
+        ['https://example.com/read/my-awesome.series.v2/en/chapter-5',{ title: 'My Awesome', chapter: 5 }],
+        ['https://example.com/read/ABC123DEF456/en/chapter-1',{ title: null, chapter: 1 }],
+    ])('getTitleAndChapterFromUrl(%s) → %o', (input, expected) => {
+        expect(getTitleAndChapterFromUrl(input)).toStrictEqual(expected);
+    });
+    describe('isATitle regex', () => {
+        const isATitle = /^(?![A-Z0-9]+$).+/;;
+
+        it.each([
+            ['Sss Class Suicide Hunter', true],
+            ['Nano Machine', true],
+            ['Solo Leveling 2', true],
+            ['01KHYAF03QVF3MSD15Z2861F8Q', false],
+            ['ABC123XYZ', false],
+            ['HELLOWORLD', false],
+            ['HelloWorld', true],
+        ])('"%s" → %s', (input, expected) => {
+            expect(isATitle.test(input)).toBe(expected);
+        });
+    });
+});
