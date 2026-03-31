@@ -82,48 +82,20 @@ footer {
     align-items:center;
 }
 #ParentPreview{
-    container-type: inline-size;
     max-width: 10000px;
+    overflow-x: hidden;
     width: 100%;
-    overflow-x: auto;
 }
 table {
-    width: max-content;
+    width: 100%;
     border-collapse: collapse;
     background-color: var(--bg-color);
     table-layout: auto;
 }
 
-/* Title column — only one allowed to grow */
-#title {
-    max-width: 200px;
-    min-width: 60px;
-    width: auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Shrink title font before ellipsis kicks in */
-@container (max-width: 700px) {
-    #title { font-size: 12px; max-width: 150px; }
-}
-
-@container (max-width: 550px) {
-    #title { font-size: 10px; max-width: 100px; }
-}
-
-/* Everything else — just fit the content, never grow */
-td:not(:nth-child(1)) input.autoInput,
-td:not(:nth-child(1)) select.autoInput {
-    width: max-content;
-    min-width: 40px;
-    white-space: nowrap;
-}
-
 input.autoInput,
 select.autoInput {
-    width: 100%;
+    width: auto;
     text-overflow: ellipsis;
     white-space: nowrap;
     height: inherit;
@@ -170,7 +142,6 @@ input[type=number]::-webkit-inner-spin-button {
 }
 #chapter {
     min-width: 75px;
-    max-width: 80px;
 }
 #url {
     max-width: 40px;
@@ -187,17 +158,12 @@ input[type=number]::-webkit-inner-spin-button {
     max-width: 78px;
 }
 #tags {
-    min-width: 80px;
     max-width: 90px;
     cursor: pointer;
 }
 #notes {
     min-width: 80px;
     max-width: 90px;
-}
-#tags option:checked {
-    background-color: var(--Btn_active);
-    color: var(--Text-color);
 }
 #Btn-Parent {
     display: flex;
