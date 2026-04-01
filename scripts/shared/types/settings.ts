@@ -1,3 +1,4 @@
+import { getElement } from "../../utils/Selection";
 import type { NovelType, ReadStatus } from "./popupType";
 
 export interface DefaultChoice {
@@ -25,6 +26,60 @@ export interface SettingsInput {
     FolderMapping: Record<string, Record<string, FolderEntry>>,
 
     AllowContextMenu: boolean
+}
+
+export type elementInput = {
+    Type: HTMLSelectElement | null;
+    Status: HTMLSelectElement | null;
+    tags: HTMLInputElement | null;
+    notes: HTMLInputElement | null;
+    saveButton: HTMLButtonElement | null;
+}
+export type elementMenu = {
+    Type: HTMLSelectElement | null;
+    Status: HTMLSelectElement | null;
+    tags: HTMLInputElement | null;
+    notes: HTMLInputElement | null;
+    saveButton: HTMLButtonElement | null;
+}
+
+export type elementsInputAndMenu = elementInput |  elementMenu;
+
+export interface ElmentsWithInputAndMenu {
+    input: {
+        Type: HTMLSelectElement | null,
+        Status: HTMLSelectElement | null,
+        tags: HTMLInputElement | null,
+        notes: HTMLInputElement | null,
+        saveButton: HTMLButtonElement | null
+    },
+    menu: {
+        Type: HTMLSelectElement | null,
+        Status: HTMLSelectElement | null,
+        tags: HTMLInputElement | null,
+        notes: HTMLInputElement | null,
+        saveButton: HTMLButtonElement | null
+    }
+}
+
+export const setDefaultSettingsElements = () => {
+    const elements: ElmentsWithInputAndMenu = {
+        input: {
+            Type: getElement<HTMLSelectElement>("#Type"),
+            Status: getElement<HTMLSelectElement>("#Status"),
+            tags: getElement<HTMLInputElement>("#tags"),
+            notes: getElement<HTMLInputElement>("#notes"),
+            saveButton: getElement<HTMLButtonElement>("#saveDefaultInput")
+        },
+        menu: {
+            Type: getElement<HTMLSelectElement>("#TypeTextMenu"),
+            Status: getElement<HTMLSelectElement>("#StatusTextMenu"),
+            tags: getElement<HTMLInputElement>("#tagsTextMenu"),
+            notes: getElement<HTMLInputElement>("#notesTextMenu"),
+            saveButton: getElement<HTMLButtonElement>("#saveDefaultInputTextMenu")
+        }
+    };
+    return elements;
 }
 
 

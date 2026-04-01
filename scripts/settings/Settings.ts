@@ -1,90 +1,33 @@
 import { ext } from "../shared/BrowserCompat";
-import { defaultSettings, type SettingsInput } from "../shared/types/settings";
+import { defaultSettings, setDefaultSettingsElements, type elementsInputAndMenu, type ElmentsWithInputAndMenu, type SettingsInput } from "../shared/types/settings";
 import { getAllHermidata, getSettings, getSpreadsheetUrl } from "../shared/Storage";
 import { novelTypes, readStatus, type Hermidata } from "../shared/types/popupType";
 import { getElement, setElement } from "../utils/Selection";
 
 
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
     const settings = new Settings();
-    settings.init();
+    await settings.init();
 });
-
-type elementInput = {
-    Type: HTMLSelectElement;
-    Status: HTMLSelectElement;
-    tags: HTMLInputElement;
-    notes: HTMLInputElement;
-    saveButton: HTMLButtonElement;
-}
-type elementMenu = {
-    Type: HTMLSelectElement;
-    Status: HTMLSelectElement;
-    tags: HTMLInputElement;
-    notes: HTMLInputElement;
-    saveButton: HTMLButtonElement;
-}
-
-type elementsInputAndMenu = elementInput |  elementMenu;
-
-interface ElmentsWithInputAndMenu {
-    input: {
-        Type: HTMLSelectElement,
-        Status: HTMLSelectElement,
-        tags: HTMLInputElement,
-        notes: HTMLInputElement,
-        saveButton: HTMLButtonElement
-    },
-    menu: {
-        Type: HTMLSelectElement,
-        Status: HTMLSelectElement,
-        tags: HTMLInputElement,
-        notes: HTMLInputElement,
-        saveButton: HTMLButtonElement
-    }
-}
-
 
 class Settings {
 
-    // is a list of tags and their corresponding color
-    private readonly tagColoring: Record<string, string> = {};
-
-    private readonly TYPE_OPTIONS = novelTypes;
-    private readonly STATUS_OPTIONS = readStatus;
-
+    private readonly tagColoring: Record<string, string> = {}; // { tag: color }
 
     private readonly input = getElement<HTMLInputElement>("#spreadsheetUrl")?.value.trim();
     private readonly status = getElement("#statusSheetURL");
     private readonly status_Input = getElement('#statusSaveDefaultInput');
     private readonly statusTextMenu = getElement('#statusSaveDefaultInputInputTextMenu');
-    private readonly elements: ElmentsWithInputAndMenu = {
-        input: {
-            Type: getElement("#Type") as HTMLSelectElement,
-            Status: getElement("#Status") as HTMLSelectElement,
-            tags: getElement("#tags") as HTMLInputElement,
-            notes: getElement("#notes") as HTMLInputElement,
-            saveButton: getElement("#saveDefaultInput") as HTMLButtonElement
-        },
-        menu: {
-            Type: getElement("#TypeTextMenu") as HTMLSelectElement,
-            Status: getElement("#StatusTextMenu") as HTMLSelectElement,
-            tags: getElement("#tagsTextMenu") as HTMLInputElement,
-            notes: getElement("#notesTextMenu") as HTMLInputElement,
-            saveButton: getElement("#saveDefaultInputTextMenu") as HTMLButtonElement
-        }
-    };
+    private readonly elements: ElmentsWithInputAndMenu = setDefaultSettingsElements();
 
-    public init() {
+    public async init() {
         // Load & populate page inputs and tables
-        this.LoadAndPopulate();
+        await this.LoadAndPopulate();
         // load settings
         this.loadSettings();
         
-
-
         this.addEventListener();
     }
 
@@ -105,12 +48,12 @@ class Settings {
             });
         });
         // Save table Input
-        this.elements.input.saveButton.addEventListener("click", () => {
+        this.elements.input.saveButton?.addEventListener("click", () => {
             const values = this.getValuesFromElements(this.elements.input);
             this.saveSettings("DefaultChoice", values, this.status_Input);
         });
         // Save table Menu
-        this.elements.menu.saveButton.addEventListener("click", () => {
+        this.elements.menu.saveButton?.addEventListener("click", () => {
             const values = this.getValuesFromElements(this.elements.menu);
             this.saveSettings("DefaultChoiceText_Menu", values, this.statusTextMenu);
         });
@@ -177,10 +120,10 @@ class Settings {
 
     private async LoadAndPopulate() {
         // Populate dropdowns
-        this.populateSelect(this.elements.input.Status, this.STATUS_OPTIONS);
-        this.populateSelect(this.elements.menu.Status, this.STATUS_OPTIONS );
-        this.populateSelect(this.elements.input.Type, this.TYPE_OPTIONS);
-        this.populateSelect(this.elements.menu.Type, this.TYPE_OPTIONS);
+        this.populateSelect(this.elements.input.Status, readStatus);
+        this.populateSelect(this.elements.menu.Status, readStatus);
+        this.populateSelect(this.elements.input.Type, novelTypes);
+        this.populateSelect(this.elements.menu.Type, novelTypes);
 
         // Load spreadsheetUrl value
         const result = await getSpreadsheetUrl();
@@ -246,7 +189,8 @@ class Settings {
         allTags.forEach(f => { if (!alreadyExist[f]) this.tagColoring[f] = 'white' })
     }
     // Helper to populate a <select> with options
-    private populateSelect(selectEl: HTMLSelectElement, options: string[]) {
+    private populateSelect(selectEl: HTMLSelectElement | null, options: string[]) {
+        if (!selectEl) throw new Error("Element not found");
         selectEl.innerHTML = "";
         options.forEach(value => {
             const opt = document.createElement("option");
