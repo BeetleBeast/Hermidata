@@ -175,6 +175,13 @@ Source maps are included in dev builds. Each background module registers its own
 - [ ] Edit type and status options directly from Settings
 - [ ] Manual alternate title entry for out-of-sync RSS matches
 - [ ] auto link RSS to entry without setting it manually
+- [ ] set-up a minimum width that works for both classic and RSS mode
+- [ ] tooltip/title of Rss Link indication doesn't work
+- [ ] add tooltip for:
+  - ``title``
+  - ``RSS link`` indication
+  - ``RSS Link not activated`` warning
+- [ ] better space bottom of RSS items
 
 ---
 

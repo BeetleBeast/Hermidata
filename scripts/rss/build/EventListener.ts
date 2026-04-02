@@ -104,14 +104,11 @@ export class EventListener extends RssBuild {
     private copyTitle(target: HTMLDivElement | null) {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
-        const nameClass = item.dataset.isNotificationItem == 'false'
-            ? 'RSS-entries-item-title'
-            : 'RSS-Notification-item-title';
+        const nameClass = 'hermidata-item-title';
         if (item.dataset.seachable == 'true') {
             const title0 = item.querySelector(`.${nameClass}`)
-            const title1 = getElement(`.RSS-Notification-item-title.${target.className}`);
-            const title2 = getElement(`.RSS-entries-item-title.${target.className}`);
-            const title = title0 || ( title1 || title2 )
+            const title1 = getElement(`.hermidata-item-title.${target.className}`);
+            const title = title0 || title1
             if (!title) throw new Error('title not found');
             navigator.clipboard.writeText(title.textContent.trim());
             console.log("Copied:", title.textContent.trim());
@@ -209,7 +206,7 @@ export class EventListener extends RssBuild {
         this.AllHermidata[newKey] = newData;
     
         // update UI
-        const titleEl = item.querySelector(".RSS-entries-item-title");
+        const titleEl = item.querySelector(".hermidata-item-title");
         if (titleEl) titleEl.textContent = newTitle;
         item.className = item.className.replace(oldKey, newKey);
     

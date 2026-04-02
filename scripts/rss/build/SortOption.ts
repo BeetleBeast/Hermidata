@@ -209,7 +209,7 @@ export class SortOption extends Sort {
         const allItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"]`);
 
         allItems.forEach(item => {
-            const titleEl = getElement('.RSS-entries-item-title', item);
+            const titleEl = getElement('.hermidata-item-title', item);
             const ItemTitleText = titleEl?.textContent?.toLowerCase() || '';
 
             const hashItem = this.GetHashItem(item);

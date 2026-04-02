@@ -1,0 +1,207 @@
+
+.hermidata-item {
+    border: 1px solid var(--Btn);
+    background-color: var(--bg-color);
+    border-radius: 4px;
+    padding: 8px 16px;
+    display: grid;
+    flex: content;
+    align-items: center;
+    flex-direction: column;
+    color: var(--Text-color);
+    transition: background-color 0.3s ease;
+    height: 60px;
+    opacity: 1;
+
+    position: relative; /* required so SVG can be absolute inside */
+
+}
+
+.hermidata-item:hover{
+    background-color: var(--Btn_hover);
+    cursor: pointer;
+}
+
+
+/* Remove ?*/
+#RSS-entries,
+#RSS-Notification {
+    width: 100%;
+}
+
+.hermidata-item-info {
+    display: grid;
+    padding: 0 5px;
+    grid-template-columns: 50px 1fr auto;
+    grid-template-rows: 30px 30px;
+    /*
+    grid-template-areas:
+    
+        Image    |             Title          | progress
+        Image | Chapter | footer | pub date | tags
+    
+        "img title title title progress" 
+        "img chapter footer pubDate tagContainer";
+    */
+    gap: 6px 10px;
+}
+
+.hermidata-item-image {
+	width: 40px;
+	height: 40px;
+	object-fit: fill;
+	border-radius: 8px;
+    padding-top: 5px;
+}
+.hermidata-item-title {
+    font-weight: bold;
+    font-size: 15px;
+    white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-self: center;
+    padding: 5px;
+    max-width: 90%;
+}
+.hermidata-item-progress {
+    font-weight: bold;
+    font-size: 16px;
+    padding-right: 10px;
+    padding-top: 5px;
+}
+.hermidata-item-chapter {
+    font-size: 15px;
+
+    width: fit-content;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-self: center;
+    margin-left: -30px;
+}
+
+.hermidata-item-footer {
+    font-size: 12px;
+    color: gray;
+    grid-column: 2;
+    justify-self: self-end;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: right;
+    width: fit-content;
+    max-width: 100px;
+    text-overflow: ellipsis;
+}
+.hermidata-item-pubDate {
+    font-size: 12px;
+    text-align: left;
+    
+    width: fit-content;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-self: self-start;
+    grid-column: 3;
+}
+
+/* TODO: Do something about this Here */
+.hermidata-item-tag-container {
+    justify-self: end;
+    width: 120px;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tag-div {
+    width: fit-content;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hermidata-item-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto; /* clicks pass through to content */
+    overflow: visible;
+    z-index: 500;
+}
+
+/* Base line styles */
+.hermidata-item-lines {
+    stroke: var(--hr);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke; /* keeps 1px regardless of SVG scaling */
+}
+
+/* Position horizontal lines using JS or CSS custom properties */
+.line-top-left-bend { transform: translateY(var(--line-h1-y, 40px)); }
+.line-top-right-bend { transform: translateY(var(--line-h2-y, 80px)); }
+.line-middel-horizontal { transform: translateX(var(--line-v1-x, 60px)); }
+
+/* Animation example — draw line in from left */
+@keyframes draw-in {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+}
+
+.hermidata-item-lines {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    pathLength: 1; /* normalize so dasharray:1 = full length */
+    animation: draw-in 0.4s ease forwards;
+}
+
+.line-top-right-bend{ animation-delay: 0.1s; }
+.line-middel-horizontal { animation-delay: 0.2s; }
+
+
+.line-bottom-left-bend {
+    animation-delay: 0.2s;
+    transform: translateY(var(--line-h2-y, 80px));
+}
+.line-bottom-right-bend {
+    animation-delay: 0.2s;
+    transform: translateY(var(--line-h2-y, 80px));
+}
+.line-bottom-vertical {
+    animation-delay: 0.2s;
+    transform: translateX(var(--line-v1-x, 60px));
+}
+
+.line-diamond {
+    stroke: var(--hr);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+.diamond-l,
+.diamond-r {
+    stroke: var(--hr);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+
+
+
+.bottom-row {
+    grid-column: 2 / 2;
+    grid-row: 2;
+
+    display: grid;
+    grid-template-columns: 1fr 140px 140px 1fr; /* FIXME: make it percentile based instead of pixels */
+    gap: 10px;
+    align-items: center;
+}
+
+.tags {
+    justify-self: end;
+}

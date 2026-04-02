@@ -130,9 +130,9 @@ th {
 }
 input[type=number],
 input[type=number]::-webkit-inner-spin-button {
+    appearance: none;
     -webkit-appearance: none;
     -moz-appearance: textfield;
-    appearance: none;
 }
 #Type {
     cursor: pointer;
@@ -162,7 +162,6 @@ input[type=number]::-webkit-inner-spin-button {
     cursor: pointer;
 }
 #notes {
-    min-width: 80px;
     max-width: 90px;
 }
 #Btn-Parent {
@@ -555,89 +554,7 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 
-.hermidata-item {
-    border: 1px solid var(--Btn);
-    background-color: var(--bg-color);
-    border-radius: 4px;
-    padding: 8px 16px;
-    display: flex;
-    flex: content;
-    align-items: center;
-    flex-direction: column;
-    color: var(--Text-color);
-    transition: background-color 0.3s ease;
-    height: 40px;
-    opacity: 1;
-
-}
-
-.hermidata-item:hover{
-    background-color: var(--Btn_hover);
-    cursor: pointer;
-}
-#RSS-entries,
-#RSS-Notification {
-    width: 100%;
-}
-.RSS-entries-item-footer,
-.RSS-Notification-item-footer {
-    font-size: 12px;
-    color: gray;
-    margin-top: -8px;
-}
-.RSS-entries-item-image,
-.RSS-Notification-item-image {
-	width: 40px;
-	height: 40px;
-	object-fit: fill;
-	border-radius: 50%;
-	padding: 2px;
-    position: absolute;
-    left: 5px;
-    padding-top: 8px;
-    margin: 0;
-}
-.RSS-entries-item-info,
-.RSS-Notification-item-info {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    justify-content: space-evenly;
-    padding: 0 15px;
-    margin-right: 7px;
-    margin-left: 15px;
-}
-.RSS-entries-item-title,
-.RSS-Notification-item-title {
-    font-weight: bold;
-    font-size: 15px;
-    padding-left: 10px;
-}
-.RSS-entries-item-chapter,
-.RSS-Notification-item-chapter {
-    font-weight: bold;
-    font-size: 15px;
-    padding-left: 10px;
-    padding-right: 15px;
-}
-.RSS-entries-item-progress,
-.RSS-Notification-item-progress {
-    font-weight: bold;
-    font-size: 16px;
-    padding-left: 10px;
-    padding-right: 10px;
-    right: 0;
-    position: absolute;
-}
-
-.RSS-entries-item-pubDate,
-.RSS-Notification-item-pubDate {
-    font-weight: bold;
-    font-size: 12px;
-    padding-left: 10px;
-    padding-right: 10px;
-}
-
+/* --- subscribe section --- */
 #subscribeBtn {
     float: right;
     position: relative;
@@ -809,16 +726,6 @@ input[type=number]::-webkit-inner-spin-button {
 }
 .genericInput:focus {
     outline: 1px invert var(--Btn);
-}
-.RSS-entries-item-tag-container {
-	position: absolute;
-	margin-top: 25px;
-	right: 27em;
-}
-.RSS-Notification-item-tag-container {
-	position: absolute;
-	margin-top: 25px;
-	right: clamp(56vw,65vw, 80vw);
 }
 .genericLabel {
     display: none;

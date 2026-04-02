@@ -20,6 +20,7 @@ interface ItemInfo {
 export class FeedItem {
 
     protected AllHermidata: AllHermidata;
+    private isFirstItem = false;
     
     constructor(AllHermidata: AllHermidata) {
         this.AllHermidata = AllHermidata;
@@ -30,27 +31,18 @@ export class FeedItem {
         console.time('makefeedItem');
         const fragment = document.createDocumentFragment();
         for (const [key, item] of Object.entries(hermidataList)) {
-
+            this.isFirstItem = Object.keys(hermidataList)[0] === key
+            
             const itemInfo = await this.getItemInfo(key, item, isRSSItem);
-
-            const settings = await getSettings();
             if ( getElement(`[data-hash-key="${key}"]`)?.dataset.hashKey && itemInfo.isRead && itemInfo.clearedNotification) continue;
 
             const li = this.createItemContainer(key, isRSSItem);
 
-            const itemImage = this.createItemImage(item, isRSSItem);
-
+            const lines = this.createItemLines(item, isRSSItem);
             
-            const ElTagContainer = this.createItemTags(itemInfo.currentHermidata, settings, isRSSItem );
+            const ItemInfoContainer = await this.createItemInfoContainer(key, item, itemInfo, isRSSItem);
             
-            
-            const ItemInfoContainer = this.createItemInfoContainer(key, item, itemInfo, itemImage, isRSSItem);
-
-            const Elfooter = this.createItemFooter(item, isRSSItem);
-            
-            
-            li.append(ElTagContainer, ItemInfoContainer, Elfooter);
-
+            li.append(lines, ItemInfoContainer);
             fragment.appendChild(li);
         }
         console.timeEnd('makefeedItem');
@@ -89,6 +81,102 @@ export class FeedItem {
         container.appendChild(title);
         return container
     }
+    private CreateLine(Position: { x1: string; y1: string; x2: string; y2: string }, className: string) {
+        const svgNS = "http://www.w3.org/2000/svg";
+        
+        const line = document.createElementNS(svgNS, 'line');
+        line.setAttribute('x1', Position.x1);
+        line.setAttribute('y1', Position.y1);
+        line.setAttribute('x2', Position.x2);
+        line.setAttribute('y2', Position.y2);
+        line.setAttribute("class",`${className} hermidata-item-lines`);
+        return line
+    }
+    private CreateSidestriangle(): { groupLeft: SVGGElement; groupRight: SVGGElement } {
+        const svgNS = "http://www.w3.org/2000/svg";
+        
+        const diamondLeft = document.createElementNS(svgNS, 'polygon');
+        diamondLeft.setAttribute("class", "diamond-group-l");
+    
+        const diamondgroupLeft = document.createElementNS(svgNS, 'g');
+        diamondgroupLeft.setAttribute("class", "diamond-l");
+        diamondgroupLeft.appendChild(diamondLeft);
+        
+
+        const diamondRight = document.createElementNS(svgNS, 'polygon');
+        diamondRight.setAttribute("class", "diamond-group-r");
+
+        const diamondgroupRight = document.createElementNS(svgNS, 'g');
+        diamondgroupRight.setAttribute("class", "diamond-r");
+        diamondgroupRight.appendChild(diamondRight);
+        return { groupLeft: diamondgroupLeft, groupRight: diamondgroupRight }
+    }
+    private CreateSidesDiamond(): { groupLeft: SVGGElement; groupRight: SVGGElement } {
+        const svgNS = "http://www.w3.org/2000/svg";
+
+        
+        const diamondLeft = document.createElementNS(svgNS, 'polygon');
+        diamondLeft.setAttribute("class", "diamond-l");
+
+        const diamondRight = document.createElementNS(svgNS, 'polygon');
+        diamondRight.setAttribute("class", "diamond-r");
+        
+
+        const diamondgroupLeft = document.createElementNS(svgNS, 'g');
+        diamondgroupLeft.setAttribute("class", "diamond-group-l");
+
+        const diamondgroupRight = document.createElementNS(svgNS, 'g');
+        diamondgroupRight.setAttribute("class", "diamond-group-r");
+        
+        
+        diamondgroupLeft.appendChild(diamondLeft);
+        diamondgroupRight.appendChild(diamondRight);
+
+        return { groupLeft: diamondgroupLeft, groupRight: diamondgroupRight }
+    }
+    private createItemLines(item: Hermidata, isRSSItem: boolean) {
+        // TODO: Add lines
+        const svgNS = "http://www.w3.org/2000/svg";
+        
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('width', '100px');
+        svg.setAttribute('height', '100px');
+        svg.setAttribute("aria-hidden", "true");
+        svg.setAttribute("class", "hermidata-item-svg");
+
+        // lines
+        const topLeftBend = this.CreateLine({ x1: "10%", y1: "0%", x2: "15%", y2: "50%" }, "line-h line-top-left-bend");
+        const middelHorizontal = this.CreateLine({ x1: "8%", y1: "50%", x2: "98%", y2: "50%" }, "line-v line-middel-horizontal");
+        const topRightBend = this.CreateLine({ x1: "85%", y1: "50%", x2: "90%", y2: "0%" }, "line-h line-top-right-bend");
+        const bottomLeftBend = this.CreateLine({ x1: "15%", y1: "50%", x2: "40%", y2: "100%" }, "line-bottom-left-bend");
+        const bottomRightBend = this.CreateLine({ x1: "60%", y1: "100%", x2: "85%", y2: "50%" }, "line-bottom-right-bend");
+        const bottomVertical = this.CreateLine({ x1: "50%", y1: "50%", x2: "50%", y2: "100%" }, "line-bottom-vertical");
+        // diamond
+        let x1 = 0, y1 = -12;
+        let x2 = 12, y2 = 0;
+        let x3 = 0, y3 = 12;
+        let x4 = -12, y4 = 0;
+        const diamondgroup = document.createElementNS(svgNS, 'g');
+        diamondgroup.setAttribute("class", "diamond-group-line");
+        const diamond = document.createElementNS(svgNS, 'polygon');
+        
+        diamond.setAttribute('points',`${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`);
+        diamond.setAttribute("class", "line-diamond hermidata-item-lines");
+        isRSSItem ? diamond.style.fill = "blue" : diamond.style.fill = "transparent"; // TODO: change to correct color later
+
+        const titleOfDiamond = document.createElement('title');
+        titleOfDiamond.innerHTML = isRSSItem ? "This Item is linked" : "this Item is <b>not</b> linked to a RSS feed";
+        diamond.appendChild(titleOfDiamond);
+        diamondgroup.appendChild(diamond);
+        
+        // RSS link missing Icon ( only for non RSS items)
+        // TODO: Add RSS link missing Icon
+
+        const { groupLeft, groupRight } = this.isFirstItem ? this.CreateSidestriangle() : this.CreateSidesDiamond();
+        svg.append(groupLeft, groupRight);
+        svg.append(diamondgroup, topLeftBend, middelHorizontal, topRightBend, bottomLeftBend, bottomRightBend, bottomVertical);
+        return svg
+    }
     private async getItemInfo(key: string, item: Hermidata, isRSSItem: boolean = false): Promise<ItemInfo> {
         const title = findByTitleOrAltV2(item.title, this.AllHermidata)?.title || item.title;
         const url = item.rss?.latestItem.link || item.url;
@@ -103,25 +191,25 @@ export class FeedItem {
         
         return { title, url, chapter, isRead, clearedNotification, currentChapter, currentHermidata };
     }
-    private createItemPubDate(item: Hermidata, isRSSItem: boolean): HTMLElement {
+    private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
-        pubDate.className = isRSSItem ? "RSS-entries-item-pubDate" : "RSS-Notification-item-pubDate";
+        pubDate.className = "hermidata-item-pubDate"
         pubDate.textContent = `Published: ${item.rss?.latestItem.pubDate ? item.rss?.latestItem.pubDate.toLocaleString() : 'N/A'}`;
         return pubDate
     }
-    private createItemFooter(item: Hermidata, isRSSItem: boolean): HTMLElement {
+    private createItemFooter(item: Hermidata): HTMLElement {
         const Elfooter = document.createElement("div");
 
-        Elfooter.className =  isRSSItem ? "RSS-entries-item-footer" :"RSS-Notification-item-footer";
+        Elfooter.className = "hermidata-item-footer"
         const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
         Elfooter.textContent = `${domain}`;
         return Elfooter
     }
-    private createItemTitle(title: string, isRSSItem = false): HTMLElement {
+    private createItemTitle(title: string): HTMLElement {
         const ELTitle = document.createElement("div");
-        ELTitle.className = isRSSItem ? "RSS-entries-item-title" : "RSS-Notification-item-title";
+        ELTitle.className = "hermidata-item-title"
 
-        ELTitle.textContent = this.createTitleText(title);
+        ELTitle.textContent = title;
         
         return ELTitle
     }
@@ -132,29 +220,22 @@ export class FeedItem {
         const AllItemChapterText = currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
         
 
-        ELchapter.className = isRSSItem ? "RSS-entries-item-chapter" : "RSS-Notification-item-chapter";
+        ELchapter.className = "hermidata-item-chapter"
         ELchapter.textContent = isRSSItem ? `${AllItemChapterText}` : `${chapterText}`;
 
         return ELchapter
     }
-    private createTitleText(title: string): string {
-        const titleText = title;
-        const maxTitleCharLangth = 50;
-        const titleTextTrunacted = titleText.length > maxTitleCharLangth ? title.slice(0, maxTitleCharLangth - 3) + '...' : titleText;
-
-        return titleTextTrunacted
-    }
-    private createItemChapterProgress(key: string, chapter: number, isRSSItem: boolean): HTMLElement {
+    private createItemChapterProgress(key: string, chapter: number): HTMLElement {
         const ELprogress = document.createElement("div");
-        ELprogress.className = isRSSItem ? "RSS-entries-item-progress" : "RSS-Notification-item-progress";
+        ELprogress.className = "hermidata-item-progress"
         const lastRead = this.AllHermidata[key]?.chapter?.current || null;
         const progress = lastRead ? ((lastRead / chapter) * 100 ).toPrecision(3) : '0';
         ELprogress.textContent = `${progress}%`;
         return ELprogress
     }
-    private createItemTags(currentHermidata: Hermidata, settings: SettingsInput, isRSSItem = false): HTMLElement {
+    private createItemTags(currentHermidata: Hermidata, settings: SettingsInput): HTMLElement {
         const ElTagContainer = document.createElement("div");
-        ElTagContainer.className =  isRSSItem ? "RSS-entries-item-tag-container" : "RSS-Notification-item-tag-container";
+        ElTagContainer.className = "hermidata-item-tag-container"
         if ( currentHermidata.meta?.tags.length > 0 ) {
             const tags = currentHermidata.meta?.tags as (string[] | string);
             const allTags = Array.isArray(tags) ? tags : tags?.split(',');
@@ -171,22 +252,36 @@ export class FeedItem {
         }
         return ElTagContainer
     }
-    private createItemInfoContainer(key: string, item: Hermidata, itemInfo: ItemInfo, itemImage: HTMLImageElement, isRSSItem: boolean): HTMLElement {
+    private async createItemInfoContainer(key: string, item: Hermidata, itemInfo: ItemInfo, isRSSItem: boolean): Promise<HTMLElement> {
+        const settings = await getSettings();
         const ElInfo = document.createElement("div");
-        ElInfo.className =  isRSSItem ? "RSS-entries-item-info" : "RSS-Notification-item-info";
+        ElInfo.className = "hermidata-item-info"
 
-        const itemTitle = this.createItemTitle(itemInfo.title, isRSSItem);
+        // image
+        const itemImage = this.createItemImage(item);
+
+        // top row
+        const itemTitle = this.createItemTitle(itemInfo.title);
+        const ELprogress = this.createItemChapterProgress(key, itemInfo.chapter);
+
+        // bottom row container
+        const bottomRow = document.createElement("div");
+        bottomRow.className = "bottom-row";
+        
+        // bottom row
         const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem);
-        const ELprogress = this.createItemChapterProgress(key, itemInfo.chapter, isRSSItem);
-        const pubdate = this.createItemPubDate(item, isRSSItem);
+        const pubdate = this.createItemPubDate(item);
+        const Elfooter = this.createItemFooter(item);
+        const ElTagContainer = this.createItemTags(itemInfo.currentHermidata, settings );
 
-        ElInfo.append(itemImage, itemTitle, ELchapter, pubdate, ELprogress);
+        bottomRow.append(ELchapter, Elfooter, pubdate, ElTagContainer);
+        ElInfo.append(itemImage, itemTitle, ELprogress, bottomRow);
 
         return ElInfo
     }
-    private createItemImage(item: Hermidata, isRSSItem: boolean= false): HTMLImageElement {
+    private createItemImage(item: Hermidata): HTMLImageElement {
         const ElImage = document.createElement("img");
-        ElImage.className = isRSSItem ? "RSS-entries-item-image" : "RSS-Notification-item-image";
+        ElImage.className = "hermidata-item-image"
         ElImage.src = item?.rss?.image || 'icons/icon48.png';
         ElImage.sizes = "48x48";
         ElImage.style.width = "48px";
