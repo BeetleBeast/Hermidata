@@ -77,12 +77,16 @@ export function positionDiamond(li: HTMLElement): void {
     
     // move main svg to the correct position
     const lineDiamond = svg.querySelector<SVGGElement>('.diamond-group-line');
-    lineDiamond?.setAttribute('transform', `translate(80, 22)`);
+    lineDiamond?.setAttribute('transform', `translate(75, 22)`);
 }
 // needs to be set after sort
 export function updatePolygons() {
     const NotificationItems = document.querySelectorAll<HTMLElement>('.hermidata-item[data-is-notification-item="true"]');
     const AllItems = document.querySelectorAll<HTMLElement>('.hermidata-item[data-is-notification-item="false"]');
+
+    // calculate coordinates distance needed
+    const liRect = AllItems[0].getBoundingClientRect();
+    const distanceToPoints = liRect.width  / 10; // TODO: get from css
 
     const { positionLeft: trianglePositionLeft, positionRight: trianglePositionRight } = triangleCoord();
     const { positionLeft: diamondPositionLeft, positionRight: diamondPositionRight } = diamondCoord();
@@ -109,24 +113,24 @@ export function updatePolygons() {
     loopTroughItems(AllItems);
 }
 
-function triangleCoord() {
+function triangleCoord(distanceToPoints: number = 8) {
 
     let x1 = 0, y1 = 0;
-    let x2 = 8, y2 = 0;
-    let x3 = 0, y3 = 8;
-    let x4 = -8, y4 = 0;
+    let x2 = distanceToPoints, y2 = 0;
+    let x3 = 0, y3 = distanceToPoints;
+    let x4 = -distanceToPoints, y4 = 0;
 
     const positionTriangleLeft = `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`;
     const positionTriangleRight = `${-x1},${y1} ${-x2},${y2} ${-x3},${y3} ${-x4},${y4}`;
 
     return { positionLeft: positionTriangleLeft, positionRight: positionTriangleRight };
 }
-function diamondCoord() {
+function diamondCoord(distanceToPoints: number = 8) {
 
-    let x1 = 0, y1 = -8;
-    let x2 = 8, y2 = 0;
-    let x3 = 0, y3 = 8;
-    let x4 = -8, y4 = 0;
+    let x1 = 0, y1 = -distanceToPoints;
+    let x2 = distanceToPoints, y2 = 0;
+    let x3 = 0, y3 = distanceToPoints;
+    let x4 = -distanceToPoints, y4 = 0;
 
     const positionLeft = `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`;
     const positionRight = `${-x1},${y1} ${-x2},${y2} ${-x3},${y3} ${-x4},${y4}`;

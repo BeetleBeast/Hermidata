@@ -282,10 +282,11 @@ export class FeedItem {
     private createItemImage(item: Hermidata): HTMLImageElement {
         const ElImage = document.createElement("img");
         ElImage.className = "hermidata-item-image"
-        ElImage.src = item?.rss?.image || 'icons/icon48.png';
-        ElImage.sizes = "48x48";
-        ElImage.style.width = "48px";
-        ElImage.style.height = "48px";
+        ElImage.src = item?.rss?.image ?? '../../../assets/icon/icon48.png';
+
+        ElImage.sizes = "40x60";
+        ElImage.style.width = "40px";
+        ElImage.style.height = "60px";
         ElImage.style.objectFit = "contain";
         ElImage.style.borderRadius = "8px";
         ElImage.alt = "Feed Image";

@@ -34,15 +34,6 @@
     padding: 0 5px;
     grid-template-columns: 50px 1fr auto;
     grid-template-rows: 30px 30px;
-    /*
-    grid-template-areas:
-    
-        Image    |             Title          | progress
-        Image | Chapter | footer | pub date | tags
-    
-        "img title title title progress" 
-        "img chapter footer pubDate tagContainer";
-    */
     gap: 6px 10px;
 }
 
@@ -79,13 +70,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     justify-self: center;
-    margin-left: -30px;
+    position: absolute;
+    left: 70px;
 }
 
 .hermidata-item-footer {
     font-size: 12px;
     color: gray;
-    grid-column: 2;
+    grid-column: 1;
     justify-self: self-end;
     overflow: hidden;
     white-space: nowrap;
@@ -99,12 +91,12 @@
     text-align: left;
     
     width: fit-content;
-    max-width: 100px;
+    max-width: 75%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     justify-self: self-start;
-    grid-column: 3;
+    grid-column: 2;
 }
 
 /* TODO: Do something about this Here */
@@ -137,15 +129,23 @@
 
 /* Base line styles */
 .hermidata-item-lines {
-    stroke: var(--hr);
+    stroke: #6C3BAA;
     stroke-width: 1;
     vector-effect: non-scaling-stroke; /* keeps 1px regardless of SVG scaling */
 }
 
 /* Position horizontal lines using JS or CSS custom properties */
-.line-top-left-bend { transform: translateY(var(--line-h1-y, 40px)); }
-.line-top-right-bend { transform: translateY(var(--line-h2-y, 80px)); }
-.line-middel-horizontal { transform: translateX(var(--line-v1-x, 60px)); }
+.line-top-left-bend { 
+    transform: translateY(var(--line-h1-y, 40px));
+}
+.line-top-right-bend { 
+    transform: translateY(var(--line-h2-y, 80px));
+    animation-delay: 0.1s;
+}
+.line-middel-horizontal { 
+    transform: translateX(var(--line-v1-x, 60px));
+    animation-delay: 0.2s;
+}
 
 /* Animation example — draw line in from left */
 @keyframes draw-in {
@@ -156,12 +156,10 @@
 .hermidata-item-lines {
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
-    pathLength: 1; /* normalize so dasharray:1 = full length */
+    appearance: 1; /* normalize so dasharray:1 = full length */
     animation: draw-in 0.4s ease forwards;
 }
 
-.line-top-right-bend{ animation-delay: 0.1s; }
-.line-middel-horizontal { animation-delay: 0.2s; }
 
 
 .line-bottom-left-bend {
@@ -197,7 +195,7 @@
     grid-row: 2;
 
     display: grid;
-    grid-template-columns: 1fr 140px 140px 1fr; /* FIXME: make it percentile based instead of pixels */
+    grid-template-columns: 40% 35% auto; /* FIXME: make it percentile based instead of pixels */
     gap: 10px;
     align-items: center;
 }
