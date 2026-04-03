@@ -65,13 +65,13 @@
     font-size: 15px;
 
     width: fit-content;
-    max-width: 120px;
+    max-width: 180px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     justify-self: center;
     position: absolute;
-    left: 70px;
+    left: 10%;
 }
 
 .hermidata-item-footer {
@@ -83,7 +83,7 @@
     white-space: nowrap;
     text-align: right;
     width: fit-content;
-    max-width: 100px;
+    max-width: 140px;
     text-overflow: ellipsis;
 }
 .hermidata-item-pubDate {
@@ -91,7 +91,7 @@
     text-align: left;
     
     width: fit-content;
-    max-width: 75%;
+    max-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -100,13 +100,14 @@
 }
 
 /* TODO: Do something about this Here */
+/* AI: this container here */
 .hermidata-item-tag-container {
-    justify-self: end;
-    width: 120px;
-    max-width: 150px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    max-width: 180px;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 .tag-div {
     width: fit-content;
@@ -114,6 +115,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 .hermidata-item-svg {
@@ -125,13 +127,6 @@
     pointer-events: auto; /* clicks pass through to content */
     overflow: visible;
     z-index: 500;
-}
-
-/* Base line styles */
-.hermidata-item-lines {
-    stroke: #6C3BAA;
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke; /* keeps 1px regardless of SVG scaling */
 }
 
 /* Position horizontal lines using JS or CSS custom properties */
@@ -154,10 +149,14 @@
 }
 
 .hermidata-item-lines {
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke; /* keeps 1px regardless of SVG scaling */
     stroke-dasharray: 1;
-    stroke-dashoffset: 1;
+    /*stroke-dashoffset: 1;*/
     appearance: 1; /* normalize so dasharray:1 = full length */
     animation: draw-in 0.4s ease forwards;
+    transform-origin: center;
+    transform-box: fill-box;
 }
 
 
@@ -176,7 +175,6 @@
 }
 
 .line-diamond {
-    stroke: var(--hr);
     stroke-width: 1;
     vector-effect: non-scaling-stroke;
 }
@@ -188,18 +186,26 @@
 }
 
 
-
+.item-lines {
+    stroke: #4e83ff54
+}
 
 .bottom-row {
     grid-column: 2 / 2;
     grid-row: 2;
 
     display: grid;
-    grid-template-columns: 40% 35% auto; /* FIXME: make it percentile based instead of pixels */
-    gap: 10px;
+    grid-template-columns: 50% 31% 31%; /* FIXME: make it percentile based instead of pixels */
+    gap: 5px;
     align-items: center;
 }
 
 .tags {
     justify-self: end;
+}
+
+
+.rss-link-missing-icon {
+    stroke: yellow;
+    fill: yellow;
 }

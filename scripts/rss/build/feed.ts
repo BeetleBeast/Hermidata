@@ -92,6 +92,17 @@ export class FeedItem {
         line.setAttribute("class",`${className} hermidata-item-lines`);
         return line
     }
+    private CreateNotifyRSSLinkIcon(): SVGElement {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const g = document.createElementNS(svgNS, 'g');
+        g.setAttribute('class', 'notify-rss-link-icon-group hermidata-item-lines rss-link-missing-icon');
+        g.setAttribute('transform', 'scale(0.5) translate(300, 70)');
+        g.innerHTML = `
+            <path d="M45.764,68.114c0,2.448,1.984,4.433,4.434,4.433s4.434-1.984,4.434-4.433c0-2.451-1.984-4.435-4.434-4.435 S45.764,65.663,45.764,68.114z"></path>
+            <path d="M52.5,54.881v-23c0-1.104-0.896-2-2-2s-2,0.896-2,2v23c0,1.104,0.896,2,2,2S52.5,55.985,52.5,54.881z"></path>
+        `;
+        return g;
+    }
     private CreateSidestriangle(): { groupLeft: SVGGElement; groupRight: SVGGElement } {
         const svgNS = "http://www.w3.org/2000/svg";
         
@@ -143,14 +154,18 @@ export class FeedItem {
         svg.setAttribute('height', '100px');
         svg.setAttribute("aria-hidden", "true");
         svg.setAttribute("class", "hermidata-item-svg");
-
+        // outside border lines
+        const topLine = this.CreateLine({ x1: "8px", y1: "0", x2: "99%", y2: "0" }, "line-h line-top item-lines");
+        const bottomLine = this.CreateLine({ x1: "8px", y1: "100%", x2: "99%", y2: "100%" }, "line-h line-bottom item-lines");
+        const leftLine = this.CreateLine({ x1: "0", y1: "8px", x2: "0", y2: "100%" }, "line-v line-left item-lines");
+        const rightLine = this.CreateLine({ x1: "100%", y1: "8px", x2: "100%", y2: "100%" }, "line-v line-right item-lines");
         // lines
-        const topLeftBend = this.CreateLine({ x1: "10%", y1: "0%", x2: "15%", y2: "50%" }, "line-h line-top-left-bend");
-        const middelHorizontal = this.CreateLine({ x1: "8%", y1: "50%", x2: "98%", y2: "50%" }, "line-v line-middel-horizontal");
-        const topRightBend = this.CreateLine({ x1: "85%", y1: "50%", x2: "90%", y2: "0%" }, "line-h line-top-right-bend");
-        const bottomLeftBend = this.CreateLine({ x1: "15%", y1: "50%", x2: "40%", y2: "100%" }, "line-bottom-left-bend");
-        const bottomRightBend = this.CreateLine({ x1: "60%", y1: "100%", x2: "85%", y2: "50%" }, "line-bottom-right-bend");
-        const bottomVertical = this.CreateLine({ x1: "50%", y1: "50%", x2: "50%", y2: "100%" }, "line-bottom-vertical");
+        const topLeftBend = this.CreateLine({ x1: "10%", y1: "0%", x2: "15%", y2: "50%" }, "line-h line-top-left-bend item-lines");
+        const middelHorizontal = this.CreateLine({ x1: "8%", y1: "50%", x2: "98%", y2: "50%" }, "line-v line-middel-horizontal item-lines" );
+        const topRightBend = this.CreateLine({ x1: "85%", y1: "50%", x2: "90%", y2: "0%" }, "line-h line-top-right-bend item-lines" );
+        const bottomLeftBend = this.CreateLine({ x1: "15%", y1: "50%", x2: "40%", y2: "100%" }, "line-bottom-left-bend item-lines" );
+        const bottomRightBend = this.CreateLine({ x1: "60%", y1: "100%", x2: "85%", y2: "50%" }, "line-bottom-right-bend item-lines" );
+        const bottomVertical = this.CreateLine({ x1: "50%", y1: "50%", x2: "50%", y2: "100%" }, "line-bottom-vertical item-lines" );
         // diamond
         let x1 = 0, y1 = -12;
         let x2 = 12, y2 = 0;
@@ -162,7 +177,7 @@ export class FeedItem {
         
         diamond.setAttribute('points',`${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`);
         diamond.setAttribute("class", "line-diamond hermidata-item-lines");
-        isRSSItem ? diamond.style.fill = "blue" : diamond.style.fill = "transparent"; // TODO: change to correct color later
+        isRSSItem ? diamond.style.fill = "blue" : diamond.style.fill = "green"; // TODO: change to correct color later
 
         const titleOfDiamond = document.createElement('title');
         titleOfDiamond.innerHTML = isRSSItem ? "This Item is linked" : "this Item is <b>not</b> linked to a RSS feed";
@@ -170,11 +185,18 @@ export class FeedItem {
         diamondgroup.appendChild(diamond);
         
         // RSS link missing Icon ( only for non RSS items)
-        // TODO: Add RSS link missing Icon
+        if (!item.rss?.latestItem) {
+            const notifyRSSLinkIcon = this.CreateNotifyRSSLinkIcon();
+            svg.appendChild(notifyRSSLinkIcon);
+        }
 
         const { groupLeft, groupRight } = this.isFirstItem ? this.CreateSidestriangle() : this.CreateSidesDiamond();
-        svg.append(groupLeft, groupRight);
-        svg.append(diamondgroup, topLeftBend, middelHorizontal, topRightBend, bottomLeftBend, bottomRightBend, bottomVertical);
+        svg.append(
+            groupLeft, groupRight, 
+            diamondgroup, topLeftBend, 
+            middelHorizontal, topRightBend, bottomLeftBend, bottomRightBend, 
+            bottomVertical, 
+            topLine, bottomLine, leftLine, rightLine);
         return svg
     }
     private async getItemInfo(key: string, item: Hermidata, isRSSItem: boolean = false): Promise<ItemInfo> {

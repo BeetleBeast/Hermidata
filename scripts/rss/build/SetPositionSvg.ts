@@ -18,6 +18,9 @@ const ITEM_LAYOUT = {
     },
     sides: {
         defaultSize: 8,
+    },
+    exlamation: {
+        leftPadding: 5,
     }
 } as const;
 
@@ -53,7 +56,7 @@ export function positionDiamond(li: HTMLElement): void {
     setRSSLink(svg, {left: LEFT_BOUNDARY, right: rightBoundaryDiamond});
 }
 // needs to be set after sort
-export function updatePolygons():  void {
+export function updatePolygons(): void {
     const NotificationItems = document.querySelectorAll<HTMLElement>('.hermidata-item[data-is-notification-item="true"]');
     const AllItems = document.querySelectorAll<HTMLElement>('.hermidata-item[data-is-notification-item="false"]');
 
@@ -65,7 +68,12 @@ export function updatePolygons():  void {
             const isFirst = Array.from(items).indexOf(item) === 0;
             const polygonLeft = item.querySelector('.diamond-l');
             const polygonRight = item.querySelector('.diamond-r');
+            const exclamation = item.querySelector('.notify-rss-link-icon-group');
         
+            const exclamationPosition = getExlamationPosition(item);
+
+            exclamation?.setAttribute('transform', `translate(${exclamationPosition}, 8) scale(0.5)`);
+
             polygonLeft?.setAttribute('points', isFirst ? triangle.positionLeft : diamond.positionLeft);
             polygonRight?.setAttribute('points', isFirst ? triangle.positionRight : diamond.positionRight);
         }
@@ -73,6 +81,21 @@ export function updatePolygons():  void {
 
     loopTroughItems(NotificationItems);
     loopTroughItems(AllItems);
+}
+function getExlamationPosition(item: HTMLElement): number {
+    const itemRect = item.getBoundingClientRect();
+    const chapter = item.querySelector<HTMLElement>('.hermidata-item-chapter');
+    const chapterWidth = chapter?.getBoundingClientRect().width;
+
+    const chapterLeft = chapter ? window.getComputedStyle(chapter).left : null;
+    if (!chapterLeft || !chapterWidth) return itemRect.width * 0.6 + ITEM_LAYOUT.exlamation.leftPadding;
+    
+    // TEMP fix the temparary offset
+    const basicWidth = Number.parseFloat(chapterLeft?.replace('px', '')) + chapterWidth - 50; // 50 is an offset 
+
+    const exclamationPosition = basicWidth + ITEM_LAYOUT.exlamation.leftPadding;
+
+    return exclamationPosition;
 }
 function setRightDiamond(li: HTMLElement, svg: SVGElement): void {
     const liRect = li.getBoundingClientRect();
