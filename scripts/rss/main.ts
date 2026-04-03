@@ -4,7 +4,6 @@ import type { Hermidata } from "../shared/types/popupType";
 import { getElement, setElement } from "../utils/Selection";
 import { BuildRSSController } from "./controller";
 import { getHermidataWithRssFromBackground } from "./load";
-import { positionDiamond, positionItemLines, updatePolygons } from "./build";
 
 
 let rssPreloadPromise: Promise<RSSDOM> | null = null;
@@ -62,10 +61,6 @@ export class RSS {
         this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
         
         await this.BuildRSS.makeSortSection(sortSection);
-        
-        updatePolygons(); // needs to be after sort
-        document.querySelectorAll<HTMLElement>('.hermidata-item').forEach(li => positionItemLines(li));
-        document.querySelectorAll<HTMLElement>('.hermidata-item').forEach(li => positionDiamond(li));
 
         await this.BuildRSS.attachEventListeners()
 

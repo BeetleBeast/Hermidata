@@ -1,6 +1,6 @@
 import { type Hermidata } from "../shared/types/popupType";
 
-import { RssBuild } from "./build";
+import {RssBuild } from "./build";
 
 import { Subscribe } from "./build/Subscribe";
 import { FeedItem } from "./build/feed";
@@ -8,6 +8,7 @@ import { Footer } from "./build/footer";
 import { EventListener } from "./build/EventListener";
 import { SortOption } from "./build/SortOption";
 import { SortLogic } from "./build/SortLogic";
+import { updatePolygons, positionDiamond } from "./build/SetPositionSvg";
 
 
 export class BuildRSSController {
@@ -24,6 +25,11 @@ export class BuildRSSController {
     public async makeSortSection(sortSection: HTMLElement): Promise<void> {
         // makeSortHeader(sortSection);
         await new SortOption(this.hermidata, await RssBuild.init()).makeSortOptions(sortSection);
+
+        // needs to be after sort options and before notification are hidden
+        updatePolygons();
+        document.querySelectorAll<HTMLElement>('.hermidata-item').forEach(item => positionDiamond(item));
+
         await new SortLogic(this.hermidata, await RssBuild.init()).sortOptionLogic(sortSection);
     }
 

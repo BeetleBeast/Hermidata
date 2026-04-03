@@ -136,7 +136,6 @@ export class FeedItem {
         return { groupLeft: diamondgroupLeft, groupRight: diamondgroupRight }
     }
     private createItemLines(item: Hermidata, isRSSItem: boolean) {
-        // TODO: Add lines
         const svgNS = "http://www.w3.org/2000/svg";
         
         const svg = document.createElementNS(svgNS, 'svg');
@@ -301,6 +300,9 @@ export class FeedItem {
         li.dataset.hashKey = key;
         li.dataset.hasRSS = 'true';
         li.dataset.seachable = 'true';
+        li.style.setProperty('--line-h2-y', `0px`);
+        li.style.setProperty('--line-h1-y', `0px`);
+        li.style.setProperty('--line-v1-x', `0px`);
         li.classList.add('hermidata-item');
     
         return li
