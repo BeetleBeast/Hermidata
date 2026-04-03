@@ -4,6 +4,25 @@ import { PastHermidata } from "../popup/core/Past";
 
 import { FeedItem } from "./build/feed";
 
+const ITEM_LAYOUT = {
+    image: {
+        paddingLeft: 12,
+        width: 40,
+        paddingRight: 2,
+    },
+    diamond: {
+        centerY: 22,
+        maxSize: 12,
+        minSize: 4,
+        sizeRatioDivisor: 2 + (1 / 3), // divisor for scaling diamond to available space
+    },
+    sides: {
+        defaultSize: 8,
+    }
+} as const;
+
+const DEBUG = false;
+
 export abstract class RssBuild {
     protected readonly hermidata: Hermidata;
 
@@ -53,67 +72,110 @@ export function positionItemLines(li: HTMLElement): void {
         li.style.setProperty('--line-v1-x', `${0}px`);
 }
 export function positionDiamond(li: HTMLElement): void {
-    
+    // Derived constant — left boundary is always image paddingLeft + width + paddingRight
+    const LEFT_BOUNDARY = ITEM_LAYOUT.image.paddingLeft + ITEM_LAYOUT.image.width + ITEM_LAYOUT.image.paddingRight;
+
     // left side diamond
     const svg = li.querySelector<SVGElement>('.hermidata-item-svg');
-    const footer = li.querySelector<HTMLElement>('.hermidata-item-footer');
-    const image = li.querySelector<HTMLElement>('.hermidata-item-image');
-    if (!svg || !footer) return;
+    if (!svg) return;
     // FIXME: the notification items don't get set as thy are hidden and so can't have their bounding rect calculated
-    const liRect = li.getBoundingClientRect();
-    const right = liRect.right - liRect.left;
-    const imageRect = image?.getBoundingClientRect();
-    if ( !imageRect ) return;
-    const imageRightPosition = imageRect.right - imageRect.left; // 60
-    const ImagePadding = '10';
+    const liWidth = li.offsetWidth;
+    if (liWidth === 0) return;
 
-    // Move the diamond group to the right position
-    const diamond = svg.querySelector<SVGGElement>('.diamond-group-l');
-    diamond?.setAttribute('transform', `translate(0, 0)`);
-
-    // Move the diamond group to the right position
-    const diamond2 = svg.querySelector<SVGGElement>('.diamond-group-r');
-    diamond2?.setAttribute('transform', `translate(${right}, 0)`);
     
-    // move main svg to the correct position
-    const lineDiamond = svg.querySelector<SVGGElement>('.diamond-group-line');
-    lineDiamond?.setAttribute('transform', `translate(75, 22)`);
+    const lineBend = svg.querySelector<SVGLineElement>('.line-top-left-bend');
+    const lineStartX = lineBend?.getAttribute('x1');
+    if (!lineStartX) return;
+
+    
+    const lineStartXps = li.clientWidth / parseFloat(lineStartX.replace('%', ''));
+    const lineBendRect = lineBend?.getBoundingClientRect();
+    if (!lineBendRect?.width || !lineBendRect.height) return;
+
+    const HalfLineBoundary =  lineBendRect.width / 2 || Math.sqrt(lineBendRect.height **2 + lineBendRect.width **2);
+
+    const rightBoundaryDiamond = lineStartXps + HalfLineBoundary;
+
+    // set-up the right diamond position
+    setRightDiamond(li, svg);
+    
+    // set-up the RSS-link indicator size and position
+    setRSSLink(svg, {left: LEFT_BOUNDARY, right: rightBoundaryDiamond});
 }
 // needs to be set after sort
 export function updatePolygons() {
     const NotificationItems = document.querySelectorAll<HTMLElement>('.hermidata-item[data-is-notification-item="true"]');
     const AllItems = document.querySelectorAll<HTMLElement>('.hermidata-item[data-is-notification-item="false"]');
 
-    // calculate coordinates distance needed
-    const liRect = AllItems[0].getBoundingClientRect();
-    const distanceToPoints = liRect.width  / 10; // TODO: get from css
-
-    const { positionLeft: trianglePositionLeft, positionRight: trianglePositionRight } = triangleCoord();
-    const { positionLeft: diamondPositionLeft, positionRight: diamondPositionRight } = diamondCoord();
+    const triangle = triangleCoord(ITEM_LAYOUT.sides.defaultSize);
+    const diamond = diamondCoord(ITEM_LAYOUT.sides.defaultSize);
 
     const loopTroughItems = (items: NodeListOf<HTMLElement>) => {
         for (const item of items) {
-            const index = Array.from(items).indexOf(item);
+            const isFirst = Array.from(items).indexOf(item) === 0;
             const polygonLeft = item.querySelector('.diamond-l');
             const polygonRight = item.querySelector('.diamond-r');
         
-            if (index === 0) {
-                // First item → no upward overlap
-                polygonLeft?.setAttribute('points', trianglePositionLeft);
-                polygonRight?.setAttribute('points', trianglePositionRight);
-            } else {
-                // Others → normal overlap shape
-                polygonLeft?.setAttribute('points', diamondPositionLeft);
-                polygonRight?.setAttribute('points', diamondPositionRight);
-            }
+            polygonLeft?.setAttribute('points', isFirst ? triangle.positionLeft : diamond.positionLeft);
+            polygonRight?.setAttribute('points', isFirst ? triangle.positionRight : diamond.positionRight);
         }
     }
 
     loopTroughItems(NotificationItems);
     loopTroughItems(AllItems);
 }
+function setRightDiamond(li: HTMLElement, svg: SVGElement): void {
+    const liRect = li.getBoundingClientRect();
+    const liWidth = liRect.right - liRect.left;
+    // Move the diamond group to the right position
+    svg.querySelector<SVGGElement>('.diamond-group-r')?.setAttribute('transform', `translate(${liWidth}, 0)`);
+}
+function setRSSLink(svg: SVGElement, boundaries: { left: number, right: number }): void {
+    // Available space for the diamond
+    const availableWidth = boundaries.right - boundaries.left;
+    
+    const centerX = boundaries.left + availableWidth / 2;
 
-function triangleCoord(distanceToPoints: number = 8) {
+    const size = Math.max(
+        ITEM_LAYOUT.diamond.minSize, 
+        Math.min(ITEM_LAYOUT.diamond.maxSize, 
+        availableWidth / ITEM_LAYOUT.diamond.sizeRatioDivisor 
+    ));
+
+
+    // Update diamond group position
+    svg.querySelector<SVGGElement>('.diamond-group-line')?.setAttribute('transform', `translate(${centerX}, ${ITEM_LAYOUT.diamond.centerY})`);
+
+    // Update diamond points relative to 0,0 inside the group
+    svg.querySelector<SVGPolygonElement>('.line-diamond')?.setAttribute('points', diamondCoord(size).positionLeft);
+
+    if (DEBUG) drawDebugLines(svg, boundaries.left, boundaries.right);
+}
+function drawDebugLines(svg: SVGElement, leftBoundaryDiamond: number, rightBoundaryDiamond: number): void {
+    // Draw debug lines for boundaries
+    const existingLeftLine = svg.querySelector('.debug-left-line');
+    const existingRightLine = svg.querySelector('.debug-right-line');
+    if (!existingLeftLine) {
+        const leftLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        leftLine.setAttribute('class', 'debug-left-line hermidata-item-lines');
+        leftLine.setAttribute('x1', String(leftBoundaryDiamond));
+        leftLine.setAttribute('y1', '0');
+        leftLine.setAttribute('x2', String(leftBoundaryDiamond));
+        leftLine.setAttribute('y2', '100%');
+        svg.appendChild(leftLine);
+    }
+    if (!existingRightLine) {
+        const rightLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        rightLine.setAttribute('class', 'debug-right-line hermidata-item-lines');
+        rightLine.setAttribute('x1', String(rightBoundaryDiamond));
+        rightLine.setAttribute('y1', '0');
+        rightLine.setAttribute('x2', String(rightBoundaryDiamond));
+        rightLine.setAttribute('y2', '100%');
+        svg.appendChild(rightLine);
+    }
+}
+
+function triangleCoord(distanceToPoints: number = ITEM_LAYOUT.sides.defaultSize) {
 
     let x1 = 0, y1 = 0;
     let x2 = distanceToPoints, y2 = 0;
@@ -125,7 +187,7 @@ function triangleCoord(distanceToPoints: number = 8) {
 
     return { positionLeft: positionTriangleLeft, positionRight: positionTriangleRight };
 }
-function diamondCoord(distanceToPoints: number = 8) {
+function diamondCoord(distanceToPoints: number = ITEM_LAYOUT.sides.defaultSize) {
 
     let x1 = 0, y1 = -distanceToPoints;
     let x2 = distanceToPoints, y2 = 0;

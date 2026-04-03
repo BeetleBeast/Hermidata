@@ -117,6 +117,7 @@ export class FeedItem {
         
         const diamondLeft = document.createElementNS(svgNS, 'polygon');
         diamondLeft.setAttribute("class", "diamond-l");
+        diamondLeft.setAttribute('transform', `translate(0, 0)`);
 
         const diamondRight = document.createElementNS(svgNS, 'polygon');
         diamondRight.setAttribute("class", "diamond-r");
