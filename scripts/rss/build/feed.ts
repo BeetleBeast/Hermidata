@@ -38,7 +38,7 @@ export class FeedItem {
 
             const li = this.createItemContainer(key, isRSSItem);
 
-            const lines = this.createItemLines(item, isRSSItem);
+            const lines = this.createItemLines(item);
             
             const ItemInfoContainer = await this.createItemInfoContainer(key, item, itemInfo, isRSSItem);
             
@@ -146,7 +146,7 @@ export class FeedItem {
 
         return { groupLeft: diamondgroupLeft, groupRight: diamondgroupRight }
     }
-    private createItemLines(item: Hermidata, isRSSItem: boolean) {
+    private createItemLines(item: Hermidata) {
         const svgNS = "http://www.w3.org/2000/svg";
         
         const svg = document.createElementNS(svgNS, 'svg');
@@ -177,16 +177,19 @@ export class FeedItem {
         
         diamond.setAttribute('points',`${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`);
         diamond.setAttribute("class", "line-diamond hermidata-item-lines");
-        isRSSItem ? diamond.style.fill = "blue" : diamond.style.fill = "green"; // TODO: change to correct color later
+        item.rss?.latestItem ? diamond.style.fill = "blue" : diamond.style.fill = "green"; // TODO: change to correct color later
 
-        const titleOfDiamond = document.createElement('title');
-        titleOfDiamond.innerHTML = isRSSItem ? "This Item is linked" : "this Item is <b>not</b> linked to a RSS feed";
+        const titleOfDiamond = this.createSVGItemTitle(item.rss?.latestItem ? "This Item is linked" : "this Item is not linked to a RSS feed")
         diamond.appendChild(titleOfDiamond);
         diamondgroup.appendChild(diamond);
         
         // RSS link missing Icon ( only for non RSS items)
         if (!item.rss?.latestItem) {
             const notifyRSSLinkIcon = this.CreateNotifyRSSLinkIcon();
+
+            const titleOfExclamation = this.createSVGItemTitle("This Item can not be updated via RSS feed because no RSS feed is linked to it.")
+            notifyRSSLinkIcon.appendChild(titleOfExclamation);
+            
             svg.appendChild(notifyRSSLinkIcon);
         }
 
@@ -198,6 +201,12 @@ export class FeedItem {
             bottomVertical, 
             topLine, bottomLine, leftLine, rightLine);
         return svg
+    }
+    private createSVGItemTitle(title: string): SVGTitleElement {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const elTitle = document.createElementNS(svgNS, 'title');
+        elTitle.innerHTML = title;
+        return elTitle;
     }
     private async getItemInfo(key: string, item: Hermidata, isRSSItem: boolean = false): Promise<ItemInfo> {
         const title = findByTitleOrAltV2(item.title, this.AllHermidata)?.title || item.title;
@@ -216,7 +225,9 @@ export class FeedItem {
     private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
         pubDate.className = "hermidata-item-pubDate"
-        pubDate.textContent = `Published: ${item.rss?.latestItem.pubDate ? item.rss?.latestItem.pubDate.toLocaleString() : 'N/A'}`;
+        const pubDateText = `Published: ${item.rss?.latestItem.pubDate ? item.rss?.latestItem.pubDate.toLocaleString() : 'N/A'}`;
+        pubDate.textContent = pubDateText;
+        pubDate.title = pubDateText;
         return pubDate
     }
     private createItemFooter(item: Hermidata): HTMLElement {
@@ -224,12 +235,14 @@ export class FeedItem {
 
         Elfooter.className = "hermidata-item-footer"
         const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
-        Elfooter.textContent = `${domain}`;
+        Elfooter.textContent = String(domain);
+        Elfooter.title = String(domain);
         return Elfooter
     }
     private createItemTitle(title: string): HTMLElement {
         const ELTitle = document.createElement("div");
         ELTitle.className = "hermidata-item-title"
+        ELTitle.title = title;
 
         ELTitle.textContent = title;
         
@@ -257,7 +270,8 @@ export class FeedItem {
     }
     private createItemTags(currentHermidata: Hermidata, settings: SettingsInput): HTMLElement {
         const ElTagContainer = document.createElement("div");
-        ElTagContainer.className = "hermidata-item-tag-container"
+        ElTagContainer.className = "hermidata-item-tag-container";
+        let allTagsInString: string = "";
         if ( currentHermidata.meta?.tags.length > 0 ) {
             const tags = currentHermidata.meta?.tags as (string[] | string);
             const allTags = Array.isArray(tags) ? tags : tags?.split(',');
@@ -266,12 +280,15 @@ export class FeedItem {
                 const tagDiv = document.createElement('div');
                 tagDiv.classList = `tag-div tag-div-${tagName}`;
                 tagDiv.textContent = `[${tagName}]`;
+                allTagsInString += `[${tagName}]`;
                 tagDiv.style.color = settings.tagColoring?.[tagName] || 'white';
                 tagDiv.dataset.TagColor = settings.tagColoring?.[tagName] || 'white';
                 ElTagContainer.append(tagDiv)
             }
             ElTagContainer.dataset.tags = JSON.stringify(allTags);
         }
+        ElTagContainer.title = currentHermidata.meta?.tags.length > 0 ? allTagsInString : "No tags";
+
         return ElTagContainer
     }
     private async createItemInfoContainer(key: string, item: Hermidata, itemInfo: ItemInfo, isRSSItem: boolean): Promise<HTMLElement> {

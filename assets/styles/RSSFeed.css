@@ -54,12 +54,14 @@
     justify-self: center;
     padding: 5px;
     max-width: 90%;
+    z-index: 800;
 }
 .hermidata-item-progress {
     font-weight: bold;
     font-size: 16px;
     padding-right: 10px;
     padding-top: 5px;
+    z-index: 800;
 }
 .hermidata-item-chapter {
     font-size: 15px;
@@ -72,6 +74,7 @@
     justify-self: center;
     position: absolute;
     left: 10%;
+    z-index: 800;
 }
 
 .hermidata-item-footer {
@@ -85,6 +88,7 @@
     width: fit-content;
     max-width: 140px;
     text-overflow: ellipsis;
+    z-index: 800;
 }
 .hermidata-item-pubDate {
     font-size: 12px;
@@ -97,6 +101,7 @@
     text-overflow: ellipsis;
     justify-self: self-start;
     grid-column: 2;
+    z-index: 800;
 }
 
 /* TODO: Do something about this Here */
@@ -108,6 +113,7 @@
     max-width: 180px;
     white-space: nowrap;
     overflow: hidden;
+    z-index: 800;
 }
 .tag-div {
     width: fit-content;
@@ -178,6 +184,12 @@
     stroke-width: 1;
     vector-effect: non-scaling-stroke;
 }
+
+.line-diamond.hermidata-item-lines:hover {
+	stroke: aliceblue;
+	cursor: help;
+}
+
 .diamond-l,
 .diamond-r {
     stroke: var(--hr);
@@ -208,4 +220,9 @@
 .rss-link-missing-icon {
     stroke: yellow;
     fill: yellow;
+}
+
+.rss-link-missing-icon:hover {
+	stroke: aliceblue;
+	cursor: help;
 }

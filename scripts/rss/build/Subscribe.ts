@@ -1,5 +1,5 @@
 import { PastHermidata } from "../../popup/core/Past";
-import { getAllRawFeeds, getHermidataViaKey } from "../../shared/Storage";
+import { getAllRawFeeds } from "../../shared/Storage";
 import { findByTitleOrAltV2, TrimTitle } from "../../shared/StringOutput";
 import type { Hermidata, NovelType } from "../../shared/types/popupType";
 import type { RawFeed } from "../../shared/types/rssType";
