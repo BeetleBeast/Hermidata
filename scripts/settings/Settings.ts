@@ -215,7 +215,8 @@ class Settings {
         if (group.Type) group.Type.value = data.Type;
         // if (group.chapter) group.chapter.value = data.chapter;
         if (group.Status) group.Status.value = data.status;
-        if (group.tags) group.tags.value = data.tags.join(",");
+        const tags = (Array.isArray( data.tags) ? data.tags.join(", ") : data.tags)
+        if (group.tags) group.tags.value = tags;
         if (group.notes) group.notes.value = data.notes;
     }
 

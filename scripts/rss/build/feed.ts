@@ -177,7 +177,7 @@ export class FeedItem {
         
         diamond.setAttribute('points',`${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`);
         diamond.setAttribute("class", "line-diamond hermidata-item-lines");
-        item.rss?.latestItem ? diamond.style.fill = "blue" : diamond.style.fill = "green"; // TODO: change to correct color later
+        item.rss?.latestItem ? diamond.style.fill = "#3c5ca6" : diamond.style.fill = "rgba(1, 175, 118, 0.87)";
 
         const titleOfDiamond = this.createSVGItemTitle(item.rss?.latestItem ? "This Item is linked" : "this Item is not linked to a RSS feed")
         diamond.appendChild(titleOfDiamond);
@@ -225,7 +225,8 @@ export class FeedItem {
     private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
         pubDate.className = "hermidata-item-pubDate"
-        const pubDateText = `Published: ${item.rss?.latestItem.pubDate ? item.rss?.latestItem.pubDate.toLocaleString() : 'N/A'}`;
+        const dateString = item.rss?.latestItem.pubDate ? new Date(item.rss.latestItem.pubDate).toLocaleDateString() : 'N/A';
+        const pubDateText = `Published: ${dateString}`;
         pubDate.textContent = pubDateText;
         pubDate.title = pubDateText;
         return pubDate

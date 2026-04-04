@@ -167,6 +167,8 @@ Source maps are included in dev builds. Each background module registers its own
 - Alternate titles need to be set manually — if a feed uses a different title than your saved entry, it may appear as a duplicate
 - Similar tags (e.g. `fav`, `favorite`, `favorites`) are stored separately instead of being merged
 
+- notification RSS item's polygon ( to indicate that it is linked ) `sometimes` don't get set at the correct position
+
 ---
 
 ### To-Do
@@ -175,10 +177,8 @@ Source maps are included in dev builds. Each background module registers its own
 - [ ] Edit type and status options directly from Settings
 - [ ] Manual alternate title entry for out-of-sync RSS matches
 - [ ] auto link RSS to entry without setting it manually
-- [ ] set-up a minimum width that works for both classic and RSS mode
-- [ ] better space bottom of RSS items
 
-- [ ] subscribe buttin ( and system ) is very fidelly and can easely break if not done in correct order.
+- [ ] subscribe button ( and system ) is very fidelly and can easely break if not done in correct order.
 
 ---
 
