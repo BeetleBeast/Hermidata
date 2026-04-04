@@ -104,8 +104,6 @@
     z-index: 800;
 }
 
-/* TODO: Do something about this Here */
-/* AI: this container here */
 .hermidata-item-tag-container {
     display: flex;
     flex-wrap: nowrap;
@@ -207,7 +205,7 @@
     grid-row: 2;
 
     display: grid;
-    grid-template-columns: 50% 31% 31%; /* FIXME: make it percentile based instead of pixels */
+    grid-template-columns: 50% 31% 31%;
     gap: 5px;
     align-items: center;
 }
