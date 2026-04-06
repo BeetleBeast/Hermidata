@@ -1,8 +1,7 @@
 
 import { TrimTitle, returnHashedTitle } from "../../shared/StringOutput";
 import type {  Hermidata, NovelType } from "../../shared/types/popupType";
-import { ext } from "../../shared/BrowserCompat";
-import { getHermidataViaKey } from "../../shared/Storage";
+import { getHermidataViaKey, saveHermidataV3 } from "../../shared/Storage";
 import { PastHermidata } from "./Past";
 
 
@@ -43,7 +42,7 @@ export async function updateChapterProgress(title: string, type: string, newChap
         entry.meta.tags = (Array.isArray(rawTags)) ? rawTags : rawTags.split(',').map(tag => tag.trim()).filter(Boolean);
         entry.chapter.lastChecked = new Date().toISOString();
         entry.meta.updated = new Date().toISOString();
-        await ext.storage.sync.set({ [key]: entry });
+        await saveHermidataV3(key, entry);
         console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
     }
     if (needsToMigrate) {
@@ -84,13 +83,6 @@ export function makeHermidataV3(title: string, url: string, type: NovelType = "M
     };
 }
 
-export async function saveHermidataV3(entry: Hermidata, key?: string): Promise<void> {
-    const Key = key || entry.id || returnHashedTitle(entry.title, entry.type, entry.url);
-    entry.meta.updated = new Date().toISOString();
-    await ext.storage.sync.set({ [Key]: entry });
-    console.log(`[HermidataV3] Saved ${entry.title}`);
-}
-
 export async function appendAltTitle(newTitle: string, entry: Hermidata): Promise<void> {
     // Normalize and deduplicate
     const trimmed = TrimTitle.trimTitle(newTitle, entry.url).title;
@@ -101,6 +93,6 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
 
     const entryKey = entry.id || returnHashedTitle(entry.title, entry.type);
 
-    await saveHermidataV3(entry, entryKey);
+    await saveHermidataV3(entryKey, entry);
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
 }

@@ -1,8 +1,7 @@
 import { detectHashType, getOldIDType, migrateHermidataV5, migrationSteps } from "../popup/core/migrate";
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
-import { ext } from "../shared/BrowserCompat";
 import { returnHashedTitle } from "../shared/StringOutput";
-import { getAllHermidata } from "../shared/Storage";
+import { getAllHermidata, updateHermidataV3 } from "../shared/Storage";
 import { type AllHermidata, type Hermidata } from "../shared/types/popupType";
 
 export const makeDefaultHermidata = (): Hermidata => ({
@@ -153,8 +152,7 @@ export class Duplicate  {
     
         // Save and remove the old entry key
         if (merged) {
-            await ext.storage.sync.set({ [merged.id]: merged });
-            await ext.storage.sync.remove(older.id);
+            await updateHermidataV3(older.id, merged.id, merged);
             console.log(`Merged "${older.title}" into "${newer.title}"`);
         } else {
             console.error(`Merge failed for:`, older.title, newer.title);

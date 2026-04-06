@@ -4,6 +4,8 @@ import type { RawFeed } from "./types/rssType";
 import { defaultSettings, type SettingsInput as Settings } from "./types/settings";
 import { getElement, setElement } from "../utils/Selection";
 import type { AllsortsType, Filters } from "./types/rssBuildType";
+import { PastHermidata } from "../popup/core/Past";
+import { returnHashedTitle } from "./StringOutput";
 
 export async function getHermidataViaKey(key: string): Promise<Hermidata | null> {
     return new Promise<Hermidata | null>((resolve, reject) => {
@@ -25,6 +27,34 @@ function isHermidata(value: unknown): value is Hermidata {
         typeof (value as Hermidata).url === 'string'
         // add whatever fields are truly required
     );
+}
+
+export async function saveHermidataV3(key: string, entry: Hermidata): Promise<void> {
+    const Key = key || entry.id || returnHashedTitle(entry.title, entry.type, entry.url);
+    entry.meta.updated = new Date().toISOString();
+
+    await ext.storage.sync.set({ [Key]: entry });
+
+    PastHermidata.invalidateCache();
+
+    console.log(`[HermidataV3] Saved ${entry.title}`);
+}
+export async function updateHermidataV3(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+
+    entry.meta.updated = new Date().toISOString();
+
+    await ext.storage.sync.set({ [newKey]: entry });
+    await ext.storage.sync.remove(oldKey);
+
+    PastHermidata.invalidateCache();
+
+    console.log(`Migrated from ${oldKey} → ${newKey}`);
+    console.log(`[HermidataV3] Updated ${entry.title}`);
+}
+export async function removeHermidataV3(id: string): Promise<void> {
+    await ext.storage.sync.remove(id);
+    PastHermidata.invalidateCache();
+    console.log(`[HermidataV3] Removed ${id}`);
 }
 
 export async function getAllHermidata(): Promise<Record<string, Hermidata>> {

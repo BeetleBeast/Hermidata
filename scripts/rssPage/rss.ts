@@ -13,9 +13,8 @@
 
 */
 
-import { ext } from "../shared/BrowserCompat";
 import { returnHashedTitle } from "../shared/StringOutput";
-import { getAllHermidata } from "../shared/Storage";
+import { getAllHermidata, removeHermidataV3, saveHermidataV3 } from "../shared/Storage";
 import { novelTypes, readStatus, type Hermidata, type NovelType, type ReadStatus } from "../shared/types/popupType";
 import { getElement, setElement } from "../utils/Selection";
 
@@ -60,12 +59,10 @@ class RssPage {
     }
     private async saveData(entry: Hermidata): Promise<void> {
         const key = entry.id || returnHashedTitle(entry.title, entry.type);
-        await ext.storage.sync.set({ [key]: entry });
-        console.log(`[HermidataV3] Saved ${entry.title}`);
+        await saveHermidataV3(key, entry);
     }
     private async removeData(id: string): Promise<void> {
-        await ext.storage.sync.remove(id);
-        console.log(`[HermidataV3] Removed ${id}`);
+        await removeHermidataV3(id);
     }
     // rendering
     private renderFilters(): void {

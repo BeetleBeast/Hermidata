@@ -4,7 +4,7 @@ import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
 import type { RawFeed } from "../shared/types/rssType";
-import { getAllRawFeeds, getHermidataViaKey } from "../shared/Storage";
+import { getAllRawFeeds, getHermidataViaKey, saveHermidataV3 } from "../shared/Storage";
 import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/popupType";
 
 export async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
@@ -172,8 +172,11 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
     // check if new entry is inside database
     const altCheck = await detectAltTitleNeeded(title, type, rssData.domain, url);
     const AllHermidata = await PastHermidata.getAllHermidata();
-    const titleOrAlt = findByTitleOrAltV2(title, AllHermidata)?.title || title
-    const key = returnHashedTitle( titleOrAlt, type);
+
+    const existingEntry = findByTitleOrAltV2(title, AllHermidata)
+    const resolvedTitle = existingEntry ? existingEntry.title : title;
+    const resolvedType = existingEntry ? existingEntry.type : type;
+    const key = returnHashedTitle( resolvedTitle, resolvedType);
 
     const KeysToFetch = [key];
     if (altCheck.relatedKey && altCheck.relatedKey !== key) KeysToFetch.push(altCheck.relatedKey)
@@ -185,7 +188,7 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
         stored[key] = obj;
     }
 
-    const entry: Hermidata = await getEntry(title, stored, altCheck, type, url, key);
+    const entry: Hermidata = await getEntry(title, stored, altCheck, resolvedType, url, key);
 
     entry.rss = {
         title: rssData.title,
@@ -200,23 +203,25 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
     const latestChapter = getChapterFromTitle(rssData.items?.[0]?.title, entry.rss.url);
     if (latestChapter) entry.chapter.latest = latestChapter;
 
-    await ext.storage.sync.set({ [key]: entry });
+    const saveKey = stored[key] ? key : altCheck.relatedKey ?? key;
+    await saveHermidataV3(saveKey, entry);
 }
 
 async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: NovelType, url: string, key: string): Promise<Hermidata> {
+    // Try to find the best matching entry among the possible keys
+    // 1. direct key match
     let entry = stored[key];
     if (altCheck.relatedKey && !entry) entry = stored[altCheck.relatedKey]
 
+    // 2. title match (including alt titles and fuzzy matches) Has priority over direct key match since keys can be outdated/stale
     if (altCheck.needAltTitle && altCheck.relatedKey) {
         const relatedEntry = stored[altCheck.relatedKey];
         if (relatedEntry) {
-            const confirmation = await customConfirm(
-                `${altCheck.reason}\nAdd "${title}" as an alt title for "${relatedEntry.title}"?`
-            );
+            const confirmation = await customConfirm(`${altCheck.reason}\nAdd "${title}" as an alt title for "${relatedEntry.title}"?`);
             if (confirmation) await appendAltTitle(title, relatedEntry);
         }
     }
-
+    // fallback: if no entry found at all, create new one
     if (!entry) entry = makeHermidataV3(title, url, type);
 
     return entry;
