@@ -78,7 +78,8 @@ export function makeHermidataV3(title: string, url: string, type: NovelType = "M
             altTitles: [Title.title],
             added: new Date().toISOString(),
             updated: new Date().toISOString(),
-            originalRelease: null
+            originalRelease: null,
+            novelStatus: undefined
         }
     };
 }

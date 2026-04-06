@@ -25,7 +25,8 @@ export const makeDefaultHermidata = (): Hermidata => ({
         added: new Date().toISOString(),
         updated: new Date().toISOString(),
         altTitles: [],
-        originalRelease: null
+        originalRelease: null,
+        novelStatus: undefined
     }
 });
 

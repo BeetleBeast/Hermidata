@@ -48,12 +48,13 @@ export interface Hermidata {
     rss: Feed | null;
     import: string | null;
     meta: {
-        tags: string[];
+        tags: string[]; // old versions might have string, but we will convert them to array
         notes: string;
         added: string;
         updated: string;
         altTitles: string[];
         originalRelease: string | null;
+        novelStatus?: NovelStatus;
     };
 }
 
