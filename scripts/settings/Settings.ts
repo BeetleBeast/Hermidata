@@ -1,10 +1,10 @@
 import { ext } from "../shared/BrowserCompat";
 import { 
     defaultSettings, setDefaultSettingsElements, 
-    type elementsInputAndMenu, type ElmentsWithInputAndMenu, type SettingsInput, type Hermidata,
+    type elementsInputAndMenu, type ElmentsWithInputAndMenu, type Settings as SettingsInput, type Hermidata,
     novelTypes, readStatus 
 } from "../shared/types/index";
-import { getAllHermidata, getSettings, getSpreadsheetUrl } from "../shared/db/Storage";
+import { getAllHermidata, getSettings, getGoogleSheetURL, setSpreadsheetUrl } from "../shared/db/Storage";
 import { getElement, setElement } from "../utils/Selection";
 
 
@@ -44,11 +44,10 @@ class Settings {
 
     private addEventListener() {
         getElement("#save")?.addEventListener("click", () => {
-            ext.storage.sync.set({ spreadsheetUrl: this.input }, () => {
-                if (!this.status) return;
-                this.status.textContent = "Saved!";
-                setTimeout(() => setElement('#statusSheetURL', el => el.textContent = ""), 2000);
-            });
+            if ( this.input) setSpreadsheetUrl(this.input);
+            if (!this.status) return;
+            this.status.textContent = "Saved!";
+            setTimeout(() => setElement('#statusSheetURL', el => el.textContent = ""), 2000);
         });
         // Save table Input
         this.elements.input.saveButton?.addEventListener("click", () => {
@@ -129,7 +128,7 @@ class Settings {
         this.populateSelect(this.elements.menu.Type, novelTypes);
 
         // Load spreadsheetUrl value
-        const result = await getSpreadsheetUrl();
+        const result = await getGoogleSheetURL();
         setElement<HTMLInputElement>("#spreadsheetUrl", el => el.value = result);
         // load table input
         const localSettings = await getSettings()
@@ -206,7 +205,6 @@ class Settings {
     private getValuesFromElements(group: elementsInputAndMenu, data: SettingsInput["DefaultChoice"] | SettingsInput["DefaultChoiceText_Menu"] | null = null)  {
         return {
             Type: data ? data?.Type : group.Type?.value,
-            chapter: data ? data?.chapter : 0,
             status: data ? data?.status : group.Status?.value,
             tags: data ? data?.tags : (group.tags?.value || ""),
             notes: data ? data?.notes : (group.notes?.value || "")

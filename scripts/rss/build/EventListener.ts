@@ -2,10 +2,11 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
 import type { MenuOption, Hermidata } from "../../shared/types/index";
-import { getHermidataViaKey, removeKeysFromSync, saveHermidataV3, setNotificationList, updateHermidataV3 } from "../../shared/db/Storage";
+import { getHermidataViaKey, saveHermidataV3, setNotificationList, updateHermidataV3 } from "../../shared/db/Storage";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
+import { deleteHermidata } from "../../shared/db/db";
 
 export class EventListener extends RssBuild {
     
@@ -222,7 +223,7 @@ export class EventListener extends RssBuild {
         const confirmation = await customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
-            removeKeysFromSync(hashItem)
+            deleteHermidata(hashItem)
         }
     }
     

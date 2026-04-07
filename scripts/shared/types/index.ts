@@ -48,7 +48,7 @@ export {
 export {
 
     type DefaultChoice,
-    type SettingsInput,
+    type Settings,
 
     type elementInput,
     type elementMenu,

@@ -1,6 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
 import { getSettings } from "../shared/db/Storage";
-import type { SettingsInput } from "../shared/types/index";
+import type { Settings } from "../shared/types/index";
 import { getElement } from "../utils/Selection";
 
 
@@ -26,7 +26,7 @@ export class FolderMapping {
         this.buildFolderMappingForm(settings);
     }
 
-    private buildFolderMappingForm(settings: SettingsInput) {
+    private buildFolderMappingForm(settings: Settings) {
         // build front-end
 
         // build select
@@ -80,8 +80,8 @@ export class FolderMapping {
     }
 
     private saveSettings(sectionKey: string, values: any, statusElement: HTMLElement | null = null) {
-        ext.storage.sync.get(["Settings"], (result: { Settings: SettingsInput }) => {
-            const updatedSettings: SettingsInput = {
+        ext.storage.sync.get(["Settings"], (result: { Settings: Settings }) => {
+            const updatedSettings: Settings = {
                 ...result.Settings,
                 [sectionKey]: values
             };

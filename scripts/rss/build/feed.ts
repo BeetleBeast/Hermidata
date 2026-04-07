@@ -1,5 +1,5 @@
 import { findByTitleOrAltV2, getChapterFromTitleReturn } from "../../shared/StringOutput";
-import type { SettingsInput, AllHermidata, Hermidata } from "../../shared/types/index";
+import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
 import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
 import { getElement } from "../../utils/Selection";
 
@@ -268,7 +268,7 @@ export class FeedItem {
         ELprogress.textContent = `${progress}%`;
         return ELprogress
     }
-    private createItemTags(currentHermidata: Hermidata, settings: SettingsInput): HTMLElement {
+    private createItemTags(currentHermidata: Hermidata, settings: Settings): HTMLElement {
         const ElTagContainer = document.createElement("div");
         ElTagContainer.className = "hermidata-item-tag-container";
         let allTagsInString: string = "";

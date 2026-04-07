@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat";
-import type { SettingsInput, InputArrayType } from "../shared/types/index";
+import type { InputArrayType } from "../shared/types/index";
 import { getSettings } from "../shared/db/Storage";
 import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";
@@ -59,9 +59,8 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
     const [title, type, chapter, url, status] = dataArray;
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
     
-    const settings: SettingsInput = await new Promise((resolve) => {
-        ext.storage.sync.get(["Settings"], (result: { Settings: SettingsInput }) => resolve(result.Settings));
-    });
+    
+    const settings = await getSettings();
     const baseType = resolveBaseType(type)
     const baseStatus = resolveBaseStatus(status)
     const folderInfo = settings?.FolderMapping?.[baseType]?.[baseStatus];

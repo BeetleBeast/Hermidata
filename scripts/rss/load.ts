@@ -5,8 +5,20 @@ import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type NovelType, novelTypes } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, saveHermidataV3 } from "../shared/db/Storage";
+import { getAllHermidataWithRss } from "../shared/db/db";
 
-export async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
+/*
+
+1. get all raw feeds from storage
+    - filter out non possible Hermidata entries
+
+2. get all hermidata with a RSS feed linked
+// 3. merge raw feeds into hermidata
+
+
+*/
+
+async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
     const rawFeeds: Record<string, RawFeed> = await getAllRawFeeds();
     const rawFeedsValues = Object.values({...rawFeeds});
     
@@ -75,7 +87,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Reco
     console.log('domainCandidates misses', allNONmaches.length);
     return filteredRawFeeds;
 }
-
+// only called in background after invalidation or on initial load
 export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> {
     console.group('getHermidataWithRss');
     console.time('getAllHermidata');
@@ -86,13 +98,13 @@ export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> 
     console.timeEnd('getRawFeedsRecord');
     // Collect all entries that have RSS
     console.time('filter entries with RSS');
-    const hermidataWRSS = Object.entries(AllHermidata).filter(([_, feed]) => feed?.rss);
+    const hermidataWRSS = Object.values(await getAllHermidataWithRss(AllHermidata));
     console.timeEnd('filter entries with RSS');
     // Run all updateFeed calls in parallel
     console.time('updateFeed');
     const updated = await Promise.all(
-        hermidataWRSS.map(async ([id, feed]) => ({
-            id,
+        hermidataWRSS.map(async (feed) => ({
+            id: feed.id,
             feed: await updateFeed(feed, RawFeeds, AllHermidata),
         }))
     );
@@ -102,7 +114,7 @@ export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> 
     console.groupEnd();
     return Object.fromEntries(updated.map(({ id, feed }) => [id, feed]));
 }
-// load.ts or wherever loadSavedFeeds is called from popup
+// whenever we need to get hermidata with RSS may be called everywhere
 export async function getHermidataWithRssFromBackground(): Promise<Record<string, Hermidata>> {
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ type: 'GET_RSS' }, (response) => {

@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat";
-import type { SettingsInput, InputArrayType } from "../shared/types/index";
+import type { Settings, InputArrayType } from "../shared/types/index";
 import { getCurrentDate } from "./feeds";
 import { handleSaveNovel } from "./rssCache";
 import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
@@ -7,7 +7,7 @@ import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
 export function initContextMenus() {
     ext.contextMenus.onClicked.addListener((info) => {
         if (info.menuItemId === "Hermidata") {
-                ext.storage.sync.get<Record<string, SettingsInput>>([ "Settings" ], (result) => {
+                ext.storage.sync.get<Record<string, Settings>>([ "Settings" ], (result) => {
                     if (result.AllowContextMenu) {
                         createContextMenu(info, result.Settings);
                     }
@@ -16,7 +16,7 @@ export function initContextMenus() {
     })
 }
 
-function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: SettingsInput) {
+function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Settings) {
     // Send tab info to your saving logic
     if (!info.linkUrl) return
     fetch(info.linkUrl, { method: "HEAD" })

@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat"
-import type { SettingsInput } from "../shared/types/index"
+import { getSettings, migrateFromChromeStorage } from "../shared/db/db"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel } from "./rssCache"
@@ -18,32 +18,32 @@ export function initMessaging() {
 }
 
 export function initInstalled() {
-    ext.runtime.onInstalled.addListener(details => {
+    ext.runtime.onInstalled.addListener(async details => {
         checkFeedsForUpdates();
 
-        ext.storage.sync.get<Record<string, SettingsInput>>([ "Settings" ], (result) => {
-            const settings = result?.Settings;
-            if (details.reason === "install") {
-                // Open settings on first install to fix bug from V?
-                if (!settings) ext.runtime.openOptionsPage();
-            } else if (details.reason === "update") {
-                const thisVersion = ext.runtime.getManifest().version;
-                console.log(`Updated to version ${thisVersion}`);
-                // open settings after an update to fix bug from V?
-                if (!settings) ext.runtime.openOptionsPage();
-            }
+        const settings = await getSettings();
 
-            if (settings?.AllowContextMenu) {
-                ext.contextMenus.create({
-                    id: "Hermidata",
-                    title: "Save to Hermidata",
-                    contexts: ["link"]
-                });
-            }
-        });
+        if (details.reason === "install") {
+            // Open settings on first install to fix bug from V?
+            if (!settings) ext.runtime.openOptionsPage();
+        } else if (details.reason === "update") {
+            const thisVersion = ext.runtime.getManifest().version;
+            console.log(`Updated to version ${thisVersion}`);
+            // open settings after an update to fix bug from V?
+            if (!settings) ext.runtime.openOptionsPage();
+        }
+
+        if (settings?.AllowContextMenu) {
+            ext.contextMenus.create({
+                id: "Hermidata",
+                title: "Save to Hermidata",
+                contexts: ["link"]
+            });
+        }
     });
     ext.runtime.onStartup.addListener(() => {
         updateCurrentBookmarkAndIcon()
         checkFeedsForUpdates();
+        migrateFromChromeStorage();
     });
 }

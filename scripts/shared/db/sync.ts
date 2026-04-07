@@ -60,11 +60,11 @@ export function initSync(): void {
             if (newValue) {
                 // Strip the transit metadata before writing to IndexedDB
                 const { _syncedBy, ...entry } = newValue
-                await putHermidata(entry)
+                await putHermidata(entry, false) // false to avoid re-syncing
                 console.log(`[Sync] Pulled entry from another device: ${entry.title}`)
             } else if (oldValue && !newValue) {
                 // Entry was deleted on another device
-                await deleteHermidata(key)
+                await deleteHermidata(key, false) // false to avoid re-syncing
                 console.log(`[Sync] Deleted entry from another device: ${key}`)
             }
         }

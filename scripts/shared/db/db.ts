@@ -1,24 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Hermidata, NovelType, ReadStatus, RawFeed } from '../types/index';
+import type { Hermidata, NovelType, ReadStatus, RawFeed, Settings } from '../types/index';
 import { ext } from '../BrowserCompat';
+import { pushToSync, removeFromSync } from './sync';
 
-// ============================================================
-// Types
-// ============================================================
-
-// TODO: set it up inside Settings in the future
-export interface Settings {
-    spreadsheetUrl: string;
-    darkMode: boolean;
-    AllowContextMenu: boolean;
-    DefaultChoiceText_Menu: {
-        Type: NovelType;
-        status: ReadStatus;
-        tags: string[];
-        notes: string;
-    };
-    FolderMapping: Record<string, Record<string, { path: string }>>;
-}
 
 // ============================================================
 // Schema
@@ -132,10 +116,11 @@ export async function getAllHermidata(): Promise<Record<string, Hermidata>> {
 }
 
 /** Add or replace an entry */
-export async function putHermidata(entry: Hermidata): Promise<void> {
+export async function putHermidata(entry: Hermidata, sync: boolean = true): Promise<void> {
     try {
         const db = await getDb();
         await db.put('hermidata', entry);
+        if (sync) await pushToSync(entry);
     } catch (err) {
         console.error('[DB] putHermidata:', err);
     }
@@ -156,10 +141,11 @@ export async function putAllHermidata(entries: Hermidata[]): Promise<void> {
 }
 
 /** Delete a single entry */
-export async function deleteHermidata(key: string): Promise<void> {
+export async function deleteHermidata(key: string, sync: boolean = true): Promise<void> {
     try {
         const db = await getDb();
         await db.delete('hermidata', key);
+        if (sync) await removeFromSync(key);
     } catch (err) {
         console.error('[DB] deleteHermidata:', err);
     }
@@ -203,14 +189,14 @@ export async function getHermidataBySource(source: string): Promise<Hermidata[]>
 }
 
 /** Get all entries that have an RSS feed linked */
-export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> {
+export async function getAllHermidataWithRss(preAll: Record<string, Hermidata> | null = null): Promise<Record<string, Hermidata>> {
     try {
-        const all = await getAllHermidata();
+        const all = preAll ?? await getAllHermidata();
         return Object.fromEntries(
             Object.entries(all).filter(([_, h]) => h.rss !== null)
-        );
+        )
     } catch (err) {
-        console.error('[DB] getHermidataWithRss:', err);
+        console.error('[DB] getAllHermidataWithRss:', err);
         return {};
     }
 }
