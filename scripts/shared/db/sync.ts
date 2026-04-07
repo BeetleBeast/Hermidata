@@ -73,7 +73,7 @@ export function initSync(): void {
                 console.log(`[Sync] Pulled entry from another device: ${entry.title}`)
             } else if (oldValue && !newValue) {
                 // Entry was deleted on another device
-                // await deleteHermidata(key, false) // false to avoid re-syncing
+                await deleteHermidata(key, false) // false to avoid re-syncing
                 console.log(`[Sync] Deleted entry from another device: ${key}`)
             }
         }

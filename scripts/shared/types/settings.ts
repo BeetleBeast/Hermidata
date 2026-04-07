@@ -1,4 +1,3 @@
-import { getElement } from "../../utils/Selection";
 import type { NovelType, ReadStatus } from "./popup";
 
 export interface DefaultChoice {
