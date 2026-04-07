@@ -1,6 +1,5 @@
-import { AllSorts, filterClassName, filterName } from "../../shared/types/rssBuildType";
-import { getLastSortOption } from "../../shared/Storage";
-import { novelStatus, novelTypes, readStatus, type Hermidata } from "../../shared/types/popupType";
+import { AllSorts, filterClassName, filterName, novelStatus, novelTypes, readStatus, type Hermidata } from "../../shared/types/index";
+import { getLastSortOption } from "../../shared/db/Storage";
 import { getElement, setElement } from "../../utils/Selection";
 import { Sort } from "./Sort";
 export class SortOption extends Sort {

@@ -1,6 +1,5 @@
 import { ext } from "../shared/BrowserCompat";
-import type { SettingsInput } from "../shared/types/settings";
-import type { InputArrayType } from "../shared/types/popupType";
+import type { SettingsInput, InputArrayType } from "../shared/types/index";
 import { getCurrentDate } from "./feeds";
 import { handleSaveNovel } from "./rssCache";
 import { getTitleAndChapterFromUrl } from "../shared/StringOutput";

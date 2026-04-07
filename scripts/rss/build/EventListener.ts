@@ -1,9 +1,8 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
-import type { MenuOption } from "../../shared/types/rssBuildType";
-import { getHermidataViaKey, removeKeysFromSync, saveHermidataV3, setNotificationList, updateHermidataV3 } from "../../shared/Storage";
-import type { Hermidata } from "../../shared/types/popupType";
+import type { MenuOption, Hermidata } from "../../shared/types/index";
+import { getHermidataViaKey, removeKeysFromSync, saveHermidataV3, setNotificationList, updateHermidataV3 } from "../../shared/db/Storage";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";

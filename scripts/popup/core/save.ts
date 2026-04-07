@@ -1,7 +1,7 @@
 
 import { TrimTitle, returnHashedTitle } from "../../shared/StringOutput";
-import type {  Hermidata, NovelType } from "../../shared/types/popupType";
-import { getHermidataViaKey, saveHermidataV3 } from "../../shared/Storage";
+import type {  Hermidata, NovelType } from "../../shared/types/index";
+import { getHermidataViaKey, saveHermidataV3 } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
 
 

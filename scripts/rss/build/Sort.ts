@@ -1,5 +1,4 @@
-import type { AllsortsType } from "../../shared/types/rssBuildType";
-import type { HermidataDateType, HermidataSortType } from "../../shared/types/popupType";
+import type { AllsortsType, HermidataDateType, HermidataSortType } from "../../shared/types/index";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 

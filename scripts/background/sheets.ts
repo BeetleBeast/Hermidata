@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat";
-import type { InputArraySheetType, InputArrayType } from "../shared/types/popupType";
+import type { InputArraySheetType, InputArrayType } from "../shared/types/index";
 import { shouldReplaceOrBlock } from "./bookmarks";
 
 

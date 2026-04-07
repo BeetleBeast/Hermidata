@@ -1,7 +1,6 @@
 import { findByTitleOrAltV2, getChapterFromTitleReturn } from "../../shared/StringOutput";
-import type { SettingsInput } from "../../shared/types/settings";
-import { getLocalNotificationItem, getSettings } from "../../shared/Storage";
-import type { AllHermidata, Hermidata } from "../../shared/types/popupType";
+import type { SettingsInput, AllHermidata, Hermidata } from "../../shared/types/index";
+import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
 import { getElement } from "../../utils/Selection";
 
 

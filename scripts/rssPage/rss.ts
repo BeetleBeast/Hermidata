@@ -14,8 +14,8 @@
 */
 
 import { returnHashedTitle } from "../shared/StringOutput";
-import { getAllHermidata, removeHermidataV3, saveHermidataV3 } from "../shared/Storage";
-import { novelTypes, readStatus, type Hermidata, type NovelType, type ReadStatus } from "../shared/types/popupType";
+import { getAllHermidata, removeHermidataV3, saveHermidataV3 } from "../shared/db/Storage";
+import { novelTypes, readStatus, type Hermidata, type NovelType, type ReadStatus } from "../shared/types/index";
 import { getElement, setElement } from "../utils/Selection";
 
 // Minimal interactive template — wire into your extension back-end as needed

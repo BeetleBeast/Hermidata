@@ -1,4 +1,4 @@
-import { type AllHermidata, type Hermidata } from "../shared/types/popupType";
+import { type AllHermidata, type Hermidata } from "../shared/types/index";
 import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
 

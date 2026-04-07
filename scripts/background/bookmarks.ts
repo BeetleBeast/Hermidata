@@ -1,7 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
-import type { SettingsInput } from "../shared/types/settings";
-import { getSettings } from "../shared/Storage";
-import type { InputArrayType } from "../shared/types/popupType";
+import type { SettingsInput, InputArrayType } from "../shared/types/index";
+import { getSettings } from "../shared/db/Storage";
 import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";

@@ -1,11 +1,8 @@
-import type { Hermidata } from "./types/popupType";
-import { ext } from "./BrowserCompat";
-import type { RawFeed } from "./types/rssType";
-import { defaultSettings, type SettingsInput as Settings } from "./types/settings";
-import { getElement, setElement } from "../utils/Selection";
-import type { AllsortsType, Filters } from "./types/rssBuildType";
-import { PastHermidata } from "../popup/core/Past";
-import { returnHashedTitle } from "./StringOutput";
+import { type Hermidata, type SettingsInput as Settings, type AllsortsType, type Filters, type RawFeed, defaultSettings } from "../types/index";
+import { ext } from "../BrowserCompat";
+import { getElement, setElement } from "../../utils/Selection";
+import { PastHermidata } from "../../popup/core/Past";
+import { returnHashedTitle } from "../StringOutput";
 
 export async function getHermidataViaKey(key: string): Promise<Hermidata | null> {
     return new Promise<Hermidata | null>((resolve, reject) => {

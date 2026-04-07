@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat"
-import { getAllHermidata } from "../shared/Storage"
+import { getAllHermidata } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks";
 import { allHermidataCashed, currentBookmark, currentTab, setState } from "./state";
 

@@ -1,6 +1,6 @@
-import { type Hermidata } from "../shared/types/popupType";
+import type { Hermidata } from "../shared/types/index";
 
-import {RssBuild } from "./build";
+import { RssBuild } from "./build";
 
 import { Subscribe } from "./build/Subscribe";
 import { FeedItem } from "./build/feed";

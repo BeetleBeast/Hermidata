@@ -1,8 +1,8 @@
 import { detectHashType, getOldIDType, migrateHermidataV5, migrationSteps } from "../popup/core/migrate";
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
 import { returnHashedTitle } from "../shared/StringOutput";
-import { getAllHermidata, updateHermidataV3 } from "../shared/Storage";
-import { type AllHermidata, type Hermidata } from "../shared/types/popupType";
+import { getAllHermidata, updateHermidataV3 } from "../shared/db/Storage";
+import { type AllHermidata, type Hermidata } from "../shared/types/index";
 
 export const makeDefaultHermidata = (): Hermidata => ({
     id: '',

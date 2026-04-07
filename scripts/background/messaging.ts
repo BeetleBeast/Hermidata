@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat"
-import type { SettingsInput } from "../shared/types/settings"
+import type { SettingsInput } from "../shared/types/index"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel } from "./rssCache"

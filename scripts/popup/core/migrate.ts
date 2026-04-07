@@ -1,7 +1,7 @@
-import type { Hermidata } from "../../shared/types/popupType";
+import type { Hermidata } from "../../shared/types/index";
 import { confirmMigrationPrompt } from "../frontend/confirm";
 import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
-import { getHermidataViaKey, updateHermidataV3 } from "../../shared/Storage";
+import { getHermidataViaKey, updateHermidataV3 } from "../../shared/db/Storage";
 import { makeHermidataV3 } from "./save";
 
 /**

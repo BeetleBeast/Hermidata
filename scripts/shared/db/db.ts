@@ -1,7 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Hermidata, NovelType, ReadStatus } from './types/popupType';
-import type { RawFeed } from './types/rssType';
-import { ext } from './BrowserCompat';
+import type { Hermidata, NovelType, ReadStatus, RawFeed } from '../types/index';
+import { ext } from '../BrowserCompat';
 
 // ============================================================
 // Types

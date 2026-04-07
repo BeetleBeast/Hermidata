@@ -1,4 +1,4 @@
-import type { Hermidata, RegexConfig, TrimmedTitle } from './types/popupType';
+import type { Hermidata, RegexConfig, TrimmedTitle } from './types/index';
 
 export function getChapterFromTitle(title: string, url: string): number {
     // Regex to find the first number (optionally after "chapter", "chap", "ch")

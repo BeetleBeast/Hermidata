@@ -1,7 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
-import type { Feed, FeedItem, RawFeed } from "../shared/types/rssType";
-import { getAllHermidata, getAllRawFeeds, saveHermidataV3 } from "../shared/Storage";
-import type { Hermidata } from "../shared/types/popupType";
+import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
+import { getAllHermidata, getAllRawFeeds, saveHermidataV3 } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
 import { TrimTitle } from "../shared/StringOutput";
 

@@ -3,9 +3,8 @@ import { appendAltTitle, makeHermidataV3 } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
-import type { RawFeed } from "../shared/types/rssType";
-import { getAllRawFeeds, getHermidataViaKey, saveHermidataV3 } from "../shared/Storage";
-import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/popupType";
+import { type RawFeed, type AltCheck, type Hermidata, type NovelType, novelTypes } from "../shared/types/index";
+import { getAllRawFeeds, getHermidataViaKey, saveHermidataV3 } from "../shared/db/Storage";
 
 export async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
     const rawFeeds: Record<string, RawFeed> = await getAllRawFeeds();

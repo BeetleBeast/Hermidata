@@ -1,7 +1,7 @@
 // shared/sync.ts
-import { ext } from './BrowserCompat'
+import { ext } from '../BrowserCompat'
 import { putHermidata, deleteHermidata } from './db'
-import type { Hermidata } from './types/popupType'
+import type { Hermidata } from '../types/index'
 
 const DEVICE_ID = await getOrCreateDeviceId()
 

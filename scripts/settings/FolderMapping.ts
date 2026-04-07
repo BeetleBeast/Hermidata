@@ -1,6 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
-import { getSettings } from "../shared/Storage";
-import type { SettingsInput } from "../shared/types/settings";
+import { getSettings } from "../shared/db/Storage";
+import type { SettingsInput } from "../shared/types/index";
 import { getElement } from "../utils/Selection";
 
 

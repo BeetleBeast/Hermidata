@@ -1,7 +1,10 @@
 import { ext } from "../shared/BrowserCompat";
-import { defaultSettings, setDefaultSettingsElements, type elementsInputAndMenu, type ElmentsWithInputAndMenu, type SettingsInput } from "../shared/types/settings";
-import { getAllHermidata, getSettings, getSpreadsheetUrl } from "../shared/Storage";
-import { novelTypes, readStatus, type Hermidata } from "../shared/types/popupType";
+import { 
+    defaultSettings, setDefaultSettingsElements, 
+    type elementsInputAndMenu, type ElmentsWithInputAndMenu, type SettingsInput, type Hermidata,
+    novelTypes, readStatus 
+} from "../shared/types/index";
+import { getAllHermidata, getSettings, getSpreadsheetUrl } from "../shared/db/Storage";
 import { getElement, setElement } from "../utils/Selection";
 
 

@@ -1,6 +1,6 @@
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/BrowserCompat"
-import type { Hermidata, InputArrayType } from "../shared/types/popupType"
+import type { Hermidata, InputArrayType } from "../shared/types/index"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"

@@ -1,4 +1,4 @@
-import type { Feed } from "./rssType";
+import type { Feed } from "./rss";
 
 /**
  * @fileoverview Types
