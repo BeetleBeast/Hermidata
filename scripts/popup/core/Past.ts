@@ -105,7 +105,6 @@ export class PastHermidata {
             const obj = await getHermidataViaKey(key);
             if ( obj && Object.keys(obj).length) possibleObj[key] = obj;
         }
-        console.log('posible Objects', possibleObj)
 
         const returnObj = {
             possibleObj: possibleObj,

@@ -33,7 +33,7 @@ function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, He
         const domainToHermidata = new Map<string, Hermidata[]>();
         
         for (const novel of hermidataValues) {
-            const domain = novel.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+            const domain = novel.url?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
             if (!domainToHermidata.has(domain)) domainToHermidata.set(domain, []);
             domainToHermidata.get(domain)!.push(novel);
         }
@@ -89,7 +89,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Reco
 }
 // only called in background after invalidation or on initial load
 export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> {
-    console.group('getHermidataWithRss');
+    console.group('[RSS Load] getHermidataWithRss');
     console.time('getAllHermidata');
     const AllHermidata = await PastHermidata.getAllHermidata();
     console.timeEnd('getAllHermidata');

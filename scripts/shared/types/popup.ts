@@ -1,5 +1,3 @@
-import type { Feed } from "./rss";
-
 /**
  * @fileoverview Types
  * - RegexConfig is a oject definition for regex patterns used in the TrimTitle class
@@ -95,3 +93,36 @@ export type AltCheck = {
 
 export type InputArrayType = [string, NovelType, number, string, ReadStatus, string, string[], string]
 export type InputArraySheetType = [string, NovelType, number, string, ReadStatus, string, string, string]
+
+
+
+export type AllFeeds = Record<string, Feed>;
+
+// Feed has single item
+export type Feed = {
+    title: string,
+    url: string,
+    image: null | string,
+    domain: string,
+    lastFetched: null | string, // Date when last fetched
+    latestItem: FeedItem
+    lastBuildDate?: null | Date,
+}
+// raw feed has multiple items
+export type RawFeed = {
+    title: string,
+    url: string,
+    domain: string,
+    lastFetched: string,
+    lastBuildDate: Date,
+    image: string,
+    items: FeedItem[],
+    lastToken: string | null
+}
+// FIXME: lastToken && guid have been added; sheck if it works
+export type FeedItem = {
+    title: string,
+    link: string,
+    pubDate: Date,
+    guid: string
+}

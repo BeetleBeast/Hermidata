@@ -26,7 +26,7 @@ export class FeedItem {
     }
 
     public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false): Promise<DocumentFragment> {
-        console.group('makefeedItem');
+        console.group('[RSS Build Feed] makefeedItem');
         console.time('makefeedItem');
         const fragment = document.createDocumentFragment();
         for (const [key, item] of Object.entries(hermidataList)) {

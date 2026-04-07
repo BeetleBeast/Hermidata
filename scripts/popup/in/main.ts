@@ -2,12 +2,13 @@
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
 import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
-import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus, type TrimmedTitle } from '../../shared/types/index';
+import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
 import { getGoogleSheetURL } from '../../shared/db/Storage';
+import { checkSyncQuota } from '../../shared/db/sync';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -21,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // After popup init — start quietly in the background
     setTimeout(() => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
+
+    setTimeout(async () => await checkSyncQuota(), 500);
 });
 
 class HermidataController {
@@ -148,7 +151,7 @@ class HermidataController {
         
         if (!pastHermidata) {
             // set title & notes
-            const trimmedTitle: TrimmedTitle = StringOutput.TrimTitle.trimTitle( currentTabInfo.pageTitle, currentTabInfo.url );
+            const trimmedTitle = StringOutput.TrimTitle.trimTitle( currentTabInfo.pageTitle, currentTabInfo.url );
             this.hermidata.title = trimmedTitle.title;
             this.hermidata.meta.notes = trimmedTitle.note ?? '';
         }
@@ -276,7 +279,7 @@ class HermidataController {
                     console.warn('status can\'t be found in past', this.pastHermidata.status)
                 }
             }
-        } else console.log('no past hermidata')
+        } else console.log('[Main Popup] no past hermidata')
     }
 
     private async saveSheet(): Promise<void> { 

@@ -1,8 +1,8 @@
 import { ext } from "../shared/BrowserCompat"
-import { getSettings, migrateFromChromeStorage } from "../shared/db/db"
+import { getSettings } from "../shared/db/db"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
-import { handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel } from "./rssCache"
+import { handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel, handleSaveRawFeeds } from "./rssCache"
 
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -12,6 +12,7 @@ export function initMessaging() {
             case 'GET_LAST_SYNC': return handleGetLastSync(sendResponse)
             case 'GET_RSS':       return handleGetRSS(sendResponse)
             case 'INVALIDATE_RSS': return handleInvalidateRSS(sendResponse)
+            case 'SAVE_RAW_FEEDS': return handleSaveRawFeeds(msg.data, sendResponse);
         }
         return true
     })
@@ -44,6 +45,5 @@ export function initInstalled() {
     ext.runtime.onStartup.addListener(() => {
         updateCurrentBookmarkAndIcon()
         checkFeedsForUpdates();
-        migrateFromChromeStorage();
     });
 }

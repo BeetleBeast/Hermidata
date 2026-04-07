@@ -1,6 +1,7 @@
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/BrowserCompat"
-import type { Hermidata, InputArrayType } from "../shared/types/index"
+import { getAllRawFeeds, putRawFeed } from "../shared/db/db"
+import type { Hermidata, InputArrayType, RawFeed } from "../shared/types/index"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
@@ -61,5 +62,19 @@ export function handleGetLastSync(sendResponse: (r: unknown) => void): true {
     : null;
 
     sendResponse({ minutesAgo: diffMinutes });
+    return true
+}
+
+export async function handleSaveRawFeeds(incomingFeeds: RawFeed[], sendResponse: (r: unknown) => void): Promise<true> {
+    const existing = await getAllRawFeeds()
+    
+    for (const feed of incomingFeeds) {
+        const existingFeed = existing[feed.url]
+        // Only update if newer or not yet stored
+        if (!existingFeed || feed.lastFetched > existingFeed.lastFetched) {
+            await putRawFeed(feed)
+        }
+    }
+    sendResponse({ status: 'ok' })
     return true
 }

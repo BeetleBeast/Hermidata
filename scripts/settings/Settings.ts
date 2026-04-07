@@ -1,13 +1,30 @@
 import { ext } from "../shared/BrowserCompat";
 import { 
-    defaultSettings, setDefaultSettingsElements, 
     type elementsInputAndMenu, type ElmentsWithInputAndMenu, type Settings as SettingsInput, type Hermidata,
-    novelTypes, readStatus 
+    novelTypes, readStatus, defaultSettings
 } from "../shared/types/index";
 import { getAllHermidata, getSettings, getGoogleSheetURL, setSpreadsheetUrl } from "../shared/db/Storage";
 import { getElement, setElement } from "../utils/Selection";
 
-
+const setDefaultSettingsElements = () => {
+    const elements: ElmentsWithInputAndMenu = {
+        input: {
+            Type: getElement<HTMLSelectElement>("#Type"),
+            Status: getElement<HTMLSelectElement>("#Status"),
+            tags: getElement<HTMLInputElement>("#tags"),
+            notes: getElement<HTMLInputElement>("#notes"),
+            saveButton: getElement<HTMLButtonElement>("#saveDefaultInput")
+        },
+        menu: {
+            Type: getElement<HTMLSelectElement>("#TypeTextMenu"),
+            Status: getElement<HTMLSelectElement>("#StatusTextMenu"),
+            tags: getElement<HTMLInputElement>("#tagsTextMenu"),
+            notes: getElement<HTMLInputElement>("#notesTextMenu"),
+            saveButton: getElement<HTMLButtonElement>("#saveDefaultInputTextMenu")
+        }
+    };
+    return elements;
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
 

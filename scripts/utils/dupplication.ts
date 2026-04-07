@@ -45,7 +45,7 @@ export class Duplicate  {
         const entries = Object.entries(data);
         const duplicates = [];
 
-        console.group("Duplicate Title Scan");
+        console.group("[Dupplication] Duplicate Title Scan");
 
         for (let i = 0; i < entries.length; i++) {
             const [keyA, valA] = entries[i];
@@ -74,10 +74,10 @@ export class Duplicate  {
                 }
             }
         }
+        console.info(`Scan complete: found ${duplicates.length} potential duplicates.`);
 
         console.groupEnd();
 
-        console.info(`Scan complete: found ${duplicates.length} potential duplicates.`);
         return duplicates;
     }
     /**

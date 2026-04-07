@@ -155,9 +155,14 @@ async function getSpreadsheetUrl(): Promise<string> {
 }
 
 export async function getGoogleSheetURL(): Promise<string> {
-    const url = await getSpreadsheetUrl();
-    if (url && isValidGoogleSheetUrl(url)) return url;
-    return sheetUrlInput();
+    try {
+        const url = await getSpreadsheetUrl();
+        if (url && isValidGoogleSheetUrl(url)) return url;
+        return sheetUrlInput();
+    } catch (error) {
+        console.error('[Storage] getGoogleSheetURL:', error);
+        return sheetUrlInput();
+    }
 }
 
 export function isValidGoogleSheetUrl(url: string): boolean {

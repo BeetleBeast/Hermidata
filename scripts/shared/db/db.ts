@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Hermidata, NovelType, ReadStatus, RawFeed, Settings } from '../types/index';
+import { type Hermidata, type NovelType, type ReadStatus, type RawFeed, type Settings, defaultSettings } from '../types/index';
 import { ext } from '../BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 
@@ -21,7 +21,7 @@ interface HermidataSchema extends DBSchema {
         };
     };
     feeds: {
-        key: string;           // hashed title key
+        key: string;           // hashed title key ( is url instead )
         value: RawFeed;
         indexes: {
             'by-domain': string;
@@ -37,6 +37,8 @@ interface HermidataSchema extends DBSchema {
 // ============================================================
 // DB init — singleton promise so every module shares one connection
 // ============================================================
+
+const SETTINGS_KEY = 'Settings';
 
 const DB_NAME = 'Hermidata';
 const DB_VERSION = 1;
@@ -87,7 +89,78 @@ async function getDb(): Promise<IDBPDatabase<HermidataSchema>> {
 
     return _db;
 }
+/*
+async function isDbEmpty(): Promise<boolean> {
+    const db = await getDb();
+    const count = await db.count('hermidata');
+    return count === 0;
+}
 
+async function loadBackup(localPath: string): Promise<any> {
+    const url = chrome.runtime.getURL(localPath);
+    const res = await fetch(url);
+    return res.json();
+}
+
+async function restoreBackup(): Promise<void> {
+    const db = await getDb();
+    const backup: Record<string, Hermidata> = await loadBackup('../../../output/Hermidata_cleaned(12).json');
+
+    console.log('[DB] Restoring backup...');
+
+    const entries: Hermidata[] = Object.entries(backup).map(
+        ([id, value]) => ({
+            ...value,
+            id: value.id ?? id,
+        })
+    );
+
+    await db.clear('hermidata');
+
+    await putAllHermidata(entries);
+
+    // mark bootstrap done
+    await db.put('settings', true as any, 'bootstrapped_v2');
+
+    console.log(`[DB] Restored ${entries.length} entries`);
+}
+
+
+export async function initializeDatabase(): Promise<void> {
+    const db = await getDb();
+    
+    const bootstrapped = await db.get('settings', 'bootstrapped_v2');
+
+    const backup: Record<string, RawFeed> = await loadBackup('../../../output/RSS_Feeds_cleaned.json');
+
+    const entries: RawFeed[] = Object.entries(backup).map(
+        ([url, value]) => ({
+            ...value,
+            url: value.url ?? url,
+        })
+    )
+
+    await putAllRawFeeds(entries)
+
+    await restoreBackup();
+
+    await putSettings( defaultSettings );
+
+    if (bootstrapped) {
+        console.log('[DB] Already initialized');
+        return;
+    }
+
+    const empty = await isDbEmpty();
+
+    if (empty) {
+        console.log('[DB] Empty DB → restoring backup');
+        
+    } else {
+        console.log('[DB] DB has data → skipping restore');
+    }
+}
+*/
 // ============================================================
 // Hermidata — CRUD
 // ============================================================
@@ -277,8 +350,6 @@ export async function deleteRawFeed(url: string): Promise<void> {
 // Settings
 // ============================================================
 
-const SETTINGS_KEY = 'Settings';
-
 export async function getSettings(): Promise<Settings | null> {
     try {
         const db = await getDb();
@@ -308,13 +379,16 @@ export async function putSettings(settings: Settings): Promise<void> {
  */
 export async function migrateFromChromeStorage(): Promise<void> {
     const db = await getDb();
-    const alreadyMigrated = await db.get('settings', 'migrated_v1');
-    if (alreadyMigrated) return;
+    const alreadyMigrated = await db.get('settings', 'migrated_v5');
+    if (alreadyMigrated) {
+        console.log('[DB] Already migrated from chrome.storage');
+        return;
+    }
 
     console.log('[DB] Starting migration from chrome.storage...');
 
     await new Promise<void>((resolve) => {
-        ext.storage.sync.get(null, async (syncData) => {
+        ext.storage.local.get(null, async (syncData) => {
             const entries: Hermidata[] = [];
             const settings = syncData['Settings'] as Settings;
 
@@ -330,7 +404,7 @@ export async function migrateFromChromeStorage(): Promise<void> {
             if (settings) await putSettings(settings);
 
             // Mark as done
-            await db.put('settings', true as unknown as Settings, 'migrated_v1');
+            await db.put('settings', true as unknown as Settings, 'migrated_v5');
             console.log(`[DB] Migrated ${entries.length} entries from chrome.storage.sync`);
             resolve();
         });

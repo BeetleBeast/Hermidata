@@ -14,7 +14,13 @@ export {
     type AltCheck,
 
     type InputArrayType,
-    type InputArraySheetType
+    type InputArraySheetType,
+
+    type AllFeeds,
+
+    type Feed,
+    type RawFeed,
+    type FeedItem,
 
 } from "./popup";
 
@@ -34,16 +40,10 @@ export {
     type FilterName,
     type FilterClassName,
     filterClassName,
-    filterName
+    filterName,
 
     type RSSDOM,
     type RSSData,
-
-    type AllFeeds,
-
-    type Feed,
-    type RawFeed,
-    type FeedItem
 } from "./rss";
 export {
 
@@ -56,13 +56,6 @@ export {
     type elementsInputAndMenu,
     type ElmentsWithInputAndMenu,
 
-    setDefaultSettingsElements,
-
-    defaultSettings
+    defaultSettings,
 
 } from "./settings";
-
-
-
-
-

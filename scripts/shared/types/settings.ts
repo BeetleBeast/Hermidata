@@ -78,27 +78,6 @@ export interface ElmentsWithInputAndMenu {
     }
 }
 
-export const setDefaultSettingsElements = () => {
-    const elements: ElmentsWithInputAndMenu = {
-        input: {
-            Type: getElement<HTMLSelectElement>("#Type"),
-            Status: getElement<HTMLSelectElement>("#Status"),
-            tags: getElement<HTMLInputElement>("#tags"),
-            notes: getElement<HTMLInputElement>("#notes"),
-            saveButton: getElement<HTMLButtonElement>("#saveDefaultInput")
-        },
-        menu: {
-            Type: getElement<HTMLSelectElement>("#TypeTextMenu"),
-            Status: getElement<HTMLSelectElement>("#StatusTextMenu"),
-            tags: getElement<HTMLInputElement>("#tagsTextMenu"),
-            notes: getElement<HTMLInputElement>("#notesTextMenu"),
-            saveButton: getElement<HTMLButtonElement>("#saveDefaultInputTextMenu")
-        }
-    };
-    return elements;
-}
-
-
 export const defaultSettings: Settings = {
     spreadsheetUrl: '',
     darkMode: true,
