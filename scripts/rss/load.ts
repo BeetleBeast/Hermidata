@@ -3,9 +3,10 @@ import { appendAltTitle, makeHermidataV3 } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
-import { type RawFeed, type AltCheck, type Hermidata, type NovelType, novelTypes } from "../shared/types/index";
-import { getAllRawFeeds, getHermidataViaKey, saveHermidataV3 } from "../shared/db/Storage";
+import { type RawFeed, type AltCheck, type Hermidata, type NovelType } from "../shared/types/index";
+import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidataV3 } from "../shared/db/Storage";
 import { getAllHermidataWithRss } from "../shared/db/db";
+import type { AnyNovelType } from "../shared/types/popup";
 
 /*
 
@@ -23,8 +24,9 @@ async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Pro
     const rawFeedsValues = Object.values({...rawFeeds});
     
     const hermidataValues = Object.values(AllHermidata);
-
-    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues);
+    const settings = await getSettings();
+    
+    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues, settings.TYPE_OPTIONS);
 
     return feedList;
 }
@@ -41,7 +43,7 @@ function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, He
         return domainToHermidata;
 }
 
-function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Record<string, RawFeed> {
+function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_OPTIONS: AnyNovelType[]): Record<string, RawFeed> {
 
     const filteredRawFeeds: Record<string, RawFeed> = {};
     
@@ -74,8 +76,8 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Reco
             allNONmaches.push(feed);
             continue;
         }
-
-        const type = matched?.type ?? novelTypes[0];
+        
+        const type = matched?.type ?? TYPE_OPTIONS[0];
         const id = returnHashedTitle(feedTitle, type, feed.url);
 
         filteredRawFeeds[id] = Object.freeze({ ...feed, items: [...(feed.items ?? [])] });
@@ -218,7 +220,7 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
     await saveHermidataV3(saveKey, entry);
 }
 
-async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: NovelType, url: string, key: string): Promise<Hermidata> {
+async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: AnyNovelType, url: string, key: string): Promise<Hermidata> {
     // Try to find the best matching entry among the possible keys
     // 1. direct key match
     let entry = stored[key];

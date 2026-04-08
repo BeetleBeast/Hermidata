@@ -3,7 +3,8 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     getAllHermidata as dbGetAllHermidata,
     getSettings as dbGetSettings, 
     getAllRawFeeds as dbGetAllRawFeeds, 
-    putSettings } from './db';
+    putSettings, 
+    putAllRawFeeds} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../StringOutput';
@@ -85,6 +86,14 @@ export async function getAllRawFeeds(): Promise<Record<string, RawFeed>> {
     } catch (err) {
         console.error('[Storage] getAllRawFeeds:', err);
         return {};
+    }
+}
+
+export async function setAllRawFeeds(feeds: RawFeed[]): Promise<void> {
+    try {
+        await putAllRawFeeds(feeds);
+    } catch (err) {
+        console.error('[Storage] setAllRawFeeds:', err);
     }
 }
 

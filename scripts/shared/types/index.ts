@@ -2,9 +2,14 @@ export {
     type RegexConfig,
     type TrimmedTitle,
 
-    type NovelType, novelTypes,
-    type NovelStatus, novelStatus,
-    type ReadStatus, readStatus,
+    type NovelType,
+    type NovelStatus,
+    type ReadStatus,
+
+    DEFAULT_NOVEL_TYPES,
+    DEFAULT_NOVEL_STATUSES,
+    DEFAULT_READ_STATUSES,
+
     type Hermidata,
 
     type HermidataDateType,
@@ -23,6 +28,8 @@ export {
     type FeedItem,
 
 } from "./popup";
+
+export type { AnyNovelType, AnyNovelStatus, AnyReadStatus } from "./popup";
 
 export {
     type NormalSortsType,

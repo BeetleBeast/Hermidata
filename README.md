@@ -180,7 +180,8 @@ Source maps are included in dev builds. Each background module registers its own
 
 - [ ] subscribe button ( and system ) is very fidelly and can easely break if not done in correct order.
 
-- update the storage of settings and load from build rss
+- update the storage of load from build rss
+
 ---
 
 ## Data & Privacy

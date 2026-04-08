@@ -21,22 +21,30 @@ export type TrimmedTitle = {
     note?: string
 }
 
+// Hardcoded defaults — used for autocomplete and initial settings
 export type NovelType =  'Manga' | 'Manhwa' | 'Manhua' | 'Novel' | 'Webnovel' | 'Anime' | "TV-Series";
-export const novelTypes: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
-
 export type NovelStatus = 'Ongoing' | 'Completed' | 'Hiatus' | 'Canceled';
-export const novelStatus: NovelStatus[] = ['Ongoing', 'Completed', 'Hiatus', 'Canceled'];
-
 export type ReadStatus = 'Viewing' | 'Finished' | 'On-hold' | 'Dropped' | 'Planned';
-export const readStatus: ReadStatus[] = ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'];
+
+// Extended versions — what you actually use at runtime
+// Allows user-defined values while keeping autocomplete on the defaults
+export type AnyNovelType = NovelType  | (string & {});
+export type AnyReadStatus = ReadStatus | (string & {});
+export type AnyNovelStatus = NovelStatus | (string & {});
+
+// Default arrays — used to seed settings on first install
+// TODO: rename names to DEFAULT_[name]
+export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
+export const DEFAULT_NOVEL_STATUSES: NovelStatus[] = ['Ongoing', 'Completed', 'Hiatus', 'Canceled'];
+export const DEFAULT_READ_STATUSES: ReadStatus[] = ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'];
 
 export interface Hermidata {
     id: string;
     title: string;
-    type: NovelType;
+    type: AnyNovelType;
     url: string;
     source: string;
-    status: ReadStatus;
+    status: AnyReadStatus;
     chapter: {
         current: number;
         latest: number;
@@ -52,7 +60,7 @@ export interface Hermidata {
         updated: string;
         altTitles: string[];
         originalRelease: string | null;
-        novelStatus?: NovelStatus;
+        novelStatus?: AnyNovelStatus;
     };
 }
 

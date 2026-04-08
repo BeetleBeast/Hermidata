@@ -1,6 +1,6 @@
 
 import { TrimTitle, returnHashedTitle } from "../../shared/StringOutput";
-import type {  Hermidata, NovelType } from "../../shared/types/index";
+import type {  Hermidata, AnyNovelType } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidataV3 } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
 
@@ -52,7 +52,7 @@ export async function updateChapterProgress(title: string, type: string, newChap
 }
 
 
-export function makeHermidataV3(title: string, url: string, type: NovelType = "Manga"): Hermidata {
+export function makeHermidataV3(title: string, url: string, type: AnyNovelType = "Manga"): Hermidata {
     const Title = TrimTitle.trimTitle(title, url);
     const hash = returnHashedTitle(title, type, url);
     const source = new URL(url).hostname.replace(/^www\./, "");

@@ -113,12 +113,31 @@
     <div id="changeTypeOption"></div>
 
     <h4> change folder name's </h4>
-    <div id="newFolderMappingContainer">
-        <select id="newFolderMappingSelect" title="type"></select>
+    <form id="newFolderMappingContainer">
+        <select id="newFolderMappingSelectType" title="type"></select>
+        <select id="newFolderMappingSelectStatus" title="novel status"></select>
         <label for="newFolderMappingPath">New Folder Mapping path</label>
         <input type="text" id="newFolderMappingPath" placeholder="...">
-        <button id="addFolderMapping">Add Folder Mapping</button>
-    </div>
+        <button type="submit" id="addFolderMapping">Add Folder Mapping</button>
+        <div class="editDefaultPathContainer">
+            
+            <label for="editRootpath">set path where all novels will be saved</label>
+            <input type="text" id="editRootpath" placeholder="...">
+            <button type="button" id="saveRootpathBtn">save</button>
+
+            <label for="editDefaultPath">set path where novels will be saved by default or if their intented path is not found</label>
+            <input type="text" id="editDefaultPath" placeholder="...">
+            <button type="button" id="saveDefaultPathBtn">save</button>
+
+        </div>
+        <div class="addNewNovelAndType">
+            <input id="addNovelStatusInput" placeholder="Novel Status" type="text">
+            <input id="addNovelTypeInput" placeholder="Novel Type" type="text">
+            <button type="button" id="addNovelStatus">Add Novel Status</button>
+            <button type="button" id="addNovelType">Add Novel Type</button>
+        </div>
+        <p id="saveStatus-folderMapping"></p>
+    </form>
     <div id="folderMappingContainer"></div>
     <button id="saveFolderMapping">Save Folder Mapping</button>
     <br>

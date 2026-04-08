@@ -1,8 +1,8 @@
-import type { NovelType, ReadStatus } from "./popup";
+import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type NovelType, type ReadStatus } from "./popup";
 
 export interface DefaultChoice {
-    Type : NovelType,
-    status : ReadStatus,
+    Type : AnyNovelType,
+    status : AnyReadStatus,
     tags : string[],
     notes : string
 }
@@ -17,8 +17,10 @@ export interface Settings {
     DefaultChoice: DefaultChoice,
     DefaultChoiceText_Menu: DefaultChoice,
 
-    TYPE_OPTIONS : NovelType[],
-    STATUS_OPTIONS : ReadStatus[],
+    TYPE_OPTIONS : AnyNovelType[],
+    STATUS_OPTIONS : AnyReadStatus[],
+    NOVEL_STATUS_OPTIONS: AnyNovelStatus[],
+
     NOVEL_TYPE_OPTIONS_V3: string[],
     NOVEL_TYPE_OPTIONS_V2: string[],
     NOVEL_STATUS_OPTIONS_V2: string[],
@@ -26,8 +28,22 @@ export interface Settings {
     tagColoring: Record<string, string>,
     // FolderMapping: Record< TypeOptions, Record<StatusOptions, Record<string, path>>>
     FolderMapping: Record<string, Record<string, FolderEntry>>,
+    FolderMappingV2: FolderMapping,
 
     AllowContextMenu: boolean
+}
+
+export type FolderMapping = {
+    root: string                          // "Manga - Anime - Novels - TV-Series"
+    statusFolders: Record<string, string> // status → folder name
+    overrides?: FolderRule[]              // optional type+status specific overrides
+    defaultPath: string                   // fallback for unknown types/statuses
+}
+
+export type FolderRule = {
+    type?: string     // string not NovelType — handles user-defined types
+    status?: string   // string not ReadStatus — handles user-defined statuses
+    path: string
 }
 // new one 
 /*
@@ -77,6 +93,44 @@ export interface ElmentsWithInputAndMenu {
     }
 }
 
+const CustomFoldermapping: FolderMapping = {
+    root: 'Manga - Anime - Novels - TV-Series',
+    statusFolders: {
+        'Finished': 'Finished',
+        'Viewing':  'Currently - Reading',
+        'Dropped':  'Abandond',
+        'Planned':  'Planned',
+        'On-hold':  'On-hold',
+    },
+    overrides: [
+        // Manga has a deeper path for Viewing
+        {
+            type: 'Manga',
+            status: 'Viewing',
+            path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading'
+        },
+        // Manga Planned also differs
+        {
+            type: 'Manga',
+            status: 'Planned',
+            path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch'
+        },
+    ],
+    defaultPath: 'Unsorted'
+}
+export const DefaultFoldermapping: FolderMapping = {
+    root: 'Hermidata',
+    statusFolders: {
+        'Finished': 'Finished',
+        'Viewing':  'Viewing',
+        'Dropped':  'Dropped',
+        'Planned':  'Planned',
+        'On-hold':  'On-hold',
+    },
+    defaultPath: 'Unsorted'
+}
+
+
 export const defaultSettings: Settings = {
     spreadsheetUrl: '',
     darkMode: true,
@@ -92,14 +146,16 @@ export const defaultSettings: Settings = {
         tags : [''],
         notes : ''
     },
-    TYPE_OPTIONS : ["Manga", "Novel", "Anime", "TV-Series"],
-    STATUS_OPTIONS : ["Finished", "Viewing", "Dropped", "Planned"],
+    TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],
+    STATUS_OPTIONS : [...DEFAULT_NOVEL_STATUSES],
+    NOVEL_STATUS_OPTIONS: [...DEFAULT_READ_STATUSES],
 
     NOVEL_TYPE_OPTIONS_V3: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"],
     NOVEL_TYPE_OPTIONS_V2: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel'],
     NOVEL_STATUS_OPTIONS_V2: ['Ongoing', 'Completed', 'Hiatus', 'Canceled'],
     READ_STATUS_OPTIONS_V2: ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'],
     tagColoring: {},
+    FolderMappingV2: CustomFoldermapping,
     FolderMapping: {
         Manga: {
             Finished: {
