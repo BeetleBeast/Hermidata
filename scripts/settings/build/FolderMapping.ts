@@ -1,4 +1,4 @@
-import { getSettings, saveSettings } from "../../shared/db/Storage";
+import { getSettings, setSettings } from "../../shared/db/Storage";
 import type { AnyNovelType, AnyReadStatus, Settings } from "../../shared/types/index";
 import { type FolderMapping as FolderMappingType, type FolderRule } from "../../shared/types/settings";
 import { getElement } from "../../utils/Selection";
@@ -172,7 +172,7 @@ export class FolderMapping extends Build {
         // if pressed on create new novel type
         const settings = await getSettings();
         settings.TYPE_OPTIONS.push(newType);
-        await saveSettings(settings);
+        await setSettings(settings);
         this.resetForm(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
     }
     private async addNovelStatusFolder(newStatus: string | undefined) {
@@ -185,7 +185,7 @@ export class FolderMapping extends Build {
         const settings = await getSettings();
         settings.FolderMappingV2.statusFolders[newStatus] = newStatus;
         settings.STATUS_OPTIONS.push(newStatus);
-        await saveSettings(settings);
+        await setSettings(settings);
         this.resetForm(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
 
     }
@@ -231,7 +231,7 @@ export class FolderMapping extends Build {
                 overrides: [...(mapping.overrides ?? []), newRule]
             }
 
-            await saveSettings({ ...settings, FolderMappingV2: updatedMapping })
+            await setSettings({ ...settings, FolderMappingV2: updatedMapping })
 
             if (this.SaveStatus) {
                 this.SaveStatus.textContent = `Rule added: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`
@@ -261,7 +261,7 @@ export class FolderMapping extends Build {
 
             if (filtered.length === before) throw new Error(`No rule found for ${type ?? 'any'} + ${status ?? 'any'}`)
 
-            await saveSettings({
+            await setSettings({
                 ...settings,
                 FolderMappingV2: { ...mapping, overrides: filtered }
             })
@@ -288,7 +288,7 @@ export class FolderMapping extends Build {
             if (!folderName.trim()) throw new Error('Folder name cannot be empty')
 
             const settings = await getSettings()
-            await saveSettings({
+            await setSettings({
                 ...settings,
                 FolderMappingV2: {
                     ...settings.FolderMappingV2,
@@ -317,7 +317,7 @@ export class FolderMapping extends Build {
             if (!path) throw new Error('Path cannot be empty')
 
             const settings = await getSettings()
-            await saveSettings({
+            await setSettings({
                 ...settings,
                 FolderMappingV2: { ...settings.FolderMappingV2, defaultPath: path.trim() }
             })
@@ -342,7 +342,7 @@ export class FolderMapping extends Build {
             if (!path) throw new Error('Path cannot be empty')
 
             const settings = await getSettings()
-            await saveSettings({
+            await setSettings({
                 ...settings,
                 FolderMappingV2: { ...settings.FolderMappingV2, root: path.trim() }
             })

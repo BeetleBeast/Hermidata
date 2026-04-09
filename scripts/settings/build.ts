@@ -1,6 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
 import { putSettings } from "../shared/db/db";
-import { getGoogleSheetURL, getSettings, saveSettings, setSpreadsheetUrl } from "../shared/db/Storage";
+import { getGoogleSheetURL, getSettings, setSettings, setSpreadsheetUrl } from "../shared/db/Storage";
 import { DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, defaultSettings, type AnyNovelStatus, type AnyNovelType, type elementsInputAndMenu, type ElmentsWithInputAndMenu, type Settings } from "../shared/types";
 import { getElement, setElement } from "../utils/Selection";
 import { ContextMenu } from "./build/ContextMenu";
@@ -123,7 +123,7 @@ export class BuildController {
             ...settings,
             [sectionKey]: values
         };
-        await saveSettings(updatedSettings);
+        await setSettings(updatedSettings);
 
         if (statusElement) {
             statusElement.textContent = "Saved!";

@@ -1,4 +1,4 @@
-import { saveSettings } from "../../shared/db/Storage";
+import { setSettings } from "../../shared/db/Storage";
 import { Build } from "../build";
 
 export class ContextMenu extends Build {
@@ -15,7 +15,7 @@ export class ContextMenu extends Build {
             const updatedSettings = await this.ensureSettingsUpToDate();
             updatedSettings.AllowContextMenu = isChecked;
 
-            saveSettings(updatedSettings);
+            setSettings(updatedSettings);
         }
 
 }

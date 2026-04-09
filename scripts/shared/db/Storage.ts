@@ -133,13 +133,13 @@ export async function getSettings(): Promise<Settings> {
     }
 }
 
-export async function saveSettings(settings: Settings): Promise<void> {
+export async function setSettings(settings: Settings): Promise<void> {
     try {
         await putSettings(settings);                            // IndexedDB
         await ext.storage.sync.set({ Settings: settings });    // sync for cross-device
         console.log('[Storage] Settings saved');
     } catch (err) {
-        console.error('[Storage] saveSettings:', err);
+        console.error('[Storage] setSettings:', err);
     }
 }
 
@@ -207,7 +207,7 @@ export function sheetUrlInput(): Promise<string> {
 
 export async function setSpreadsheetUrl(url: string): Promise<void> {
     const settings = await getSettings();
-    await saveSettings({ ...settings, spreadsheetUrl: url });
+    await setSettings({ ...settings, spreadsheetUrl: url });
 }
 
 // ============================================================

@@ -1,7 +1,7 @@
 import { PastHermidata } from "../../popup/core/Past";
 import { getAllRawFeeds } from "../../shared/db/Storage";
 import { findByTitleOrAltV2, TrimTitle } from "../../shared/StringOutput";
-import type { Hermidata, NovelType, RawFeed } from "../../shared/types/index";
+import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 import { linkRSSFeed } from "../load";
@@ -60,7 +60,7 @@ export class Subscribe extends RssBuild {
     private onSubscribeClick( notificationSection: HTMLElement, allItemSection: HTMLElement ): void {
         if (!this.matchedFeed) return;
 
-        const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as NovelType || this.hermidata.type;
+        const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as AnyNovelType || this.hermidata.type;
         const currentTitle = getElement<HTMLInputElement>('#title_HDRSS')?.value || this.hermidata.title;
 
         linkRSSFeed(currentTitle, currentType, this.hermidata.url, this.matchedFeed);

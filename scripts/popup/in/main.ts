@@ -2,7 +2,7 @@
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
 import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
-import { type AnyNovelType, type AnyReadStatus, type Hermidata, type NovelType, type ReadStatus, type Settings } from '../../shared/types/index';
+import { type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
@@ -268,14 +268,14 @@ class HermidataController {
     private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
             if (!novelTypes.includes(this.pastHermidata.type)) {
-                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type) as NovelType
+                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type) as AnyNovelType
                 if ( novelTypes.includes(capitalizeFirstLetterOfStringLetterType) ) this.pastHermidata.type = capitalizeFirstLetterOfStringLetterType
                 else {
                     console.warn('type can\'t be found in past', this.pastHermidata.type)
                 }
             }
             if (!readStatus.includes(this.pastHermidata.status)) {
-                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status) as ReadStatus
+                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status) as AnyReadStatus
                 if ( readStatus.includes(capitalizeFirstLetterOfStringLetterStatus) ) this.pastHermidata.status = capitalizeFirstLetterOfStringLetterStatus
                 else {
                     console.warn('status can\'t be found in past', this.pastHermidata.status)
@@ -287,10 +287,10 @@ class HermidataController {
     private async saveSheet(): Promise<void> { 
 
         const title = getElement<HTMLInputElement>("#title")?.value;
-        const Type = getElement<HTMLSelectElement>('#Type')?.value as NovelType;
+        const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
         const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
         const url = getElement<HTMLInputElement>("#url")?.value;
-        const status = getElement<HTMLSelectElement>('#status')?.value as ReadStatus;
+        const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
         const date = getElement<HTMLInputElement>("#date")?.value;
         const tags = getElement<HTMLInputElement>("#tags")?.value || "";
         const notes = getElement<HTMLInputElement>("#notes")?.value || "";
@@ -312,7 +312,6 @@ class HermidataController {
         await updateChapterProgress(title, Type, Number(Chapter), this.hermidata);
         this.past = null;
 
-        type InputArrayType = [string, NovelType, number, string, ReadStatus, string, string[], string]
         const data: InputArrayType = [title, Type, Number(Chapter), url, status, date, tagsArray, notes]
 
         // save to google sheet & bookmark/replace bookmark

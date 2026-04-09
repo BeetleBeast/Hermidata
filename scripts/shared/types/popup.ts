@@ -33,7 +33,6 @@ export type AnyReadStatus = ReadStatus | (string & {});
 export type AnyNovelStatus = NovelStatus | (string & {});
 
 // Default arrays — used to seed settings on first install
-// TODO: rename names to DEFAULT_[name]
 export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
 export const DEFAULT_NOVEL_STATUSES: NovelStatus[] = ['Ongoing', 'Completed', 'Hiatus', 'Canceled'];
 export const DEFAULT_READ_STATUSES: ReadStatus[] = ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'];
@@ -69,9 +68,7 @@ export interface Hermidata {
 export type HermidataDateType = 'added' | 'updated';
 export type HermidataSortType = 'pubDate';
 
-// old version
-// export type AllHermidata = ({ [s: string]: Hermidata; });
-// best for chrome.storage
+
 export type AllHermidata = Record<string, Hermidata>;
 
 
@@ -99,8 +96,8 @@ export type AltCheck = {
     existingKey?: undefined;
 }
 
-export type InputArrayType = [string, NovelType, number, string, ReadStatus, string, string[], string]
-export type InputArraySheetType = [string, NovelType, number, string, ReadStatus, string, string, string]
+export type InputArrayType = [string, AnyNovelType, number, string, AnyReadStatus, string, string[], string]
+export type InputArraySheetType = [string, AnyNovelType, number, string, AnyReadStatus, string, string, string]
 
 
 

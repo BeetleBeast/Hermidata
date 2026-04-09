@@ -1,5 +1,5 @@
 import { putAllHermidata } from "../../shared/db/db";
-import { getAllHermidata, getAllRawFeeds, getSettings, saveSettings, setAllRawFeeds } from "../../shared/db/Storage";
+import { getAllHermidata, getAllRawFeeds, getSettings, setSettings, setAllRawFeeds } from "../../shared/db/Storage";
 import type { Hermidata, RawFeed } from "../../shared/types";
 import type { FolderMapping, FolderRule, Settings } from "../../shared/types/settings"
 
@@ -39,7 +39,7 @@ export class ImportsAndExports extends Build {
             
             const existingData = await getSettings();
             const mergedData: Settings = { ...existingData, ...JSON.parse(importedData) };
-            saveSettings(mergedData);
+            setSettings(mergedData);
 
             alert("Settings imported successfully!");
         } catch (err) {

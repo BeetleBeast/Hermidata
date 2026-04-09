@@ -1,4 +1,4 @@
-import { getAllHermidata, getSettings, saveSettings } from "../../shared/db/Storage";
+import { getAllHermidata, getSettings, setSettings } from "../../shared/db/Storage";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -41,7 +41,7 @@ export class TagColoring extends Build {
     
         private async saveTagColoring(tagColoringInput: { [tag: string]: string }) {
             const settings = await getSettings();
-            saveSettings({ ...settings, tagColoring: tagColoringInput });
+            setSettings({ ...settings, tagColoring: tagColoringInput });
             console.log("Tag colors saved.");
         }
 

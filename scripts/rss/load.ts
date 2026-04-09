@@ -3,10 +3,9 @@ import { appendAltTitle, makeHermidataV3 } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
-import { type RawFeed, type AltCheck, type Hermidata, type NovelType } from "../shared/types/index";
+import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidataV3 } from "../shared/db/Storage";
 import { getAllHermidataWithRss } from "../shared/db/db";
-import type { AnyNovelType } from "../shared/types/popup";
 
 /*
 
@@ -181,7 +180,7 @@ export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFe
  * @param {String} type - the RSS input type
  * @param {Object} rssData  - the RSS feed data
 */
-export async function linkRSSFeed(title: string, type: NovelType, url: string, rssData: RawFeed) {
+export async function linkRSSFeed(title: string, type: AnyNovelType, url: string, rssData: RawFeed) {
     // check if new entry is inside database
     const altCheck = await detectAltTitleNeeded(title, type, rssData.domain, url);
     const AllHermidata = await PastHermidata.getAllHermidata();

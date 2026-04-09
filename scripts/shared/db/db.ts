@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { type Hermidata, type NovelType, type ReadStatus, type RawFeed, type Settings, defaultSettings } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, defaultSettings, type AnyNovelType, type AnyReadStatus } from '../types/index';
 import { ext } from '../BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 
@@ -14,8 +14,8 @@ interface HermidataSchema extends DBSchema {
         value: Hermidata;
         indexes: {
             'by-title': string;
-            'by-type': NovelType;
-            'by-status': ReadStatus;
+            'by-type': AnyNovelType;
+            'by-status': AnyReadStatus;
             'by-source': string;
             'by-updated': string;
         };
@@ -227,7 +227,7 @@ export async function deleteHermidata(key: string, sync: boolean = true): Promis
 // ============================================================
 
 /** Get all entries of a given type */
-export async function getHermidataByType(type: NovelType): Promise<Hermidata[]> {
+export async function getHermidataByType(type: AnyNovelType): Promise<Hermidata[]> {
     try {
         const db = await getDb();
         return await db.getAllFromIndex('hermidata', 'by-type', type);
@@ -238,7 +238,7 @@ export async function getHermidataByType(type: NovelType): Promise<Hermidata[]> 
 }
 
 /** Get all entries with a given read status */
-export async function getHermidataByStatus(status: ReadStatus): Promise<Hermidata[]> {
+export async function getHermidataByStatus(status: AnyReadStatus): Promise<Hermidata[]> {
     try {
         const db = await getDb();
         return await db.getAllFromIndex('hermidata', 'by-status', status);

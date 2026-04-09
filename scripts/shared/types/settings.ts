@@ -1,4 +1,4 @@
-import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type NovelType, type ReadStatus } from "./popup";
+import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus } from "./popup";
 
 export interface DefaultChoice {
     Type : AnyNovelType,

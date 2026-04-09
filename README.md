@@ -174,13 +174,14 @@ Source maps are included in dev builds. Each background module registers its own
 ### To-Do
 
 - [ ] Choose which save targets are active per entry (bookmark only, sheet only, or both)
-- [ ] Edit type and status options directly from Settings
 - [ ] Manual alternate title entry for out-of-sync RSS matches
 - [ ] auto link RSS to entry without setting it manually
 
 - [ ] subscribe button ( and system ) is very fidelly and can easely break if not done in correct order.
 
-- update the storage of load from build rss
+- [ ] update the storage of load from build rss
+
+- [ ] update red_icon to only show when it detect the bookmark inside the allowed root & its a Hermidata its saved.
 
 ---
 
