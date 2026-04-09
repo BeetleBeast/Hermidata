@@ -147,8 +147,8 @@ export const defaultSettings: Settings = {
         notes : ''
     },
     TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],
-    STATUS_OPTIONS : [...DEFAULT_NOVEL_STATUSES],
-    NOVEL_STATUS_OPTIONS: [...DEFAULT_READ_STATUSES],
+    STATUS_OPTIONS : [...DEFAULT_READ_STATUSES],
+    NOVEL_STATUS_OPTIONS: [...DEFAULT_NOVEL_STATUSES],
 
     NOVEL_TYPE_OPTIONS_V3: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"],
     NOVEL_TYPE_OPTIONS_V2: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel'],

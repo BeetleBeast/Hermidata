@@ -118,6 +118,8 @@ export async function getSettings(): Promise<Settings> {
         const local = await dbGetSettings();
         if (local) return local;
 
+        console.log('[Storage] Settings not found in IndexedDB, falling back to storage.sync');
+
         // Fall back to storage.sync for users not yet migrated
         return await new Promise<Settings>((resolve, reject) => {
             ext.storage.sync.get('Settings', (result: { Settings: Settings }) => {
@@ -151,12 +153,16 @@ async function getSpreadsheetUrl(): Promise<string> {
         if (settings?.spreadsheetUrl) return settings.spreadsheetUrl;
 
         // Fall back to old standalone key for users not yet migrated
-        return await new Promise<string>((resolve, reject) => {
+        const urlFromSync =  await new Promise<string>((resolve, reject) => {
             ext.storage.sync.get(['spreadsheetUrl'], (result: { spreadsheetUrl: string }) => {
                 if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
                 else resolve(result.spreadsheetUrl || '');
             });
         });
+
+        if (urlFromSync) await setSpreadsheetUrl(urlFromSync);
+
+        return urlFromSync;
     } catch (err) {
         console.error('[Storage] getSpreadsheetUrl:', err);
         return '';

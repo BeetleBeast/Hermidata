@@ -4,6 +4,7 @@ import { initContextMenus } from './contextMenus'
 import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/db/sync'
+import { migrateFromChromeStorage } from '../shared/db/db'
 
 /*
 ./background/
@@ -21,6 +22,7 @@ import { initSync } from '../shared/db/sync'
     initSync.ts              ← sync logic + onChanged listener for syncing across devices
 */
 
+await migrateFromChromeStorage()
 initRssCache()
 initTabs()
 initMessaging()

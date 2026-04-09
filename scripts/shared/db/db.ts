@@ -388,7 +388,7 @@ export async function migrateFromChromeStorage(): Promise<void> {
     await new Promise<void>((resolve) => {
         ext.storage.sync.get(null, async (syncData) => {
             const entries: Hermidata[] = [];
-            const settings = syncData['Settings'] as Settings;
+            const settings = defaultSettings ?? syncData['Settings'] as Settings;
 
             for (const [key, value] of Object.entries(syncData)) {
                 if (key === 'Settings' || key === 'spreadsheetUrl') continue;

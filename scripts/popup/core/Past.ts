@@ -1,6 +1,6 @@
-import { getAllHermidata, getHermidataViaKey } from "../../shared/db/Storage";
+import { getAllHermidata, getHermidataViaKey, getSettings } from "../../shared/db/Storage";
 import { TrimTitle, findByTitleOrAltV2, returnHashedTitle } from "../../shared/StringOutput";
-import { type Hermidata, type NovelType, type AllHermidata, novelTypes, type AltCheck } from "../../shared/types/index";
+import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
 import { migrateCopy } from "./migrate";
@@ -94,9 +94,11 @@ export class PastHermidata {
     }
     private async getTitleFromFuzzy(trueTitle: string): Promise<{ possibleObj: AllHermidata, AltKeyNeeded: { needAltTitle: boolean, reason: string }, fuzzyKey: string | null | undefined  }> {
         const AltKeyNeeded = await detectAltTitleNeeded(this.hermidata.title, this.hermidata.type, this.hermidata.source, this.hermidata.url);
+        const settings = await getSettings();
+        
         const fuzzyKey = AltKeyNeeded?.relatedKey;
         // Generate all possible keys
-        const possibleKeys = novelTypes.map(type => returnHashedTitle(trueTitle, type));
+        const possibleKeys = settings.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type));
         // add fuzzy key if not inside possible keys
         if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey);
         // get all posible hermidata Obj
@@ -147,7 +149,7 @@ export class PastHermidata {
     }
 }
 
-export async function detectAltTitleNeeded(title: string, type: NovelType, source: string, url: string, threshold = 0.85): Promise<AltCheck> {
+export async function detectAltTitleNeeded(title: string, type: AnyNovelType, source: string, url: string, threshold = 0.85): Promise<AltCheck> {
     const data = await PastHermidata.getAllHermidata();
     if (!data) return { needAltTitle: false, reason: "No data loaded" };
 

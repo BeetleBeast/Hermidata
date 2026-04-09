@@ -2,12 +2,12 @@
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
 import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
-import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus } from '../../shared/types/index';
+import { type AnyNovelType, type AnyReadStatus, type Hermidata, type NovelType, type ReadStatus, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
-import { getGoogleSheetURL } from '../../shared/db/Storage';
+import { getGoogleSheetURL, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
 
 export type CurrentTab = {
@@ -46,10 +46,12 @@ class HermidataController {
 
     public async init(): Promise<void> {
         this.forceSetClassic()
-        const [ CurrentTabInfo, googleSheetURL ]: [CurrentTab, string] = await Promise.all([
+        const [ CurrentTabInfo, googleSheetURL, settings ]: [CurrentTab, string, Settings] = await Promise.all([
             this.getCurrentTabInfo(),
             getGoogleSheetURL(),
-        ])
+            getSettings(),
+        ]);
+        
 
         this.googleSheetURL = googleSheetURL;
 
@@ -65,7 +67,7 @@ class HermidataController {
         
         this.RSS = new RSS(this.hermidata);
 
-        this.populateUI();
+        this.populateUI(settings);
         this.bindEvents();
     }
     private async checkForDuplicates(): Promise<void> {
@@ -111,7 +113,7 @@ class HermidataController {
         return promise;
     }
     
-    private populateType() {
+    private populateType(novelTypes: AnyNovelType[]) {
         const folderSelect = getElement("#Type");
         const folderSelect2 = getElement("#Type_HDRSS")
 
@@ -128,7 +130,7 @@ class HermidataController {
             folderSelect2.appendChild(option2);
         });
     }
-    private populateStatus() {
+    private populateStatus(readStatus: AnyReadStatus[]) {
         const folderSelect = getElement("#status");
 
         if (!folderSelect) return;
@@ -157,18 +159,18 @@ class HermidataController {
         }
     }
     
-    private populateUI(): void {
+    private populateUI(settings: Settings): void {
         // All the getElementById calls live here
         const display = this.pastHermidata ?? this.hermidata;
 
         
         this.RSS?.changePageToClassic();
 
-        this.populateType();
-        this.populateStatus();
+        this.populateType(settings.TYPE_OPTIONS);
+        this.populateStatus(settings.STATUS_OPTIONS);
 
         // backward compatibility for past hermidata
-        this.trycapitalizingTypesAndStatus();
+        this.trycapitalizingTypesAndStatus(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
 
         setElement("#Pagetitle", el => el.textContent = this.pageTitle || '');
 
@@ -263,7 +265,7 @@ class HermidataController {
                 input.addEventListener('input', resize);
         })
     }
-    private trycapitalizingTypesAndStatus() {
+    private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
             if (!novelTypes.includes(this.pastHermidata.type)) {
                 let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type) as NovelType
@@ -324,6 +326,6 @@ class HermidataController {
     }
 }
 
-function capitalizeFirstLetterOfString<T extends NovelType | ReadStatus>(str: NovelType | ReadStatus ): NovelType | ReadStatus {
+function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): AnyNovelType | AnyReadStatus {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str;
 }
