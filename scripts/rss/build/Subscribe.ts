@@ -45,7 +45,7 @@ export class Subscribe extends RssBuild {
             subscribeBtn.title = "subscribe to recieve notifications"
             subscribeBtn.ariaLabel = "subscribe to recieve notifications"
         }
-        subscribeBtn.onclick = () => this.onSubscribeClick( notificationSection,  allItemSection );
+        subscribeBtn.onclick = async () => this.onSubscribeClick( notificationSection,  allItemSection );
     }
 
     private async findMatchingFeed( feedList: Record<string, RawFeed>, allHermidata: Record<string, Hermidata>, currentTitle: string ): Promise<RawFeed | null> {
@@ -57,14 +57,14 @@ export class Subscribe extends RssBuild {
         return null;
     }
 
-    private onSubscribeClick( notificationSection: HTMLElement, allItemSection: HTMLElement ): void {
+    private async onSubscribeClick( notificationSection: HTMLElement, allItemSection: HTMLElement ): Promise<void> {
         if (!this.matchedFeed) return;
 
         const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as AnyNovelType || this.hermidata.type;
         const currentTitle = getElement<HTMLInputElement>('#title_HDRSS')?.value || this.hermidata.title;
 
         linkRSSFeed(currentTitle, currentType, this.hermidata.url, this.matchedFeed);
-        this.reloadContent(notificationSection, allItemSection);
+        await this.reloadContent(notificationSection, allItemSection);
         console.log('Linked RSS to extension');
     }
 }

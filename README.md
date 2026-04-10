@@ -183,6 +183,10 @@ Source maps are included in dev builds. Each background module registers its own
 
 - [ ] update red_icon to only show when it detect the bookmark inside the allowed root & its a Hermidata its saved.
 
+- [ ] content file doesn't load
+
+- [ ] feeds are stilll local
+
 ---
 
 ## Data & Privacy
