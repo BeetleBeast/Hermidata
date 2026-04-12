@@ -4,7 +4,8 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     getSettings as dbGetSettings, 
     getAllRawFeeds as dbGetAllRawFeeds, 
     putSettings, 
-    putAllRawFeeds} from './db';
+    putAllRawFeeds,
+    putAllHermidata} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../StringOutput';
@@ -75,6 +76,15 @@ export async function getAllHermidata(): Promise<Record<string, Hermidata>> {
         return {};
     }
 }
+export async function setAllHermidata(hermidata: Hermidata[]): Promise<void> {
+    try {
+        await putAllHermidata(hermidata);
+        const count = Object.keys(hermidata).length;
+        console.log(`[Storage] set ${count} total entries`);
+    } catch (err) {
+        console.error('[Storage] setAllHermidata:', err);
+    }
+}
 
 // ============================================================
 // Feeds
@@ -124,7 +134,7 @@ export async function getSettings(): Promise<Settings> {
         return await new Promise<Settings>((resolve, reject) => {
             ext.storage.sync.get('Settings', (result: { Settings: Settings }) => {
                 if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
-                else resolve(result.Settings ?? defaultSettings);
+                else resolve(defaultSettings);
             });
         });
     } catch (err) {

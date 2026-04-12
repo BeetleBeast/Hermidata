@@ -63,6 +63,9 @@ export {
     type elementsInputAndMenu,
     type ElmentsWithInputAndMenu,
 
+    type FolderMapping,
+    type FolderRule,
+
     defaultSettings,
 
 } from "./settings";

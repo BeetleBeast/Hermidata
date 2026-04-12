@@ -45,7 +45,7 @@ const DB_VERSION = 1;
 
 let _db: IDBPDatabase<HermidataSchema> | null = null;
 
-async function getDb(): Promise<IDBPDatabase<HermidataSchema>> {
+export async function getDb(): Promise<IDBPDatabase<HermidataSchema>> {
     if (_db) return _db;
 
     _db = await openDB<HermidataSchema>(DB_NAME, DB_VERSION, {

@@ -185,7 +185,7 @@ Source maps are included in dev builds. Each background module registers its own
 
 - [ ] content file doesn't load
 
-- [ ] feeds are stilll local
+- [ ] feeds are still local
 
 ---
 

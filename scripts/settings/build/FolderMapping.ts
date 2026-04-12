@@ -1,6 +1,4 @@
-import { getSettings, setSettings } from "../../shared/db/Storage";
-import type { AnyNovelType, AnyReadStatus, Settings } from "../../shared/types/index";
-import { type FolderMapping as FolderMappingType, type FolderRule } from "../../shared/types/settings";
+import type { AnyNovelType, AnyReadStatus, Settings, FolderMapping as FolderMappingType, FolderRule } from "../../shared/types/index";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -44,10 +42,22 @@ export class FolderMapping extends Build {
 
     async init() {
         // get current OR a default settings
-        const settings = await getSettings();
+        try {
+            const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null });
+            
+            this.loadExistingRules(settings);
+            this.buildFolderMappingForm(settings);
+        } catch (error: any) {
+            console.error("Full error object:", error);
+            console.error("Error message:", error?.message);
+            console.error("Error stack:", error?.stack);
+            console.error("Error name:", error?.name);
+            
+            // If it's a custom error, it might have other properties
+            console.error("Raw error:", JSON.stringify(error, null, 2));
+            console.error(error);
+        }
         
-        this.loadExistingRules(settings);
-        this.buildFolderMappingForm(settings);
     }
 
     public static resolveFolder( type: string, status: string, mapping: FolderMappingType ): string {
@@ -67,11 +77,14 @@ export class FolderMapping extends Build {
             if (scored.length) return scored[0]!.path
         }
 
-        // 2. Build path from root + type + statusFolder
-        const statusFolder = mapping.statusFolders[status]
-        if (statusFolder) return `${mapping.root}/${type}/${statusFolder}`
+        // 2. Apply type alias to consolidate folders
+        const folderType = mapping.typeAliases?.[type] ?? type;
 
-        // 3. Nothing matched
+        // 3. Build path from root + type + statusFolder
+        const statusFolder = mapping.statusFolders[status]
+        if (statusFolder) return `${mapping.root}/${folderType}/${statusFolder}`
+
+        // 4. Nothing matched
         return `${mapping.root}/${mapping.defaultPath}`;
     }
 
@@ -79,7 +92,7 @@ export class FolderMapping extends Build {
         if (!this.FinishedMappingContainer) return
         this.FinishedMappingContainer.innerHTML = ''
 
-        const mapping = settings.FolderMappingV2
+        const mapping = settings.FolderMapping
         mapping.overrides?.forEach(rule => {
             const row = this.buildRuleRow(
                 rule.type   ?? 'any',
@@ -92,9 +105,9 @@ export class FolderMapping extends Build {
 
     private buildFolderMappingForm(settings: Settings) {
         // build select
-        const novelTypes = settings.NOVEL_TYPE_OPTIONS_V3;
-        const readStatus = settings.READ_STATUS_OPTIONS_V2;
-        // const novelStatus = settings.NOVEL_STATUS_OPTIONS_V2;
+        const novelTypes = settings.TYPE_OPTIONS;
+        const readStatus = settings.STATUS_OPTIONS;
+        // const novelStatus = settings.NOVEL_STATUS_OPTIONS;
 
         this.populateSelect(this.SelectNovelType, novelTypes);
         this.populateSelect(this.SelectReadSatus, readStatus);
@@ -170,9 +183,9 @@ export class FolderMapping extends Build {
             return;
         };
         // if pressed on create new novel type
-        const settings = await getSettings();
+        const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null });
         settings.TYPE_OPTIONS.push(newType);
-        await setSettings(settings);
+        await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: settings});
         this.resetForm(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
     }
     private async addNovelStatusFolder(newStatus: string | undefined) {
@@ -182,10 +195,10 @@ export class FolderMapping extends Build {
             return;
         };
         // if pressed on create new novel Status type
-        const settings = await getSettings();
-        settings.FolderMappingV2.statusFolders[newStatus] = newStatus;
+        const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null });
+        settings.FolderMapping.statusFolders[newStatus] = newStatus;
         settings.STATUS_OPTIONS.push(newStatus);
-        await setSettings(settings);
+        await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: settings});
         this.resetForm(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
 
     }
@@ -213,8 +226,8 @@ export class FolderMapping extends Build {
             if (!path.trim()) throw new Error('Path cannot be empty')
             if (!type && !status) throw new Error('At least one of type or status must be set')
 
-            const settings = await getSettings()
-            const mapping = settings.FolderMappingV2
+            const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null })
+            const mapping = settings.FolderMapping
 
             // Check if an identical rule already exists
             const duplicate = mapping.overrides?.find(r => r.type === type && r.status === status)
@@ -231,7 +244,7 @@ export class FolderMapping extends Build {
                 overrides: [...(mapping.overrides ?? []), newRule]
             }
 
-            await setSettings({ ...settings, FolderMappingV2: updatedMapping })
+            await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: { ...settings, FolderMapping: updatedMapping }});
 
             if (this.SaveStatus) {
                 this.SaveStatus.textContent = `Rule added: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`
@@ -251,8 +264,8 @@ export class FolderMapping extends Build {
     }
     private async removeFolderMappingRule( type: AnyNovelType | undefined, status: AnyReadStatus | undefined ): Promise<void> {
         try {
-            const settings = await getSettings()
-            const mapping = settings.FolderMappingV2
+            const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null })
+            const mapping = settings.FolderMapping
 
             const before = mapping.overrides?.length ?? 0
             const filtered = mapping.overrides?.filter(
@@ -261,10 +274,7 @@ export class FolderMapping extends Build {
 
             if (filtered.length === before) throw new Error(`No rule found for ${type ?? 'any'} + ${status ?? 'any'}`)
 
-            await setSettings({
-                ...settings,
-                FolderMappingV2: { ...mapping, overrides: filtered }
-            })
+            await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: { ...settings, FolderMapping: { ...mapping, overrides: filtered } }});
 
             if (this.SaveStatus) {
                 this.SaveStatus.textContent = `Rule removed`
@@ -287,12 +297,12 @@ export class FolderMapping extends Build {
         try {
             if (!folderName.trim()) throw new Error('Folder name cannot be empty')
 
-            const settings = await getSettings()
-            await setSettings({
+            const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null })
+            await await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: mergedData});{
                 ...settings,
-                FolderMappingV2: {
-                    ...settings.FolderMappingV2,
-                    statusFolders: { ...settings.FolderMappingV2.statusFolders, [status]: folderName.trim() }
+                FolderMapping: {
+                    ...settings.FolderMapping,
+                    statusFolders: { ...settings.FolderMapping.statusFolders, [status]: folderName.trim() }
                 }
             })
 
@@ -316,11 +326,8 @@ export class FolderMapping extends Build {
             const path = this.DefaultPath?.value.trim()
             if (!path) throw new Error('Path cannot be empty')
 
-            const settings = await getSettings()
-            await setSettings({
-                ...settings,
-                FolderMappingV2: { ...settings.FolderMappingV2, defaultPath: path.trim() }
-            })
+            const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null })
+            await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: { ...settings, FolderMapping: { ...settings.FolderMapping, defaultPath: path.trim() } }});
 
             if (this.SaveStatus) {
                 this.SaveStatus.textContent = `Saved: ${path}`
@@ -341,11 +348,11 @@ export class FolderMapping extends Build {
             const path = this.Rootpath?.value.trim()
             if (!path) throw new Error('Path cannot be empty')
 
-            const settings = await getSettings()
-            await setSettings({
+            const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null })
+            await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: {
                 ...settings,
-                FolderMappingV2: { ...settings.FolderMappingV2, root: path.trim() }
-            })
+                FolderMapping: { ...settings.FolderMapping, root: path.trim() }
+            }});
 
             if (this.SaveStatus) {
                 this.SaveStatus.textContent = `Saved: ${path}`

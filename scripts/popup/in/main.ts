@@ -1,8 +1,8 @@
 
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
-import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
-import { type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type Settings } from '../../shared/types/index';
+import { Duplicate } from '../../utils/dupplication';
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
@@ -16,6 +16,33 @@ export type CurrentTab = {
     url: string;
 }
 
+
+export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus?: AnyNovelStatus): Hermidata => ({
+    id: '',
+    title: '',
+    type:  type,
+    url: '',
+    source: '',
+    status: status,
+    chapter: { 
+        current: 0,
+        latest: 0,
+        history: [],
+        lastChecked: new Date().toISOString()
+    },
+    rss: null,
+    import: null,
+    meta: {
+        tags: [],
+        notes: '',
+        added: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        altTitles: [],
+        originalRelease: null,
+        novelStatus: novelStatus
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const controller = new HermidataController();
     controller.init().catch(console.error);
@@ -27,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 class HermidataController {
-    public hermidata: Hermidata = makeDefaultHermidata();
+    public hermidata: Hermidata = makeDefaultHermidata('', '');
     
     public past: PastHermidataClass | null = null;
 
@@ -52,6 +79,7 @@ class HermidataController {
             getSettings(),
         ]);
         
+        this.hermidata = makeDefaultHermidata(settings.TYPE_OPTIONS[0], settings.STATUS_OPTIONS[0], settings.NOVEL_STATUS_OPTIONS[0]);
 
         this.googleSheetURL = googleSheetURL;
 

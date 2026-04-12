@@ -1,7 +1,9 @@
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
+import { FolderMapping } from "../settings/build/FolderMapping";
 import { getChapterFromTitle, TrimTitle } from "../shared/StringOutput";
 import { getSettings } from "../shared/db/Storage";
-import { createNestedFolders, getBookmarkChildren } from "./bookmarks";
+import type { Settings } from "../shared/types";
+import { findNestedFolder, getBookmarkChildren } from "./bookmarks";
 import { setState, settingsCashed } from "./state";
 
 
@@ -40,16 +42,9 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab) {
 
     if (!settings) return { hasValidFuzzyBookmark: false, hasValidFuzzyHermidata: false };
 
-    let flatmapFolderInfo = []
-    for (const element of Object.values(settings?.FolderMapping)) {
-        const element1 = element;
-        for (const element of Object.values(element1)) {
-            const element2 = element;
-                flatmapFolderInfo.push(element2)
-        }
-    }
+    let folderPaths: string[] = getFolderPathsFromMapping(settings);
     
-    const resultFuzzyBookmark = await detectFuzzyBookmark(currentTab, flatmapFolderInfo, Browserroot);
+    const resultFuzzyBookmark = await detectFuzzyBookmark(currentTab, folderPaths, Browserroot);
     const ressultFuzzyHermidata = await detectFuzzyHermidata(currentTab);
     let sameChapter;
     const finalObj: { bookmark?: FuzzyBookmarkMatches, bookmarkSameChapter?: boolean, hermidataSameChapter?: boolean, hermidata?: FuzzyHermidataMatches} = {};
@@ -72,6 +67,24 @@ export async function hasRelatedBookmarkCached(tab: chrome.tabs.Tab) {
     fuzzyCache.set(tab.url, result);
     return result;
 }
+
+// Generate all possible folder paths from the new mapping system
+function getFolderPathsFromMapping(settings: Settings): string[] {
+    const folderPaths: Set<string> = new Set();
+    
+    if (!settings?.TYPE_OPTIONS || !settings?.STATUS_OPTIONS || !settings?.FolderMapping) return [];
+    
+    for (const novelType of Object.values(settings.TYPE_OPTIONS)) {
+        for (const readStatus of Object.values(settings.STATUS_OPTIONS)) {
+            const path = FolderMapping.resolveFolder( novelType, readStatus, settings.FolderMapping );
+            folderPaths.add(path);
+        }
+    }
+    
+    // Remove duplicates (in case multiple type/status combos resolve to same path)
+    return [...folderPaths].flat();
+}
+
 
 async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8): Promise<{hasValidFuzzyHermidata: boolean, fuzzyMatches: FuzzyHermidataMatches[]}> {
     const fuzzyMatches: FuzzyHermidataMatches[] = [];
@@ -105,33 +118,35 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
     const hasValidFuzzyHermidata = fuzzyMatches.length > 0;
     return {hasValidFuzzyHermidata, fuzzyMatches};
 }
-async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, flatmapFolderInfo: Record<string, any>[], Browserroot: string, threshold = 0.8): 
+async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, folderPaths: string[], Browserroot: string, threshold = 0.8): 
     Promise<{hasValidFuzzyBookmark: boolean, fuzzyMatches: FuzzyBookmarkMatches[]}> {
     const fuzzyMatches: FuzzyBookmarkMatches[] = [];
     
 
-    for (const element of flatmapFolderInfo) {
-        const folder = element;
-        folder.pathSegments = folder.path.split('/').filter(Boolean);
+    for (const folderPath of folderPaths) {
+        if (!folderPath) continue;
 
-        folder.finalFolderId = await createNestedFolders(folder.pathSegments, Browserroot);
-        folder.bookmarks = await getBookmarkChildren(folder.finalFolderId);
+        const pathSegments = folderPath.split('/').filter(Boolean);
 
-        for (const bookmark of folder.bookmarks) {
+        const finalFolderId = await findNestedFolder(pathSegments, Browserroot)
+        if (!finalFolderId) continue;
+        const bookmarks = await getBookmarkChildren(finalFolderId);
+
+        for (const bookmark of bookmarks) {
             if (!currentTab.title) continue;
             const score = CalcDiff(bookmark.title, currentTab.title);
 
             if (score >= threshold) {
                 fuzzyMatches.push({
-                    folderPath: folder.path,
+                    folderPath: folderPath,
                     bookmarkTitle: bookmark.title,
-                    fuzzySearchUrl: bookmark.url,
+                    fuzzySearchUrl: bookmark.url!,
                     currentUrl: currentTab.url,
                     similarity: score
                 });
 
                 console.warn(
-                    `[Fuzzy Match ${score.toFixed(2)}] "${bookmark.title}" ↔ "${currentTab.title}" in folder "${folder.path}"`
+                    `[Fuzzy Match ${score.toFixed(2)}] "${bookmark.title}" ↔ "${currentTab.title}" in folder "${folderPath}"`
                 );
             }
         }

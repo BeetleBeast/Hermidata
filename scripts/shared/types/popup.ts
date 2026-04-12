@@ -58,7 +58,7 @@ export interface Hermidata {
         added: string;
         updated: string;
         altTitles: string[];
-        originalRelease: string | null;
+        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
         novelStatus?: AnyNovelStatus;
     };
 }

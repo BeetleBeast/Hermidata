@@ -7,9 +7,9 @@ export interface DefaultChoice {
     notes : string
 }
 
-type FolderEntry = { path: string }
-
 export interface Settings {
+    version: number;
+
     spreadsheetUrl: string;
     
     darkMode: boolean;
@@ -21,14 +21,8 @@ export interface Settings {
     STATUS_OPTIONS : AnyReadStatus[],
     NOVEL_STATUS_OPTIONS: AnyNovelStatus[],
 
-    NOVEL_TYPE_OPTIONS_V3: string[],
-    NOVEL_TYPE_OPTIONS_V2: string[],
-    NOVEL_STATUS_OPTIONS_V2: string[],
-    READ_STATUS_OPTIONS_V2: string[],
     tagColoring: Record<string, string>,
-    // FolderMapping: Record< TypeOptions, Record<StatusOptions, Record<string, path>>>
-    FolderMapping: Record<string, Record<string, FolderEntry>>,
-    FolderMappingV2: FolderMapping,
+    FolderMapping: FolderMapping,
 
     AllowContextMenu: boolean
 }
@@ -37,6 +31,7 @@ export type FolderMapping = {
     root: string                          // "Manga - Anime - Novels - TV-Series"
     statusFolders: Record<string, string> // status → folder name
     overrides?: FolderRule[]              // optional type+status specific overrides
+    typeAliases?: Record<string, string>  // Map types to their folder names
     defaultPath: string                   // fallback for unknown types/statuses
 }
 
@@ -45,20 +40,7 @@ export type FolderRule = {
     status?: string   // string not ReadStatus — handles user-defined statuses
     path: string
 }
-// new one 
-/*
-export interface Settings {
-    spreadsheetUrl: string;
-    darkMode: boolean;
-    
-    DefaultChoice: DefaultChoice,
-    DefaultChoiceText_Menu: DefaultChoice,
-    
-    FolderMapping: Record<string, Record<string, { path: string }>>;
-    
-    AllowContextMenu: boolean;
-}
-*/
+
 export type elementInput = {
     Type: HTMLSelectElement | null;
     Status: HTMLSelectElement | null;
@@ -102,19 +84,27 @@ const CustomFoldermapping: FolderMapping = {
         'Planned':  'Planned',
         'On-hold':  'On-hold',
     },
+    typeAliases: {
+        "Manga": "Manga",
+        "Manhwa": "Manga",    // Manhwa → Manga folder
+        "Manhua": "Manga",    // Manhua → Manga folder
+        "Novel": "Novels",    // Novel → Novels (with s)
+        "Webnovel": "Novels", // Webnovel → Novels
+        "Anime": "Anime",
+        "TV-Series": "TV-Series"
+    },
     overrides: [
-        // Manga has a deeper path for Viewing
-        {
-            type: 'Manga',
-            status: 'Viewing',
-            path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading'
-        },
-        // Manga Planned also differs
-        {
-            type: 'Manga',
-            status: 'Planned',
-            path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch'
-        },
+        // Manga / Manhwa / Manhua ->  from Reading to Currently - Reading/Reading
+        { type: 'Manga', status: 'Viewing', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading' },
+        { type: 'Manhwa', status: 'Viewing', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading'},
+        { type: 'Manhua', status: 'Viewing', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading' },
+        // Manga / Manhwa / Manhua -> from Planned to Currently - Reading/future watch
+        { type: 'Manga', status: 'Planned', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch' },
+        { type: 'Manhwa', status: 'Planned', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch' },
+        { type: 'Manhua', status: 'Planned', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch' },
+        // Novel / Webnovel -> from Reading to Currently - Reading/Reading
+        { type: "Novel", status: "Viewing", path: "Manga - Anime - Novels - TV-Series/Novels/Currently - Reading" },
+        { type: "Webnovel", status: "Viewing", path: "Manga - Anime - Novels - TV-Series/Novels/Currently - Reading" },
     ],
     defaultPath: 'Unsorted'
 }
@@ -132,6 +122,7 @@ export const DefaultFoldermapping: FolderMapping = {
 
 
 export const defaultSettings: Settings = {
+    version: 5,
     spreadsheetUrl: '',
     darkMode: true,
     DefaultChoice : {
@@ -150,69 +141,7 @@ export const defaultSettings: Settings = {
     STATUS_OPTIONS : [...DEFAULT_READ_STATUSES],
     NOVEL_STATUS_OPTIONS: [...DEFAULT_NOVEL_STATUSES],
 
-    NOVEL_TYPE_OPTIONS_V3: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"],
-    NOVEL_TYPE_OPTIONS_V2: ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel'],
-    NOVEL_STATUS_OPTIONS_V2: ['Ongoing', 'Completed', 'Hiatus', 'Canceled'],
-    READ_STATUS_OPTIONS_V2: ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'],
     tagColoring: {},
-    FolderMappingV2: CustomFoldermapping,
-    FolderMapping: {
-        Manga: {
-            Finished: {
-                path: "Manga - Anime - Novels - TV-Series/Manga/Finished"
-                },
-            Viewing: {
-                path: "Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading"
-                },
-            Dropped: {
-                path: "Manga - Anime - Novels - TV-Series/Manga/Abandond"
-                },
-            Planned: {
-                path: "Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch"
-                }
-            },
-        Novel: {
-            Finished: {
-                path: "Manga - Anime - Novels - TV-Series/Novels/Finished"
-                },
-            Viewing: {
-                path: "Manga - Anime - Novels - TV-Series/Novels/Currently - Reading"
-                },
-            Dropped: {
-                path: "Manga - Anime - Novels - TV-Series/Novels/Abandond"
-                },
-            Planned: {
-                path: "Manga - Anime - Novels - TV-Series/Novels/Planned"
-                },
-            },
-        Anime: {
-            Finished: {
-                path: "Manga - Anime - Novels - TV-Series/Anime/Finished"
-            },
-            Viewing: {
-                path: "Manga - Anime - Novels - TV-Series/Anime/Currently - Reading"
-                },
-            Dropped: {
-                path: "Manga - Anime - Novels - TV-Series/Anime/Abandond"
-                },
-            Planned: {
-                path: "Manga - Anime - Novels - TV-Series/Anime/Planned"
-                },
-            },
-        'TV-Series': {
-            Finished: {
-                path: "Manga - Anime - Novels - TV-Series/TV-Series/Finished"
-                },
-            Viewing: {
-                path: "Manga - Anime - Novels - TV-Series/TV-Series/Currently - Reading"
-                },
-            Dropped: {
-                path: "Manga - Anime - Novels - TV-Series/TV-Series/Abandond"
-                },
-            Planned: {
-                path: "Manga - Anime - Novels - TV-Series/TV-Series/Planned"
-            },
-        },
-    },
+    FolderMapping: CustomFoldermapping,
     AllowContextMenu : true,
 };

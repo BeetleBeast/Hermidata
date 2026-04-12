@@ -2,33 +2,8 @@ import { detectHashType, getOldIDType, migrateHermidataV5, migrationSteps } from
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
 import { returnHashedTitle } from "../shared/StringOutput";
 import { getAllHermidata, updateHermidataV3 } from "../shared/db/Storage";
-import { type AllHermidata, type Hermidata } from "../shared/types/index";
+import { type AllHermidata } from "../shared/types/index";
 
-export const makeDefaultHermidata = (): Hermidata => ({
-    id: '',
-    title: '',
-    type: 'Manga',
-    url: '',
-    source: '',
-    status: 'Viewing',
-    chapter: { 
-        current: 0,
-        latest: 0,
-        history: [],
-        lastChecked: new Date().toISOString()
-    },
-    rss: null,
-    import: null,
-    meta: {
-        tags: [],
-        notes: '',
-        added: new Date().toISOString(),
-        updated: new Date().toISOString(),
-        altTitles: [],
-        originalRelease: null,
-        novelStatus: undefined
-    }
-});
 
 
 export class Duplicate  {

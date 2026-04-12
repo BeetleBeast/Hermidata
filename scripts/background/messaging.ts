@@ -1,8 +1,8 @@
 import { ext } from "../shared/BrowserCompat"
-import { getSettings } from "../shared/db/db"
+import { getSettings } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
-import { handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel, handleSaveRawFeeds } from "./rssCache"
+import { handleDbOperation, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel, handleSaveRawFeeds } from "./rssCache"
 
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -13,6 +13,7 @@ export function initMessaging() {
             case 'GET_RSS':       return handleGetRSS(sendResponse)
             case 'INVALIDATE_RSS': return handleInvalidateRSS(sendResponse)
             case 'SAVE_RAW_FEEDS': return handleSaveRawFeeds(msg.data, sendResponse);
+            case 'DB_OPERATION' : handleDbOperation(msg.store, msg.operation, sendResponse, msg.payload); return true;
         }
         return true
     })

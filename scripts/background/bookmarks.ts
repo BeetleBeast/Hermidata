@@ -5,6 +5,7 @@ import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";
 import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
+import { FolderMapping } from "../settings/build/FolderMapping";
 
 declare const browser: typeof chrome | undefined;
 
@@ -32,17 +33,15 @@ export async function writeToBookmarks(dataArray: InputArrayType) {
 
 async function addBookmark([title, type, chapter, url, status,,]: InputArrayType) {
     const settings = await getSettings();
-    const baseType = resolveBaseType(type);
-    const baseStatus = resolveBaseStatus(status);
-    const folderInfo = settings?.FolderMapping?.[baseType]?.[baseStatus];
-    if (!folderInfo?.path) {
+    const folderMapPath = FolderMapping.resolveFolder(type, status, settings.FolderMapping);
+    if (!folderMapPath) {
         console.warn("Folder mapping not found for", type, status);
         return;
     }
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Bookmarks";
-    const pathSegments = folderInfo.path.split('/').filter(Boolean);
+    const pathSegments = folderMapPath.split('/').filter(Boolean);
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
     const bookmark = await createBookmark({
@@ -61,10 +60,8 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
     
     
     const settings = await getSettings();
-    const baseType = resolveBaseType(type)
-    const baseStatus = resolveBaseStatus(status)
-    const folderInfo = settings?.FolderMapping?.[baseType]?.[baseStatus];
-    if (!folderInfo?.path) {
+    const folderMapPath = FolderMapping.resolveFolder(type, status, settings.FolderMapping);
+    if (!folderMapPath) {
         console.warn("Folder mapping not found for", type, status);
         return;
     }
@@ -72,7 +69,7 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Bookmarks";
-    const pathSegments = folderInfo.path.split('/').filter(Boolean);
+    const pathSegments = folderMapPath.split('/').filter(Boolean);
 
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const freshBookmarks = await searchValidBookmarks();
@@ -289,6 +286,14 @@ export async function createNestedFolders(pathSegments: string[], rootTitle: str
 
 }
 
+export async function findNestedFolder(pathSegments: string[], rootTitle: string): Promise<string | null> {
+    const rootId = await getRootByTitle(rootTitle);
+    if (!rootId) return null;
+    
+    const existingFolder = await findFolderPath(rootId, pathSegments);
+    return existingFolder?.id ?? null;
+}
+
 // === Helpers ===
 // Recursive helper to find a nested folder path
 async function findFolderPath(rootId: string, pathSegments: string[], index: number = 0): Promise<chrome.bookmarks.BookmarkTreeNode | null> {
@@ -316,37 +321,6 @@ async function createMissingFolders(baseId: string, pathSegments: string[], inde
     
     return createMissingFolders(folder.id, pathSegments, index + 1);
 }
-
-// mapping function to normalize types before looking up the folder
-function resolveBaseType(type: string) {
-    const map: { [key: string]: string } = {
-        Manga: "Manga",
-        Manhwa: "Manga",
-        Manhua: "Manga",
-
-        Novel: "Novel",
-        Webnovel: "Novel",
-
-        Anime: "Anime",
-        "TV-Series": "TV-Series",
-    };
-    return map[type] || type;
-}
-
-function resolveBaseStatus(status: string) {
-    const map: { [key: string]: string } = {
-        Viewing: "Viewing",
-        
-        Finished: "Finished",
-        
-        Dropped: "Dropped",
-        
-        Planned: "Planned",
-        "On-hold": "Planned"
-    }
-    return map[status] || status
-}
-
 
 // ==== Bookmarking Functions ====
 function extractTitleFromBookmark(title: string) {
