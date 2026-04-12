@@ -206,8 +206,7 @@ class HermidataController {
         setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
         setElement<HTMLSelectElement>('#status', el => el.value = display.status);
         setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
-        setElement<HTMLInputElement>('#url', el => el.value  = this.hermidata.url);
-        setElement<HTMLInputElement>("#date", el => el.value = new Intl.DateTimeFormat('en-GB').format(new Date()) || "");
+        
         setElement<HTMLInputElement>("#tags", el => el.value = display.meta.tags.toString());
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
@@ -314,24 +313,24 @@ class HermidataController {
 
     private async saveSheet(): Promise<void> { 
 
+        // from front-end
         const title = getElement<HTMLInputElement>("#title")?.value;
         const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
         const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
-        const url = getElement<HTMLInputElement>("#url")?.value;
         const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
-        const date = getElement<HTMLInputElement>("#date")?.value;
         const tags = getElement<HTMLInputElement>("#tags")?.value || "";
         const notes = getElement<HTMLInputElement>("#notes")?.value || "";
-        const args = '';
+        // from back-end
+        const url = this.hermidata.url;
+        const date =  new Intl.DateTimeFormat('en-GB').format(new Date());
 
         const tagsArray = tags.split(',').map((tag) => tag.trim());
 
-        if (!title || !Type || !Chapter || !url || !status || !date) throw new Error('Missing required fields');
+        if (!title || !Type || !Chapter || !status) throw new Error('Missing required fields');
 
         this.hermidata.title = title;
         this.hermidata.type = Type;
         this.hermidata.chapter.current = Number(Chapter);
-        this.hermidata.url = url;
         this.hermidata.status = status;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;
@@ -346,7 +345,7 @@ class HermidataController {
         ext.runtime.sendMessage({
             type: "SAVE_NOVEL",
             data: data,
-            args
+            args: ""
         });
 
         if(!this.Testing) setTimeout( () => window.close(), 400);
