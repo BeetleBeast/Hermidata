@@ -56,3 +56,20 @@ export const filterName: FilterName = {
     Tag: 'Tag', 
     Date: 'Date'
 }
+
+
+import type { AllHermidata } from "./popup";
+
+export type RSSDOM = {
+    notifications: {
+        items: DocumentFragment;
+    };
+    allItems: {
+        header: DocumentFragment;
+        items: DocumentFragment;
+    }
+}
+export type RSSData = {
+    feeds: AllHermidata; // this one has RSS the other is all
+    hermidata: AllHermidata;
+}

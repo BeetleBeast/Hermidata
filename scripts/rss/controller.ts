@@ -1,4 +1,4 @@
-import { type Hermidata } from "../shared/types/popupType";
+import type { Hermidata } from "../shared/types/index";
 
 import { RssBuild } from "./build";
 
@@ -8,6 +8,7 @@ import { Footer } from "./build/footer";
 import { EventListener } from "./build/EventListener";
 import { SortOption } from "./build/SortOption";
 import { SortLogic } from "./build/SortLogic";
+import { updatePolygons, positionDiamond } from "./build/SetPositionSvg";
 
 
 export class BuildRSSController {
@@ -24,6 +25,12 @@ export class BuildRSSController {
     public async makeSortSection(sortSection: HTMLElement): Promise<void> {
         // makeSortHeader(sortSection);
         await new SortOption(this.hermidata, await RssBuild.init()).makeSortOptions(sortSection);
+
+        // needs to be after sort options and before notification are hidden
+        updatePolygons(); // potential fix for svg position bug when opening RSS page and notification svg's are not set
+        const allElements = await document.querySelectorAll<HTMLElement>('.hermidata-item');
+        allElements.forEach(item => positionDiamond(item));
+
         await new SortLogic(this.hermidata, await RssBuild.init()).sortOptionLogic(sortSection);
     }
 

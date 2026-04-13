@@ -13,10 +13,9 @@
 
 */
 
-import { ext } from "../shared/BrowserCompat";
 import { returnHashedTitle } from "../shared/StringOutput";
-import { getAllHermidata } from "../shared/Storage";
-import { novelTypes, readStatus, type Hermidata, type NovelType, type ReadStatus } from "../shared/types/popupType";
+import { getAllHermidata, getSettings, removeHermidataV3, saveHermidataV3 } from "../shared/db/Storage";
+import { type AnyNovelType, type Hermidata, type AnyReadStatus, type Settings } from "../shared/types/index";
 import { getElement, setElement } from "../utils/Selection";
 
 // Minimal interactive template — wire into your extension back-end as needed
@@ -60,27 +59,26 @@ class RssPage {
     }
     private async saveData(entry: Hermidata): Promise<void> {
         const key = entry.id || returnHashedTitle(entry.title, entry.type);
-        await ext.storage.sync.set({ [key]: entry });
-        console.log(`[HermidataV3] Saved ${entry.title}`);
+        await saveHermidataV3(key, entry);
     }
     private async removeData(id: string): Promise<void> {
-        await ext.storage.sync.remove(id);
-        console.log(`[HermidataV3] Removed ${id}`);
+        await removeHermidataV3(id);
     }
     // rendering
-    private renderFilters(): void {
+    private renderFilters(settings: Settings): void {
         if(!this.filterType || !this.filterStatus) return;
         this.filterType.innerHTML = '<option value="">All types</option>';
         
+        
 
-        novelTypes.forEach(t=> setElement('#filterType', el => el.appendChild(new Option(t,t))));
+        settings.TYPE_OPTIONS.forEach(t=> setElement('#filterType', el => el.appendChild(new Option(t,t))));
         this.filterStatus.innerHTML = '<option value="">All status</option>';
-        readStatus.forEach(s=> setElement('#filterStatus', el => el.appendChild(new Option(s,s))));
+        settings.STATUS_OPTIONS.forEach(s=> setElement('#filterStatus', el => el.appendChild(new Option(s,s))));
         if (!this.detailType || !this.detailStatus) return;
         this.detailType.innerHTML = '';
         this.detailStatus.innerHTML = '';
-        novelTypes.forEach(t=> setElement('#detailType', el => el.appendChild(new Option(t,t))));
-        readStatus.forEach(s=>setElement('#detailStatus', el => el.appendChild(new Option(s,s))));
+        settings.TYPE_OPTIONS.forEach(t=> setElement('#detailType', el => el.appendChild(new Option(t,t))));
+        settings.STATUS_OPTIONS.forEach(s=>setElement('#detailStatus', el => el.appendChild(new Option(s,s))));
     }
     private async renderList(filterQuery: string =''){
         if(!this.entriesEl) return;
@@ -159,8 +157,8 @@ class RssPage {
         if (url) item.url = url;
     
         if (!this.detailType || !this.detailStatus) return;
-        item.type = this.detailType.value as NovelType;
-        item.status = this.detailStatus.value as ReadStatus;
+        item.type = this.detailType.value as AnyNovelType;
+        item.status = this.detailStatus.value as AnyReadStatus;
         item.chapter.current = newCurrent;
         item.meta = item.meta || {};
         const notes = getElement<HTMLInputElement>('#detailNotes')?.value;
@@ -227,13 +225,13 @@ class RssPage {
         setElement<HTMLInputElement>('#bulkEditTags', el => el.value = firstItem.meta?.tags.join(', ') || '');
         setElement('#bulkEditPanel', el => el.style.display = 'block');
     }
-    private isdifferent(newItem: NovelType | ReadStatus | string[], OldItem: NovelType | ReadStatus | string[]): boolean {
+    private isdifferent(newItem: AnyNovelType | AnyReadStatus | string[], OldItem: AnyNovelType | AnyReadStatus | string[]): boolean {
         return !!(newItem !== OldItem && newItem !== undefined);
     }
     private async saveBulkEdit() {
         // selector save (site-specific RSS selectors)
-        const newType = getElement<HTMLSelectElement>('#bulkEditType')?.value as NovelType;
-        const newStatus = getElement<HTMLSelectElement>('#bulkEditStatus')?.value as ReadStatus;
+        const newType = getElement<HTMLSelectElement>('#bulkEditType')?.value as AnyNovelType;
+        const newStatus = getElement<HTMLSelectElement>('#bulkEditStatus')?.value as AnyReadStatus;
         const newTags = getElement<HTMLInputElement>('#bulkEditTags')?.value.split(',').map(tag => tag.trim()) as string[];
 
         
@@ -294,7 +292,8 @@ class RssPage {
         getElement('#emailNotify')?.addEventListener('change', this.updateNotificationPreview);
     }
     public async init() {
-        this.renderFilters();
+        const settings = await getSettings();
+        this.renderFilters(settings);
         await this.loadData();
         await this.renderList();
         this.updateNotificationPreview();

@@ -3,17 +3,29 @@ import { appendAltTitle, makeHermidataV3 } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/BrowserCompat";
 import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
-import type { RawFeed } from "../shared/types/rssType";
-import { getAllRawFeeds, getHermidataViaKey } from "../shared/Storage";
-import { novelTypes, type AltCheck, type Hermidata, type NovelType } from "../shared/types/popupType";
+import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType } from "../shared/types/index";
+import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidataV3 } from "../shared/db/Storage";
+import { getAllHermidataWithRss } from "../shared/db/db";
 
-export async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
+/*
+
+1. get all raw feeds from storage
+    - filter out non possible Hermidata entries
+
+2. get all hermidata with a RSS feed linked
+// 3. merge raw feeds into hermidata
+
+
+*/
+
+async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
     const rawFeeds: Record<string, RawFeed> = await getAllRawFeeds();
     const rawFeedsValues = Object.values({...rawFeeds});
     
     const hermidataValues = Object.values(AllHermidata);
-
-    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues);
+    const settings = await getSettings();
+    
+    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues, settings.TYPE_OPTIONS);
 
     return feedList;
 }
@@ -22,7 +34,7 @@ function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, He
         const domainToHermidata = new Map<string, Hermidata[]>();
         
         for (const novel of hermidataValues) {
-            const domain = novel.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+            const domain = novel.url?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
             if (!domainToHermidata.has(domain)) domainToHermidata.set(domain, []);
             domainToHermidata.get(domain)!.push(novel);
         }
@@ -30,7 +42,7 @@ function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, He
         return domainToHermidata;
 }
 
-function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Record<string, RawFeed> {
+function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_OPTIONS: AnyNovelType[]): Record<string, RawFeed> {
 
     const filteredRawFeeds: Record<string, RawFeed> = {};
     
@@ -63,8 +75,8 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Reco
             allNONmaches.push(feed);
             continue;
         }
-
-        const type = matched?.type ?? novelTypes[0];
+        
+        const type = matched?.type ?? TYPE_OPTIONS[0];
         const id = returnHashedTitle(feedTitle, type, feed.url);
 
         filteredRawFeeds[id] = Object.freeze({ ...feed, items: [...(feed.items ?? [])] });
@@ -76,9 +88,9 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Reco
     console.log('domainCandidates misses', allNONmaches.length);
     return filteredRawFeeds;
 }
-
+// only called in background after invalidation or on initial load
 export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> {
-    console.group('getHermidataWithRss');
+    console.group('[RSS Load] getHermidataWithRss');
     console.time('getAllHermidata');
     const AllHermidata = await PastHermidata.getAllHermidata();
     console.timeEnd('getAllHermidata');
@@ -87,13 +99,13 @@ export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> 
     console.timeEnd('getRawFeedsRecord');
     // Collect all entries that have RSS
     console.time('filter entries with RSS');
-    const hermidataWRSS = Object.entries(AllHermidata).filter(([_, feed]) => feed?.rss);
+    const hermidataWRSS = Object.values(await getAllHermidataWithRss(AllHermidata));
     console.timeEnd('filter entries with RSS');
     // Run all updateFeed calls in parallel
     console.time('updateFeed');
     const updated = await Promise.all(
-        hermidataWRSS.map(async ([id, feed]) => ({
-            id,
+        hermidataWRSS.map(async (feed) => ({
+            id: feed.id,
             feed: await updateFeed(feed, RawFeeds, AllHermidata),
         }))
     );
@@ -103,7 +115,7 @@ export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> 
     console.groupEnd();
     return Object.fromEntries(updated.map(({ id, feed }) => [id, feed]));
 }
-// load.ts or wherever loadSavedFeeds is called from popup
+// whenever we need to get hermidata with RSS may be called everywhere
 export async function getHermidataWithRssFromBackground(): Promise<Record<string, Hermidata>> {
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ type: 'GET_RSS' }, (response) => {
@@ -168,12 +180,15 @@ export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFe
  * @param {String} type - the RSS input type
  * @param {Object} rssData  - the RSS feed data
 */
-export async function linkRSSFeed(title: string, type: NovelType, url: string, rssData: RawFeed) {
+export async function linkRSSFeed(title: string, type: AnyNovelType, url: string, rssData: RawFeed) {
     // check if new entry is inside database
     const altCheck = await detectAltTitleNeeded(title, type, rssData.domain, url);
     const AllHermidata = await PastHermidata.getAllHermidata();
-    const titleOrAlt = findByTitleOrAltV2(title, AllHermidata)?.title || title
-    const key = returnHashedTitle( titleOrAlt, type);
+
+    const existingEntry = findByTitleOrAltV2(title, AllHermidata)
+    const resolvedTitle = existingEntry ? existingEntry.title : title;
+    const resolvedType = existingEntry ? existingEntry.type : type;
+    const key = returnHashedTitle( resolvedTitle, resolvedType);
 
     const KeysToFetch = [key];
     if (altCheck.relatedKey && altCheck.relatedKey !== key) KeysToFetch.push(altCheck.relatedKey)
@@ -185,7 +200,7 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
         stored[key] = obj;
     }
 
-    const entry: Hermidata = await getEntry(title, stored, altCheck, type, url, key);
+    const entry: Hermidata = await getEntry(title, stored, altCheck, resolvedType, url, key);
 
     entry.rss = {
         title: rssData.title,
@@ -200,23 +215,25 @@ export async function linkRSSFeed(title: string, type: NovelType, url: string, r
     const latestChapter = getChapterFromTitle(rssData.items?.[0]?.title, entry.rss.url);
     if (latestChapter) entry.chapter.latest = latestChapter;
 
-    await ext.storage.sync.set({ [key]: entry });
+    const saveKey = stored[key] ? key : altCheck.relatedKey ?? key;
+    await saveHermidataV3(saveKey, entry);
 }
 
-async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: NovelType, url: string, key: string): Promise<Hermidata> {
+async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: AnyNovelType, url: string, key: string): Promise<Hermidata> {
+    // Try to find the best matching entry among the possible keys
+    // 1. direct key match
     let entry = stored[key];
     if (altCheck.relatedKey && !entry) entry = stored[altCheck.relatedKey]
 
+    // 2. title match (including alt titles and fuzzy matches) Has priority over direct key match since keys can be outdated/stale
     if (altCheck.needAltTitle && altCheck.relatedKey) {
         const relatedEntry = stored[altCheck.relatedKey];
         if (relatedEntry) {
-            const confirmation = await customConfirm(
-                `${altCheck.reason}\nAdd "${title}" as an alt title for "${relatedEntry.title}"?`
-            );
+            const confirmation = await customConfirm(`${altCheck.reason}\nAdd "${title}" as an alt title for "${relatedEntry.title}"?`);
             if (confirmation) await appendAltTitle(title, relatedEntry);
         }
     }
-
+    // fallback: if no entry found at all, create new one
     if (!entry) entry = makeHermidataV3(title, url, type);
 
     return entry;

@@ -1,0 +1,226 @@
+
+.hermidata-item {
+    border: 1px solid var(--Btn);
+    background-color: var(--bg-color);
+    border-radius: 4px;
+    padding: 8px 8px;
+    display: grid;
+    flex: content;
+    align-items: center;
+    flex-direction: column;
+    color: var(--Text-color);
+    transition: background-color 0.3s ease;
+    height: 60px;
+    opacity: 1;
+
+    position: relative; /* required so SVG can be absolute inside */
+
+}
+
+.hermidata-item:hover{
+    background-color: var(--Btn_hover);
+    cursor: pointer;
+}
+
+
+/* Remove ?*/
+#RSS-entries,
+#RSS-Notification {
+    width: 100%;
+}
+
+.hermidata-item-info {
+    display: grid;
+    padding: 0 5px;
+    grid-template-columns: 50px 1fr auto;
+    grid-template-rows: 30px 30px;
+    gap: 6px 10px;
+}
+
+.hermidata-item-image {
+	width: 40px;
+	height: 40px;
+	object-fit: fill;
+	border-radius: 8px;
+    padding-top: 5px;
+}
+.hermidata-item-title {
+    font-weight: bold;
+    font-size: 15px;
+    white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-self: center;
+    padding: 5px;
+    max-width: 90%;
+    z-index: 800;
+}
+.hermidata-item-progress {
+    font-weight: bold;
+    font-size: 16px;
+    padding-right: 10px;
+    padding-top: 5px;
+    z-index: 800;
+}
+.hermidata-item-chapter {
+    font-size: 15px;
+
+    width: fit-content;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-self: center;
+    position: absolute;
+    left: 10%;
+    z-index: 800;
+}
+
+.hermidata-item-footer {
+    font-size: 12px;
+    color: gray;
+    grid-column: 1;
+    justify-self: self-end;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: right;
+    width: fit-content;
+    max-width: 140px;
+    text-overflow: ellipsis;
+    z-index: 800;
+}
+.hermidata-item-pubDate {
+    font-size: 12px;
+    text-align: left;
+    
+    width: fit-content;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    justify-self: self-start;
+    grid-column: 2;
+    z-index: 800;
+}
+
+.hermidata-item-tag-container {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    z-index: 800;
+}
+.tag-div {
+    width: fit-content;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+.hermidata-item-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto; /* clicks pass through to content */
+    overflow: visible;
+    z-index: 500;
+}
+
+/* Position horizontal lines using JS or CSS custom properties */
+.line-top-left-bend { 
+    transform: translateY(var(--line-h1-y, 40px));
+}
+.line-top-right-bend { 
+    transform: translateY(var(--line-h2-y, 80px));
+    animation-delay: 0.1s;
+}
+.line-middel-horizontal { 
+    transform: translateX(var(--line-v1-x, 60px));
+    animation-delay: 0.2s;
+}
+
+/* Animation example — draw line in from left */
+@keyframes draw-in {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+}
+
+.hermidata-item-lines {
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke; /* keeps 1px regardless of SVG scaling */
+    stroke-dasharray: 1;
+    /*stroke-dashoffset: 1;*/
+    appearance: 1; /* normalize so dasharray:1 = full length */
+    animation: draw-in 0.4s ease forwards;
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+
+
+.line-bottom-left-bend {
+    animation-delay: 0.2s;
+    transform: translateY(var(--line-h2-y, 80px));
+}
+.line-bottom-right-bend {
+    animation-delay: 0.2s;
+    transform: translateY(var(--line-h2-y, 80px));
+}
+.line-bottom-vertical {
+    animation-delay: 0.2s;
+    transform: translateX(var(--line-v1-x, 60px));
+}
+
+.line-diamond {
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.line-diamond.hermidata-item-lines:hover {
+	stroke: aliceblue;
+	cursor: help;
+}
+
+.diamond-l,
+.diamond-r {
+    stroke: var(--hr);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+
+.item-lines {
+    stroke: #4e83ff54
+}
+
+.bottom-row {
+    grid-column: 2 / 2;
+    grid-row: 2;
+
+    display: grid;
+    grid-template-columns: 50% 31% 31%;
+    gap: 5px;
+    align-items: center;
+}
+
+.tags {
+    justify-self: end;
+}
+
+
+.rss-link-missing-icon {
+    stroke: yellow;
+    fill: yellow;
+}
+
+.rss-link-missing-icon:hover {
+	stroke: aliceblue;
+	cursor: help;
+}

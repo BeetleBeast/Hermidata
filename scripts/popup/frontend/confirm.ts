@@ -1,4 +1,4 @@
-import type { Hermidata } from "../../shared/types/popupType";
+import type { Hermidata } from "../../shared/types/index";
 import { getElement, setElement } from "../../utils/Selection";
 
 /**

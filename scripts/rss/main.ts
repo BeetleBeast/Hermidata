@@ -1,6 +1,5 @@
 import { PastHermidata } from "../popup/core/Past";
-import type { RSSData, RSSDOM } from "../shared/types/rssType";
-import type { Hermidata } from "../shared/types/popupType";
+import type { RSSData, RSSDOM, Hermidata } from "../shared/types/index";
 import { getElement, setElement } from "../utils/Selection";
 import { BuildRSSController } from "./controller";
 import { getHermidataWithRssFromBackground } from "./load";
@@ -61,7 +60,7 @@ export class RSS {
         this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
         
         await this.BuildRSS.makeSortSection(sortSection);
-        
+
         await this.BuildRSS.attachEventListeners()
 
         await this.BuildRSS.makeFooterSection();

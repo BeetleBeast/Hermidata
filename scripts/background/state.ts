@@ -1,11 +1,10 @@
-import type { SettingsInput } from "../shared/types/settings"
-import type { Hermidata } from "../shared/types/popupType"
+import type { Settings, Hermidata } from "../shared/types/index"
 
 // state.ts
 export let currentBookmark: chrome.bookmarks.BookmarkTreeNode | null = null
 export let currentTab: chrome.tabs.Tab | null = null
 export let allHermidataCashed: Record<string, Hermidata> | undefined
-export let settingsCashed: SettingsInput | null = null
+export let settingsCashed: Settings | null = null
 export let lastAutoFeedCkeck = 0
 export let lastFeedCkeck = 0
 

@@ -1,8 +1,7 @@
-import type { Hermidata } from "../../shared/types/popupType";
+import type { Hermidata } from "../../shared/types/index";
 import { confirmMigrationPrompt } from "../frontend/confirm";
 import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
-import { getHermidataViaKey } from "../../shared/Storage";
-import { ext } from "../../shared/BrowserCompat";
+import { getHermidataViaKey, updateHermidataV3 } from "../../shared/db/Storage";
 import { makeHermidataV3 } from "./save";
 
 /**
@@ -154,14 +153,14 @@ export async function migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD
             ),
             added: older.meta?.added || base.meta.added,
             updated: new Date().toISOString(),
-            originalRelease: null // TODO: do something with it
+            originalRelease: null, // TODO: do something with it
+            novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus || undefined // TODO: do something with it
+
         }
     }
     // step 3. save & remove key
-    await ext.storage.sync.set({ [newKey]: merged });
-    await ext.storage.sync.remove(oldKey);
+    updateHermidataV3(oldKey, newKey, merged);
 
-    console.log(`Migrated from ${oldKey} → ${newKey}`);
     return merged;
 }
 

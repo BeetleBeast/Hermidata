@@ -1,8 +1,8 @@
 import { ext } from "../shared/BrowserCompat"
-import type { SettingsInput } from "../shared/types/settings"
+import { getSettings } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
-import { handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel } from "./rssCache"
+import { handleDbOperation, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleReloadRss, handleSaveNovel, handleSaveRawFeeds } from "./rssCache"
 
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -12,35 +12,36 @@ export function initMessaging() {
             case 'GET_LAST_SYNC': return handleGetLastSync(sendResponse)
             case 'GET_RSS':       return handleGetRSS(sendResponse)
             case 'INVALIDATE_RSS': return handleInvalidateRSS(sendResponse)
+            case 'SAVE_RAW_FEEDS': return handleSaveRawFeeds(msg.data, sendResponse);
+            case 'DB_OPERATION' : handleDbOperation(msg.store, msg.operation, sendResponse, msg.payload); return true;
         }
         return true
     })
 }
 
 export function initInstalled() {
-    ext.runtime.onInstalled.addListener(details => {
+    ext.runtime.onInstalled.addListener(async details => {
         checkFeedsForUpdates();
 
-        ext.storage.sync.get<Record<string, SettingsInput>>([ "Settings" ], (result) => {
-            const settings = result?.Settings;
-            if (details.reason === "install") {
-                // Open settings on first install to fix bug from V?
-                if (!settings) ext.runtime.openOptionsPage();
-            } else if (details.reason === "update") {
-                const thisVersion = ext.runtime.getManifest().version;
-                console.log(`Updated to version ${thisVersion}`);
-                // open settings after an update to fix bug from V?
-                if (!settings) ext.runtime.openOptionsPage();
-            }
+        const settings = await getSettings();
 
-            if (settings?.AllowContextMenu) {
-                ext.contextMenus.create({
-                    id: "Hermidata",
-                    title: "Save to Hermidata",
-                    contexts: ["link"]
-                });
-            }
-        });
+        if (details.reason === "install") {
+            // Open settings on first install to fix bug from V?
+            if (!settings) ext.runtime.openOptionsPage();
+        } else if (details.reason === "update") {
+            const thisVersion = ext.runtime.getManifest().version;
+            console.log(`Updated to version ${thisVersion}`);
+            // open settings after an update to fix bug from V?
+            if (!settings) ext.runtime.openOptionsPage();
+        }
+
+        if (settings?.AllowContextMenu) {
+            ext.contextMenus.create({
+                id: "Hermidata",
+                title: "Save to Hermidata",
+                contexts: ["link"]
+            });
+        }
     });
     ext.runtime.onStartup.addListener(() => {
         updateCurrentBookmarkAndIcon()

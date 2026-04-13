@@ -1,19 +1,19 @@
-import { AllSorts, filterClassName, filterName } from "../../shared/types/rssBuildType";
-import { getLastSortOption } from "../../shared/Storage";
-import { novelStatus, novelTypes, readStatus, type Hermidata } from "../../shared/types/popupType";
+import { AllSorts, filterClassName, filterName, type Hermidata, type Settings } from "../../shared/types/index";
+import { getLastSortOption, getSettings } from "../../shared/db/Storage";
 import { getElement, setElement } from "../../utils/Selection";
 import { Sort } from "./Sort";
 export class SortOption extends Sort {
 
     private selectedIndex: number = -1;
-
     
     public async makeSortOptions(parent_section: HTMLElement): Promise<void> {
         if (getElement('.mainContainerHeader')) return;
+
+        const settings = await getSettings();
         
         // --- 1. Search bar & filter ---
         const [mainContainer, lastSort] = await Promise.all([
-            Promise.resolve(this.CreateMainContainer()),
+            Promise.resolve(this.CreateMainContainer(settings)),
             getLastSortOption()
         ]);
 
@@ -48,7 +48,7 @@ export class SortOption extends Sort {
 
         return searchContainer
     }
-    private CreateFilter(): HTMLDivElement {
+    private CreateFilter(settings: Settings): HTMLDivElement {
         const filterSection = document.createElement('div');
         filterSection.className = 'filter-section-container';
 
@@ -56,13 +56,13 @@ export class SortOption extends Sort {
         const SortSection = this.createFilterSection(filterName.Sort, AllSorts, filterClassName.Sort);
 
         // 2. Type
-        const typeSection = this.createFilterSection(filterName.Type, novelTypes, filterClassName.Type);
+        const typeSection = this.createFilterSection(filterName.Type, settings.TYPE_OPTIONS, filterClassName.Type);
 
         // 3. Status
-        const statusSection = this.createFilterSection(filterName.Status, readStatus, filterClassName.Status);
+        const statusSection = this.createFilterSection(filterName.Status, settings.STATUS_OPTIONS, filterClassName.Status);
         
         // 3.5. novels Status filter
-        const novelStatusSection = this.createFilterSection(filterName.NovelStatus, novelStatus, filterClassName.NovelStatus);
+        const novelStatusSection = this.createFilterSection(filterName.NovelStatus, settings.NOVEL_STATUS_OPTIONS, filterClassName.NovelStatus);
     
         // 4. Source
         const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).map(item => item.source).filter(Boolean)));
@@ -140,7 +140,7 @@ export class SortOption extends Sort {
         section.appendChild(list);
         return section;
     };
-    private CreateMainContainer(): HTMLDivElement {
+    private CreateMainContainer(settings: Settings): HTMLDivElement {
         const mainContainer = document.createElement('div');
 
         mainContainer.className = 'mainContainerHeader';
@@ -149,7 +149,7 @@ export class SortOption extends Sort {
         const searchContainer = this.CreateSearchBar();
         
         // 2. filters & sort
-        const filterSection = this.CreateFilter();
+        const filterSection = this.CreateFilter(settings);
 
         mainContainer.append(searchContainer, filterSection);
 
@@ -209,7 +209,7 @@ export class SortOption extends Sort {
         const allItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"]`);
 
         allItems.forEach(item => {
-            const titleEl = getElement('.RSS-entries-item-title', item);
+            const titleEl = getElement('.hermidata-item-title', item);
             const ItemTitleText = titleEl?.textContent?.toLowerCase() || '';
 
             const hashItem = this.GetHashItem(item);

@@ -1,11 +1,11 @@
 import { ext } from "../shared/BrowserCompat";
-import type { SettingsInput } from "../shared/types/settings";
-import { getSettings } from "../shared/Storage";
-import type { InputArrayType } from "../shared/types/popupType";
+import type { InputArrayType } from "../shared/types/index";
+import { getSettings } from "../shared/db/Storage";
 import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";
 import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
+import { FolderMapping } from "../settings/build/FolderMapping";
 
 declare const browser: typeof chrome | undefined;
 
@@ -33,17 +33,15 @@ export async function writeToBookmarks(dataArray: InputArrayType) {
 
 async function addBookmark([title, type, chapter, url, status,,]: InputArrayType) {
     const settings = await getSettings();
-    const baseType = resolveBaseType(type);
-    const baseStatus = resolveBaseStatus(status);
-    const folderInfo = settings?.FolderMapping?.[baseType]?.[baseStatus];
-    if (!folderInfo?.path) {
+    const folderMapPath = FolderMapping.resolveFolder(type, status, settings.FolderMapping);
+    if (!folderMapPath) {
         console.warn("Folder mapping not found for", type, status);
         return;
     }
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Bookmarks";
-    const pathSegments = folderInfo.path.split('/').filter(Boolean);
+    const pathSegments = folderMapPath.split('/').filter(Boolean);
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
     const bookmark = await createBookmark({
@@ -57,16 +55,13 @@ async function addBookmark([title, type, chapter, url, status,,]: InputArrayType
 }
 async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<typeof shouldReplaceOrBlock>) {
     const { replacedURL: OldURL, replaceID: OldID } = decision;
-    const [title, type, chapter, url, status, date, tags, notes] = dataArray;
+    const [title, type, chapter, url, status] = dataArray;
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
     
-    const settings: SettingsInput = await new Promise((resolve) => {
-        ext.storage.sync.get(["Settings"], (result: { Settings: SettingsInput }) => resolve(result.Settings));
-    });
-    const baseType = resolveBaseType(type)
-    const baseStatus = resolveBaseStatus(status)
-    const folderInfo = settings?.FolderMapping?.[baseType]?.[baseStatus];
-    if (!folderInfo?.path) {
+    
+    const settings = await getSettings();
+    const folderMapPath = FolderMapping.resolveFolder(type, status, settings.FolderMapping);
+    if (!folderMapPath) {
         console.warn("Folder mapping not found for", type, status);
         return;
     }
@@ -74,7 +69,7 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Bookmarks";
-    const pathSegments = folderInfo.path.split('/').filter(Boolean);
+    const pathSegments = folderMapPath.split('/').filter(Boolean);
 
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const freshBookmarks = await searchValidBookmarks();
@@ -99,11 +94,11 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
 
 export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<chrome.bookmarks.BookmarkTreeNode>[] | string[][], isSheet = true) {
     const [title,, chapter, url,, date,] = newEntry;
-    let oldTitle, oldNovelType, oldChapter: number,  oldUrl: string | undefined, oldReadStatus,  oldDate, id, notes, tags;
+    let oldTitle, oldUrl: string | undefined,  oldDate, id;
 
     for (let i = 0; i < existingRows.length; i++) {
         if (isSheet) {
-            [oldTitle, oldNovelType, oldChapter, oldUrl, oldReadStatus, oldDate, tags, notes] = existingRows[i] as InputArrayType;
+            [oldTitle,,, oldUrl,, oldDate] = existingRows[i] as InputArrayType;
         } else {
             const row: { title: string, url: string, id: string} = existingRows[i] as { title: string, url: string, id: string };
             ({ title: oldTitle, url: oldUrl, id } = row);
@@ -111,15 +106,14 @@ export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Par
             
         const SameTrimedTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();
 
-        const { title: OldTitleParsed, chapter: oldChapterParsed } = getTitleAndChapterFromUrl(oldUrl ?? ''); // FIXME: this isn't a url but a date string
-        const  { title: TitleParsed, chapter: ChapterParsed } = getTitleAndChapterFromUrl(url);
+        const { title: OldTitleParsed, chapter: oldChapterParsed } = getTitleAndChapterFromUrl(oldUrl ?? '');
+        const  TitleParsed = getTitleAndChapterFromUrl(url).title;
         
         const SameTitle = OldTitleParsed === TitleParsed;
         const isSame = isSheet ? SameTrimedTitle : SameTitle;
 
         if (isSame) {
             const chapterChanged = chapter !== oldChapterParsed;
-            const chapterChangedURL = ChapterParsed !== oldChapterParsed;
 
             const oldDateStr = oldDate?.toString()
 
@@ -218,17 +212,6 @@ function updateBookmark(id: string, changes: Partial<chrome.bookmarks.BookmarkTr
         });
     });
 }
-function getAllBookmarks(id: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
-    if (browser?.bookmarks?.getSubTree) {
-        return browser.bookmarks.getSubTree(id);
-    }
-    return new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
-        ext.bookmarks.getSubTree(id, (result) => {
-        if (ext.runtime.lastError) reject(new Error(chrome.runtime.lastError?.message));
-        else resolve(result);
-        });
-    });
-}
 function moveBookmark(id: string, parentId: string) {
     if (browser?.bookmarks?.move) {
         return browser.bookmarks.move(id, { parentId });
@@ -303,6 +286,14 @@ export async function createNestedFolders(pathSegments: string[], rootTitle: str
 
 }
 
+export async function findNestedFolder(pathSegments: string[], rootTitle: string): Promise<string | null> {
+    const rootId = await getRootByTitle(rootTitle);
+    if (!rootId) return null;
+    
+    const existingFolder = await findFolderPath(rootId, pathSegments);
+    return existingFolder?.id ?? null;
+}
+
 // === Helpers ===
 // Recursive helper to find a nested folder path
 async function findFolderPath(rootId: string, pathSegments: string[], index: number = 0): Promise<chrome.bookmarks.BookmarkTreeNode | null> {
@@ -330,37 +321,6 @@ async function createMissingFolders(baseId: string, pathSegments: string[], inde
     
     return createMissingFolders(folder.id, pathSegments, index + 1);
 }
-
-// mapping function to normalize types before looking up the folder
-function resolveBaseType(type: string) {
-    const map: { [key: string]: string } = {
-        Manga: "Manga",
-        Manhwa: "Manga",
-        Manhua: "Manga",
-
-        Novel: "Novel",
-        Webnovel: "Novel",
-
-        Anime: "Anime",
-        "TV-Series": "TV-Series",
-    };
-    return map[type] || type;
-}
-
-function resolveBaseStatus(status: string) {
-    const map: { [key: string]: string } = {
-        Viewing: "Viewing",
-        
-        Finished: "Finished",
-        
-        Dropped: "Dropped",
-        
-        Planned: "Planned",
-        "On-hold": "Planned"
-    }
-    return map[status] || status
-}
-
 
 // ==== Bookmarking Functions ====
 function extractTitleFromBookmark(title: string) {

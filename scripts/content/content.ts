@@ -1,107 +1,155 @@
-// must be a self-contained IIFE bundle
+// must be a self-contained IIFE bundle — no imports allowed
 
-// --- Types ---
+// ============================================================
+// Types
+// ============================================================
+
 type RawFeed = {
-    title: string,
-    url: string,
-    domain: string,
-    lastFetched: string,
-    lastBuildDate: string,
-    image: string,
-    items: FeedItem[],
-    lastToken: string | null
-}
+    title: string;
+    url: string;
+    domain: string;
+    lastFetched: string;
+    lastBuildDate: string;
+    image: string;
+    items: FeedItem[];
+    lastToken: string | null;
+};
+
 type FeedItem = {
-    title: string,
-    link: string,
-    pubDate: Date,
-    guid: string
-}
-// --- Globals ---
+    title: string;
+    link: string;
+    pubDate: Date;
+    guid: string;
+};
+
+// ============================================================
+// Globals
+// ============================================================
+
 declare const browser: typeof chrome | undefined;
+const ext: typeof chrome = (browser ?? chrome);
 
-const ext: typeof chrome = ( browser ?? chrome );
+// ============================================================
+// Entry point
+// ============================================================
 
-
-
-// content.js
 addFeedToGlobalMain();
 
-
-async function getAllRawFeeds(): Promise<Record<string, RawFeed>> {
-    return new Promise<Record<string, RawFeed>>((resolve, reject) => {
-        ext.storage.local.get("savedFeeds", (result: { savedFeeds: Record<string, RawFeed> }) => {
-            if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError?.message));
-            resolve(result?.savedFeeds || {});
-        });
-    }).catch(error => {
-        console.error('Extention error: Failed Premise savedFeeds: ',error);
-        return {};
-    })
-}
+// ============================================================
+// Detection
+// ============================================================
 
 async function getRssFeedsInHead(): Promise<Partial<RawFeed>[]> {
-    const rssLinks = [...document.querySelectorAll('link[rel="alternate"][type="application/rss+xml"], link[rel="alternate"][type="application/atom+xml"]')];
-    const feeds = rssLinks.map(link => ({
+    const rssLinks = [
+        ...document.querySelectorAll(
+            'link[rel="alternate"][type="application/rss+xml"], link[rel="alternate"][type="application/atom+xml"]'
+        )
+    ];
+    return rssLinks.map(link => ({
         title: link.getAttribute('title') || document.title,
         url: new URL(link.getAttribute('href') || '', location.origin).href
     }));
-
-    return feeds;
 }
+
 async function getRssFeedsInBody(feeds: Partial<RawFeed>[]): Promise<Partial<RawFeed>[]> {
-    const anchorCandidates = [...document.querySelectorAll('a[href*="rss"], a[href*="feed"], a[href$=".xml"]')];
+    const existing = new Set(feeds.map(f => f.url));
+    const anchorCandidates = [...document.querySelectorAll<HTMLAnchorElement>('a[href*="rss"], a[href*="feed"], a[href$=".xml"]')];
+
     for (const a of anchorCandidates) {
-        const text = (a.textContent || "").toLowerCase();
-        const href = a.getAttribute("href");
+        const text = (a.textContent || '').toLowerCase();
+        const href = a.getAttribute('href');
         if (!href) continue;
 
-        // If it *looks* like an RSS link based on text or href pattern
-        if (text.includes("rss") || text.includes("feed") || new RegExp(/\/(rss|feed|atom)(\.xml)?$/i).exec(href)) {
-            const fullUrl = new URL(href, location.origin).href;
+        const isRssLike =
+            text.includes('rss') ||
+            text.includes('feed') ||
+            /\/(rss|feed|atom)(\.xml)?$/i.test(href);
+
+        if (!isRssLike) continue;
+
+        const fullUrl = new URL(href, location.origin).href;
+        if (!existing.has(fullUrl)) {
+            existing.add(fullUrl);
             feeds.push({
-                title: a.textContent.trim() || document.title,
+                title: a.textContent?.trim() || document.title,
                 url: fullUrl
             });
         }
     }
+
     return feeds;
 }
+
+/**
+ * Only called if head + body detection found nothing.
+ * Probes common RSS paths — avoids unnecessary network requests on every page.
+ */
 async function getRssFeedsFromDefaultPaths(feeds: Partial<RawFeed>[]): Promise<Partial<RawFeed>[]> {
-    const possibleFeeds = ['/feed', '/rss', '/atom.xml', '/rss.xml'];
-    for (const path of possibleFeeds) {
+    if (feeds.length > 0) return feeds; // ← skip if we already found something
+
+    const possiblePaths = ['/feed', '/rss', '/atom.xml', '/rss.xml'];
+    const existing = new Set(feeds.map(f => f.url));
+
+    for (const path of possiblePaths) {
         const testUrl = new URL(path, location.origin).href;
+        if (existing.has(testUrl)) continue;
+
         try {
             const response = await fetch(testUrl, { method: 'HEAD' });
-            if (response.ok && response.headers.get('Content-Type')?.includes('xml')) {
-                console.log('Found valid RSS feed at', testUrl);
+            const contentType = response.headers.get('Content-Type') || '';
+            if (response.ok && contentType.includes('xml')) {
+                console.log('[Hermidata] Found RSS feed at default path:', testUrl);
                 feeds.push({ title: document.title, url: testUrl });
-                break;
+                break; // one is enough
             }
-        } catch (err) {
-            // ignore CORS/404
-            console.warn('Error checking feed URL', testUrl, err);
+        } catch {
+            // CORS / 404 — expected, ignore
         }
     }
+
     return feeds;
 }
 
-async function normalizeAndStoreFeeds(feeds: Partial<RawFeed>[]): Promise<RawFeed[]> {
-    const partialFeeds: Partial<RawFeed>[] = feeds.map(feed => normalizeFeedData(feed));
+// ============================================================
+// Fetch + parse
+// ============================================================
 
-    const GlobalFeeds: RawFeed[] = [];
-    for (const partialFeed of partialFeeds) {
-        const feed = await fetchSampleText(partialFeed);
-        addFeedToGlobal(feed, GlobalFeeds);
+async function fetchAndParseRSS(feedUrl: string): Promise<[FeedItem[], string | null, string | null]> {
+    const response = await fetch(feedUrl);
+    if (!response.ok) throw new Error(`Feed fetch failed: ${feedUrl} (${response.status})`);
+
+    const text = await response.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, 'text/xml');
+
+    if (xml.querySelector('parsererror')) {
+        throw new Error(`XML parse error for feed: ${feedUrl}`);
     }
 
-    return GlobalFeeds;
+    const items: FeedItem[] = [...xml.querySelectorAll('item, entry')].slice(0, 10).map(item => ({
+        title: item.querySelector('title')?.textContent?.trim() ?? '',
+        link: (
+            item.querySelector('link')?.getAttribute('href') ??
+            item.querySelector('link')?.textContent ??
+            ''
+        ).trim(),
+        pubDate: new Date(item.querySelector('pubDate, updated, published')?.textContent ?? Date.now()),
+        guid: (
+            item.querySelector('guid')?.textContent ??
+            item.querySelector('id')?.textContent ??
+            item.querySelector('link')?.textContent ??
+            ''
+        )
+    }));
 
+    const lastBuildDate = xml.querySelector('lastBuildDate, updated')?.textContent ?? null;
+    const image = xml.querySelector('image > url')?.textContent ?? null;
+
+    return [items, lastBuildDate, image];
 }
-// --- Helper functions ---
-function normalizeFeedData(feed: Partial<RawFeed>): Partial<RawFeed> {
-    if (!feed.url || !feed.title) throw new Error('No URL or title');
 
+function normalizeFeedData(feed: Partial<RawFeed>): Partial<RawFeed> {
+    if (!feed.url || !feed.title) throw new Error(`Feed missing url or title: ${JSON.stringify(feed)}`);
     const domain = new URL(feed.url).hostname.replace(/^www\./, '');
     return {
         title: feed.title.trim(),
@@ -111,97 +159,92 @@ function normalizeFeedData(feed: Partial<RawFeed>): Partial<RawFeed> {
         lastToken: null
     };
 }
-async function fetchSampleText(feed: Partial<RawFeed>): Promise<RawFeed> {
-    const ReturnError = (message: string) => { throw new Error(message) };
 
-    if (!feed.url) throw new Error('No URL');
-
-    const [items, lastBuildDate, image] = await fetchAndParseRSS(feed.url);
-    feed.lastBuildDate = lastBuildDate ?? ReturnError('No lastBuildDate');
-    feed.image = image  ?? ReturnError('No image');
-    feed.items = items ?? ReturnError('No items');
-    feed.lastFetched = new Date().toISOString();
-
-    console.log(`Fetched ${items.length} items from ${feed.url}`);
-
-    return feed as RawFeed;
-}
-
-async function fetchAndParseRSS(feedUrl: string): Promise<[FeedItem[], null | string, null | string]> {
-    const response = await fetch(feedUrl);
-    const text = await response.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, "text/xml");
-    const items = [...xml.querySelectorAll("item")].map(item => ({
-        title: item.querySelector("title")?.textContent ?? "",
-        link: item.querySelector("link")?.textContent ?? "",
-        pubDate: new Date(item.querySelector("pubDate")?.textContent ?? 0),
-        guid: item.querySelector("guid")?.textContent ?? ""
-    }));
-    const lastBuildDate = xml.querySelector("lastBuildDate")?.textContent ?? null;
-    const image = xml.querySelector("image > url")?.textContent ?? null;
-    return [items, lastBuildDate, image];
-}
-
-function addFeedToGlobal(feed: RawFeed, globalArr: RawFeed[]) {
-    if (!globalArr.some(f => f.url === feed.url)) {
-        globalArr.push(feed);
-    }
-}
-
-async function saveFeeds(GlobalFeeds: RawFeed[]) {
-    const savedFeeds = await getAllRawFeeds().catch(error => { console.error('Extention error: Failed Premise savedFeeds: ',error); return {}; }) as Record<string, RawFeed>;
-
-    const combined: RawFeed[] = Object.values(savedFeeds);
-    for (const feed of GlobalFeeds) {
-        console.log(`[Hermidata] Checking feed: ${feed.title}`);
-        const existingIndex = combined.findIndex(f => f.url === feed.url);
-        console.log(`[Hermidata] existingIndex: ${existingIndex}`);
-        if (existingIndex === -1) combined.push(feed);
-        else {
-            // Existing feed → update if newer
-            const existing = combined[existingIndex];
-            if ((feed.lastFetched || 0) > (existing.lastFetched || 0)) {
-                combined[existingIndex] = { ...existing, ...feed };
-                console.log(`[Hermidata] Updated feed: ${feed.title}`);
-            }
-        }
-    }
-    ext.storage.local.set({ savedFeeds: combined }).then(() => {
-        console.log(`[Hermidata] ${GlobalFeeds.length} feeds saved to local storage`);
-    });
-}
-
-
-
-async function addFeedToGlobalMain() {
+async function buildFullFeed(partial: Partial<RawFeed>): Promise<RawFeed | null> {
+    if (!partial.url) return null;
     try {
-        console.log("[Hermidata] content.js loaded on", globalThis.location.href);
+        const [items, lastBuildDate, image] = await fetchAndParseRSS(partial.url);
+        return {
+            ...partial,
+            items,
+            lastBuildDate: lastBuildDate ?? new Date().toISOString(),
+            image: image ?? '',
+            lastFetched: new Date().toISOString(),
+            lastToken: null,
+        } as RawFeed;
+    } catch (err) {
+        console.warn(`[Hermidata] Failed to fetch feed ${partial.url}:`, err);
+        return null;
+    }
+}
 
-        // --- 1. Detect RSS <link rel="alternate"> in head ---
-        let feeds: Partial<RawFeed>[] = await getRssFeedsInHead();
-        
-        // --- 2. Detect RSS-looking <a> links in body ---
-        feeds = await getRssFeedsInBody(feeds);
+// ============================================================
+// Storage — content scripts can't use IndexedDB directly
+// so we message the background to handle writes
+// ============================================================
 
+async function saveFeeds(feeds: RawFeed[]): Promise<void> {
+    if (!feeds.length) return;
 
-        console.log('Detected possible RSS links:', feeds);
-        // --- 3. Try common default paths ---
-        feeds = await getRssFeedsFromDefaultPaths(feeds);
-        
-        // --- 4. Normalize & store ---
-        const GlobalFeeds: RawFeed[] = await normalizeAndStoreFeeds(feeds);
+    try {
+        // Send to background which writes to IndexedDB
+        ext.runtime.sendMessage({
+            type: 'SAVE_RAW_FEEDS',
+            data: feeds
+        });
+        console.log(`[Hermidata] Sent ${feeds.length} feed(s) to background for saving`);
+    } catch (err) {
+        console.error('[Hermidata] Failed to send feeds to background:', err);
+    }
+}
 
-        // --- 5. Fetch sample items ---
-        for (const feed of GlobalFeeds) fetchSampleText(feed);
+// ============================================================
+// Main
+// ============================================================
 
-        console.log('Final GlobalFeeds:', GlobalFeeds);
+async function addFeedToGlobalMain(): Promise<void> {
+    try {
+        console.log('[Hermidata] content.ts loaded on', location.href);
 
-        // Save all found feeds to local storage
-        await saveFeeds(GlobalFeeds);
+        // 1. Head detection (cheapest — no network)
+        let partials: Partial<RawFeed>[] = await getRssFeedsInHead();
+
+        // 2. Body link detection (no network)
+        partials = await getRssFeedsInBody(partials);
+
+        // 3. Default path probing (network, only if nothing found yet)
+        partials = await getRssFeedsFromDefaultPaths(partials);
+
+        if (!partials.length) {
+            console.log('[Hermidata] No RSS feeds detected on this page');
+            return;
+        }
+
+        console.log(`[Hermidata] Detected ${partials.length} possible RSS feed(s):`, partials.map(f => f.url));
+
+        // 4. Normalize metadata (no network)
+        const normalized = partials
+            .map(f => { try { return normalizeFeedData(f) } catch { return null } })
+            .filter(Boolean) as Partial<RawFeed>[];
+
+        // 5. Fetch all feeds in parallel (network)
+        const results = await Promise.allSettled(normalized.map(f => buildFullFeed(f)));
+
+        const feeds: RawFeed[] = results
+            .filter((r): r is PromiseFulfilledResult<RawFeed> => r.status === 'fulfilled' && r.value !== null)
+            .map(r => r.value);
+
+        if (!feeds.length) {
+            console.warn('[Hermidata] No feeds successfully fetched');
+            return;
+        }
+
+        console.log(`[Hermidata] Successfully built ${feeds.length} feed(s)`);
+
+        // 6. Send to background for storage
+        await saveFeeds(feeds);
 
     } catch (err) {
-        console.error(err);
-    };
+        console.error('[Hermidata] addFeedToGlobalMain failed:', err);
+    }
 }
-

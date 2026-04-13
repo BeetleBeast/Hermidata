@@ -1,5 +1,5 @@
 import { ext } from "../shared/BrowserCompat"
-import { getAllHermidata } from "../shared/Storage"
+import { getAllHermidata } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks";
 import { allHermidataCashed, currentBookmark, currentTab, setState } from "./state";
 
@@ -45,7 +45,6 @@ export function updateIcon(Url: string | null = null, currentTabParameter: chrom
 async function setIconAndTitle(actionApi: ActionApi, tabId: number) {
 
     const path =  currentBookmark  ? "assets/icon/icon_red48.png" : "assets/icon/icon48.png";
-    const iconPath = currentBookmark  ? { 48: "assets/icon/icon_red48.png" } : { 48: "assets/icon/icon48.png" };
     const title = currentBookmark  ? 'Already bookmarkt!' : 'Bookmark it!';
 
     actionApi.setIcon({ path, tabId }, () => {

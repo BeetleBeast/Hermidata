@@ -1,13 +1,12 @@
-import { saveHermidataV3 } from "../../popup/core/save";
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
-import type { MenuOption } from "../../shared/types/rssBuildType";
-import { getHermidataViaKey, removeKeysFromSync, setNotificationList } from "../../shared/Storage";
-import type { Hermidata } from "../../shared/types/popupType";
+import type { MenuOption, Hermidata } from "../../shared/types/index";
+import { getHermidataViaKey, saveHermidataV3, setNotificationList, updateHermidataV3 } from "../../shared/db/Storage";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
+import { deleteHermidata } from "../../shared/db/db";
 
 export class EventListener extends RssBuild {
     
@@ -104,14 +103,11 @@ export class EventListener extends RssBuild {
     private copyTitle(target: HTMLDivElement | null) {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
-        const nameClass = item.dataset.isNotificationItem == 'false'
-            ? 'RSS-entries-item-title'
-            : 'RSS-Notification-item-title';
+        const nameClass = 'hermidata-item-title';
         if (item.dataset.seachable == 'true') {
             const title0 = item.querySelector(`.${nameClass}`)
-            const title1 = getElement(`.RSS-Notification-item-title.${target.className}`);
-            const title2 = getElement(`.RSS-entries-item-title.${target.className}`);
-            const title = title0 || ( title1 || title2 )
+            const title1 = getElement(`.hermidata-item-title.${target.className}`);
+            const title = title0 || title1
             if (!title) throw new Error('title not found');
             navigator.clipboard.writeText(title.textContent.trim());
             console.log("Copied:", title.textContent.trim());
@@ -168,7 +164,7 @@ export class EventListener extends RssBuild {
         );
     
         // Save to storage
-        await saveHermidataV3(entry, hashItem);
+        await saveHermidataV3(hashItem, entry);
     
         console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
     }
@@ -201,15 +197,14 @@ export class EventListener extends RssBuild {
         );
     
         // Save and clean up
-        await ext.storage.sync.set({ [newKey]: newData });
-        await ext.storage.sync.remove(oldKey);
+        await updateHermidataV3(oldKey, newKey, newData);
     
         //  update your in-memory list
         delete this.AllHermidata[oldKey];
         this.AllHermidata[newKey] = newData;
     
         // update UI
-        const titleEl = item.querySelector(".RSS-entries-item-title");
+        const titleEl = item.querySelector(".hermidata-item-title");
         if (titleEl) titleEl.textContent = newTitle;
         item.className = item.className.replace(oldKey, newKey);
     
@@ -228,7 +223,7 @@ export class EventListener extends RssBuild {
         const confirmation = await customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
-            removeKeysFromSync(hashItem)
+            deleteHermidata(hashItem)
         }
     }
     
@@ -260,7 +255,7 @@ export class EventListener extends RssBuild {
 
         entry.rss = null;
 
-        await ext.storage.sync.set({ [key]: entry });
+        await saveHermidataV3(key, entry);
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined

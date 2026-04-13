@@ -1,13 +1,14 @@
 
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
-import { Duplicate, makeDefaultHermidata } from '../../utils/dupplication';
-import { type Hermidata, type NovelType, type ReadStatus, novelTypes, readStatus, type TrimmedTitle } from '../../shared/types/popupType';
+import { Duplicate } from '../../utils/dupplication';
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
-import { getGoogleSheetURL } from '../../shared/Storage';
+import { getGoogleSheetURL, getSettings } from '../../shared/db/Storage';
+import { checkSyncQuota } from '../../shared/db/sync';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -15,16 +16,45 @@ export type CurrentTab = {
     url: string;
 }
 
+
+export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus?: AnyNovelStatus): Hermidata => ({
+    id: '',
+    title: '',
+    type:  type,
+    url: '',
+    source: '',
+    status: status,
+    chapter: { 
+        current: 0,
+        latest: 0,
+        history: [],
+        lastChecked: new Date().toISOString()
+    },
+    rss: null,
+    import: null,
+    meta: {
+        tags: [],
+        notes: '',
+        added: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        altTitles: [],
+        originalRelease: null,
+        novelStatus: novelStatus
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const controller = new HermidataController();
     controller.init().catch(console.error);
 
     // After popup init — start quietly in the background
     setTimeout(() => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
+
+    setTimeout(async () => await checkSyncQuota(), 500);
 });
 
 class HermidataController {
-    public hermidata: Hermidata = makeDefaultHermidata();
+    public hermidata: Hermidata = makeDefaultHermidata('', '');
     
     public past: PastHermidataClass | null = null;
 
@@ -43,10 +73,13 @@ class HermidataController {
 
     public async init(): Promise<void> {
         this.forceSetClassic()
-        const [ CurrentTabInfo, googleSheetURL ]: [CurrentTab, string] = await Promise.all([
+        const [ CurrentTabInfo, googleSheetURL, settings ]: [CurrentTab, string, Settings] = await Promise.all([
             this.getCurrentTabInfo(),
             getGoogleSheetURL(),
-        ])
+            getSettings(),
+        ]);
+        
+        this.hermidata = makeDefaultHermidata(settings.TYPE_OPTIONS[0], settings.STATUS_OPTIONS[0], settings.NOVEL_STATUS_OPTIONS[0]);
 
         this.googleSheetURL = googleSheetURL;
 
@@ -62,7 +95,7 @@ class HermidataController {
         
         this.RSS = new RSS(this.hermidata);
 
-        this.populateUI();
+        this.populateUI(settings);
         this.bindEvents();
     }
     private async checkForDuplicates(): Promise<void> {
@@ -108,7 +141,7 @@ class HermidataController {
         return promise;
     }
     
-    private populateType() {
+    private populateType(novelTypes: AnyNovelType[]) {
         const folderSelect = getElement("#Type");
         const folderSelect2 = getElement("#Type_HDRSS")
 
@@ -125,7 +158,7 @@ class HermidataController {
             folderSelect2.appendChild(option2);
         });
     }
-    private populateStatus() {
+    private populateStatus(readStatus: AnyReadStatus[]) {
         const folderSelect = getElement("#status");
 
         if (!folderSelect) return;
@@ -148,24 +181,24 @@ class HermidataController {
         
         if (!pastHermidata) {
             // set title & notes
-            const trimmedTitle: TrimmedTitle = StringOutput.TrimTitle.trimTitle( currentTabInfo.pageTitle, currentTabInfo.url );
+            const trimmedTitle = StringOutput.TrimTitle.trimTitle( currentTabInfo.pageTitle, currentTabInfo.url );
             this.hermidata.title = trimmedTitle.title;
             this.hermidata.meta.notes = trimmedTitle.note ?? '';
         }
     }
     
-    private populateUI(): void {
+    private populateUI(settings: Settings): void {
         // All the getElementById calls live here
         const display = this.pastHermidata ?? this.hermidata;
 
         
         this.RSS?.changePageToClassic();
 
-        this.populateType();
-        this.populateStatus();
+        this.populateType(settings.TYPE_OPTIONS);
+        this.populateStatus(settings.STATUS_OPTIONS);
 
         // backward compatibility for past hermidata
-        this.trycapitalizingTypesAndStatus();
+        this.trycapitalizingTypesAndStatus(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
 
         setElement("#Pagetitle", el => el.textContent = this.pageTitle || '');
 
@@ -179,7 +212,7 @@ class HermidataController {
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
         setElement('#isNewHermidata', el => el.textContent = this.pastHermidata?.title ? '' : 'New!');
-        this.FixTableSize()
+        this.FixTableSize();
         
         // HDR RSS
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
@@ -260,32 +293,32 @@ class HermidataController {
                 input.addEventListener('input', resize);
         })
     }
-    private trycapitalizingTypesAndStatus() {
+    private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
             if (!novelTypes.includes(this.pastHermidata.type)) {
-                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type) as NovelType
+                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type) as AnyNovelType
                 if ( novelTypes.includes(capitalizeFirstLetterOfStringLetterType) ) this.pastHermidata.type = capitalizeFirstLetterOfStringLetterType
                 else {
                     console.warn('type can\'t be found in past', this.pastHermidata.type)
                 }
             }
             if (!readStatus.includes(this.pastHermidata.status)) {
-                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status) as ReadStatus
+                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status) as AnyReadStatus
                 if ( readStatus.includes(capitalizeFirstLetterOfStringLetterStatus) ) this.pastHermidata.status = capitalizeFirstLetterOfStringLetterStatus
                 else {
                     console.warn('status can\'t be found in past', this.pastHermidata.status)
                 }
             }
-        } else console.log('no past hermidata')
+        } else console.log('[Main Popup] no past hermidata')
     }
 
     private async saveSheet(): Promise<void> { 
 
         const title = getElement<HTMLInputElement>("#title")?.value;
-        const Type = getElement<HTMLSelectElement>('#Type')?.value as NovelType;
+        const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
         const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
         const url = getElement<HTMLInputElement>("#url")?.value;
-        const status = getElement<HTMLSelectElement>('#status')?.value as ReadStatus;
+        const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
         const date = getElement<HTMLInputElement>("#date")?.value;
         const tags = getElement<HTMLInputElement>("#tags")?.value || "";
         const notes = getElement<HTMLInputElement>("#notes")?.value || "";
@@ -307,7 +340,6 @@ class HermidataController {
         await updateChapterProgress(title, Type, Number(Chapter), this.hermidata);
         this.past = null;
 
-        type InputArrayType = [string, NovelType, number, string, ReadStatus, string, string[], string]
         const data: InputArrayType = [title, Type, Number(Chapter), url, status, date, tagsArray, notes]
 
         // save to google sheet & bookmark/replace bookmark
@@ -321,6 +353,6 @@ class HermidataController {
     }
 }
 
-function capitalizeFirstLetterOfString<T extends NovelType | ReadStatus>(str: NovelType | ReadStatus ): NovelType | ReadStatus {
+function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): AnyNovelType | AnyReadStatus {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str;
 }

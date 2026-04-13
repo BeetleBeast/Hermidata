@@ -4,22 +4,24 @@
   "description": "**Hermidata** is a browser extension designed to help you efficiently track your progress across novels, manga, anime, or any serialized content by saving entries directly into a linked Google Spreadsheet.",
   "main": "main.js",
   "scripts": {
-    "dev": "vite build --watch --config vite.config.ts & vite build --watch --config vite.content.config.ts",
+    "dev": "vite build --watch --config vite.config.ts && vite build --watch --config vite.content.config.ts",
     "build": "vite build && vite build --config vite.content.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "buildCntent": "vite build --config vite.content.config.ts"
   },
   "type": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/chrome": "^0.1.37",
+    "@types/chrome": "^0.1.40",
     "@types/firefox-webext-browser": "^143.0.0",
-    "@types/node": "^25.5.0",
-    "typescript": "^5.9.3",
-    "vite": "^8.0.0",
-    "vitest": "^4.1.0"
+    "@types/node": "^25.6.0",
+    "idb": "^8.0.3",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4"
   }
 }

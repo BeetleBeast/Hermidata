@@ -1,5 +1,5 @@
-import type { Filters, NormalSortsType } from "../../shared/types/rssBuildType";
-import { getLastFilter, setLastFilter, setLastSortOption } from "../../shared/Storage";
+import type { Filters, NormalSortsType } from "../../shared/types/index";
+import { getLastFilter, setLastFilter, setLastSortOption } from "../../shared/db/Storage";
 import { Sort } from "./Sort";
 
 export class SortLogic extends Sort {

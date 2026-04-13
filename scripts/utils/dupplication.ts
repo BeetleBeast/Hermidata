@@ -1,34 +1,9 @@
 import { detectHashType, getOldIDType, migrateHermidataV5, migrationSteps } from "../popup/core/migrate";
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
-import { ext } from "../shared/BrowserCompat";
 import { returnHashedTitle } from "../shared/StringOutput";
-import { getAllHermidata } from "../shared/Storage";
-import { type AllHermidata, type Hermidata } from "../shared/types/popupType";
+import { getAllHermidata, updateHermidataV3 } from "../shared/db/Storage";
+import { type AllHermidata } from "../shared/types/index";
 
-export const makeDefaultHermidata = (): Hermidata => ({
-    id: '',
-    title: '',
-    type: 'Manga',
-    url: '',
-    source: '',
-    status: 'Viewing',
-    chapter: { 
-        current: 0,
-        latest: 0,
-        history: [],
-        lastChecked: new Date().toISOString()
-    },
-    rss: null,
-    import: null,
-    meta: {
-        tags: [],
-        notes: '',
-        added: new Date().toISOString(),
-        updated: new Date().toISOString(),
-        altTitles: [],
-        originalRelease: null
-    }
-});
 
 
 export class Duplicate  {
@@ -45,7 +20,7 @@ export class Duplicate  {
         const entries = Object.entries(data);
         const duplicates = [];
 
-        console.group("Duplicate Title Scan");
+        console.group("[Dupplication] Duplicate Title Scan");
 
         for (let i = 0; i < entries.length; i++) {
             const [keyA, valA] = entries[i];
@@ -74,10 +49,10 @@ export class Duplicate  {
                 }
             }
         }
+        console.info(`Scan complete: found ${duplicates.length} potential duplicates.`);
 
         console.groupEnd();
 
-        console.info(`Scan complete: found ${duplicates.length} potential duplicates.`);
         return duplicates;
     }
     /**
@@ -153,8 +128,7 @@ export class Duplicate  {
     
         // Save and remove the old entry key
         if (merged) {
-            await ext.storage.sync.set({ [merged.id]: merged });
-            await ext.storage.sync.remove(older.id);
+            await updateHermidataV3(older.id, merged.id, merged);
             console.log(`Merged "${older.title}" into "${newer.title}"`);
         } else {
             console.error(`Merge failed for:`, older.title, newer.title);

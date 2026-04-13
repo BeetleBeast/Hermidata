@@ -1,4 +1,4 @@
-import type { Hermidata, RegexConfig, TrimmedTitle } from './types/popupType';
+import type { Hermidata, RegexConfig, TrimmedTitle } from './types/index';
 
 export function getChapterFromTitle(title: string, url: string): number {
     // Regex to find the first number (optionally after "chapter", "chap", "ch")
@@ -69,24 +69,27 @@ export function simpleHash(str: string) {
     return hash.toString();
 }
 
-export function getTitleAndChapterFromUrl(url: string): { title: string, chapter: number } {
+export function getTitleAndChapterFromUrl(url: string): { title: string | null, chapter: number } {
     const parts = new URL(url).pathname.split('/').filter(Boolean);
     const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
-    if (!titleSlug) return { title: "Unknown", chapter: Number.NaN };
-    const chapter = parts.at(-1)?.includes('chapter') ? Number.parseFloat(parts.at(-1)?.replace('chapter-', '') || '0') : 0;
-    const title = titleSlug
+    if (!titleSlug) return { title: null, chapter: Number.NaN };
+    const chapter = parts.at(-1)?.includes('chapter') ? Number.parseFloat(parts.at(-1)?.replace('chapter-', '') || '0') : Number.NaN;
+    const potentialTitle = titleSlug
         .split('.')[0]             // remove Site's ID code (.yvov1)
         .replace(/(.)\1$/, '$1')   // Remove last char if second to last is the same
         // .split('-')[0]             // remove possible advert's 
         .replaceAll('-', ' ')        // hyphens to spaces
         .replaceAll(/\b\w/g, c => c.toUpperCase()); // capitalize words
 
+        const isATitle = new RegExp(/^(?![A-Z0-9]+$).+/);
+
+        const title = isATitle.test(potentialTitle) ? potentialTitle : null;
+
     return {
         title,
         chapter
     };
 }
-
 
 export class TrimTitle {
     
