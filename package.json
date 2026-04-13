@@ -8,12 +8,11 @@
     "build": "vite build && vite build --config vite.content.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:ui": "vitest --ui",
-    "buildCntent": "vite build --config vite.content.config.ts"
+    "test:ui": "vitest --ui"
   },
   "type": "module",
   "keywords": [],
-  "author": "",
+  "author": "X.K. BeetleBeast",
   "license": "ISC",
   "devDependencies": {
     "@types/chrome": "^0.1.40",
