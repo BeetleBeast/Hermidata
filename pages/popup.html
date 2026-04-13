@@ -5,53 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hermidata</title>
     <link rel="stylesheet" href="../assets/styles/styles.css">
+    <link rel="stylesheet" href="../assets/styles/Classic.css">
     <link rel="stylesheet" href="../assets/styles/RSSFeed.css">
 </head>
 <body>
-    <div id="header" class="HDSwitcher buttons">
+    <div id="header" class="HDSwitcher">
         <button id="HDClassicBtn" type="button" class="active Btn">Classic</button>
         <button id="HDRSSBtn" type="button" class="Btn">RSS</button>
     </div>
 <section id="body" class="HDClassic">
-    <div>
-        <button id="openSettings" type="button" >
-            <img alt="0" class="icon" id="Settings_IMG" src='../assets/icon/settings_24.png'/>
-        </button>
+    <div class="topMain">
+        <svg class="svgImgTitleVert">
+            <line x1="0" y1="0" x2="0" y2="100%" class="lineVert1" />
+            <line x1="0" y1="0" x2="0" y2="100%" class="lineVert2" />
+        </svg>
+        <div class="imgHermidata">
+            <img class="imgHermidata" alt="default image" src="../assets/icon/default_favicon.png"/>
+        </div>
         <h2 id="Pagetitle" data-name="Page_Title">Loading...</h2>
+        <button class="openSettings" type="button" >
+            <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png'/>
+        </button>
     </div>
-    <div id="ParentPreview">
+    <div class="table-container">
         <table>
-        <thead>
-            <tr>
-            <th class="HEADER">Title</th>
-            <th class="HEADER">Type</th>
-            <th class="HEADER">Chapter</th>
-            <th class="HEADER">URL</th>
-            <th class="HEADER">Status</th>
-            <th class="HEADER">Date</th>
-            <th class="HEADER">Tags</th>
-            <th class="HEADER">Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><input id="title" class="autoInput" data-name="Title"  type="text" spellcheck="false" placeholder="Title" /></td>
-                <td><select id="Type" class="autoInput" data-name="Type"  type="text" title="Type" ></select></td>
-                <td><input id="chapter" class="autoInput" data-name="Chapter"  type="number" placeholder="Chapter" /></td>
-                <td><input id="url" type="url"  data-name="Url" placeholder="URL" /></td>
-                <td><select id="status" class="autoInput" data-name="Status"  type="text" title="Status"></select></td>
-                <td><input id="date" class="autoInput" data-name="Date"  type="text" placeholder="dd/mm/yyyy" /></td>
-                <td><input id="tags" class="autoInput" data-name="Tag"  type="text" placeholder="Tags"></input></td>
-                <td><input id="notes" class="autoInput" data-name="Notes"  type="text" placeholder="Notes" /></td>
-            </tr>
-        </tbody>
+            <thead>
+                <tr>
+                <th class="HEADER">Title</th>
+                <th class="HEADER">Chapter</th>
+                <th class="HEADER">Type</th>
+                <th class="HEADER">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input id="title" class="autoInput" data-name="Title"  type="text" spellcheck="false" placeholder="Title" /></td>
+                    <td><input id="chapter" class="autoInput" data-name="Chapter"  type="number" placeholder="Chapter" /></td>
+                    <td><select id="Type" class="autoInput" data-name="Type"  type="text" title="Type" ></select></td>
+                    <td><select id="status" class="autoInput" data-name="Status"  type="text" title="Status"></select></td>
+                </tr>
+            </tbody>
         </table>
     </div>
-    <div class="buttons" id="Btn-Parent">
-        <button type="button" class="Btn" id="save">Save</button>
-        <button type="button" id="openFullPage" class="fullpage-btn Btn">Open Selected Spreadsheet</button>
+    <div class="bottomMain">
+        <div class="tagContainer">
+            <label for="tags" class="tagsLabel">Tags</label>
+            <div id="tagsContainer">
+
+                <input id="tags" class="autoInput" data-name="Tag"  type="text" placeholder="add tag..."></input>
+            </div>
+        </div>
+        <div class="notesContainer">
+            <label for="notes" class="notesLabel">Notes</label>
+            <input id="notes" class="autoInput" data-name="Notes" type="text" placeholder="optional..." />
+        </div>
     </div>
-    <h3 id="isNewHermidata"></h3>
+    <div class="footer">
+        <div id="Btn-Parent">
+            <button type="button" class="Btn" id="save">Save</button>
+            <h3 id="isNewHermidata"></h3>
+            <div class="versionContainer"><span class="version">v1.4.3</span></div>
+        </div>
+    </div>
 </section>
 <section class="HDRSS">
     <div id="HDRSS-subscribe-container">

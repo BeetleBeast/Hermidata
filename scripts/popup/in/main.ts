@@ -262,7 +262,7 @@ class HermidataController {
                     return;
                 }
                 const textWidth = measureText(value, input);
-                const parent = getElement('#ParentPreview');
+                const parent = getElement('.table-container');
                 if (!parent) {
                     input.style.width = '42px'; // no parent = no width
                     return;
