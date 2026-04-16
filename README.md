@@ -169,6 +169,8 @@ Source maps are included in dev builds. Each background module registers its own
 
 - notification RSS item's polygon ( to indicate that it is linked ) `sometimes` don't get set at the correct position
 
+- if text is a certain size the RSS mode will get a horizotal scroll bar
+
 ---
 
 ### To-Do
@@ -186,6 +188,9 @@ Source maps are included in dev builds. Each background module registers its own
 - [ ] content file doesn't load
 
 - [ ] feeds are still local
+
+- [ ] clean whipe of storage.sync
+- [ ] backup storage.cync
 
 ---
 
