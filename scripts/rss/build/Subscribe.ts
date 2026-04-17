@@ -13,8 +13,8 @@ export class Subscribe extends RssBuild {
     public async makeSubscibeBtn(): Promise<void> {
         const [feedListGlobal, allHermidata] = await Promise.all([ getAllRawFeeds(), PastHermidata.getAllHermidata() ]);
         const subscribeBtn = getElement<HTMLButtonElement>("#subscribeBtn");
-        const notificationSection = getElement("#RSS-Notification");
-        const allItemSection = getElement("#All-RSS-entries");
+        const notificationSection = getElement<HTMLDivElement>("#RSS-Notification");
+        const allItemSection = getElement<HTMLDivElement>("#All-RSS-entries");
 
         if (!subscribeBtn || !notificationSection || !allItemSection) throw new Error('Subscribe: required elements not found');
 

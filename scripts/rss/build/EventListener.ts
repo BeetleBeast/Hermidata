@@ -237,8 +237,8 @@ export class EventListener extends RssBuild {
         }
         const hashItem = this.GetHashItem(item);
         
-        const NotificationSection = getElement("#RSS-Notification")
-        const AllItemSection = getElement("#All-RSS-entries")
+        const NotificationSection = getElement<HTMLDivElement>("#RSS-Notification");
+        const AllItemSection = getElement<HTMLDivElement>("#All-RSS-entries");
 
         if (!NotificationSection || !AllItemSection) throw new Error('Element not found');
 

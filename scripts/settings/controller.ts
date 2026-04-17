@@ -48,9 +48,9 @@ export class BuildController {
     private readonly contextMenu: ContextMenu = new ContextMenu();
 
     private readonly input = getElement<HTMLInputElement>("#spreadsheetUrl")?.value.trim();
-    private readonly status = getElement("#statusSheetURL");
-    private readonly status_Input = getElement('#statusSaveDefaultInput');
-    private readonly statusTextMenu = getElement('#statusSaveDefaultInputInputTextMenu');
+    private readonly status = getElement<HTMLParagraphElement>("#statusSheetURL");
+    private readonly status_Input = getElement<HTMLParagraphElement>('#statusSaveDefaultInput');
+    private readonly statusTextMenu = getElement<HTMLParagraphElement>('#statusSaveDefaultInputInputTextMenu');
     private readonly elements: ElmentsWithInputAndMenu = setDefaultSettingsElements();
 
     constructor() {

@@ -17,7 +17,7 @@ export type CurrentTab = {
 }
 
 
-export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus?: AnyNovelStatus): Hermidata => ({
+export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
     id: '',
     title: '',
     type:  type,
@@ -48,13 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
     controller.init().catch(console.error);
 
     // After popup init — start quietly in the background
-    setTimeout(() => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
+    setTimeout(async () => await controller.RSS?.preloadRSS(), 200)  // slight delay so popup renders first
 
     setTimeout(async () => await checkSyncQuota(), 500);
 });
 
 class HermidataController {
-    public hermidata: Hermidata = makeDefaultHermidata('', '');
+    public hermidata: Hermidata = makeDefaultHermidata('', '', '');
     
     public past: PastHermidataClass | null = null;
 
@@ -140,30 +140,12 @@ class HermidataController {
         });
         return promise;
     }
-    
-    private populateType(novelTypes: AnyNovelType[]) {
-        const folderSelect = getElement("#Type");
-        const folderSelect2 = getElement("#Type_HDRSS")
-
-        if (!folderSelect || !folderSelect2) return;
-
-        novelTypes.forEach(element => {
-            const option = document.createElement("option");
-            option.value = element;
-            option.textContent = element;
-            folderSelect.appendChild(option);
-            const option2 = document.createElement("option");
-            option2.value = element;
-            option2.textContent = element;
-            folderSelect2.appendChild(option2);
-        });
-    }
-    private populateStatus(readStatus: AnyReadStatus[]) {
-        const folderSelect = getElement("#status");
+    private populateSelect(options: AnyNovelStatus[] | AnyReadStatus[] | AnyNovelType[], selectEl: string) {
+        const folderSelect = getElement(selectEl);
 
         if (!folderSelect) return;
 
-        readStatus.forEach(element => {
+        options.forEach(element => {
             const option = document.createElement("option");
             option.value = element;
             option.textContent = element;
@@ -194,8 +176,10 @@ class HermidataController {
         
         this.RSS?.changePageToClassic();
 
-        this.populateType(settings.TYPE_OPTIONS);
-        this.populateStatus(settings.STATUS_OPTIONS);
+        this.populateSelect(settings.TYPE_OPTIONS, "#Type");
+        this.populateSelect(settings.TYPE_OPTIONS, "#Type_HDRSS");
+        this.populateSelect(settings.STATUS_OPTIONS, "#status");
+        this.populateSelect(settings.NOVEL_STATUS_OPTIONS, "#NovelStatus");
 
         // backward compatibility for past hermidata
         this.trycapitalizingTypesAndStatus(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
@@ -203,16 +187,22 @@ class HermidataController {
         setElement("#Pagetitle", el => el.textContent = this.pageTitle || '');
 
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
-        setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
-        setElement<HTMLSelectElement>('#status', el => el.value = display.status);
-        setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
-        
-        setElement<HTMLInputElement>("#tags", el => el.value = display.meta.tags.toString());
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
-        setElement('#isNewHermidata', el => el.textContent = this.pastHermidata?.title ? '' : 'New!');
-        this.FixTableSize();
+        setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
+        setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
+        setElement<HTMLSelectElement>('#status', el => el.value = display.status);
+        setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.NOVEL_STATUS_OPTIONS[0]);
+
+        setElement<HTMLDivElement>('#tag-pill-container', el => el.innerHTML = '');
+
+        setElement('#isNewHermidata', el => el.textContent = this.pastHermidata?.title ? 'Linked Item' : 'New Item');
+        setElement<HTMLTitleElement>('.RSSLinkState-title', el => el.textContent = this.pastHermidata?.title ?  "This Item is linked" : "this Item is not linked to a RSS feed");
+        setElement<SVGPolygonElement>('.RSSLinkState-polygon', el => el.style.fill = this.pastHermidata?.title ? "rgba(1, 175, 118, 0.87)" : "#3c5ca6");
         
+        setElement<HTMLSpanElement>(".version", el => el.textContent = ext.runtime.getManifest().version);
+
+        this.FixTableSize();
         // HDR RSS
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
         setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.type);
@@ -221,17 +211,12 @@ class HermidataController {
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
 
-        getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e));
-        getElement("#HDRSSBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e));
+        getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e as PointerEvent));
+        getElement("#HDRSSBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e as PointerEvent));
 
-        getElement('#openSettings')?.addEventListener('click', () => {
+        getElement('.openSettings')?.addEventListener('click', () => {
             ext.runtime.openOptionsPage()
             .catch((error) => console.error('Extention error trying open extention settings: ',error)); 
-        });
-        getElement('#openFullPage')?.addEventListener('click', () => {
-            if (!this.googleSheetURL) return;
-            ext.tabs.create({ url: this.googleSheetURL })
-            .catch((error) => console.error('Extention error trying to open new tab GoogleSheetURL: ',error));
         });
     }
     private FixTableSize() {
@@ -258,13 +243,13 @@ class HermidataController {
             const resize = () => {
                 const value = input.value;
                 if (!value) {
-                    input.style.width = '42px'; // empty = no width
+                    //input.style.width = '42px'; // empty = no width
                     return;
                 }
                 const textWidth = measureText(value, input);
-                const parent = getElement('.table-container');
+                const parent = getElement('.table-1') ?? getElement('.table-2');
                 if (!parent) {
-                    input.style.width = '42px'; // no parent = no width
+                    // input.style.width = '42px'; // no parent = no width
                     return;
                 }
                 const parentMaxWidth = 10000; // same as your CSS

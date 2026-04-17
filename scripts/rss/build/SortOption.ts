@@ -165,8 +165,8 @@ export class SortOption extends Sort {
         measurements.forEach(({ elFilter, width }) => {
             if (elFilter && width) elFilter.style.minWidth = `${width}px`;
         })
-
-        setElement('.autocompleteContainer', el => el.style.width = `${getElement('.search-input')?.offsetWidth}px`);
+        const searchInput = getElement('.search-input') as HTMLInputElement | null;
+        setElement('.autocompleteContainer', el => el.style.width = `${searchInput?.offsetWidth}px`);
     }
 
     private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {

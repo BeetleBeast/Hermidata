@@ -14,59 +14,69 @@
         <button id="HDRSSBtn" type="button" class="Btn">RSS</button>
     </div>
 <section id="body" class="HDClassic">
-    <div class="topMain">
-        <svg class="svgImgTitleVert">
-            <line x1="0" y1="0" x2="0" y2="100%" class="lineVert1" />
-            <line x1="0" y1="0" x2="0" y2="100%" class="lineVert2" />
-        </svg>
-        <div class="imgHermidata">
-            <img class="imgHermidata" alt="default image" src="../assets/icon/default_favicon.png"/>
-        </div>
+    <section class="topMain">
         <h2 id="Pagetitle" data-name="Page_Title">Loading...</h2>
         <button class="openSettings" type="button" >
             <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png'/>
         </button>
-    </div>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                <th class="HEADER">Title</th>
-                <th class="HEADER">Chapter</th>
-                <th class="HEADER">Type</th>
-                <th class="HEADER">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><input id="title" class="autoInput" data-name="Title"  type="text" spellcheck="false" placeholder="Title" /></td>
-                    <td><input id="chapter" class="autoInput" data-name="Chapter"  type="number" placeholder="Chapter" /></td>
-                    <td><select id="Type" class="autoInput" data-name="Type"  type="text" title="Type" ></select></td>
-                    <td><select id="status" class="autoInput" data-name="Status"  type="text" title="Status"></select></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="bottomMain">
-        <div class="tagContainer">
-            <label for="tags" class="tagsLabel">Tags</label>
-            <div id="tagsContainer">
-
-                <input id="tags" class="autoInput" data-name="Tag"  type="text" placeholder="add tag..."></input>
-            </div>
+    </section>
+    <section class="main">
+        <div class="TitleAndNotes-container table-1-container">
+            <table class="table-1">
+                <thead>
+                    <tr>
+                    <th class="HEADER">Title</th>
+                    <th class="HEADER notes-header">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input id="title" class="autoInput" data-name="Title"  type="text" spellcheck="false" placeholder="Title" /></td>
+                        <td><input id="notes" class="autoInput" data-name="Notes" type="text" placeholder="optional..." /></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <div class="notesContainer">
-            <label for="notes" class="notesLabel">Notes</label>
-            <input id="notes" class="autoInput" data-name="Notes" type="text" placeholder="optional..." />
+        <div class="otherContainer table-2-container">
+            <table class="table-2">
+                <thead>
+                    <tr>
+                    <th class="HEADER">Chapter</th>
+                    <th class="HEADER">Type</th>
+                    <th class="HEADER">Read Status</th>
+                    <th class="HEADER">Novel Status</th>
+                    <th class="HEADER tags-header">Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input id="chapter" class="autoInput" data-name="Chapter"  type="number" placeholder="Chapter" /></td>
+                        <td><select id="Type" class="autoInput" data-name="Type"  type="text" title="Type" ></select></td>
+                        <td><select id="status" class="autoInput" data-name="Status"  type="text" title="Status"></select></td>
+                        <td><select id="NovelStatus" class="autoInput" data-name="NovelStatus"  type="text" title="NovelStatus"></select></td>
+                        <td class="tags-container">
+                            <input id="tags" class="autoInput" data-name="Tag"  type="text" placeholder="add tag..." />
+                            <div id="tag-pill-container"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-    </div>
-    <div class="footer">
+    </section>
+    <section class="footer">
         <div id="Btn-Parent">
             <button type="button" class="Btn" id="save">Save</button>
-            <h3 id="isNewHermidata"></h3>
-            <div class="versionContainer"><span class="version">v1.4.3</span></div>
+            <div class="RSSLinkState-container">
+                <svg class="RSSLinkState-svg">
+                    <g class="RSSLinkState-g">
+                        <polygon points="0,-12 12,0 0,12 -12,0" class="RSSLinkState-polygon"><title class="RSSLinkState-title">this Item is not linked to a RSS feed</title></polygon>
+                    </g>
+                </svg>
+                <h3 id="isNewHermidata"></h3>
+            </div>
+            <div class="versionContainer">Version: <span class="version">v0.18.4</span></div>
         </div>
-    </div>
+    </section>
 </section>
 <section class="HDRSS">
     <div id="HDRSS-subscribe-container">

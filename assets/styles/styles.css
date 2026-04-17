@@ -12,19 +12,18 @@
 
     --hr: #555
 }
+
 body {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
-    
-    margin-bottom: 15px;
-    margin-right: 5px;
-    overflow: hidden;
-    transition: height 0.6s ease;
+	background-color: var(--bg-color);
+	color: var(--Text-color);
+	/* margin-bottom: 15px; */
+	/* margin-right: 5px; */
+	overflow: hidden;
+	transition: height 0.6s ease;
 }
 body::after {
     content: "";
     display: block;
-    height: 40px; /* Height of the footer */
 }
 
 .Btn {
@@ -54,7 +53,8 @@ body::after {
     position: absolute;
     top: 50px;
     width: 98vw;
-    overflow: scroll;
+    overflow-y: scroll;
+    overflow-x: hidden;
     height: 500px;
 }
 #HDRSSBtn {
@@ -89,6 +89,9 @@ footer {
 #statusSaveDefaultInputInputTextMenu {
     color: green;
 }
+
+/* RSS mode */
+
 .HDRSS_Input {
     background-color: var(--bg-color);
     color: var(--Text-color);
