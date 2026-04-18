@@ -55,7 +55,10 @@
                         <td><select id="status" class="autoInput" data-name="Status"  type="text" title="Status"></select></td>
                         <td><select id="NovelStatus" class="autoInput" data-name="NovelStatus"  type="text" title="NovelStatus"></select></td>
                         <td class="tags-container">
-                            <input id="tags" class="autoInput" data-name="Tag"  type="text" placeholder="add tag..." />
+                            <div class="autocomplete-wrapper">
+                                <input id="tags" class="autoInput" data-name="Tag" type="text" placeholder="add tag..." />
+                                <span class="autocomplete-ghost" aria-hidden="true"></span>
+                            </div>
                             <div id="tag-pill-container"></div>
                         </td>
                     </tr>

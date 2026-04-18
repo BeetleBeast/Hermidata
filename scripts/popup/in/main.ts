@@ -9,6 +9,7 @@ import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
 import { getGoogleSheetURL, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
+import { TagAutocomplete, TagsSystem } from '../core/Tags';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -80,6 +81,8 @@ class HermidataController {
 
     private dupplicate: Duplicate | null = null;
 
+    private tags: TagsSystem = new TagsSystem();
+
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
     public googleSheetURL: string | undefined;
@@ -113,6 +116,9 @@ class HermidataController {
 
         this.populateUI(settings);
         this.bindEvents();
+        
+        const tags = new TagsSystem();
+        await tags.init();
     }
     private async checkForDuplicates(): Promise<void> {
         this.dupplicate = new Duplicate();
@@ -216,6 +222,7 @@ class HermidataController {
         setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.NOVEL_STATUS_OPTIONS[0]);
 
         setElement<HTMLDivElement>('#tag-pill-container', el => el.innerHTML = '');
+        this.populateTagPills(this.hermidata.meta.tags, settings.tagColoring);
 
         const state = stateConfig[this.getState()];
         setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
@@ -228,7 +235,16 @@ class HermidataController {
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
         setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.type);
     }
+    private populateTagPills(tags: string[], tagColoring: Settings['tagColoring']): void {
+        const container = getElement<HTMLDivElement>('#tag-pill-container');
+        if (!container) return;
 
+        
+        tags.forEach(tag => {
+            const pill = this.tags.CreatePill(tag, tagColoring[tag]);
+            container.appendChild(pill);
+        });
+    }
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
 

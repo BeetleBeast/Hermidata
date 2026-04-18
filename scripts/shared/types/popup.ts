@@ -37,6 +37,11 @@ export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'N
 export const DEFAULT_NOVEL_STATUSES: NovelStatus[] = ['Ongoing', 'Completed', 'Hiatus', 'Canceled'];
 export const DEFAULT_READ_STATUSES: ReadStatus[] = ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'];
 
+
+// hardcoded default tags
+export const DEFAULT_TAGS: string[] = ['Action', 'Romance', 'Completed', 'Ongoing', 'Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
+
+
 export interface Hermidata {
     id: string;
     title: string;
