@@ -41,8 +41,8 @@ export class RSS {
 
     public async openRSS(e: PointerEvent) {
         this.changePageToRSS(e);
-        const sortSection = getElement("#sort-RSS-entries") as HTMLDivElement;
-        const notification = getElement("#RSS-Notification") as HTMLDivElement;
+        const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
+        const notification = getElement<HTMLDivElement>("#RSS-Notification");
         const allSec = getElement("#All-RSS-entries");
 
         if (!sortSection || !notification || !allSec) throw new Error('Element not found');

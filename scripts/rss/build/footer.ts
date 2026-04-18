@@ -12,7 +12,7 @@ export class Footer extends RssBuild {
         const clearNotification = getElement("#clear-notifications");
         if (!clearNotification) throw new Error('Element not found');
         clearNotification.addEventListener('click', () => {
-            const rssNotificationContainer = getElement("#RSS-Notification") as HTMLDivElement;
+            const rssNotificationContainer = getElement<HTMLDivElement>("#RSS-Notification");
             if (!rssNotificationContainer) throw new Error('Element not found');
             this.removeAllChildNodes(rssNotificationContainer) // clear front-end
             this.setNotificationListAllToNull(null) // clear back-end

@@ -243,14 +243,14 @@ class HermidataController {
     private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
             if (!novelTypes.includes(this.pastHermidata.type)) {
-                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type) as AnyNovelType
+                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type)
                 if ( novelTypes.includes(capitalizeFirstLetterOfStringLetterType) ) this.pastHermidata.type = capitalizeFirstLetterOfStringLetterType
                 else {
                     console.warn('type can\'t be found in past', this.pastHermidata.type)
                 }
             }
             if (!readStatus.includes(this.pastHermidata.status)) {
-                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status) as AnyReadStatus
+                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status)
                 if ( readStatus.includes(capitalizeFirstLetterOfStringLetterStatus) ) this.pastHermidata.status = capitalizeFirstLetterOfStringLetterStatus
                 else {
                     console.warn('status can\'t be found in past', this.pastHermidata.status)
@@ -300,6 +300,6 @@ class HermidataController {
     }
 }
 
-function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): AnyNovelType | AnyReadStatus {
-    return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str;
+function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): T {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str as T;
 }
