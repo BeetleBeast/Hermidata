@@ -43,6 +43,24 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
     }
 });
 
+const stateConfig = {
+    new: {
+        text: 'New Item',
+        tooltip: 'This is a new Item',
+        color: '#3ca69d'
+    },
+    linked: {
+        text: 'Linked Item',
+        tooltip: 'This Item is linked to a RSS feed',
+        color: 'rgba(1, 175, 118, 0.87)'
+    },
+    unlinked: {
+        text: 'Unlinked Item',
+        tooltip: 'This Item is not linked to a RSS feed',
+        color: '#3c5ca6'
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const controller = new HermidataController();
     controller.init().catch(console.error);
@@ -66,8 +84,6 @@ class HermidataController {
 
     public googleSheetURL: string | undefined;
     public pageTitle: string | undefined;
-
-    private readonly HARDCAP_RUNAWAYGROWTH = 300;
 
     private readonly Testing = false;
 
@@ -168,6 +184,11 @@ class HermidataController {
             this.hermidata.meta.notes = trimmedTitle.note ?? '';
         }
     }
+    private getState(): keyof typeof stateConfig {
+        if (!this.pastHermidata?.title) return 'new';
+        if (this.pastHermidata.rss?.latestItem.title) return 'linked';
+        return 'unlinked';
+    };
     
     private populateUI(settings: Settings): void {
         // All the getElementById calls live here
@@ -196,13 +217,13 @@ class HermidataController {
 
         setElement<HTMLDivElement>('#tag-pill-container', el => el.innerHTML = '');
 
-        setElement('#isNewHermidata', el => el.textContent = this.pastHermidata?.title ? 'Linked Item' : 'New Item');
-        setElement<HTMLTitleElement>('.RSSLinkState-title', el => el.textContent = this.pastHermidata?.title ?  "This Item is linked" : "this Item is not linked to a RSS feed");
-        setElement<SVGPolygonElement>('.RSSLinkState-polygon', el => el.style.fill = this.pastHermidata?.title ? "rgba(1, 175, 118, 0.87)" : "#3c5ca6");
+        const state = stateConfig[this.getState()];
+        setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
+        setElement<HTMLTitleElement>('.RSSLinkState-title', el => el.textContent = state.tooltip);
+        setElement<SVGPolygonElement>('.RSSLinkState-polygon', el => el.style.fill = state.color);
         
         setElement<HTMLSpanElement>(".version", el => el.textContent = ext.runtime.getManifest().version);
 
-        this.FixTableSize();
         // HDR RSS
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
         setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.type);
@@ -218,64 +239,6 @@ class HermidataController {
             ext.runtime.openOptionsPage()
             .catch((error) => console.error('Extention error trying open extention settings: ',error)); 
         });
-    }
-    private FixTableSize() {
-        const inputs = document.querySelectorAll<HTMLInputElement>('input.autoInput');
-        inputs.forEach(input => {
-            const td = input.closest('td');
-            const table = input.closest('table');
-            const columnIndex = td?.cellIndex ?? -1;
-            const th = table?.querySelectorAll('th')[columnIndex];
-            if (!th) return;
-
-            const measureText = (text: string, inputEl: Element) => {
-                const span = document.createElement('span');
-                span.style.position = 'absolute';
-                span.style.visibility = 'hidden';
-                span.style.whiteSpace = 'pre';
-                span.style.font = getComputedStyle(inputEl).font;
-                span.textContent = text || '';
-                document.body.appendChild(span);
-                const width = span.offsetWidth;
-                span.remove();
-                return width;
-            };
-            const resize = () => {
-                const value = input.value;
-                if (!value) {
-                    //input.style.width = '42px'; // empty = no width
-                    return;
-                }
-                const textWidth = measureText(value, input);
-                const parent = getElement('.table-1') ?? getElement('.table-2');
-                if (!parent) {
-                    // input.style.width = '42px'; // no parent = no width
-                    return;
-                }
-                const parentMaxWidth = 10000; // same as your CSS
-                const parentStyle = getComputedStyle(parent);
-                const parentPadding = Number.parseFloat(parentStyle.paddingLeft) + Number.parseFloat(parentStyle.paddingRight);
-                // Actual usable space in the parent
-                const maxContainerWidth = (document.body.offsetWidth, parentMaxWidth) - parentPadding;
-                // Get all first-row cells and subtract other columns' widths
-                const row = table.rows[0];
-                const cells = row.cells;
-                let otherColsWidth = 0;
-                for (let i = 0; i < cells.length; i++) {
-                    if (i !== columnIndex) {
-                        otherColsWidth += cells[i].offsetWidth;
-                    }
-                }
-                // Remaining space available for this input
-                const availableWidth = maxContainerWidth - otherColsWidth - 200; // no clue what 200 is 
-                // Clamp final width
-                const clampedWidth = Math.min(textWidth + 12, availableWidth, this.HARDCAP_RUNAWAYGROWTH);
-                input.style.width = `${clampedWidth}px`;
-            };
-            // Defer initial call to allow proper layout
-            requestAnimationFrame(() => resize());
-                input.addEventListener('input', resize);
-        })
     }
     private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
