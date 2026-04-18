@@ -1,0 +1,299 @@
+/* --- group --- */
+.HDClassic {
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- top main --- */
+
+.topMain {
+	height: 50px;
+	display: grid;
+	/* gap: 20px; */
+	align-items: center;
+	/* justify-content: center; */
+	grid-template-columns: 1fr auto 1fr;
+}
+
+#Pagetitle {
+	margin: 0;
+	grid-column: 2;
+	justify-self: center;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-wrap: nowrap;
+    width: 100%;
+}
+/* settings tooth weel */
+.openSettings {
+	background: none;
+	border: none;
+	cursor: pointer;
+	/* display: block; */
+	/* position: absolute; */
+	right: 20px;
+	grid-column: 3;
+	justify-self: end;
+}
+
+.openSettings .icon {
+    width: 24px;
+    height: 24px;
+    opacity: 0.8;
+}
+
+.openSettings:hover .icon {
+    opacity: 1;
+}
+
+/* --- top table --- */
+
+.table-1-container {
+    max-width: 10000px;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.table-1 {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--bg-color);
+    table-layout: fixed;
+    ;
+}
+
+.notes-header {
+    
+	width: 40%;
+}
+
+#title {
+	width: 100%;
+}
+#notes {
+	width: 100%;
+	text-align: left;
+	padding-left: 5%;
+	min-width: 87%;
+}
+
+/* --- bottom table --- */
+
+.table-2 {
+	/* width: 100%; */
+	width: 100%;
+	border-collapse: collapse;
+	background-color: var(--bg-color);
+	table-layout: fixed;
+}
+
+.table-2-container {
+    max-width: 10000px;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.tags-header {
+    width: 40%;
+}
+
+.table-2-container HEADER:not(.tags-header) {
+    width: 60%;
+}
+
+
+input.autoInput,
+select.autoInput {
+    width: auto;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    height: inherit;
+    overflow: hidden;
+    border: none;
+    box-sizing: border-box;
+    padding: 2px;
+    font-size: 14px;
+    list-style: none;
+    text-align: center;
+    scroll-behavior: smooth;
+    outline: none;
+    outline-width: 0;
+    outline-color: var(--Text-color);
+    color: var(--Text-color);
+    background-image: none;
+    background-color: var(--bg-color);
+}
+tr {
+    height: 35px;
+}
+td, th {
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #ccc;
+    padding: 0;
+}
+th {
+    background-color: var(--Input-color);
+    border: 1px solid #d1d5db;
+    font-weight: bold;
+    padding: 8px;
+    width: fit-content;
+}
+input[type=number],
+input[type=number]::-webkit-inner-spin-button {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+}
+#Type {
+    cursor: pointer;
+}
+#status {
+    cursor: pointer;
+}
+#chapter {
+    min-width: 75px;
+    width: 100%;
+}
+#NovelStatus {
+    cursor: pointer;
+}
+
+
+/* bottom main */
+
+.bottomMain {
+	height: 9em;
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+}
+
+/* tags container */
+
+.tagContainer {
+	height: 80px;
+	display: flex;
+	flex-direction: row;
+	border: 1px solid;
+}
+
+.tagsLabel, .notesLabel {
+	font-size: 14px;
+	color: var(--Text-color);
+	display: block;
+	text-align: center;
+	width: 15%;
+	max-width: 13%;
+	margin-top: 5%;
+}
+
+.tags-container {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: normal;
+	/* text-align: left; */
+	padding-left: 1%;
+	/* width: fit-content; */
+	height: inherit;
+}
+
+#tag-pill-container {
+	/* background-color: #4923cf17; */
+	width: 100%;
+	z-index: 500;
+	/* border: 1px solid; */
+	/* width: 102%; */
+	height: 100%;
+	/* min-width: 90%; */
+	text-align: right;
+}
+
+#tags {
+	cursor: text;
+	/* border: 1px solid; */
+	/* width: 20%; */
+	text-align: left;
+	/* padding-left: 5%; */
+	/* margin: 10px; */
+	/* height: fit-content; */
+	/* align-self: first baseline; */
+	background-color: transparent;
+	/* max-width: 85%; */
+	/* position: absolute; */
+	/* left: 15%; */
+	/* top: 2%; */
+	/* margin-top: 3.5em; */
+	/* width: 100%; */
+	min-width: 20%;
+	width: fit-content;
+}
+
+
+/* notes container */
+
+.notesContainer {
+	height: 65px;
+	display: flex;
+	border: 1px solid;
+}
+
+
+
+
+
+/* Footer */
+
+#Btn-Parent {
+    display: flex;
+    align-items: self-end;
+    justify-content: space-between;
+}
+
+#save {
+    margin-top: 10px;
+}
+
+#isNewHermidata {
+    margin: 0;
+    text-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.versionContainer {
+	margin: 5px;
+}
+
+/* RSS Link state visualization */
+
+.RSSLinkState-container {
+    width: 20%;
+	height: 40px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+
+.RSSLinkState-svg {
+    width: 100%;
+	height: 100%;
+	/* aria-hidden: true; */
+}
+
+.RSSLinkState-g {
+    translate: 40px 20px;
+}
+.RSSLinkState-polygon {
+    stroke: var(--Text-color);
+    stroke-width: 1;
+    animation-delay: 0.2s;
+}
+
+.RSSLinkState-polygon:hover {
+	stroke: aliceblue;
+	cursor: help;
+}

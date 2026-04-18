@@ -12,23 +12,20 @@
 
     --hr: #555
 }
+
 body {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
-    
-    margin-bottom: 15px;
-    margin-right: 5px;
-    overflow: hidden;
-    transition: height 0.6s ease;
+	background-color: var(--bg-color);
+	color: var(--Text-color);
+	/* margin-bottom: 15px; */
+	/* margin-right: 5px; */
+	overflow: hidden;
+	transition: height 0.6s ease;
 }
 body::after {
     content: "";
     display: block;
-    height: 40px; /* Height of the footer */
 }
-#Pagetitle {
-    margin-right: 40px;
-}
+
 .Btn {
     background-color: var(--bg-color);
     color: var(--Text-color);
@@ -56,7 +53,8 @@ body::after {
     position: absolute;
     top: 50px;
     width: 98vw;
-    overflow: scroll;
+    overflow-y: scroll;
+    overflow-x: hidden;
     height: 500px;
 }
 #HDRSSBtn {
@@ -81,124 +79,6 @@ footer {
     justify-content:flex-start;
     align-items:center;
 }
-#ParentPreview{
-    max-width: 10000px;
-    overflow-x: hidden;
-    width: 100%;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: var(--bg-color);
-    table-layout: auto;
-}
-
-input.autoInput,
-select.autoInput {
-    width: auto;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    height: inherit;
-    overflow: hidden;
-    border: none;
-    box-sizing: border-box;
-    padding: 2px;
-    font-size: 14px;
-    list-style: none;
-    text-align: center;
-    scroll-behavior: smooth;
-    outline: none;
-    outline-width: 0;
-    outline-color: var(--Text-color);
-    color: var(--Text-color);
-    background-image: none;
-    background-color: var(--bg-color);
-}
-
-td, th {
-    text-align: center;
-    vertical-align: middle;
-    border: 1px solid #ccc;
-    padding: 0;
-}
-th {
-    background-color: var(--Input-color);
-    border: 1px solid #d1d5db;
-    font-weight: bold;
-    padding: 8px;
-    width: fit-content;
-}
-input[type=number],
-input[type=number]::-webkit-inner-spin-button {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: textfield;
-}
-#Type {
-    cursor: pointer;
-}
-#status {
-    cursor: pointer;
-}
-#chapter {
-    min-width: 75px;
-}
-#url {
-    max-width: 40px;
-    width: 100%;
-    box-sizing: border-box;
-    border: none;
-    padding: 0px;
-    font-size: 14px;
-    text-align: center;
-    color: var(--Text-color);
-    background-color: var(--bg-color);
-}
-#date {
-    max-width: 78px;
-}
-#tags {
-    max-width: 90px;
-    cursor: pointer;
-}
-#notes {
-    max-width: 90px;
-}
-#Btn-Parent {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-}
-#isNewHermidata {
-    position: absolute;
-    
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: fit-content;
-
-    margin: 0;
-    margin-top: -22px;
-    margin-left: 40%;
-}
-#openSettings {
-    position: absolute;
-    right: 10px;
-    background: none;
-    border: none;
-    cursor: pointer;
-}
-
-#openSettings .icon {
-    width: 24px;
-    height: 24px;
-    opacity: 0.8;
-}
-
-#openSettings:hover .icon {
-    opacity: 1;
-}
 
 #spreadsheetPrompt {
     display:none;
@@ -209,6 +89,9 @@ input[type=number]::-webkit-inner-spin-button {
 #statusSaveDefaultInputInputTextMenu {
     color: green;
 }
+
+/* RSS mode */
+
 .HDRSS_Input {
     background-color: var(--bg-color);
     color: var(--Text-color);

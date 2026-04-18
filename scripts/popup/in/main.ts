@@ -17,7 +17,7 @@ export type CurrentTab = {
 }
 
 
-export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus?: AnyNovelStatus): Hermidata => ({
+export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
     id: '',
     title: '',
     type:  type,
@@ -43,18 +43,36 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
     }
 });
 
+const stateConfig = {
+    new: {
+        text: 'New Item',
+        tooltip: 'This is a new Item',
+        color: '#3ca69d'
+    },
+    linked: {
+        text: 'Linked Item',
+        tooltip: 'This Item is linked to a RSS feed',
+        color: 'rgba(1, 175, 118, 0.87)'
+    },
+    unlinked: {
+        text: 'Unlinked Item',
+        tooltip: 'This Item is not linked to a RSS feed',
+        color: '#3c5ca6'
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const controller = new HermidataController();
     controller.init().catch(console.error);
 
     // After popup init — start quietly in the background
-    setTimeout(async () => await controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
+    setTimeout(async () => await controller.RSS?.preloadRSS(), 200)  // slight delay so popup renders first
 
     setTimeout(async () => await checkSyncQuota(), 500);
 });
 
 class HermidataController {
-    public hermidata: Hermidata = makeDefaultHermidata('', '');
+    public hermidata: Hermidata = makeDefaultHermidata('', '', '');
     
     public past: PastHermidataClass | null = null;
 
@@ -66,8 +84,6 @@ class HermidataController {
 
     public googleSheetURL: string | undefined;
     public pageTitle: string | undefined;
-
-    private readonly HARDCAP_RUNAWAYGROWTH = 300;
 
     private readonly Testing = false;
 
@@ -140,30 +156,12 @@ class HermidataController {
         });
         return promise;
     }
-    
-    private populateType(novelTypes: AnyNovelType[]) {
-        const folderSelect = getElement("#Type");
-        const folderSelect2 = getElement("#Type_HDRSS")
-
-        if (!folderSelect || !folderSelect2) return;
-
-        novelTypes.forEach(element => {
-            const option = document.createElement("option");
-            option.value = element;
-            option.textContent = element;
-            folderSelect.appendChild(option);
-            const option2 = document.createElement("option");
-            option2.value = element;
-            option2.textContent = element;
-            folderSelect2.appendChild(option2);
-        });
-    }
-    private populateStatus(readStatus: AnyReadStatus[]) {
-        const folderSelect = getElement("#status");
+    private populateSelect(options: AnyNovelStatus[] | AnyReadStatus[] | AnyNovelType[], selectEl: string) {
+        const folderSelect = getElement(selectEl);
 
         if (!folderSelect) return;
 
-        readStatus.forEach(element => {
+        options.forEach(element => {
             const option = document.createElement("option");
             option.value = element;
             option.textContent = element;
@@ -186,6 +184,11 @@ class HermidataController {
             this.hermidata.meta.notes = trimmedTitle.note ?? '';
         }
     }
+    private getState(): keyof typeof stateConfig {
+        if (!this.pastHermidata?.title) return 'new';
+        if (this.pastHermidata.rss?.latestItem.title) return 'linked';
+        return 'unlinked';
+    };
     
     private populateUI(settings: Settings): void {
         // All the getElementById calls live here
@@ -194,8 +197,10 @@ class HermidataController {
         
         this.RSS?.changePageToClassic();
 
-        this.populateType(settings.TYPE_OPTIONS);
-        this.populateStatus(settings.STATUS_OPTIONS);
+        this.populateSelect(settings.TYPE_OPTIONS, "#Type");
+        this.populateSelect(settings.TYPE_OPTIONS, "#Type_HDRSS");
+        this.populateSelect(settings.STATUS_OPTIONS, "#status");
+        this.populateSelect(settings.NOVEL_STATUS_OPTIONS, "#NovelStatus");
 
         // backward compatibility for past hermidata
         this.trycapitalizingTypesAndStatus(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
@@ -203,17 +208,22 @@ class HermidataController {
         setElement("#Pagetitle", el => el.textContent = this.pageTitle || '');
 
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
-        setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
-        setElement<HTMLSelectElement>('#status', el => el.value = display.status);
-        setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
-        setElement<HTMLInputElement>('#url', el => el.value  = this.hermidata.url);
-        setElement<HTMLInputElement>("#date", el => el.value = new Intl.DateTimeFormat('en-GB').format(new Date()) || "");
-        setElement<HTMLInputElement>("#tags", el => el.value = display.meta.tags.toString());
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
-        setElement('#isNewHermidata', el => el.textContent = this.pastHermidata?.title ? '' : 'New!');
-        this.FixTableSize();
+        setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
+        setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
+        setElement<HTMLSelectElement>('#status', el => el.value = display.status);
+        setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.NOVEL_STATUS_OPTIONS[0]);
+
+        setElement<HTMLDivElement>('#tag-pill-container', el => el.innerHTML = '');
+
+        const state = stateConfig[this.getState()];
+        setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
+        setElement<HTMLTitleElement>('.RSSLinkState-title', el => el.textContent = state.tooltip);
+        setElement<SVGPolygonElement>('.RSSLinkState-polygon', el => el.style.fill = state.color);
         
+        setElement<HTMLSpanElement>(".version", el => el.textContent = ext.runtime.getManifest().version);
+
         // HDR RSS
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
         setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.type);
@@ -222,88 +232,25 @@ class HermidataController {
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
 
-        getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e));
-        getElement("#HDRSSBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e));
+        getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e as PointerEvent));
+        getElement("#HDRSSBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e as PointerEvent));
 
-        getElement('#openSettings')?.addEventListener('click', () => {
+        getElement('.openSettings')?.addEventListener('click', () => {
             ext.runtime.openOptionsPage()
             .catch((error) => console.error('Extention error trying open extention settings: ',error)); 
         });
-        getElement('#openFullPage')?.addEventListener('click', () => {
-            if (!this.googleSheetURL) return;
-            ext.tabs.create({ url: this.googleSheetURL })
-            .catch((error) => console.error('Extention error trying to open new tab GoogleSheetURL: ',error));
-        });
-    }
-    private FixTableSize() {
-        const inputs = document.querySelectorAll<HTMLInputElement>('input.autoInput');
-        inputs.forEach(input => {
-            const td = input.closest('td');
-            const table = input.closest('table');
-            const columnIndex = td?.cellIndex ?? -1;
-            const th = table?.querySelectorAll('th')[columnIndex];
-            if (!th) return;
-
-            const measureText = (text: string, inputEl: Element) => {
-                const span = document.createElement('span');
-                span.style.position = 'absolute';
-                span.style.visibility = 'hidden';
-                span.style.whiteSpace = 'pre';
-                span.style.font = getComputedStyle(inputEl).font;
-                span.textContent = text || '';
-                document.body.appendChild(span);
-                const width = span.offsetWidth;
-                span.remove();
-                return width;
-            };
-            const resize = () => {
-                const value = input.value;
-                if (!value) {
-                    input.style.width = '42px'; // empty = no width
-                    return;
-                }
-                const textWidth = measureText(value, input);
-                const parent = getElement('#ParentPreview');
-                if (!parent) {
-                    input.style.width = '42px'; // no parent = no width
-                    return;
-                }
-                const parentMaxWidth = 10000; // same as your CSS
-                const parentStyle = getComputedStyle(parent);
-                const parentPadding = Number.parseFloat(parentStyle.paddingLeft) + Number.parseFloat(parentStyle.paddingRight);
-                // Actual usable space in the parent
-                const maxContainerWidth = (document.body.offsetWidth, parentMaxWidth) - parentPadding;
-                // Get all first-row cells and subtract other columns' widths
-                const row = table.rows[0];
-                const cells = row.cells;
-                let otherColsWidth = 0;
-                for (let i = 0; i < cells.length; i++) {
-                    if (i !== columnIndex) {
-                        otherColsWidth += cells[i].offsetWidth;
-                    }
-                }
-                // Remaining space available for this input
-                const availableWidth = maxContainerWidth - otherColsWidth - 200; // no clue what 200 is 
-                // Clamp final width
-                const clampedWidth = Math.min(textWidth + 12, availableWidth, this.HARDCAP_RUNAWAYGROWTH);
-                input.style.width = `${clampedWidth}px`;
-            };
-            // Defer initial call to allow proper layout
-            requestAnimationFrame(() => resize());
-                input.addEventListener('input', resize);
-        })
     }
     private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
             if (!novelTypes.includes(this.pastHermidata.type)) {
-                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type) as AnyNovelType
+                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type)
                 if ( novelTypes.includes(capitalizeFirstLetterOfStringLetterType) ) this.pastHermidata.type = capitalizeFirstLetterOfStringLetterType
                 else {
                     console.warn('type can\'t be found in past', this.pastHermidata.type)
                 }
             }
             if (!readStatus.includes(this.pastHermidata.status)) {
-                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status) as AnyReadStatus
+                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status)
                 if ( readStatus.includes(capitalizeFirstLetterOfStringLetterStatus) ) this.pastHermidata.status = capitalizeFirstLetterOfStringLetterStatus
                 else {
                     console.warn('status can\'t be found in past', this.pastHermidata.status)
@@ -314,24 +261,24 @@ class HermidataController {
 
     private async saveSheet(): Promise<void> { 
 
+        // from front-end
         const title = getElement<HTMLInputElement>("#title")?.value;
         const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
         const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
-        const url = getElement<HTMLInputElement>("#url")?.value;
         const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
-        const date = getElement<HTMLInputElement>("#date")?.value;
         const tags = getElement<HTMLInputElement>("#tags")?.value || "";
         const notes = getElement<HTMLInputElement>("#notes")?.value || "";
-        const args = '';
+        // from back-end
+        const url = this.hermidata.url;
+        const date =  new Intl.DateTimeFormat('en-GB').format(new Date());
 
         const tagsArray = tags.split(',').map((tag) => tag.trim());
 
-        if (!title || !Type || !Chapter || !url || !status || !date) throw new Error('Missing required fields');
+        if (!title || !Type || !Chapter || !status) throw new Error('Missing required fields');
 
         this.hermidata.title = title;
         this.hermidata.type = Type;
         this.hermidata.chapter.current = Number(Chapter);
-        this.hermidata.url = url;
         this.hermidata.status = status;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;
@@ -346,13 +293,13 @@ class HermidataController {
         ext.runtime.sendMessage({
             type: "SAVE_NOVEL",
             data: data,
-            args
+            args: ""
         });
 
         if(!this.Testing) setTimeout( () => window.close(), 400);
     }
 }
 
-function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): AnyNovelType | AnyReadStatus {
-    return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str;
+function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): T {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str as T;
 }
