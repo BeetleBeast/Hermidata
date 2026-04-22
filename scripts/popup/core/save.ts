@@ -7,8 +7,10 @@ import { PastHermidata } from "./Past";
 
 
 
-export async function updateChapterProgress(title: string, type: string, newChapterNumber: number, hermidata: Hermidata) {
+export async function updateChapterProgress(title: string, type: string, hermidata: Hermidata) {
     let needsToMigrate = false
+
+    const newChapterNumber = Number(hermidata.chapter.current);
     
     const key = returnHashedTitle(title, type);
     const data = await getHermidataViaKey(key);
@@ -33,15 +35,24 @@ export async function updateChapterProgress(title: string, type: string, newChap
     if ( entry.title !== title || entry.type !== type || key !== entry.id) needsToMigrate = true
 
     if (newChapterNumber >= entry.chapter.current) {
+
         entry.id = key;
-        entry.chapter.history.push(entry.chapter.current);
+
         entry.chapter.current = newChapterNumber;
-        entry.status = hermidata.status;
+        if (!entry.chapter.history.some(chapter => chapter === newChapterNumber)) entry.chapter.history.push(entry.chapter.current);
+        entry.chapter.lastChecked = new Date().toISOString();
+
         entry.type = hermidata.type;
+        entry.status = hermidata.status;
+        entry.meta.novelStatus = hermidata.meta.novelStatus;
+
         const rawTags = hermidata.meta.tags as string[] | string;
         entry.meta.tags = (Array.isArray(rawTags)) ? rawTags : rawTags.split(',').map(tag => tag.trim()).filter(Boolean);
-        entry.chapter.lastChecked = new Date().toISOString();
+        
         entry.meta.updated = new Date().toISOString();
+
+        if (hermidata.chapter.latest > entry.chapter.latest) entry.chapter.latest = hermidata.chapter.latest;
+
         await saveHermidataV3(key, entry);
         console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
     }
@@ -79,7 +90,7 @@ export function makeHermidataV3(title: string, url: string, type: AnyNovelType =
             added: new Date().toISOString(),
             updated: new Date().toISOString(),
             originalRelease: null,
-            novelStatus: undefined
+            novelStatus: 'Ongoing'
         }
     };
 }

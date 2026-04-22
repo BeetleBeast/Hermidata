@@ -39,7 +39,13 @@ export const DEFAULT_READ_STATUSES: ReadStatus[] = ['Viewing', 'Finished', 'On-h
 
 
 // hardcoded default tags
-export const DEFAULT_TAGS: string[] = ['Action', 'Romance', 'Completed', 'Ongoing', 'Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
+export const DEFAULT_TAGS: string[] = [
+    'Action', 'Romance', 'Comedy', 'Drama', 'Slice of Life', 'Adventure', 'Parody', 'Magic',
+    'Fantasy', 'Mystery', 'Thriller', 'Horror', 'Sci-Fi', 'Historical', 'Supernatural', 
+    'Ecchi', 'Harem', 'Hentai',
+    'Seinen', 'Shoujo', 'Shoujoai', 'Shounen', 'Shounenai', 'Josei', 'Yaoi', 'Yuri',
+    'Isekai', 'Mecha', 'Demons', 'Ghosts', 'Vampire', 'Psychological', 'Super Power', 
+];
 
 
 export interface Hermidata {
@@ -64,7 +70,7 @@ export interface Hermidata {
         updated: string;
         altTitles: string[];
         originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
-        novelStatus?: AnyNovelStatus;
+        novelStatus: AnyNovelStatus;
     };
 }
 

@@ -1,88 +1,46 @@
-/* --- group --- */
+
+/* new CSS ------------------------------------------*/
+
+
+/* V2 classic & RSS mode Buttons */
 .HDClassic {
     display: flex;
     flex-direction: column;
 }
 
-/* --- top main --- */
-
+/* ---- top-main ---- */
 .topMain {
 	height: 50px;
 	display: grid;
-	/* gap: 20px; */
 	align-items: center;
-	/* justify-content: center; */
-	grid-template-columns: 1fr auto 1fr;
+	grid-template-columns: 0 auto 30px;
+}
+/* title & settings */
+#title {
+	width: 100%;
+	grid-column: 2;
 }
 
-#Pagetitle {
-	margin: 0;
-	grid-column: 2;
-	justify-self: center;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	text-wrap: nowrap;
-    width: 100%;
-}
 /* settings tooth weel */
 .openSettings {
 	background: none;
 	border: none;
 	cursor: pointer;
-	/* display: block; */
-	/* position: absolute; */
-	right: 20px;
 	grid-column: 3;
 	justify-self: end;
 }
-
 .openSettings .icon {
     width: 24px;
     height: 24px;
     opacity: 0.8;
 }
-
 .openSettings:hover .icon {
     opacity: 1;
 }
 
-/* --- top table --- */
-
-.table-1-container {
-    max-width: 10000px;
-    overflow-x: hidden;
-    width: 100%;
-}
-
-.table-1 {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: var(--bg-color);
-    table-layout: fixed;
-    ;
-}
-
-.notes-header {
-    
-	width: 40%;
-}
-
-#title {
-	width: 100%;
-}
-#notes {
-	width: 100%;
-	text-align: left;
-	padding-left: 5%;
-	min-width: 87%;
-}
-
-/* --- bottom table --- */
+/* ---- main ---- */
 
 .table-2 {
-	/* width: 100%; */
 	width: 100%;
 	border-collapse: collapse;
 	background-color: var(--bg-color);
@@ -95,8 +53,12 @@
     width: 100%;
 }
 
+.table-1-tags-container {
+	height: 50px;
+}
+
 .tags-header {
-    width: 40%;
+    width: 10%;
 }
 
 .table-2-container HEADER:not(.tags-header) {
@@ -125,9 +87,6 @@ select.autoInput {
     background-image: none;
     background-color: var(--bg-color);
 }
-tr {
-    height: 35px;
-}
 td, th {
     text-align: center;
     vertical-align: middle;
@@ -153,23 +112,106 @@ input[type=number]::-webkit-inner-spin-button {
 #status {
     cursor: pointer;
 }
-#chapter {
-    min-width: 75px;
+#NovelStatus {
+	cursor: pointer;
+}
+
+
+/* chapter */
+
+.chapter-container[data-has-previous-chapter="true"] {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+}
+
+#previousChapter[data-has-previous-chapter="false"] {
+	display: none;
+}
+
+#chapter[data-has-previous-chapter="false"] {
+	min-width: 75px;
+	width: 100%;
+}
+#chapter[data-has-previous-chapter="true"] {
+	min-width: 75px;
+	width: 45%;
+}
+#previousChapter[data-has-previous-chapter="true"] {
+	cursor: default;
+	width: auto;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	height: inherit;
+	overflow: hidden;
+	border: none;
+	box-sizing: border-box;
+	padding: 2px;
+	font-size: 14px;
+	list-style: none;
+	text-align: center;
+	scroll-behavior: smooth;
+	outline: none;
+	outline-width: 0;
+	outline-color: var(--Text-color);
+	color: var(--Text-color);
+	background-image: none;
+	background-color: var(--bg-color);
+	width: 45%;
+	color: var(--Btn_disabled);
+}
+
+#chapterArrow[data-has-previous-chapter="false"] {
+	display: none;
+}
+
+#chapterArrow[data-has-previous-chapter="true"] {
+	display: block;
+}
+
+/* ---- bottom-main ---- */
+
+.table-1-container {
+    max-width: 10000px;
+    overflow-x: hidden;
     width: 100%;
 }
-#NovelStatus {
-    cursor: pointer;
+
+.table-1 {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--bg-color);
+    table-layout: fixed;
+    ;
 }
 
-
-/* bottom main */
-
-.bottomMain {
-	height: 9em;
-	display: flex;
-	flex-direction: column;
-	flex-wrap: nowrap;
+/* tags */
+.tags-container {
+	position: relative;
+	height: 50px;
 }
+
+.autocomplete-wrapper {
+	/* position: relative; */
+	/* display: inline-block; */
+	min-width: 20%;
+	width: fit-content;
+	height: 100%;
+}
+/* notes */
+.notes-header {
+	width: 10%;
+}
+#notes {
+	width: 100%;
+	text-align: left;
+	padding-left: 1%;
+}
+
+/* ---- footer ---- */
+
+
 
 /* tags container */
 
@@ -197,7 +239,7 @@ input[type=number]::-webkit-inner-spin-button {
 	justify-content: normal;
 	/* text-align: left; */
 	padding-left: 1%;
-	/* width: fit-content; */
+	/* width: 98.8%; */
 	height: inherit;
 }
 
@@ -232,6 +274,42 @@ input[type=number]::-webkit-inner-spin-button {
 	width: fit-content;
 }
 
+#tag-pill-container {
+	width: 100%;
+	z-index: 500;
+	height: 100%;
+	display: flex;
+	flex-direction: row-reverse;
+}
+
+.tag-pill {
+	width: fit-content;
+	display: flex;
+	flex-direction: row;
+	/* justify-content: center; */
+	align-items: center;
+	gap: 5px;
+	background-color: red;
+	height: fit-content;
+	border-radius: 10px;
+	padding-left: 5px;
+	padding-right: 5px;
+	margin: 5px;
+	color: contrast-color(red);
+	border: 1px solid black;
+}
+
+.tag-pill-text {
+	/* width: fit-content; */
+	/* height: fit-content; */
+	margin: 0;
+}
+
+.tag-pill-removeX {
+	display: block;
+	margin-bottom: 8px;
+	cursor: pointer;
+}
 
 /* notes container */
 
@@ -270,8 +348,7 @@ input[type=number]::-webkit-inner-spin-button {
 /* RSS Link state visualization */
 
 .RSSLinkState-container {
-    width: 20%;
-	height: 40px;
+	width: 50%;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -279,13 +356,12 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 .RSSLinkState-svg {
-    width: 100%;
-	height: 100%;
-	/* aria-hidden: true; */
+	width: 40px;
+	height: 40px;
 }
 
 .RSSLinkState-g {
-    translate: 40px 20px;
+	translate: 20px 20px;
 }
 .RSSLinkState-polygon {
     stroke: var(--Text-color);
@@ -337,7 +413,5 @@ input[type=number]::-webkit-inner-spin-button {
 	line-height: inherit;
 }
 
-/* Make sure parent table cell allows positioning */
-.tags-container {
-    position: relative;
-}
+
+

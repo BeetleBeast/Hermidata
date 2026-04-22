@@ -9,7 +9,7 @@ import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
 import { getGoogleSheetURL, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
-import { TagAutocomplete, TagsSystem } from '../core/Tags';
+import { TagsSystem } from '../core/Tags';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -66,10 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const controller = new HermidataController();
     controller.init().catch(console.error);
 
+    // FIXME: this is a hack
     // After popup init — start quietly in the background
-    setTimeout(async () => await controller.RSS?.preloadRSS(), 200)  // slight delay so popup renders first
+    setTimeout(() => controller.RSS?.preloadRSS(), 200)  // slight delay so popup renders first
 
-    setTimeout(async () => await checkSyncQuota(), 500);
+    setTimeout( () => checkSyncQuota(), 500);
 });
 
 class HermidataController {
@@ -195,7 +196,21 @@ class HermidataController {
         if (this.pastHermidata.rss?.latestItem.title) return 'linked';
         return 'unlinked';
     };
-    
+    private setChapterPastNumber(hasPast: Hermidata | null = null): void {
+        
+        const chapter = getElement<HTMLInputElement>("#chapter");
+        const previousChapter = getElement<HTMLInputElement>("#previousChapter");
+        const chapterContainer = getElement<HTMLInputElement>(".chapter-container");
+        const chapterArrow = getElement<HTMLInputElement>("#chapterArrow");
+        
+        if (!chapter || !previousChapter || !chapterContainer || !chapterArrow) return;
+
+        chapter.dataset.hasPreviousChapter = hasPast ? "true" : 'false';
+        previousChapter.dataset.hasPreviousChapter = hasPast ? "true" : 'false';
+        chapterContainer.dataset.hasPreviousChapter = hasPast ? "true" : 'false';
+        chapterArrow.dataset.hasPreviousChapter = hasPast ? "true" : 'false';
+    }
+    // data-has-previous-chapter="true"
     private populateUI(settings: Settings): void {
         // All the getElementById calls live here
         const display = this.pastHermidata ?? this.hermidata;
@@ -208,21 +223,23 @@ class HermidataController {
         this.populateSelect(settings.STATUS_OPTIONS, "#status");
         this.populateSelect(settings.NOVEL_STATUS_OPTIONS, "#NovelStatus");
 
+        this.setChapterPastNumber(this.pastHermidata);
+
+
+
         // backward compatibility for past hermidata
         this.trycapitalizingTypesAndStatus(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
 
-        setElement("#Pagetitle", el => el.textContent = this.pageTitle || '');
-
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
-        setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
-
-        setElement<HTMLInputElement>('#chapter', el => el.value  = String(this.hermidata.chapter.current));
+        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.history.at(-1) || 0));
+        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.current));
         setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
         setElement<HTMLSelectElement>('#status', el => el.value = display.status);
         setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.NOVEL_STATUS_OPTIONS[0]);
-
-        setElement<HTMLDivElement>('#tag-pill-container', el => el.innerHTML = '');
-        this.populateTagPills(this.hermidata.meta.tags, settings.tagColoring);
+        
+        this.tags.populateTagPills(this.hermidata.meta.tags, settings.tagColoring);
+        
+        setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
         const state = stateConfig[this.getState()];
         setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
@@ -234,16 +251,6 @@ class HermidataController {
         // HDR RSS
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
         setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.type);
-    }
-    private populateTagPills(tags: string[], tagColoring: Settings['tagColoring']): void {
-        const container = getElement<HTMLDivElement>('#tag-pill-container');
-        if (!container) return;
-
-        
-        tags.forEach(tag => {
-            const pill = this.tags.CreatePill(tag, tagColoring[tag]);
-            container.appendChild(pill);
-        });
     }
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
@@ -282,25 +289,25 @@ class HermidataController {
         const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
         const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
         const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
-        const tags = getElement<HTMLInputElement>("#tags")?.value || "";
         const notes = getElement<HTMLInputElement>("#notes")?.value || "";
         // from back-end
         const url = this.hermidata.url;
-        const date =  new Intl.DateTimeFormat('en-GB').format(new Date());
+        const date = new Intl.DateTimeFormat('en-GB').format(new Date());
 
-        const tagsArray = tags.split(',').map((tag) => tag.trim());
+        const tagsArray = this.tags.getTags();
 
         if (!title || !Type || !Chapter || !status) throw new Error('Missing required fields');
 
         this.hermidata.title = title;
         this.hermidata.type = Type;
         this.hermidata.chapter.current = Number(Chapter);
+        this.hermidata.chapter.history.push(this.hermidata.chapter.current);
         this.hermidata.status = status;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;
 
         // save to Browser in JSON format
-        await updateChapterProgress(title, Type, Number(Chapter), this.hermidata);
+        await updateChapterProgress(title, Type, this.hermidata);
         this.past = null;
 
         const data: InputArrayType = [title, Type, Number(Chapter), url, status, date, tagsArray, notes]

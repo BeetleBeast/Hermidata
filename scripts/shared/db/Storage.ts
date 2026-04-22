@@ -102,11 +102,10 @@ export function getAllTags(allHermidata: Record<string, Hermidata>): Map<string,
         }
     }
     // add default tags
-    for (const tag in DEFAULT_TAGS) {
+    for (const tag of DEFAULT_TAGS) {
         if (tagCount.has(tag)) continue;
         tagCount.set(tag, 0);
     }
-    
     return tagCount; // tag → usage count
 }
 export function getSuggestedTags( input: string, allTags: Map<string, number>, selectedTags: string[], threshold = 0.80 ): Array<{ tag: string; count: number }> {

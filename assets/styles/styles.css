@@ -19,6 +19,7 @@ body {
 	/* margin-bottom: 15px; */
 	/* margin-right: 5px; */
 	overflow: hidden;
+    /*width: minmax(360px, 400px, 700px);*/
 	transition: height 0.6s ease;
 }
 body::after {

@@ -1,5 +1,5 @@
 import { getAllTags } from "../../shared/db/Storage";
-import { type AllHermidata } from "../../shared/types";
+import { type AllHermidata, type Settings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { levenshteinDistance, PastHermidata } from "./Past";
 
@@ -50,6 +50,7 @@ export class TagAutocomplete {
     }
 }
 
+/*
 class SimplerInlineAutocomplete {
     private autocomplete;
     private input: HTMLInputElement;
@@ -91,7 +92,7 @@ class SimplerInlineAutocomplete {
                     this.addTag(placeholder);
                 } else if (this.input.value.trim()) {
                     // Add current value
-                    this.addTag(normalizeTag(this.input.value));
+                    this.addTag(this.normalizeTag(this.input.value));
                 }
             }
         });
@@ -106,44 +107,77 @@ class SimplerInlineAutocomplete {
         this.input.value = '';
         this.input.placeholder = 'add tag...';
     }
+    private normalizeTag(input: string): string {
+        return input
+            .trim()
+            .split(/\s+/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
 }
-
-function normalizeTag(input: string): string {
-    return input
-        .trim()
-        .split(/\s+/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
-}
-
+*/
 export class TagsSystem {
     private autocomplete: TagAutocomplete | null = null;
     private input: HTMLInputElement | null = null;
     private ghostInput: HTMLSpanElement | null = null;
 
+    public getTags(): string[] { return this.Tags; }
 
+    private Tags: string[] = [];
 
     async init() {
         const input = getElement<HTMLInputElement>('#tags');
         const ghostInput = getElement<HTMLSpanElement>('.autocomplete-ghost');
 
-        const tagsController = new TagAutocomplete(await PastHermidata.getAllHermidata());
-        if (!input || !ghostInput || !tagsController) return;
+        this.autocomplete = new TagAutocomplete(await PastHermidata.getAllHermidata());
+        if (!input || !ghostInput) return;
         this.input = input;
         this.ghostInput = ghostInput;
-        this.autocomplete = tagsController;
 
 
         this.bindEvents();
     }
 
+    public populateTagPills(tags: string[], tagColoring: Settings['tagColoring']): void {
+        const container = getElement<HTMLDivElement>('#tag-pill-container');
+        if (!container) return;
+
+        tags.forEach(tag => {
+            const pill = this.CreatePill(tag, tagColoring[tag]);
+            container.appendChild(pill);
+        });
+    }
 
     public CreatePill(tag: string, color: string): HTMLDivElement {
+        // pill container
         const pill = document.createElement("div");
         pill.classList.add(`tag-pill`);
         pill.dataset.color = color;
-        pill.textContent = tag;
+        
         pill.style.backgroundColor = color;
+        pill.style.color = `contrast-color(${color})`;
+        // pill text
+        const pillText = document.createElement("p");
+        pillText.classList.add("tag-pill-text");
+        pillText.dataset.color = color;
+        pillText.textContent = tag;
+
+        // pill remove button
+        const removeButton = document.createElement("span");
+        removeButton.classList.add("tag-pill-removeX");
+        removeButton.dataset.color = color;
+        removeButton.textContent = "x";
+
+        removeButton.addEventListener("click", () => {
+            pill.remove();
+            this.Tags = this.Tags.filter(t => t !== tag);
+        });
+
+        pill.appendChild(pillText);
+        pill.appendChild(removeButton);
+
+        this.Tags.push(tag);
+
         return pill;
     }
 
@@ -222,14 +256,13 @@ export class TagsSystem {
             pillContainer.appendChild(pill);
         } else if (input.value.trim()) {
             // Add current value
-            const pill = this.CreatePill(this.normalizeTag(input.value), '#3c5ca6');
+            const pill = this.CreatePill(this.normalizeTag(input.value), '#4191b1');
             pillContainer.appendChild(pill);
-
         }
         ghostSpan.textContent = '';
-        input.textContent = '';
+        input.value = '';
     }
-        private normalizeTag(input: string): string {
+    private normalizeTag(input: string): string {
         return input
             .trim()
             .split(/\s+/)
