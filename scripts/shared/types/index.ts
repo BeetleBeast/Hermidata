@@ -9,6 +9,7 @@ export {
     DEFAULT_NOVEL_TYPES,
     DEFAULT_NOVEL_STATUSES,
     DEFAULT_READ_STATUSES,
+    DEFAULT_TAGS,
 
     type Hermidata,
 

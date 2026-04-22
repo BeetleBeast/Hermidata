@@ -14,30 +14,14 @@
         <button id="HDRSSBtn" type="button" class="Btn">RSS</button>
     </div>
 <section id="body" class="HDClassic">
-    <section class="topMain">
-        <h2 id="Pagetitle" data-name="Page_Title">Loading...</h2>
-        <button class="openSettings" type="button" >
-            <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png'/>
-        </button>
-    </section>
     <section class="main">
-        <div class="TitleAndNotes-container table-1-container">
-            <table class="table-1">
-                <thead>
-                    <tr>
-                    <th class="HEADER">Title</th>
-                    <th class="HEADER notes-header">Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><input id="title" class="autoInput" data-name="Title"  type="text" spellcheck="false" placeholder="Title" /></td>
-                        <td><input id="notes" class="autoInput" data-name="Notes" type="text" placeholder="optional..." /></td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="topMain">
+            <input id="title" class="autoInput" data-name="Title" type="text" spellcheck="false" placeholder="Title" />
+            <button class="openSettings" type="button" >
+                <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png'/>
+            </button>
         </div>
-        <div class="otherContainer table-2-container">
+        <div class="table-2-container">
             <table class="table-2">
                 <thead>
                     <tr>
@@ -45,21 +29,38 @@
                     <th class="HEADER">Type</th>
                     <th class="HEADER">Read Status</th>
                     <th class="HEADER">Novel Status</th>
-                    <th class="HEADER tags-header">Tags</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><input id="chapter" class="autoInput" data-name="Chapter"  type="number" placeholder="Chapter" /></td>
-                        <td><select id="Type" class="autoInput" data-name="Type"  type="text" title="Type" ></select></td>
-                        <td><select id="status" class="autoInput" data-name="Status"  type="text" title="Status"></select></td>
-                        <td><select id="NovelStatus" class="autoInput" data-name="NovelStatus"  type="text" title="NovelStatus"></select></td>
-                        <td class="tags-container">
-                            <input id="tags" class="autoInput" data-name="Tag"  type="text" placeholder="add tag..." />
-                            <div id="tag-pill-container"></div>
-                        </td>
+                        <td><div class="chapter-container">
+                                <p id="previousChapter" class="autoInput" data-name="PreviousChapter" type="number"></p>
+                                <span id="chapterArrow">=></span>
+                                <input id="chapter" class="autoInput" data-name="Chapter" type="number" placeholder="Chapter"/>
+                        </td></div>
+                        <td><select id="Type" class="autoInput" data-name="Type" type="text" title="Type"></select></td>
+                        <td><select id="status" class="autoInput" data-name="Status" type="text" title="Status"></select></td>
+                        <td><select id="NovelStatus" class="autoInput" data-name="NovelStatus" type="text" title="NovelStatus"></select></td>
                     </tr>
                 </tbody>
+            </table>
+        </div>
+        <div class="table-1-container">
+            <table class="table-1">
+                <tr class="table-1-tags-container">
+                    <th class="HEADER tags-header">Tags</th>
+                    <td class="tags-container">
+                        <div class="autocomplete-wrapper">
+                            <input id="tags" class="autoInput" data-name="Tag" type="text" placeholder="add tag..." />
+                            <span class="autocomplete-ghost" aria-hidden="true"></span>
+                        </div>
+                        <div id="tag-pill-container"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="HEADER notes-header">Notes</th>
+                    <td><input id="notes" class="autoInput" data-name="Notes" type="text" placeholder="optional..." /></td>
+                </tr>
             </table>
         </div>
     </section>

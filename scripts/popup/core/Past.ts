@@ -227,7 +227,7 @@ export function CalcDiff(a: string, b: string) {
     return score;
 }
 
-function levenshteinDistance(a: string, b: string) {
+export function levenshteinDistance(a: string, b: string) {
     const m = a.length, n = b.length;
     if (m === 0) return n;
     if (n === 0) return m;

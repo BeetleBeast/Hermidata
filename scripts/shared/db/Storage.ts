@@ -7,10 +7,10 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     putAllRawFeeds,
     putAllHermidata} from './db';
 import { pushToSync, removeFromSync } from './sync';
-import { PastHermidata } from '../../popup/core/Past';
+import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../StringOutput';
 import { getElement, setElement } from '../../utils/Selection';
-import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, defaultSettings } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, defaultSettings, DEFAULT_TAGS } from '../types/index';
 
 // ============================================================
 // Hermidata
@@ -85,6 +85,51 @@ export async function setAllHermidata(hermidata: Hermidata[]): Promise<void> {
         console.error('[Storage] setAllHermidata:', err);
     }
 }
+// ============================================================
+// Tags
+// ============================================================
+
+export function getAllTags(allHermidata: Record<string, Hermidata>): Map<string, number> {
+    const tagCount = new Map<string, number>();
+    for (const entry of Object.values(allHermidata)) {
+
+        const tags = entry.meta.tags as (string[] | string);
+        const tagsArray = Array.isArray(tags) ? tags : tags?.split(',');
+
+        for (const tag of tagsArray) {
+            if (!tag.trim()) continue; // skip empty
+            tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+        }
+    }
+    // add default tags
+    for (const tag of DEFAULT_TAGS) {
+        if (tagCount.has(tag)) continue;
+        tagCount.set(tag, 0);
+    }
+    return tagCount; // tag → usage count
+}
+export function getSuggestedTags( input: string, allTags: Map<string, number>, selectedTags: string[], threshold = 0.80 ): Array<{ tag: string; count: number }> {
+    return [...allTags.entries()]
+        .filter(([tag]) => !selectedTags.includes(tag)) // hide already selected
+        .filter(([tag]) =>
+            tag.toLowerCase().includes(input.toLowerCase()) // substring first
+            || CalcDiff(input, tag) >= threshold            // then fuzzy
+        )
+        .sort((a, b) => b[1] - a[1]) // sort by usage count descending
+        .slice(0, 8)                  // max 8 suggestions
+        .map(([tag, count]) => ({ tag, count }));
+}
+function filterByTags( allHermidata: Record<string, Hermidata>, selectedTags: string[] ): Record<string, Hermidata> {
+    if (!selectedTags.length) return allHermidata;
+
+    return Object.fromEntries(
+        Object.entries(allHermidata).filter(([_, entry]) =>
+            // AND — entry must have ALL selected tags
+            selectedTags.every(tag => entry.meta.tags.includes(tag))
+        )
+    );
+}
+
 
 // ============================================================
 // Feeds
