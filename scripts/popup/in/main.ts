@@ -62,9 +62,9 @@ const stateConfig = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const controller = new HermidataController();
-    controller.init().catch(console.error);
+    await controller.init().catch(console.error);
 
     // FIXME: this is a hack
     // After popup init — start quietly in the background
@@ -82,7 +82,7 @@ class HermidataController {
 
     private dupplicate: Duplicate | null = null;
 
-    private tags: TagsSystem = new TagsSystem();
+    private tags: TagsSystem;
 
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
@@ -90,6 +90,10 @@ class HermidataController {
     public pageTitle: string | undefined;
 
     private readonly Testing = false;
+
+    constructor() {
+        this.tags = new TagsSystem();
+    }
 
     public async init(): Promise<void> {
         this.forceSetClassic()
@@ -118,8 +122,7 @@ class HermidataController {
         this.populateUI(settings);
         this.bindEvents();
         
-        const tags = new TagsSystem();
-        await tags.init();
+        await this.tags.init();
     }
     private async checkForDuplicates(): Promise<void> {
         this.dupplicate = new Duplicate();
@@ -307,19 +310,19 @@ class HermidataController {
         this.hermidata.meta.notes = notes;
 
         // save to Browser in JSON format
-        await updateChapterProgress(title, Type, this.hermidata);
+        const savedInStorage = await updateChapterProgress(title, Type, this.hermidata);
         this.past = null;
 
         const data: InputArrayType = [title, Type, Number(Chapter), url, status, date, tagsArray, notes]
 
         // save to google sheet & bookmark/replace bookmark
-        ext.runtime.sendMessage({
+        const savedAsBookmarkAndSheet = await ext.runtime.sendMessage({
             type: "SAVE_NOVEL",
             data: data,
             args: ""
-        });
+        }) as boolean;
 
-        if(!this.Testing) setTimeout( () => window.close(), 400);
+        if (!this.Testing && savedInStorage && savedAsBookmarkAndSheet ) setTimeout( () => window.close(), 400);
     }
 }
 

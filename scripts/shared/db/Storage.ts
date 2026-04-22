@@ -30,6 +30,7 @@ export async function saveHermidataV3(key: string, entry: Hermidata): Promise<vo
         console.log(`[HermidataV3] Saved ${entry.title}`);
     } catch (err) {
         console.error('[Storage] saveHermidataV3:', err);
+        throw err;
     }
 }
 

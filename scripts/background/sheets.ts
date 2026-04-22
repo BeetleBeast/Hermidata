@@ -26,9 +26,11 @@ export async function writeToSheet(token: number, dataArray: InputArrayType | In
 
         if (decision.action === "append") {
             appendRow(token, dataArray);
+            console.log("Added new entry.", dataArray);
         } else if (decision.action === "replace") {
             if (!decision.rowIndex) throw new Error("Row index not found.");
             updateRow(token, decision.rowIndex, dataArray);
+            console.log("Replaced/updated entry.", dataArray);
         } else {
             console.log("Skipping entry.");
         }

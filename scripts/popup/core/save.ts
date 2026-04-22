@@ -7,58 +7,65 @@ import { PastHermidata } from "./Past";
 
 
 
-export async function updateChapterProgress(title: string, type: string, hermidata: Hermidata) {
-    let needsToMigrate = false
-
-    const newChapterNumber = Number(hermidata.chapter.current);
+export async function updateChapterProgress(title: string, type: string, hermidata: Hermidata): Promise<boolean> {
+    try {
+        let needsToMigrate = false
     
-    const key = returnHashedTitle(title, type);
-    const data = await getHermidataViaKey(key);
-
-    
-    let entry: Hermidata | null = null;
-
-    if (data) {
-        entry = data;
-    } else {
-        // id entry is new/can't be found in storage
-        const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
-        if (Hermidata) entry = Hermidata
-        else entry = makeHermidataV3(title, hermidata.url, hermidata.type);
-    }
-
-    if (!entry) {
-        console.warn(`[HermidataV3] No entry found for ${title}`);
-        return;
-    }
-
-    if ( entry.title !== title || entry.type !== type || key !== entry.id) needsToMigrate = true
-
-    if (newChapterNumber >= entry.chapter.current) {
-
-        entry.id = key;
-
-        entry.chapter.current = newChapterNumber;
-        if (!entry.chapter.history.some(chapter => chapter === newChapterNumber)) entry.chapter.history.push(entry.chapter.current);
-        entry.chapter.lastChecked = new Date().toISOString();
-
-        entry.type = hermidata.type;
-        entry.status = hermidata.status;
-        entry.meta.novelStatus = hermidata.meta.novelStatus;
-
-        const rawTags = hermidata.meta.tags as string[] | string;
-        entry.meta.tags = (Array.isArray(rawTags)) ? rawTags : rawTags.split(',').map(tag => tag.trim()).filter(Boolean);
+        const newChapterNumber = Number(hermidata.chapter.current);
         
-        entry.meta.updated = new Date().toISOString();
-
-        if (hermidata.chapter.latest > entry.chapter.latest) entry.chapter.latest = hermidata.chapter.latest;
-
-        await saveHermidataV3(key, entry);
-        console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
-    }
-    if (needsToMigrate) {
-        const past = new PastHermidata(hermidata);
-        past.init().catch(error => console.error(error));
+        const key = returnHashedTitle(title, type);
+        const data = await getHermidataViaKey(key);
+    
+        
+        let entry: Hermidata | null = null;
+    
+        if (data) {
+            entry = data;
+        } else {
+            // id entry is new/can't be found in storage
+            const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
+            if (Hermidata) entry = Hermidata
+            else entry = makeHermidataV3(title, hermidata.url, hermidata.type);
+        }
+    
+        if (!entry) {
+            console.warn(`[HermidataV3] No entry found for ${title}`);
+            return false;
+        }
+    
+        if ( entry.title !== title || entry.type !== type || key !== entry.id) needsToMigrate = true
+    
+        if (newChapterNumber >= entry.chapter.current) {
+    
+            entry.id = key;
+    
+            entry.chapter.current = newChapterNumber;
+            if (!entry.chapter.history.some(chapter => chapter === newChapterNumber)) entry.chapter.history.push(entry.chapter.current);
+            entry.chapter.lastChecked = new Date().toISOString();
+    
+            entry.type = hermidata.type;
+            entry.status = hermidata.status;
+            entry.meta.novelStatus = hermidata.meta.novelStatus;
+    
+            const rawTags = hermidata.meta.tags as string[] | string;
+            entry.meta.tags = (Array.isArray(rawTags)) ? rawTags : rawTags.split(',').map(tag => tag.trim()).filter(Boolean);
+            
+            entry.meta.updated = new Date().toISOString();
+    
+            if (hermidata.chapter.latest > entry.chapter.latest) entry.chapter.latest = hermidata.chapter.latest;
+    
+            await saveHermidataV3(key, entry);
+            console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
+        }
+        if (needsToMigrate) {
+            const past = new PastHermidata(hermidata);
+            await past.init().catch(error => console.error(error));
+            return false
+        }
+        return true
+    } catch (error) {
+        console.error('[HermidataV3] updateChapterProgress failed:', error);
+        return false;
     }
 }
 

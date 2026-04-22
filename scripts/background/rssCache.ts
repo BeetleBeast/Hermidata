@@ -34,12 +34,19 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export function handleSaveNovel(data: InputArrayType): true {
-    getToken((token: number) => {
-        writeToSheet(token, data);
-        writeToBookmarks(data);
-    });
-    updateCurrentBookmarkAndIcon(data[3]);
+export function handleSaveNovel(data: InputArrayType, sendResponse: (r: unknown) => void): true {
+    try {
+        getToken((token: number) => {
+            writeToSheet(token, data);
+            writeToBookmarks(data);
+        });
+        updateCurrentBookmarkAndIcon(data[3]);
+        console.log('[Background] SAVE_NOVEL complete');
+        sendResponse(true);
+    } catch (error) {
+        console.error('[Background] SAVE_NOVEL error:', error);
+        sendResponse(false);
+    }
     return true
 }
 

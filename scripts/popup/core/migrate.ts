@@ -154,7 +154,7 @@ export async function migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD
             added: older.meta?.added || base.meta.added,
             updated: new Date().toISOString(),
             originalRelease: null, // TODO: do something with it
-            novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus || undefined // TODO: do something with it
+            novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus // TODO: do something with it
 
         }
     }

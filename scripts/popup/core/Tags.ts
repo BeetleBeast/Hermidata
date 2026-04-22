@@ -197,7 +197,8 @@ export class TagsSystem {
             if (topSuggestion && topSuggestion.toLowerCase().startsWith(value.toLowerCase())) {
                 // Show completion hint in placeholder
                 const completion = topSuggestion.slice(value.length);
-                ghostInput.textContent = value + completion;
+                const ghostValue = value.at(0)?.toUpperCase() + value.slice(1).toLowerCase() + completion;
+                ghostInput.textContent = ghostValue;
             } else {
                 ghostInput.textContent = '';
                 }
