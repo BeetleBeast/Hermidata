@@ -248,17 +248,6 @@ input[type=number]::-webkit-inner-spin-button {
 	border-left: 0;
 }
 
-#tag-pill-container {
-	/* background-color: #4923cf17; */
-	width: 100%;
-	z-index: 500;
-	/* border: 1px solid; */
-	/* width: 102%; */
-	height: 100%;
-	/* min-width: 90%; */
-	text-align: right;
-}
-
 #tags {
 	cursor: text;
 	/* border: 1px solid; */
@@ -285,6 +274,7 @@ input[type=number]::-webkit-inner-spin-button {
 	height: 100%;
 	display: flex;
 	flex-direction: row-reverse;
+	align-items: center;
 }
 
 .tag-pill {
