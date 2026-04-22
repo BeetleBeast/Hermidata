@@ -143,7 +143,9 @@ export class TagsSystem {
         if (!container) return;
 
         tags.forEach(tag => {
-            const pill = this.CreatePill(tag, tagColoring[tag]);
+            const tagTrimmed = tag.trim();
+            if (!tagTrimmed) return;
+            const pill = this.CreatePill(tagTrimmed, tagColoring[tag]);
             container.appendChild(pill);
         });
     }

@@ -57,10 +57,6 @@
 	height: 50px;
 }
 
-.tags-header {
-    width: 10%;
-}
-
 .table-2-container HEADER:not(.tags-header) {
     width: 60%;
 }
@@ -118,32 +114,24 @@ input[type=number]::-webkit-inner-spin-button {
 
 
 /* chapter */
-
+.chapter-container[data-has-previous-chapter="false"] {
+	height: 30px;
+}
 .chapter-container[data-has-previous-chapter="true"] {
 	display: flex;
 	flex-direction: row;
 	justify-content: center;
 	align-items: center;
+	height: 30px;
 }
 
 #previousChapter[data-has-previous-chapter="false"] {
 	display: none;
 }
-
-#chapter[data-has-previous-chapter="false"] {
-	min-width: 75px;
-	width: 100%;
-}
-#chapter[data-has-previous-chapter="true"] {
-	min-width: 75px;
-	width: 45%;
-}
 #previousChapter[data-has-previous-chapter="true"] {
 	cursor: default;
-	width: auto;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	height: inherit;
 	overflow: hidden;
 	border: none;
 	box-sizing: border-box;
@@ -160,6 +148,16 @@ input[type=number]::-webkit-inner-spin-button {
 	background-color: var(--bg-color);
 	width: 45%;
 	color: var(--Btn_disabled);
+	margin: 0;
+}
+
+#chapter[data-has-previous-chapter="false"] {
+	min-width: 75px;
+	width: 100%;
+	
+}
+#chapter[data-has-previous-chapter="true"] {
+	width: 45%;
 }
 
 #chapterArrow[data-has-previous-chapter="false"] {
@@ -215,6 +213,11 @@ input[type=number]::-webkit-inner-spin-button {
 
 /* tags container */
 
+.tags-header {
+	width: 10%;
+	border-top: 0;
+}
+
 .tagContainer {
 	height: 80px;
 	display: flex;
@@ -237,10 +240,12 @@ input[type=number]::-webkit-inner-spin-button {
 	flex-direction: row;
 	align-items: center;
 	justify-content: normal;
-	/* text-align: left; */
 	padding-left: 1%;
 	/* width: 98.8%; */
 	height: inherit;
+	border-top: 0;
+	border-bottom: 0;
+	border-left: 0;
 }
 
 #tag-pill-container {
