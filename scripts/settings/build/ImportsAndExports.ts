@@ -1,32 +1,38 @@
+import { ext } from "../../shared/BrowserCompat";
 import type { Hermidata, RawFeed } from "../../shared/types";
 import type { FolderMapping, FolderRule, Settings } from "../../shared/types/settings"
+import { getElement } from "../../utils/Selection";
 
 import { Build } from "../build";
 
 export class ImportsAndExports extends Build {
 
-    constructor() {
-        super();
-    }
+    public async init() {
 
-    public async getSettings(): Promise<Settings> {
-        return this.dbRequest('settings', 'get', { id: 'Settings', data: null });
+
+        this.bindEvents();
     }
-    public async setSettings(data: Settings): Promise<void> {
-        await this.dbRequest('settings', 'put', { id: 'Settings', data });
-    }
-    public async getSpreadsheetUrl(): Promise<string> {
-        const settings: Settings = await this.dbRequest('settings', 'get', { id: 'Settings', data: null });
-        return settings.spreadsheetUrl;
-    }
-    public async setSpreadsheetUrl(url: string): Promise<void> {
-        const settings: Settings = await this.dbRequest('settings', 'get', { id: 'Settings', data: null });
-        settings.spreadsheetUrl = url;
-        await this.dbRequest('settings', 'put', { id: 'Settings', data: settings });
+    
+    private bindEvents() {
+        getElement("#exportBtn")?.addEventListener("click", () => this.exportSettings());
+        getElement("#importBtn")?.addEventListener("change", (e) => this.importSettings(e));
+        
+        getElement("#exportDataBtn")?.addEventListener("click", () => this.exportHermidata() );
+        getElement("#importDataBtn")?.addEventListener("change", (e) => this.importHermidata(e) );
+
+        getElement("#exportRSSBtn")?.addEventListener("click", () => this.exportRSSBtn() );
+        getElement("#importRSSBtn")?.addEventListener("change", (e) => this.importRSSBtn(e) );
+
+        getElement("#exportFolderMappingBtn")?.addEventListener("click", () => this.exportFolderMapping());
+        getElement("#importFolderMappingBtn")?.addEventListener("change", (e) => this.importFolderMapping(e));
+
+        getElement("#exportSyncDataBtn")?.addEventListener("click", () => this.exportSyncData());
+        getElement("#deleteSyncDataBtn")?.addEventListener("click", () => this.deleteSyncData());
+        getElement("#importSyncDataBtn")?.addEventListener("change", (e) => this.importSyncData(e));
     }
 
     // Export Settings as JSON
-    public async exportSettings() {
+    private async exportSettings() {
         // Ensure settings are up to date
         const updatedSettings = await this.ensureSettingsUpToDate();
 
@@ -42,7 +48,7 @@ export class ImportsAndExports extends Build {
         a.remove();
         URL.revokeObjectURL(url);
     }
-    public async importSettings(event: Event) {
+    private async importSettings(event: Event) {
         const target = event.target as HTMLInputElement;
         const file = target.files?.[0];
         if (!file) return
@@ -60,7 +66,7 @@ export class ImportsAndExports extends Build {
         }
     };
 
-    public async exportHermidata() {
+    private async exportHermidata() {
         try {
             const DataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
             const Data = Object.fromEntries(DataList.map(h => [h.id, h]));
@@ -81,7 +87,7 @@ export class ImportsAndExports extends Build {
         }
     }
 
-    public async importHermidata(event: Event) {
+    private async importHermidata(event: Event) {
         const target = event.target as HTMLInputElement;
         const file = target?.files?.[0];
         if (!file) return;
@@ -111,7 +117,7 @@ export class ImportsAndExports extends Build {
         reader.readAsText(file);
     }
 
-    public async importRSSBtn(event: Event) {
+    private async importRSSBtn(event: Event) {
         const target = event.target as HTMLInputElement;
         const file = target?.files?.[0];
         if (!file) return;
@@ -139,7 +145,7 @@ export class ImportsAndExports extends Build {
         reader.readAsText(file);
     }
 
-    public async exportRSSBtn() { // possible rss
+    private async exportRSSBtn() { // possible rss
         try {
             const DataList = await this.dbRequest<RawFeed[]>('feeds', 'getAll');;
             const Data = Object.fromEntries(DataList.map(h => [h.url, h]));
@@ -158,6 +164,117 @@ export class ImportsAndExports extends Build {
         } catch (error) {
             console.error("Extension error: Failed exportHermidata: ", error)
         }
+    }
+
+    private async exportFolderMapping() {
+        try {
+            const settings = await this.getSettings();
+            const folderMapping = settings.FolderMapping;
+            
+            const jsonSTR = JSON.stringify(folderMapping, null, 2);
+            const blob = new Blob([jsonSTR], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+        
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "folderMapping.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Extension error: Failed exportFolderMapping: ", error)
+        }
+    }
+
+    private async importFolderMapping(event: Event) {
+        const target = event.target as HTMLInputElement;
+        const file = target?.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const target = e.target ?? null;
+                const importedData: Settings['FolderMapping'] = JSON.parse(target?.result as string);
+
+                // Get existing storage
+                const settings = await this.getSettings();
+                const existingData = (await this.getSettings()).FolderMapping;
+
+                // Merge folderMapping
+                const mergedDataObject = { ...existingData, ...importedData };
+                // Merge Settings
+                const mergedSettings = { ...settings, FolderMapping: mergedDataObject };
+                // Save merged result
+                await this.setSettings( mergedSettings );
+
+                console.log("FolderMapping import + merge complete!");
+            } catch (error) {
+                console.error("Extension error: Failed FolderMapping import:", error);
+            }
+        };
+        reader.readAsText(file);
+    }
+    
+
+    // backup sync
+    private async exportSyncData() {
+        try {
+            // get SyncData
+            const data = await ext.storage.sync.get(null);
+            
+            const jsonSTR = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonSTR], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+        
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "syncData_backup.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Extension error: Failed exportSyncData: ", error)
+        }
+    }
+    // delete sync
+    private async deleteSyncData() {
+        try {
+            await ext.storage.sync.clear();
+            console.log("SyncData deleted!");
+        } catch (error) {
+            console.error("Extension error: Failed deleteSyncData: ", error)
+        }
+    }
+    // import sync
+    private async importSyncData(event: Event) {
+        const target = event.target as HTMLInputElement;
+        const file = target?.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const target = e.target ?? null;
+                const importedData: { [key: string]: unknown } = JSON.parse(target?.result as string);
+
+                // Get existing storage
+                const existingData = (await ext.storage.sync.get(null));
+
+                // Merge folderMapping
+                const mergedDataObject = { ...existingData, ...importedData };
+                // Merge Settings
+                // Save merged result
+                await ext.storage.sync.set(mergedDataObject);
+
+                console.log("FolderMapping import + merge complete!");
+            } catch (error) {
+                console.error("Extension error: Failed FolderMapping import:", error);
+            }
+        };
+        reader.readAsText(file);
     }
 
 }

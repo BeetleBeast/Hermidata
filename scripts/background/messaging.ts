@@ -35,7 +35,7 @@ export function initInstalled() {
             if (!settings) ext.runtime.openOptionsPage();
         }
 
-        if (settings?.AllowContextMenu) {
+        if (settings?.ExtensionBehaviour.AllowContextMenu) {
             ext.contextMenus.create({
                 id: "Hermidata",
                 title: "Save to Hermidata",

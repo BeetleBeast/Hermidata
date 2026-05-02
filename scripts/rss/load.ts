@@ -25,7 +25,7 @@ async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Pro
     const hermidataValues = Object.values(AllHermidata);
     const settings = await getSettings();
     
-    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues, settings.TYPE_OPTIONS);
+    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues, settings.ContentTypesAndStatuses.TYPE_OPTIONS);
 
     return feedList;
 }

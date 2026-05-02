@@ -108,14 +108,22 @@ export async function handleDbOperation( store: 'hermidata' | 'feeds' | 'setting
     }
     return true;
 }
-async function putAll(store: 'hermidata' | 'feeds' | 'settings', data: Hermidata[] | RawFeed[]) {
+async function putAll(store: 'hermidata' | 'feeds' | 'settings', data: Record<string, Hermidata> | RawFeed[]) {
     try {
         const db = await getDb();
         const tx = db.transaction(store, 'readwrite');
-        await Promise.all([
-            ...data.map(d => tx.store.put(d)),
-            tx.done,
-        ]);
+        if (store === 'hermidata') {
+            await Promise.all([
+                ...Object.values(data).map(d => tx.store.put(d)),
+                tx.done,
+            ]);
+        } else {
+            const feedData = data as RawFeed[]
+            await Promise.all([
+                ...feedData.map(d => tx.store.put(d)),
+                tx.done,
+            ]);
+        }
     } catch (err) {
         console.error(`[DB] put${store.at(0)?.toUpperCase()}All:`, err);
     }

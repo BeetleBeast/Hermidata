@@ -56,13 +56,13 @@ export class SortOption extends Sort {
         const SortSection = this.createFilterSection(filterName.Sort, AllSorts, filterClassName.Sort);
 
         // 2. Type
-        const typeSection = this.createFilterSection(filterName.Type, settings.TYPE_OPTIONS, filterClassName.Type);
+        const typeSection = this.createFilterSection(filterName.Type, settings.ContentTypesAndStatuses.TYPE_OPTIONS, filterClassName.Type);
 
         // 3. Status
-        const statusSection = this.createFilterSection(filterName.Status, settings.STATUS_OPTIONS, filterClassName.Status);
+        const statusSection = this.createFilterSection(filterName.Status, settings.ContentTypesAndStatuses.STATUS_OPTIONS, filterClassName.Status);
         
         // 3.5. novels Status filter
-        const novelStatusSection = this.createFilterSection(filterName.NovelStatus, settings.NOVEL_STATUS_OPTIONS, filterClassName.NovelStatus);
+        const novelStatusSection = this.createFilterSection(filterName.NovelStatus, settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS, filterClassName.NovelStatus);
     
         // 4. Source
         const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).map(item => item.source).filter(Boolean)));
@@ -283,6 +283,7 @@ export class SortOption extends Sort {
             });
     
             const uniqueBuckets = Array.from(new Set(yearBuckets)).filter(Boolean);
+            this.ammountOfYearBuckets = uniqueBuckets.length
     
             const thisYeay = new Date().getFullYear()
             const everySingleYear = thisYeay - 2020

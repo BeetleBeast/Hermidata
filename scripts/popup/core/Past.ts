@@ -98,7 +98,7 @@ export class PastHermidata {
         
         const fuzzyKey = AltKeyNeeded?.relatedKey;
         // Generate all possible keys
-        const possibleKeys = settings.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type));
+        const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type));
         // add fuzzy key if not inside possible keys
         if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey);
         // get all posible hermidata Obj

@@ -19,3 +19,5 @@ Hidden*
 # ignore all output files
 !.gitKeep
 output/*
+# ignore all data test's
+tests/data/*

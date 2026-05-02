@@ -5,7 +5,7 @@ import { RssBuild } from "../build";
 export abstract class Sort extends RssBuild {
 
 
-    private ammountOfYearBuckets: number = 0;
+    protected ammountOfYearBuckets: number = 0;
     private readonly maxYearBuckets: number = 15; 
 
     protected applySortToEntries(sortType: AllsortsType = "Alphabet") {
@@ -105,8 +105,6 @@ export abstract class Sort extends RssBuild {
         
         if (this.ammountOfYearBuckets >= this.maxYearBuckets) bucket = this.createDacadeBucket(year);
         else bucket = this.createYearBucket(year);
-        
-        this.ammountOfYearBuckets++;
         return bucket;
     }
     private createDacadeBucket(year: string): string {

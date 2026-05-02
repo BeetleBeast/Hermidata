@@ -206,7 +206,7 @@ export async function setSettings(settings: Settings): Promise<void> {
 async function getSpreadsheetUrl(): Promise<string> {
     try {
         const settings = await getSettings();
-        if (settings?.spreadsheetUrl) return settings.spreadsheetUrl;
+        if (settings?.AccountAndConnections.spreadsheetUrl) return settings.AccountAndConnections.spreadsheetUrl;
 
         // Fall back to old standalone key for users not yet migrated
         const urlFromSync =  await new Promise<string>((resolve, reject) => {
@@ -263,7 +263,7 @@ export function sheetUrlInput(): Promise<string> {
 
 export async function setSpreadsheetUrl(url: string): Promise<void> {
     const settings = await getSettings();
-    await setSettings({ ...settings, spreadsheetUrl: url });
+    await setSettings({ ...settings, AccountAndConnections : { ...settings.AccountAndConnections, spreadsheetUrl: url }});
 }
 
 // ============================================================

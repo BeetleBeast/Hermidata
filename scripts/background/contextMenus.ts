@@ -25,12 +25,12 @@ function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Sett
         let { title, chapter } = getTitleAndChapterFromUrl(finalUrl);
         let url = finalUrl;
         let date = getCurrentDate(); // yyyy-mm-dd
-        let type = Settings.DefaultChoiceText_Menu.Type;
-        let status = Settings.DefaultChoiceText_Menu.status;
-        let tags = Settings.DefaultChoiceText_Menu.tags;
-        let notes = Settings.DefaultChoiceText_Menu.notes;
+        let type = Settings.DefaultBookmarkSettings.DefaultChoiceText_Menu.novelType;
+        let status = Settings.DefaultBookmarkSettings.DefaultChoiceText_Menu.novelStatus;
+        let tags = Settings.DefaultBookmarkSettings.DefaultChoiceText_Menu.tags;
+        let notes = Settings.DefaultBookmarkSettings.DefaultChoiceText_Menu.notes;
         const data: InputArrayType = [title ?? "", type, chapter, url, status, date, tags, notes];
-        handleSaveNovel(data);
+        handleSaveNovel(data, () => {});
     })
     .catch(err => console.error("Failed to resolve redirect:", err));
 }

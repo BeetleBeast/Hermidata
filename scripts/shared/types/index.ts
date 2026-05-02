@@ -58,6 +58,8 @@ export {
     type DefaultChoice,
     type Settings,
 
+    type NotificationTypes,
+
     type elementInput,
     type elementMenu,
 
