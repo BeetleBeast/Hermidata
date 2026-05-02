@@ -70,6 +70,8 @@ export function simpleHash(str: string) {
 }
 
 export function getTitleAndChapterFromUrl(url: string): { title: string | null, chapter: number } {
+    if (!url) return { title: null, chapter: Number.NaN };
+    if (!url.trim()) return { title: null, chapter: Number.NaN };
     const parts = new URL(url).pathname.split('/').filter(Boolean);
     const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
     if (!titleSlug) return { title: null, chapter: Number.NaN };
