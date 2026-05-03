@@ -36,10 +36,11 @@ export class DefaultBookmarkInputs extends Build {
 
         const settings = await this.getSettings();
 
+        // set values to inputs based on settings
+        await this.LoadAndPopulate(settings);
+
         // Load & populate page inputs and tables
         await this.loadTableInput(settings);
-
-        await this.LoadAndPopulate(settings);
 
         this.bindEvents();
     }

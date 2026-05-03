@@ -166,41 +166,116 @@ select.autoInput {
     color: green;
 }
 
+[data-active="false"] {
+    display: none;
+}
 
 
+.formIndented {
+    margin-left: 30px;
+}
+
+.section-content[data-active="true"] {
+    display: block;
+}
+.section-content[data-active="false"] {
+    display: none;
+}
+
+body {
+	background-color: var(--bg-color);
+	color: var(--Text-color);
+	margin-bottom: 15px;
+	margin-right: 5px;
+	overflow: auto;
+	height: 100%;
+}
+
+.sidebar {
+	width: 10%;
+	background: transparent;
+	/* border-right: 1px solid #ddd; */
+	padding: 20px 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	color: white;
+	position: absolute;
+	top: 10%;
+	border: 1px solid;
+	margin-left: 5%;
+	margin-right: 5%;
+	padding-bottom: 50px;
+}
+
+.main.content {
+	margin-left: 20%;
+	border-left: 1px solid;
+}
+
+nav {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	gap: 20px;
+	margin-top: 20px;
+}
+
+.nav-item {
+	display: block;
+	width: 100%;
+	padding: 12px 20px;
+	border: none;
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.2s;
+	color: white;
+	border: 1px solid;
+}
 
 /* AI */
 
+/* Edit Tags */
+.EditORemoveItem {
+	width: fit-content;
+	height: fit-content;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: left;
+	border-radius: 2px;
+}
+.EditORemoveItem-input {
+	border: none;
+	border-radius: unset;
+}
+.tagColoringInput {
+	width: 30px;
+	/* padding: 1px; */
+	border-radius: unset;
+	border: none;
+}
+.EditORemoveItem-removeBtn {
+	border: none;
+	border-radius: unset;
+}
+.EditORemoveItem-updateBtn {
+    border: none;
+	border-radius: unset;
+}
 
 .settings-page {
     display: flex;
     height: 100vh;
 }
 
-.sidebar {
-    width: 250px;
-    background: #f5f5f5;
-    border-right: 1px solid #ddd;
-    padding: 20px 0;
-}
-
-.nav-item {
-    display: block;
-    width: 100%;
-    padding: 12px 20px;
-    border: none;
-    background: transparent;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
 .nav-item:hover {
-    background: #e0e0e0;
+    background: var(--Btn_hover);
 }
 
-.nav-item.active {
-    background: #007bff;
+.nav-item[data-active="true"] {
+    background: var(--Btn_active);
     color: white;
 }
 
@@ -210,6 +285,217 @@ select.autoInput {
     overflow-y: auto;
 }
 
-.section-content {
+
+/* folder mapping */
+/* explanation */
+.FolderMapping_Explanation {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	top: 20px;
+	right: 20px;
+	border: 1px solid;
+	border-radius: 15px;
+	text-align: center;
+	width: 20%;
+	padding: 15px;
+    align-items: center;
+}
+
+#formulaOfFolderMapping {
+	border: 1px solid;
+	padding: 5px;
+    width: fit-content;
+}
+#formulaOfErrorFolderMapping {
+	border: 1px solid;
+	padding: 5px;
+	width: fit-content;
+}
+/* Remove or add Alias */
+.FolderMapping_RenameOrAddAlias {
+	width: fit-content;
+	border: 1px solid;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.FolderMapping_RenameOrAddAlias-child {
+	width: fit-content;
+	display: flex;
+	justify-content: center;
+	flex-direction: row;
+	align-items: center;
+	padding: 5px;
+	align-self: self-end;
+}
+
+/* custom Aliases */
+.FolderMapping_ActiveAliases {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: fit-content;
+	border: 1px solid;
+	border-radius: 15px;
+	padding: 15px;
+}
+#AliasesHeader {
+	display: flex;
+	gap: 5px;
+	align-items: center;
+	flex-direction: row;
+	justify-content: space-around;
+	width: 100%;
+}
+#activeAliasesContainer {
+	display: flex;
+	align-items: baseline;
+	flex-direction: row;
+	gap: 5px;
+}
+
+
+#activeTypeAliases {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	align-items: end;
+	padding: 10px;
+	border: 1px solid;
+}
+#activeReadStatuses {
+	display: flex;
+	flex-direction: column;
+	align-items: end;
+	border: 1px solid;
+	padding: 10px;
+	gap: 5px;
+}
+
+/* custom rules */
+
+.FolderMapping_ActiveCustomRules {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid;
+	width: fit-content;
+	padding: 15px;
+	border-radius: 15px;
+	align-items: center;
+	justify-content: center;
+}
+
+#activeCustomRulesContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+#activeCustomRules {
+	display: flex;
+	flex-direction: column;
+	align-items: end;
+	gap: 5px;
+}
+
+.folder-mapping-row {
+	display: flex;
+	flex-direction: row;
+	gap: 15px;
+	border: none;
+	text-align: center;
+	text-decoration: underline;
+}
+
+/* advanced options */
+#advancedOptionsBtn {
+	width: 30%;
+	background-color: transparent;
+	color: white;
+	padding: 15px;
+	margin-top: 15px;
+	margin-bottom: 15px;
+	text-align: center;
+	margin-left: 35%;
+	margin-right: 35%;
+}
+.FolderMapping_advancedOptions {
     display: none;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid;
+    padding: 15px;
+    border-radius: 15px;
+    width: fit-content;
+}
+
+/* sub-folders */
+.FolderMapping_advancedOptions_AddGeneralSubfolders {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+#add_Subfolder_NovelTypes {
+	display: flex;
+	align-self: end;
+}
+#add_Subfolder_ReadStatuses {
+	display: flex;
+	align-self: end;
+}
+#add_NovelTypes_Subfolder_Options,
+#add_ReadStatuses_Subfolder_Options {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+#addCustomRule_Options {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+
+.prefixAndSuffix {
+    background-color: transparent;
+	color: var(--Text-color);
+	align-self: normal;
+	/* width: 70px; */
+	border: none;
+}
+
+.prefixAndSuffix:hover,
+.prefixAndSuffix.highlighted {
+    background: transparent;
+    color: var(--Text-color);
+}
+.prefixAndSuffix:focus {
+    outline: 1px invert var(--Btn);
+}
+
+
+#add_NovelTypes_Subfolder_Options_Inputs {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border: 1px solid;
+}
+#add_ReadStatuses_Subfolder_Options_Inputs {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border: 1px solid;
+}
+
+
+
+
+/* custom rules */
+
+.FolderMapping_advancedOptions_AddCustomRules {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 }

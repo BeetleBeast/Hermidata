@@ -1,4 +1,4 @@
-import { defaultSettings, type Settings } from "../shared/types";
+import { defaultSettings, type Hermidata, type Settings } from "../shared/types";
 import { getElement, setElement } from "../utils/Selection";
 
 
@@ -11,6 +11,9 @@ export abstract class Build {
     }
     protected setSettings(data: Settings): Promise<void> {
         return this.dbRequest<void>('settings', 'put', { id: 'Settings', data });
+    }
+    protected setHermidata(data: Hermidata): Promise<void> {
+        return this.dbRequest<void>('hermidata', 'update', { id: data.id, data });
     }
 
     protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000) {

@@ -7,7 +7,7 @@ export class ExtensionBehaviour extends Build {
     private readonly enableLightMode = getElement<HTMLInputElement>("#enableLightMode");
     private readonly allowContextMenu = getElement<HTMLInputElement>("#AllowContextMenu");
 
-    private readonly anableNotification = getElement<HTMLInputElement>("#enableNotification");
+    private readonly enableNotification = getElement<HTMLInputElement>("#enableNotification");
     private readonly notificationBadge = getElement<HTMLInputElement>("#notificationBadge");
     private readonly notificationMessageMinimum = getElement<HTMLInputElement>("#notificationMessageMinimum");
     private readonly notificationMessageFull = getElement<HTMLInputElement>("#notificationMessageFull");
@@ -42,7 +42,7 @@ export class ExtensionBehaviour extends Build {
         this.enableLightMode?.addEventListener("change", (e) => this.EnableLightMode(e));
         this.allowContextMenu?.addEventListener("change", (e) => this.AllowContextMenu(e));
 
-        this.anableNotification?.addEventListener("change", (e) => this.EnableNotification(e));
+        this.enableNotification?.addEventListener("change", (e) => this.EnableNotification(e));
 
         this.notificationBadge?.addEventListener("change", (e) => this.NotificationType(e));
         this.notificationMessageMinimum?.addEventListener("change", (e) => this.NotificationType(e));
@@ -62,6 +62,15 @@ export class ExtensionBehaviour extends Build {
         const AllowContextMenu = settings.ExtensionBehaviour.AllowContextMenu;
         setElement<HTMLInputElement>("#AllowContextMenu", el => el.checked = AllowContextMenu);
     }
+    private updateNotificationSubMenu(enableNotification: HTMLInputElement) {
+        const notificationParentIsChecked = enableNotification.checked;
+        const updateBadgeState = (badge: HTMLInputElement | null) => {
+            if (badge) badge.disabled = !notificationParentIsChecked;
+        };
+        updateBadgeState(this.notificationBadge);
+        updateBadgeState(this.notificationMessageMinimum);
+        updateBadgeState(this.notificationMessageFull);
+    }
     private setValueOptionNotification(settings: Settings) {
         const notification = settings.ExtensionBehaviour.EnableNotification;
         switch(notification) {
@@ -75,7 +84,12 @@ export class ExtensionBehaviour extends Build {
                 setElement<HTMLInputElement>("#notificationMessageFull", el => el.checked = true);
                 break;
         }
-        setElement<HTMLInputElement>("#enableNotification", el => el.checked = notification !== "None");
+        // disable notification type options if notifications are disabled
+        const enableNotification = getElement<HTMLInputElement>('#enableNotification');
+        if (!enableNotification) return;
+        enableNotification.checked = notification !== "None";
+
+        this.updateNotificationSubMenu(enableNotification);
     }
     private setValueOptionKeyboardShortcuts(settings: Settings) {
         const keyboardShortcuts = settings.ExtensionBehaviour.EnableKeyboardShortcuts;
@@ -120,13 +134,34 @@ export class ExtensionBehaviour extends Build {
         updatedSettings.ExtensionBehaviour.EnableNotification = isChecked ? "Badge" : "None";
 
         this.setSettings(updatedSettings);
+
+        this.updateNotificationSubMenu(event);
     }
 
     // Notification Type
     private async NotificationType(e: Event) {
+        const enableNotification = getElement<HTMLInputElement>('#enableNotification');
+        if (!enableNotification) return;
+
         const event = e.target as HTMLInputElement;
         const isChecked = event.checked;
         const updatedSettings = await this.ensureSettingsUpToDate();
+
+        const notificationParentIsChecked = enableNotification.checked;
+        const updateBadgeState = (badge: HTMLInputElement | null) => {
+            if (badge) badge.disabled = !notificationParentIsChecked;
+        };
+        updateBadgeState(this.notificationBadge);
+        updateBadgeState(this.notificationMessageMinimum);
+        updateBadgeState(this.notificationMessageFull);
+
+        if (!notificationParentIsChecked && updatedSettings.ExtensionBehaviour.EnableNotification === "None") return;
+        else if (!notificationParentIsChecked) {
+            updatedSettings.ExtensionBehaviour.EnableNotification = "None";
+            this.setSettings(updatedSettings);
+            return;
+        }
+        
         updatedSettings.ExtensionBehaviour.EnableNotification = isChecked ? event.value as NotificationTypes : "None";
 
         this.setSettings(updatedSettings);

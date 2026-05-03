@@ -95,6 +95,7 @@ export async function handleDbOperation( store: 'hermidata' | 'feeds' | 'setting
         switch (operation) {
             case 'getAll':  result = await db.getAll(store); break;
             case 'putAll':  result = await putAll(store, payload!.data); break;
+            case 'update':  result = await db.put(store, payload!.data); break;
             case 'get':     result = await db.get(store, payload!.id); break;
             case 'put':     result = await db.put(store, payload!.data, payload!.id); break;
             case 'delete':  result = await db.delete(store, payload!.id); break;

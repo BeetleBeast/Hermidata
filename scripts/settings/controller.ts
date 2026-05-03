@@ -23,44 +23,63 @@ export class BuildController {
     
     private readonly folderMapping = new FolderMapping();
     
-    private readonly importAndExport = new ImportsAndExports();
+    private readonly importAndExport;
     
-    private readonly openAccount_Connection = getElement<HTMLButtonElement>('#openAccount_Connection');
-    private readonly openExtension_Behaviour = getElement<HTMLButtonElement>('#openExtension_Behaviour');
-    private readonly openDefaultBookmarkSettings = getElement<HTMLButtonElement>('#openDefaultBookmarkSettings');
-    private readonly openContentTypes_Statuses = getElement<HTMLButtonElement>('#openContentTypes_Statuses');
-    private readonly openTagManagement = getElement<HTMLButtonElement>('#openTagManagement');
-    private readonly openFolderMapping = getElement<HTMLButtonElement>('#openFolderMapping');
-    private readonly openImport_Export = getElement<HTMLButtonElement>('#openImport_Export');
-    
+    private readonly navigations: Map<string, string> = new Map([
+        ['account-connection', 'Account_Connection'],
+        ['extension-behaviour', 'Extension_Behaviour'],
+        ['default-bookmarks', 'DefaultBookmarkSettings'],
+        ['content-types', 'ContentTypes_Statuses'],
+        ['tag-management', 'TagManagement'],
+        ['folder-mapping', 'FolderMapping'],
+        ['import-export', 'Import_Export']
+    ]);
+
+    private readonly openAccount_Connection = getElement<HTMLButtonElement>(`#open${this.navigations.get('account-connection')}`);
+    private readonly openExtension_Behaviour = getElement<HTMLButtonElement>(`#open${this.navigations.get('extension-behaviour')}`);
+    private readonly openDefaultBookmarkSettings = getElement<HTMLButtonElement>(`#open${this.navigations.get('default-bookmarks')}`);
+    private readonly openContentTypes_Statuses = getElement<HTMLButtonElement>(`#open${this.navigations.get('content-types')}`);
+    private readonly openTagManagement = getElement<HTMLButtonElement>(`#open${this.navigations.get('tag-management')}`);
+    private readonly openFolderMapping = getElement<HTMLButtonElement>(`#open${this.navigations.get('folder-mapping')}`);
+    private readonly openImport_Export = getElement<HTMLButtonElement>(`#open${this.navigations.get('import-export')}`);
+
+    constructor(devMode = false) {
+        this.importAndExport = new ImportsAndExports(devMode);
+    }
+
     public async init() {
         this.bindEvents();
-        await this.navigateTo('account-connection');
+        await this.navigateTo(this.openAccount_Connection!, Array.from(this.navigations.keys())[0]);
     }
     
     private bindEvents() {
-        this.openAccount_Connection?.addEventListener('click', () => this.navigateTo('account-connection'));
-        this.openExtension_Behaviour?.addEventListener('click', () => this.navigateTo('extension-behaviour'));
-        this.openDefaultBookmarkSettings?.addEventListener('click', () => this.navigateTo('default-bookmarks'));
-        this.openContentTypes_Statuses?.addEventListener('click', () => this.navigateTo('content-types'));
-        this.openTagManagement?.addEventListener('click', () => this.navigateTo('tag-management'));
-        this.openFolderMapping?.addEventListener('click', () => this.navigateTo('folder-mapping'));
-        this.openImport_Export?.addEventListener('click', () => this.navigateTo('import-export'));
+        const navStrings = Array.from(this.navigations.keys());
+        this.openAccount_Connection?.addEventListener('click', (e) => this.navigateTo(e, navStrings[0]));
+        this.openExtension_Behaviour?.addEventListener('click', (e) => this.navigateTo(e, navStrings[1]));
+        this.openDefaultBookmarkSettings?.addEventListener('click', (e) => this.navigateTo(e, navStrings[2]));
+        this.openContentTypes_Statuses?.addEventListener('click', (e) => this.navigateTo(e, navStrings[3]));
+        this.openTagManagement?.addEventListener('click', (e) => this.navigateTo(e, navStrings[4]));
+        this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, navStrings[5]));
+        this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, navStrings[6]));
     }
     
-    private async navigateTo(sectionId: string) {
+    private async navigateTo(e: PointerEvent | HTMLButtonElement, sectionId: string) {
+        const target = e instanceof PointerEvent ? e.target as HTMLButtonElement : e;
+        if (target.dataset.active === "true") return; // already active, do nothing
         // Update current section
         this.currentSection = sectionId;
         
         // Update button active states
-        document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active') );
+        document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach(btn => btn.dataset.active = "false" );
         
         // Hide all content sections
-        document.querySelectorAll<HTMLElement>('.section-content').forEach(section => section.style.display = 'none' );
+        document.querySelectorAll<HTMLElement>('.section-content').forEach(section => section.dataset.active = "false" );
         
         // Show and initialize selected section
-        const container = getElement<HTMLElement>(`#${sectionId}-content`);
-        if (container) container.style.display = 'block';
+        const activeElementClassName = this.navigations.get(sectionId);
+        const container = getElement<HTMLElement>(`.${activeElementClassName}`);
+        if (container) container.dataset.active = "true";
+        target.dataset.active = "true";
         
         // Initialize section on first visit
         if (!this.initializedSections.has(sectionId)) {

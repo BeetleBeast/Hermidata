@@ -13,7 +13,7 @@ export class TagManagement extends Build {
     private readonly addTagBtn = getElement<HTMLInputElement>("#addTagBtn");
     
     private readonly tagEditContainer = getElement<HTMLDivElement>("#tagEditContainer");
-    
+
     private readonly colorTagsBtn = getElement<HTMLInputElement>("#saveTagColoringBtn");
 
     private readonly tagMergeSelect1 = getElement<HTMLSelectElement>("#tagMergeSelect1");
@@ -26,21 +26,22 @@ export class TagManagement extends Build {
     public async init() {
         this.allTagsUsed = await this.getAllTagsUsed();
 
+        // color tags
+        await this.loadTagColoring();
         // update/remove tag
         this.populateUpdateRemoveTagForm();
         // merge tags
         this.populateTagMergeSelect();
-        // color tags
-        this.loadTagColoring();
 
         this.bindEvents();
     }
-    private ReloadForms() {
-        this.init();
+    private async ReloadForms() {
+        await this.init();
     }
     private populateUpdateRemoveTagForm() {
         if (!this.tagEditContainer) return;
-        const allTagsUsed = Object.values(this.allTagsUsed);
+        this.tagEditContainer.innerHTML = "";
+        const allTagsUsed = Array.from(this.allTagsUsed.values());
         for ( const tag of allTagsUsed ) this.CreateEditAndRemoveDiv(this.tagEditContainer, tag);
 
     }
@@ -68,7 +69,9 @@ export class TagManagement extends Build {
             const value = editTagInput.value;
             if (value === oldValue || !value || !oldValue) return;
             this.updateTag(oldValue, value);
+            this.updateTagColor(this.tagColoring);
         });
+        const tagColoringInput = this.buildTagColoringForm(input);
 
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
@@ -79,10 +82,10 @@ export class TagManagement extends Build {
             this.deleteTag(input); // remove back-end
         });
 
-        item.append(inputElement, removeBtn);
+        item.append(inputElement, tagColoringInput, updateBtn, removeBtn);
         container.appendChild(item);
         return container;
-        }
+    }
     private populateTagMergeSelect() {
         for (const tag of this.allTagsUsed.values()) {
             const option = document.createElement("option");
@@ -90,7 +93,12 @@ export class TagManagement extends Build {
             option.value = tag;
             option.text = tag;
             this.tagMergeSelect1?.add(option);
+        }
+        for (const tag of this.allTagsUsed.values()) {
+            const option = document.createElement("option");
             option.classList = "tag-merge-select-option_2";
+            option.value = tag;
+            option.text = tag;
             this.tagMergeSelect2?.add(option);
         }
     }
@@ -98,18 +106,21 @@ export class TagManagement extends Build {
     private bindEvents() {
         this.addTagBtn?.addEventListener("click", async () => {
             await this.addNewTag();
-            this.ReloadForms();
+            await this.ReloadForms();
         });
         this.mergeTagsBtn?.addEventListener("click", async () => {
-            const toBeRemoved = getElement<HTMLOptionElement>(".tag-merge-select-option_1");
-            const toSurvive = getElement<HTMLOptionElement>(".tag-merge-select-option_2");
+            const toBeRemoved = this.tagMergeSelect1
+            const toSurvive = this.tagMergeSelect2
             if (!toBeRemoved || !toSurvive) return;
-            await this.mergeTags(toBeRemoved.value, toSurvive.value);
-            this.ReloadForms();
+            const toBeRemovedValue = toBeRemoved.value;
+            const toSurviveValue = toSurvive.value;
+            if (!toBeRemovedValue || !toSurviveValue || toBeRemovedValue === toSurviveValue) return;
+            await this.mergeTags(toBeRemovedValue, toSurviveValue);
+            await this.ReloadForms();
         });
         this.colorTagsBtn?.addEventListener("click", async () => {
             await this.saveAllTagColoring();
-            this.buildTagColoringForm();
+            await this.ReloadForms();
         })
     }
     private async addNewTag() {
@@ -151,31 +162,22 @@ export class TagManagement extends Build {
         const allTagsUsed = allHermidata.flatMap(item => item.meta?.tags || []);
         const tagsSet = new Set(allTagsUsed);
         const allUniqueTags = Array.from(tagsSet).filter(tag => tag !== '');
-        return new Map(allUniqueTags.entries());;
+        return new Map(allUniqueTags.entries());
     }
 
-    private buildTagColoringForm() {
-        const container = getElement("#tagColoringContainer");
-        if (container) container.innerHTML = "";
+    private buildTagColoringForm(tag: string) {
+        const input = document.createElement("input");
+        input.classList.add("tagColoringInput");
+        input.type = "color";
+        input.value = this.tagColoring[tag];
+        input.dataset.tag = tag;
+        input.dataset.color = this.tagColoring[tag];
 
-        for (const tag of Object.keys(this.tagColoring)) {
-            const label = document.createElement("label");
-            label.textContent = `Color for ${tag}: `;
-    
-            const input = document.createElement("input");
-            input.type = "color";
-            input.value = this.tagColoring[tag];
-            input.dataset.tag = tag;
-            if (!container) return;
-            container.appendChild(label);
-            container.appendChild(input);
-            container.appendChild(document.createElement("br"));
-    
-            input.addEventListener("input", async () => {
-                this.tagColoring[tag] = input.value;
-                await this.saveTagColoring(this.tagColoring);
-            });
-        }
+        input.addEventListener("input", async () => {
+            this.tagColoring[tag] = input.value;
+            await this.saveTagColoring(this.tagColoring);
+        });
+        return input;
     }
     private async saveAllTagColoring() {
         await this.saveTagColoring(this.tagColoring);
@@ -190,9 +192,10 @@ export class TagManagement extends Build {
 
     private async loadTagColoring() {
         const Settings = await this.getSettings();
-        Object.assign(this.tagColoring, Settings.TagManagement.tagColoring || await this.createDefaultTagColor());
-        await this.updateTagColor(Settings.TagManagement.tagColoring);
-        this.buildTagColoringForm();
+        const defaultTagColoring = await this.createDefaultTagColor();
+        const storedTagColoring = Object.keys(Settings.TagManagement.tagColoring).length > 0 ? Settings.TagManagement.tagColoring : defaultTagColoring;
+        Object.assign(this.tagColoring, storedTagColoring);
+        await this.updateTagColor(storedTagColoring);
     }
     private async createDefaultTagColor(): Promise<{ [tag: string]: string }> {
         const defaultColor = 'white';
@@ -216,7 +219,7 @@ export class TagManagement extends Build {
         for (const hermidata of Object.values(allHermidata)) {
             if (hermidata.meta?.tags && hermidata.meta.tags.includes(oldTag)) {
                 hermidata.meta.tags = hermidata.meta.tags.map(t => t === oldTag ? newTag : t);
-                this.updateHermidata(hermidata);
+                await this.setHermidata(hermidata);
             }
         }
     }
@@ -230,7 +233,7 @@ export class TagManagement extends Build {
         for (const hermidata of Object.values(allHermidata)) {
             if (hermidata.meta?.tags && hermidata.meta.tags.includes(tag)) {
                 hermidata.meta.tags = hermidata.meta.tags.filter(t => t !== tag);
-                this.updateHermidata(hermidata);
+                await this.setHermidata(hermidata);
             }
         }
     }
@@ -239,7 +242,7 @@ export class TagManagement extends Build {
         for (const hermidata of Object.values(allHermidata)) {
             if (hermidata.meta?.tags && hermidata.meta.tags.includes(toBeRemovedTag)) {
                 hermidata.meta.tags = hermidata.meta.tags.map(t => t === toBeRemovedTag ? trueTag : t);
-                this.updateHermidata(hermidata);
+                await this.setHermidata(hermidata);
             }
         }
     }
@@ -247,9 +250,6 @@ export class TagManagement extends Build {
     private async getAllHermidata(): Promise<Record<string, Hermidata>> {
         const getAllHermidataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
         return Object.fromEntries(getAllHermidataList.map(h => [h.id, h]));
-    }
-    private async updateHermidata(hermidata: Hermidata) {
-        await this.dbRequest<void>('hermidata', 'update', { id: hermidata.id, data: hermidata});
     }
 
 

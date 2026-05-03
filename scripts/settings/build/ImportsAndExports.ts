@@ -7,8 +7,23 @@ import { Build } from "../build";
 
 export class ImportsAndExports extends Build {
 
+    private readonly devMode: boolean;
+
+    constructor(devMode = false) {
+        super();
+        this.devMode = devMode;
+    }
+
     public async init() {
 
+        if (this.devMode) {
+            getElement("#exportRSSBtn")!.dataset.active = "true";
+            getElement("#importRSSBtn")!.dataset.active = "true";
+
+            getElement("#exportSyncDataBtn")!.dataset.active = "true";
+            getElement("#importSyncDataBtn")!.dataset.active = "true";
+            getElement("#deleteSyncDataBtn")!.dataset.active = "true";
+        }
 
         this.bindEvents();
     }
@@ -19,16 +34,18 @@ export class ImportsAndExports extends Build {
         
         getElement("#exportDataBtn")?.addEventListener("click", () => this.exportHermidata() );
         getElement("#importDataBtn")?.addEventListener("change", (e) => this.importHermidata(e) );
-
-        getElement("#exportRSSBtn")?.addEventListener("click", () => this.exportRSSBtn() );
-        getElement("#importRSSBtn")?.addEventListener("change", (e) => this.importRSSBtn(e) );
-
+        
         getElement("#exportFolderMappingBtn")?.addEventListener("click", () => this.exportFolderMapping());
         getElement("#importFolderMappingBtn")?.addEventListener("change", (e) => this.importFolderMapping(e));
 
-        getElement("#exportSyncDataBtn")?.addEventListener("click", () => this.exportSyncData());
-        getElement("#deleteSyncDataBtn")?.addEventListener("click", () => this.deleteSyncData());
-        getElement("#importSyncDataBtn")?.addEventListener("change", (e) => this.importSyncData(e));
+        if (this.devMode) {
+            getElement("#exportRSSBtn")?.addEventListener("click", () => this.exportRSSBtn() );
+            getElement("#importRSSBtn")?.addEventListener("change", (e) => this.importRSSBtn(e) );
+
+            getElement("#exportSyncDataBtn")?.addEventListener("click", () => this.exportSyncData());
+            getElement("#importSyncDataBtn")?.addEventListener("change", (e) => this.importSyncData(e));
+            getElement("#deleteSyncDataBtn")?.addEventListener("click", () => this.deleteSyncData());
+        }
     }
 
     // Export Settings as JSON

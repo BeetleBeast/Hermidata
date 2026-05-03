@@ -198,6 +198,24 @@ export async function setSettings(settings: Settings): Promise<void> {
         console.error('[Storage] setSettings:', err);
     }
 }
+export async function resetSettings(): Promise<void> {
+    try {
+        const settings = await getSettings();
+        const settingsVersion = settings?.version ?? 0;
+        const latestVersion = defaultSettings.version;
+        if (settingsVersion >= latestVersion) {
+            console.warn(`[Storage] resetSettings: current version (${settingsVersion}) is up-to-date, no reset needed.`);
+            return;
+        }
+        else {
+            console.error('[Storage] resetSettings: wrong version');
+            await putSettings(defaultSettings);                            // IndexedDB
+            console.log('[Storage] Settings reset');
+        }
+    } catch (err) {
+        console.error('[Storage] resetSettings:', err);
+    }
+}
 
 // ============================================================
 // Google Sheet URL — kept in storage.sync (small, needed cross-device)

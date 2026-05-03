@@ -5,6 +5,7 @@ import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/db/sync'
 import { migrateFromChromeStorage } from '../shared/db/db'
+import { resetSettings } from '../shared/db/Storage'
 
 /*
 ./background/
@@ -22,6 +23,7 @@ import { migrateFromChromeStorage } from '../shared/db/db'
     initSync.ts              ← sync logic + onChanged listener for syncing across devices
 */
 
+await resetSettings()
 await migrateFromChromeStorage()
 initRssCache()
 initTabs()

@@ -24,7 +24,7 @@
     <aside class="sidebar" class="sidebar">
         <h1>HERMIDATA</h1>
         <p>Settings</p>
-        <hr>
+        <br>
         <nav>
             <button id="openAccount_Connection" class="openLink nav-item" data-active="true" type="button">Account & Connection</button>
             <button id="openExtension_Behaviour" class="openLink nav-item" data-active="false" type="button">Extension Behaviour</button>
@@ -52,7 +52,7 @@
         </section>
         <section class="section-content Extension_Behaviour" data-active="false">
             <br>
-            <label for="enableLightMode">Enable Dark Mode</label>
+            <label for="enableLightMode">Enable Light Mode</label>
             <input id="enableLightMode" type="checkbox" title="Enable Light Mode">
             <br>
             <hr>
@@ -66,13 +66,13 @@
             <input type="checkbox" id="enableNotification" title="Enable Notification">
             <form class="formIndented">
                 <label for="notificationBadge">Notification Badge</label>
-                <input type="radio" id="notificationBadge" title="Notification Badge" value="Badge">
+                <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
                 <br>
                 <label for="notificationMessageMinimum">Notification With miminimum description</label>
-                <input type="radio" id="notificationMessageMinimum" title="Notification With miminimum description" value="MessageMinimum">
+                <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With miminimum description" value="MessageMinimum">
                 <br>
                 <label for="notificationMessageFull">Notification With Full description</label>
-                <input type="radio" id="notificationMessageFull" title="Notification With Full description" value="MessageFull">
+                <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
             </form>
             <br>
             <hr>
@@ -88,22 +88,21 @@
             <hr>
             <br>
             <h3 id="saveTarget">Save Target</h3>
-            <input type="checkbox" id="enableAutoSubscribe" title="Enable Auto-subscribe Bookmarks" disabled>
             <form class="formIndented">
                 <label for="InternalCollection">save to an Internal Collection</label>
-                <input type="checkbox" id="InternalCollection" title="Internal Collection" value="Json" checked readonly>
+                <input type="checkbox" id="InternalCollection" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
                 <br>
                 <label for="SaveToGoogleSpreadsheet">save to a Google Spreadsheet</label>
-                <input type="checkbox" id="SaveToGoogleSpreadsheet" title="save to a Google Spreadsheet" checked value="Spreadsheet">
+                <input type="checkbox" id="SaveToGoogleSpreadsheet" name="SaveCollection" title="save to a Google Spreadsheet" checked value="Spreadsheet">
                 <br>
                 <label for="SaveToBrowserBookmark">Save as a browser Bookmark</label>
-                <input type="checkbox" id="SaveToBrowserBookmark" title="Save as a browser Bookmark" checked value="Bookmark">
+                <input type="checkbox" id="SaveToBrowserBookmark" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
             </form>
             <br>
         </section>
         <section class="section-content DefaultBookmarkSettings" data-active="false">
             <br>
-            <h3><strong> New Entry Defaults in popup </strong></h3>
+            <h3>New Entry Defaults in popup</h3>
             <br>
             <table>change Default Input
                 <thead>
@@ -213,21 +212,20 @@
                 <!-- dynamic items here -->
             </div>
             <br>
+            <button type="button" id="saveTagColoringBtn">save All Tag coloring</button>
+            <br>
             <hr>
             <br>
             <h4> Merge tags </h4>
             <sub>merge 2 tags into one</sub>
             <br>
-            <section class="section TagMerge" id="tagMergeContainer" data-active="false">
+            <section class="section TagMerge" id="tagMergeContainer">
                 <br>
-                <label for="tagMergeSelect1">Tag 1</label>
-                <sub> the tag to be merged and removed </sub>
+                <span> remove </span>
                 <select id="tagMergeSelect1" title="Tag 1">
                     <!-- dynamic items here -->
                 </select>
-                <br>
-                <label for="tagMergeSelect2">Tag 2</label>
-                <sub> the tag that will survive the merge </sub>
+                <span> and merge with </span>
                 <select id="tagMergeSelect2" title="Tag 2">
                     <!-- dynamic items here -->
                 </select>
@@ -235,15 +233,6 @@
                 <button type="button" id="mergeTags">merge</button>
                 <br>
             </section>
-            <br>
-            <hr>
-            <br>
-            <h4> Tag coloring </h3>
-            <div id="tagColoringContainer"></div>
-            <br>
-            <button type="button" id="saveTagColoringBtn">save Tag coloring</button>
-            <br>
-            <hr>
             <br>
         </section>
         <br>
@@ -253,20 +242,18 @@
                 <div id="folderMappingExplanationContainer">
                     <h3><strong> How it works: </strong></h3>
                     <br>
-                    <p id="explainationOFolderMapping">
-                        the extension will automatically 
+                    <p>the extension will automatically 
                         save your progress inside your
-                        browser bookmarks.
-    
-                        However!
+                        browser bookmarks.</p>
+                        <p>However!</p>
+                    <p id="explainationOFolderMapping">
                         it saves all your bookmarks using it's
                         own formula on how each specific
                         page is saved depending on the
                         selection you choose during the saving
                         moment.
-    
-                        Here bellow is the formula.
                     </p>
+                    <p>Here bellow is the formula.</p>
                 </div>
                 <br>
                 <p id="formulaOfFolderMapping"></p>
@@ -277,27 +264,35 @@
             
             <section class="FolderMapping_RenameOrAddAlias">
                 <h3><strong> Rename or Add Alias </strong></h3>
+                <div id="rootPathContainer" class="FolderMapping_RenameOrAddAlias-child">
+                    <label for="rootPath">root path: </label>
+                    <input type="text" id="rootPath"/>
+                    <button type="button" id="saveRootPathBtn">Save</button>
+                    <span id="rootPathStatus"></span>
+                </div>
+                <div id="defaultPathContainer" class="FolderMapping_RenameOrAddAlias-child">
+                    <label for="unsortedPath">unsorted path: </label>
+                    <input type="text" id="unsortedPath"/>
+                    <button type="button" id="saveUnsortedPathBtn">Save</button>
+                    <span id="unsortedPathStatus"></span>
+                </div>
                 <br>
-                <label for="rootPath">root path: </label>
-                <input type="text" id="rootPath"/>
-                <button type="button" id="saveRootPathBtn">Save</button>
-                <span id="rootPathStatus"></span>
-                <br>
-                <label for="unsortedPath">unsorted path: </label>
-                <input type="text" id="unsortedPath"/>
-                <button type="button" id="saveUnsortedPathBtn">Save</button>
-                <span id="unsortedPathStatus"></span>
-                <br>
-                <select id="addNovelTypeAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
-                <label for="addNovelTypeAlias">Add Alias: </label>
-                <input type="text" id="addNovelTypeAlias" placeholder="type here..." />
-                <button type="button" id="addNovelTypeAliasBtn">Add Alias</button>
-                <br>
-                <select id="addReadStatusAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
-                <label for="addReadStatusAlias">Add Alias: </label>
-                <input type="text" id="addReadStatusAlias" placeholder="type here..." />
-                <button type="button" id="addReadStatusAliasBtn">Add Alias</button>
-                <p id="saveStatus-folderMapping-new-aliases"></p>
+                <div id="AddAliasContainer" class="FolderMapping_RenameOrAddAlias-child">
+                    <div id="AddAliasToNovelTypeContainer">
+                        <select id="addNovelTypeAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
+                        <label for="addNovelTypeAlias">Add Alias: </label>
+                        <input type="text" id="addNovelTypeAlias" placeholder="type here..." />
+                        <button type="button" id="addNovelTypeAliasBtn">Add Alias</button>
+                    </div>
+                    <br>
+                    <div id="AddAliasToReadStatusContainer">
+                        <select id="addReadStatusAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
+                        <label for="addReadStatusAlias">Add Alias: </label>
+                        <input type="text" id="addReadStatusAlias" placeholder="type here..." />
+                        <button type="button" id="addReadStatusAliasBtn">Add Alias</button>
+                    </div>
+                    <p id="saveStatus-folderMapping-new-aliases"></p>
+                </div>
                 <br>
             </section>
             <br>
@@ -318,7 +313,7 @@
             <section class="FolderMapping_ActiveCustomRules">
                 <h3><strong> Active Custom Rules </strong></h3>
                 <div id="activeCustomRulesContainer">
-                    <div id="activeCustomRules"> <!-- dynamic items here --> </div>µ
+                    <div id="activeCustomRules"> <!-- dynamic items here --> </div>
                     <p id="saveStatus-folderMapping-overides"></p>
                 </div>
                 <br>
@@ -331,24 +326,28 @@
                     <h3><strong> Add General Subfolders </strong></h3>
                     <br>
                     <div id="add_Subfolder_NovelTypes">
-                        <p for="add_NovelTypes_Subfolder">Novel Types: </p>
-                        <select id="add_NovelTypes_Subfolder_To_Select" title="AddSubfolderTo">
-                            <!-- dynamic items here -->
-                        </select>
-                        <input type="text" id="add_NovelTypes_Subfolder_Prefix" placeholder="type here..." />
-                        <span id="add_NovelTypes_Subfolder_Word"></span>
-                        <input type="text" id="add_NovelTypes_Subfolder_Suffix" placeholder="type here..." />
-                        <button type="button" id="add_NovelTypes_Subfolder_Btn">Add Subfolder</button>
+                        <div id="add_NovelTypes_Subfolder_Options">
+                            <span for="add_NovelTypes_Subfolder">Novel Types: </span>
+                            <select id="add_NovelTypes_Subfolder_To_Select" title="AddSubfolderTo"> <!-- dynamic items here --> </select>
+                            <div id="add_NovelTypes_Subfolder_Options_Inputs">
+                                <input type="text" id="add_NovelTypes_Subfolder_Prefix" class="prefixAndSuffix" placeholder="type here..." />
+                                <span id="add_NovelTypes_Subfolder_Word"></span>
+                                <input type="text" id="add_NovelTypes_Subfolder_Suffix" class="prefixAndSuffix" placeholder="type here..." />
+                            </div>
+                            <button type="button" id="add_NovelTypes_Subfolder_Btn">Add Subfolder</button>
+                        </div>
                     </div>
                     <div id="add_Subfolder_ReadStatuses">
-                        <p for="add_ReadStatuses_Subfolder">Novel Types: </p>
-                        <select id="add_ReadStatuses_Subfolder_To_Select" title="AddSubfolderTo">
-                            <!-- dynamic items here -->
-                        </select>
-                        <input type="text" id="add_ReadStatuses_Subfolder_Prefix" placeholder="type here..." />
-                        <span id="add_ReadStatuses_Subfolder_Word"></span>
-                        <input type="text" id="add_ReadStatuses_Subfolder_Suffix" placeholder="type here..." />
-                        <button type="button" id="add_ReadStatuses_Subfolder_Btn">Add Subfolder</button>
+                        <div id="add_ReadStatuses_Subfolder_Options">
+                            <span for="add_ReadStatuses_Subfolder">Read Status: </span>
+                            <select id="add_ReadStatuses_Subfolder_To_Select" title="AddSubfolderTo"> <!-- dynamic items here --> </select>
+                            <div id="add_ReadStatuses_Subfolder_Options_Inputs">
+                                <input type="text" id="add_ReadStatuses_Subfolder_Prefix" class="prefixAndSuffix" placeholder="type here..." />
+                                <span id="add_ReadStatuses_Subfolder_Word"></span>
+                                <input type="text" id="add_ReadStatuses_Subfolder_Suffix" class="prefixAndSuffix" placeholder="type here..." />
+                            </div>
+                            <button type="button" id="add_ReadStatuses_Subfolder_Btn">Add Subfolder</button>
+                        </div>
                     </div>
                     <br>
                 </section>
@@ -356,13 +355,15 @@
                 <section class="FolderMapping_advancedOptions_AddCustomRules">
                     <h3><strong> Add Custom Rules </strong></h3>
                     <br>
-                    <p class="CustomRules">When </p>
-                    <select id="addCustomRuleToSelect_NovelType" title="AddRuleTo"> <!-- dynamic items here --> </select>
-                    <p class="CustomRules"> is </p>
-                    <select id="addCustomRuleToSelect_ReadStatus" title="AddRuleTo"> <!-- dynamic items here --> </select>
-                    <p class="CustomRules"> Save to: </p>
-                    <input type="text" id="addCustomRule" placeholder="type here..." />
-                    <button type="button" id="addCustomRuleBtn">Add Rule</button>
+                    <div id="addCustomRule_Options">
+                        <span class="CustomRules">When </span>
+                        <select id="addCustomRuleToSelect_NovelType" title="AddRuleTo"> <!-- dynamic items here --> </select>
+                        <span class="CustomRules"> is </span>
+                        <select id="addCustomRuleToSelect_ReadStatus" title="AddRuleTo"> <!-- dynamic items here --> </select>
+                        <span class="CustomRules"> Save to: </span>
+                        <input type="text" id="addCustomRule" placeholder="type here..." />
+                        <button type="button" id="addCustomRuleBtn">Add Rule</button>
+                    </div>
                     <p id="saveStatus-folderMapping-new-overides"></p>
                     <br>
                 </section>

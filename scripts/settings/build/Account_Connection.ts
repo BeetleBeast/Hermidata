@@ -6,13 +6,14 @@ import { Build } from "../build";
 export class Account_Connection extends Build {
 
 
-    private readonly input = getElement<HTMLInputElement>("#spreadsheetUrl")?.value.trim();
+    private readonly input = getElement<HTMLInputElement>("#spreadsheetUrl");
     private readonly status = getElement<HTMLParagraphElement>("#statusSheetURL");
     private readonly saveBtn = getElement<HTMLButtonElement>("#saveSpreadsheetUrl");
     private readonly testBtn = getElement<HTMLButtonElement>("#testSpreadsheetUrl");
     
     private readonly LogOutBtn = getElement<HTMLButtonElement>("#logOut");
 
+    private spreadsheetUrl: string = "";
 
 
     public async init() {
@@ -31,13 +32,19 @@ export class Account_Connection extends Build {
     }
     private async SetSpreadsheetUrl() {
         if (!this.input || !this.status) return;
-        this.setSpreadsheetUrl(this.input);
+        const value = this.input.value.trim();
+        if (!value) {
+            this.temporaryStatus("Please enter a URL", "#statusSheetURL");
+            return;
+        }
+        this.setSpreadsheetUrl(value);
         this.temporaryStatus("Saved!", "#statusSheetURL");
     }
     private async TestSpreadsheetUrl() {
         if (!this.input || !this.status) return;
         this.status.textContent = "Testing...";
-        const response = await fetch(this.input);
+        const value = this.input.value.trim() || this.spreadsheetUrl;
+        const response = await fetch(value, { method: "HEAD" });
         if (!response.ok) this.temporaryStatus("Failed to connect", "#statusSheetURL");
         else this.temporaryStatus("connected!", "#statusSheetURL", 500);
     }
@@ -51,6 +58,7 @@ export class Account_Connection extends Build {
     private async loadSheetUrl() {
         // Load spreadsheetUrl value
         const result = await this.getSpreadsheetUrl();
+        this.spreadsheetUrl = result;
         setElement<HTMLInputElement>("#spreadsheetUrl", el => el.value = result);
     }
 

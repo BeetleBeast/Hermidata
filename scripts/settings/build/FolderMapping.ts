@@ -71,6 +71,10 @@ export class FolderMapping extends Build {
             // set formula
             this.setFormulaOfFolderMapping();
             
+            // set current values to inputs
+            this.setRootPathValue(settings.FolderMapping.root);
+            this.setDefaultPathValue(settings.FolderMapping.defaultPath);
+            
             // populate add aliases
             this.populateAddAliases(settings);
 
@@ -121,7 +125,18 @@ export class FolderMapping extends Build {
         this.addCustomRuleBtn?.addEventListener('click', () => this.addNewRule());
         
         // toggle advanced options
-        this.advancedOptionsBtn?.addEventListener('click', () =>this.advancedOptions?.classList.toggle('hidden') );
+        this.advancedOptionsBtn?.addEventListener('click', () => {
+            const value = this.advancedOptions?.style.display === 'flex' ? 'none' : 'flex';
+            this.advancedOptions!.style.display = value;
+        });
+    }
+    private setRootPathValue(value: string) {
+        if (!this.rootPath) return;
+        this.rootPath.value = value;
+    }
+    private setDefaultPathValue(value: string) {
+        if (!this.unsortedPath) return;
+        this.unsortedPath.value = value;
     }
     private populateSubFolderMiddleWord(isNovelType: boolean) {
         if (isNovelType) {
@@ -344,6 +359,9 @@ export class FolderMapping extends Build {
         const NovelTypes = allNovelTypes.filter((NovelType) => !settings.FolderMapping.typeAliases?.[NovelType])
         const ReadStatuses = AllReadStatuses.filter((ReadStatus) => !settings.FolderMapping.statusFolders?.[ReadStatus]);
 
+        if (NovelTypes.length === 0) getElement("#AddAliasToNovelTypeContainer")!.style.display = 'none';
+        if (ReadStatuses.length === 0) getElement("#AddAliasToReadStatusContainer")!.style.display = 'none';
+        if (NovelTypes.length === 0 && ReadStatuses.length === 0) getElement("#AddAliasContainer")!.style.display = 'none';
         this.populateSelect(this.addNovelTypeAliasToSelect, NovelTypes);
         this.populateSelect(this.addReadStatusAliasToSelect, ReadStatuses);
     }
@@ -368,6 +386,11 @@ export class FolderMapping extends Build {
         this.populateSelect(this.add_NovelTypes_Subfolder_To_Select, allNovelTypes);
         // add_ReadStatuses_Subfolder_To_Select
         this.populateSelect(this.add_ReadStatuses_Subfolder_To_Select, AllReadStatuses);
+        // populate middle word
+        const NovelType = this.add_NovelTypes_Subfolder_To_Select?.value;
+        this.add_NovelTypes_Subfolder_Word!.textContent = `/${NovelType}/`;
+        const ReadStatus = this.add_ReadStatuses_Subfolder_To_Select?.value;
+        this.add_ReadStatuses_Subfolder_Word!.textContent = `/${ReadStatus}/`;
     }
 
     private populateFolderMappingsCustomRules(settings: Settings) {
