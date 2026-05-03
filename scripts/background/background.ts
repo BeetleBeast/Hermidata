@@ -5,7 +5,7 @@ import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/db/sync'
 import { migrateFromChromeStorage } from '../shared/db/db'
-import { resetSettings } from '../shared/db/Storage'
+import { migrateSettings, resetSettings } from '../shared/db/Storage'
 
 /*
 ./background/
@@ -20,10 +20,15 @@ import { resetSettings } from '../shared/db/Storage'
     fuzzy.ts               ← fuzzy bookmark/hermidata matching
     contextMenus.ts        ← context menu setup + handler
 ../shared/...
-    initSync.ts              ← sync logic + onChanged listener for syncing across devices
+    initSync.ts            ← sync logic + onChanged listener for syncing across devices
+    migrateFromChromeStorage() ← migrate from chrome.storage to IndexedDB
+    ../utils/..
+    resetSettings.ts       ← dev-only function to reset settings in IndexedDB
+    migrationSettings()    ← migrate from old settings to new version
 */
 
-await resetSettings()
+// await resetSettings() // dev-only
+await migrateSettings()
 await migrateFromChromeStorage()
 initRssCache()
 initTabs()
