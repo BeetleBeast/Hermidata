@@ -2,7 +2,9 @@ import { detectHashType, getOldIDType, migrateHermidataV5, migrationSteps } from
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
 import { returnHashedTitle } from "../shared/StringOutput";
 import { getAllHermidata, updateHermidataV3 } from "../shared/db/Storage";
-import { type AllHermidata } from "../shared/types/index";
+import { defaultSettings, type AllHermidata, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type DefaultChoice, type NotificationTypes, type Settings, type FolderMapping } from "../shared/types/index";
+import { migrateFolderMapping } from "../settings/build/ImportsAndExports";
+import { putSettings } from "../shared/db/db";
 
 
 
@@ -249,6 +251,129 @@ export class Duplicate  {
     }
 
 }
+type FolderEntry = { path: string }
 
+interface oldSettingsV4 {
+    spreadsheetUrl: string;
+    
+    darkMode: boolean;
 
+    DefaultChoice: DefaultChoice_V5,
+    DefaultChoiceText_Menu: DefaultChoice_V5,
 
+    TYPE_OPTIONS : AnyNovelType[],
+    STATUS_OPTIONS : AnyReadStatus[],
+    NOVEL_STATUS_OPTIONS: AnyNovelStatus[],
+
+    NOVEL_TYPE_OPTIONS_V3: string[],
+    NOVEL_TYPE_OPTIONS_V2: string[],
+    NOVEL_STATUS_OPTIONS_V2: string[],
+    READ_STATUS_OPTIONS_V2: string[],
+    tagColoring: Record<string, string>,
+    // FolderMapping: Record< TypeOptions, Record<StatusOptions, Record<string, path>>>
+    FolderMapping: Record<string, Record<string, FolderEntry>>,
+    FolderMappingV2: FolderMapping,
+
+    AllowContextMenu: boolean
+}
+interface DefaultChoice_V5 {
+    Type : AnyNovelType,
+    status : AnyReadStatus,
+    tags : string[],
+    notes : string
+}
+interface oldSettingsV5 {
+    version: number;
+
+    spreadsheetUrl: string;
+
+    darkMode: boolean;
+
+    DefaultChoice: DefaultChoice_V5,
+    DefaultChoiceText_Menu: DefaultChoice_V5,
+
+    TYPE_OPTIONS : AnyNovelType[],
+    STATUS_OPTIONS : AnyReadStatus[],
+    NOVEL_STATUS_OPTIONS: AnyNovelStatus[],
+
+    tagColoring: Record<string, string>,
+    FolderMapping: FolderMapping,
+
+    AllowContextMenu: boolean
+}
+
+export async function  migrateSettingsToLatest(settings: oldSettingsV5 | oldSettingsV4 | unknown, version: number): Promise<void> {
+    const upgrade = (knownSettings: oldSettingsV5 | oldSettingsV4, defaultSettings: Settings): Settings => {
+        // Type guard to check if it's already the new FolderMapping format
+        const isFolderMapping = (value: any): value is FolderMapping => {
+            return value && 
+                typeof value === 'object' && 
+                'root' in value && 
+                'statusFolders' in value && 
+                'defaultPath' in value;
+        }
+        const migratedFolderMapping: FolderMapping = isFolderMapping(knownSettings.FolderMapping)
+            ? knownSettings.FolderMapping : migrateFolderMapping( knownSettings.FolderMapping as Record<string, Record<string, FolderEntry>>,  defaultSettings.FolderMapping.root );
+        const result: Settings = {...defaultSettings,
+            version: 6,
+            AccountAndConnections: {
+                spreadsheetUrl: knownSettings.spreadsheetUrl
+            },
+            ExtensionBehaviour: {
+                EnableLightMode: knownSettings.darkMode ? false : true,
+                AllowContextMenu: knownSettings.AllowContextMenu,
+                EnableNotification: "None" as NotificationTypes,
+                EnableKeyboardShortcuts: false as boolean,
+                EnableAutoSubscribe: false as boolean,
+                SaveTarget: {
+                    internalCollection: true,
+                    GoogleSpreadsheet: true as boolean,
+                    BrowserBookmark: true as boolean
+                }
+            },
+            DefaultBookmarkSettings: {
+                DefaultChoice: { 
+                    novelStatus: defaultSettings.DefaultBookmarkSettings.DefaultChoice.novelStatus,
+                    novelType: knownSettings.DefaultChoice.Type, 
+                    readStatus: knownSettings.DefaultChoice.status,
+                    tags: knownSettings.DefaultChoice.tags,
+                    notes: knownSettings.DefaultChoice.notes
+                },
+                DefaultChoiceText_Menu: {
+                    novelStatus: defaultSettings.DefaultBookmarkSettings.DefaultChoiceText_Menu.novelStatus,
+                    novelType: knownSettings.DefaultChoiceText_Menu.Type, 
+                    readStatus: knownSettings.DefaultChoiceText_Menu.status,
+                    tags: knownSettings.DefaultChoiceText_Menu.tags,
+                    notes: knownSettings.DefaultChoiceText_Menu.notes
+                }
+            },
+            ContentTypesAndStatuses: {
+                TYPE_OPTIONS: knownSettings.TYPE_OPTIONS,
+                STATUS_OPTIONS: knownSettings.STATUS_OPTIONS,
+                NOVEL_STATUS_OPTIONS: knownSettings.NOVEL_STATUS_OPTIONS,
+            },
+            TagManagement: {
+                tagColoring: knownSettings.tagColoring
+            },
+            FolderMapping: migratedFolderMapping,
+        };
+        return result;
+    };
+    if (!version || version < 4) {
+        console.error("Settings version too old or missing. Cannot migrate.");
+        return;
+    }
+    if (version === 5) {
+        console.warn("Settings version is newer than expected. Attempting best-effort migration.");
+        const knownSettings = settings as oldSettingsV5;
+        const result: Settings = upgrade(knownSettings, defaultSettings);
+        await putSettings(result);
+    }
+
+    if (version === 4) {
+        const knownSettings = settings as oldSettingsV4;
+        
+        const result: Settings = upgrade(knownSettings, defaultSettings);
+        await putSettings(result);
+    }
+}
