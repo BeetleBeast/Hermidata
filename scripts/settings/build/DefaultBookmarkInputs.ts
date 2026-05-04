@@ -1,4 +1,4 @@
-import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type DefaultChoice, type elementsInputAndMenu, type ElmentsWithInputAndMenu, type Settings } from "../../shared/types";
+import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, defaultSettings, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type DefaultChoice, type elementsInputAndMenu, type ElmentsWithInputAndMenu, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -56,6 +56,23 @@ export class DefaultBookmarkInputs extends Build {
             const values = this.getValuesFromElements(this.elements.menu);
             this.updateSettings("DefaultChoiceText_Menu", values, this.statusTextMenu);
         });
+    }
+    public async resetValues() {
+        // remove all values from inputs
+        this.setValuesToElements(this.elements.input, defaultSettings.DefaultBookmarkSettings.DefaultChoice);
+        this.setValuesToElements(this.elements.menu, defaultSettings.DefaultBookmarkSettings.DefaultChoiceText_Menu);
+    }
+    public async cancelValues() {
+        // reset page values to current settings
+        const settings = await this.getSettings();
+        await this.LoadAndPopulate(settings);
+    }
+    public async saveValues() {
+        const valuesInput = this.getValuesFromElements(this.elements.input);
+        this.updateSettings("DefaultChoice", valuesInput, this.status_Input);
+        // Save table Menu
+        const valuesMenu = this.getValuesFromElements(this.elements.menu);
+        this.updateSettings("DefaultChoiceText_Menu", valuesMenu, this.statusTextMenu);
     }
     private async updateSettings(sectionKey: "DefaultChoice" | "DefaultChoiceText_Menu", values: DefaultChoice, statusElement: HTMLElement | null = null) {
         const settings = await this.getSettings();

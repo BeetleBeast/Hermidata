@@ -23,6 +23,21 @@ export class Account_Connection extends Build {
 
         this.bindEvents();
     }
+    public async resetValues() {
+        const settings = await this.getSettings();
+        settings.AccountAndConnections.spreadsheetUrl = "";
+        await this.setSettings(settings);
+        this.cancelValues();
+    }
+    public async cancelValues() {
+        // reset page values to current settings
+        await this.loadSheetUrl();
+        if (this.input) this.input.value = "";
+        if (this.status) this.status.textContent = "";
+    }
+    public async saveValues() {
+        this.SetSpreadsheetUrl();
+    }
     private bindEvents() {
         this.saveBtn?.addEventListener("click", () => this.SetSpreadsheetUrl());
 

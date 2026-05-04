@@ -1,4 +1,4 @@
-import type { Hermidata, Settings } from "../../shared/types";
+import { defaultSettings, type Hermidata, type Settings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -38,6 +38,22 @@ export class TagManagement extends Build {
     private async ReloadForms() {
         await this.init();
     }
+    public async resetValues() {
+        // reset settings in IndexedDB
+        const settings = await this.getSettings();
+        settings.TagManagement = defaultSettings.TagManagement;
+        await this.setSettings(settings);
+        await this.ReloadForms();
+    }
+    public async cancelValues() {
+        // reset page values to current settings
+        await this.ReloadForms();
+    }
+    public async saveValues() {
+        // TODO: implement if needed, currently values are saved immediately on change
+        // no page values to save, since all actions are tag-based
+    }
+
     private populateUpdateRemoveTagForm() {
         if (!this.tagEditContainer) return;
         this.tagEditContainer.innerHTML = "";

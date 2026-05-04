@@ -1,4 +1,4 @@
-import type { NotificationTypes, Settings } from "../../shared/types";
+import { defaultSettings, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -51,6 +51,26 @@ export class ExtensionBehaviour extends Build {
         this.enableKeyboardShortcuts?.addEventListener("change", (e) => this.EnableKeyboardShortcuts(e));
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.saveTarget?.addEventListener("change", (e) => this.SaveTarget(e));
+    }
+    public async resetValues() {
+        // reset all values from inputs to default
+        const settings = await this.getSettings();
+        const updatedSettings: Settings = { ...settings, ExtensionBehaviour: { ...defaultSettings.ExtensionBehaviour } };
+        // reset settings in IndexedDB
+        await this.setSettings(updatedSettings);
+    }
+    public async cancelValues() {
+        // reset page values to current settings
+        const settings = await this.getSettings();
+        this.setValueOptionLightMode(settings);
+        this.setValueOptionContextMenu(settings);
+        this.setValueOptionNotification(settings);
+        this.setValueOptionKeyboardShortcuts(settings);
+        this.setValueOptionAutoSubscribe(settings);
+        this.setValueOptionSaveTarget(settings);
+    }
+    public async saveValues() {
+        // values are saved on input change, so no need to do anything here
     }
 
 

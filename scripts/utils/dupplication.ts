@@ -359,10 +359,6 @@ export async function  migrateSettingsToLatest(settings: oldSettingsV5 | oldSett
         };
         return result;
     };
-    if (!version || version < 4) {
-        console.error("Settings version too old or missing. Cannot migrate.");
-        return;
-    }
     if (version === 5) {
         console.warn("Settings version is newer than expected. Attempting best-effort migration.");
         const knownSettings = settings as oldSettingsV5;
@@ -370,7 +366,7 @@ export async function  migrateSettingsToLatest(settings: oldSettingsV5 | oldSett
         await putSettings(result);
     }
 
-    if (version === 4) {
+    if (version === 4 || !version || version < 4) {
         const knownSettings = settings as oldSettingsV4;
         
         const result: Settings = upgrade(knownSettings, defaultSettings);

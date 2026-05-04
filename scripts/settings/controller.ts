@@ -35,6 +35,11 @@ export class BuildController {
         ['import-export', 'Import_Export']
     ]);
 
+    private readonly resetBtn = getElement<HTMLButtonElement>("#resetSettingsBtn");
+    private readonly saveBtn = getElement<HTMLButtonElement>("#saveSettingsBtn");
+    private readonly cancelBtn = getElement<HTMLButtonElement>("#cancelSettingsBtn");
+
+
     private readonly openAccount_Connection = getElement<HTMLButtonElement>(`#open${this.navigations.get('account-connection')}`);
     private readonly openExtension_Behaviour = getElement<HTMLButtonElement>(`#open${this.navigations.get('extension-behaviour')}`);
     private readonly openDefaultBookmarkSettings = getElement<HTMLButtonElement>(`#open${this.navigations.get('default-bookmarks')}`);
@@ -61,8 +66,11 @@ export class BuildController {
         this.openTagManagement?.addEventListener('click', (e) => this.navigateTo(e, navStrings[4]));
         this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, navStrings[5]));
         this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, navStrings[6]));
+
+        this.resetBtn?.addEventListener('click', () => this.resetPage(this.currentSection));
+        this.saveBtn?.addEventListener('click', () => this.savePage(this.currentSection));
+        this.cancelBtn?.addEventListener('click', () => this.cancelPage(this.currentSection));
     }
-    
     private async navigateTo(e: PointerEvent | HTMLButtonElement, sectionId: string) {
         const target = e instanceof PointerEvent ? e.target as HTMLButtonElement : e;
         if (target.dataset.active === "true") return; // already active, do nothing
@@ -110,6 +118,81 @@ export class BuildController {
                 break;
             case 'import-export':
                 await this.importAndExport.init();
+                break;
+        }
+    }
+    private async savePage(sectionId: string) {
+        switch (sectionId) {
+            case 'account-connection':
+                await this.accountConnection.saveValues();
+                break;
+            case 'extension-behaviour':
+                await this.extensionBehaviour.saveValues();
+                break;
+            case 'default-bookmarks':
+                await this.defaultBookmarkInputs.saveValues();
+                break;
+            case 'content-types':
+                await this.contentTypesAndStatuses.saveValues();
+                break;
+            case 'tag-management':
+                await this.tagManagement.saveValues();
+                break;
+            case 'folder-mapping':
+                await this.folderMapping.saveValues();
+                break;
+            case 'import-export':
+                await this.importAndExport.saveValues();
+                break;
+        }
+    }
+    private async cancelPage(sectionId: string) {
+        switch (sectionId) {
+            case 'account-connection':
+                await this.accountConnection.cancelValues();
+                break;
+            case 'extension-behaviour':
+                await this.extensionBehaviour.cancelValues();
+                break;
+            case 'default-bookmarks':
+                await this.defaultBookmarkInputs.cancelValues();
+                break;
+            case 'content-types':
+                await this.contentTypesAndStatuses.cancelValues();
+                break;
+            case 'tag-management':
+                await this.tagManagement.cancelValues();
+                break;
+            case 'folder-mapping':
+                await this.folderMapping.cancelValues();
+                break;
+            case 'import-export':
+                await this.importAndExport.cancelValues();
+                break;
+        }
+    }
+    private async resetPage(sectionId: string) {
+        switch (sectionId) {
+            case 'account-connection':
+                await this.accountConnection.resetValues();
+                break;
+            case 'extension-behaviour':
+                await this.extensionBehaviour.resetValues();
+                break;
+            case 'default-bookmarks':
+                await this.defaultBookmarkInputs.resetValues();
+                break;
+            case 'content-types':
+                await this.contentTypesAndStatuses.resetValues();
+                break;
+            case 'tag-management':
+                await this.tagManagement.resetValues();
+                break;
+            case 'folder-mapping':
+                await this.folderMapping.resetValues();
+                break;
+            case 'import-export':
+                await this.importAndExport.resetValues();
                 break;
         }
     }

@@ -1,5 +1,5 @@
 import { it } from "vitest";
-import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Settings } from "../../shared/types";
+import { defaultSettings, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -30,8 +30,27 @@ export class ContentTypesAndStatuses extends Build {
         this.newNovelTypeBtn?.addEventListener("click", () => this.saveNewNovelType());
         this.newNovelStatusBtn?.addEventListener("click", () => this.saveNewNovelStatus());
         this.newReadStatusBtn?.addEventListener("click", () => this.saveNewReadStatus());
+    }
+    public async resetValues() {
+        // remove all values from inputs
+        if (this.newNovelType) this.newNovelType.value = "";
+        if (this.newNovelStatus) this.newNovelStatus.value = "";
+        if (this.newReadStatus) this.newReadStatus.value = "";
 
-
+        // reset settings in IndexedDB
+        const settings = await this.getSettings();
+        settings.ContentTypesAndStatuses.TYPE_OPTIONS = defaultSettings.ContentTypesAndStatuses.TYPE_OPTIONS;
+        settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS = defaultSettings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS;
+        settings.ContentTypesAndStatuses.STATUS_OPTIONS = defaultSettings.ContentTypesAndStatuses.STATUS_OPTIONS;
+        await this.setSettings(settings);
+        await this.populateSelects();
+    }
+    public async cancelValues() {
+        // reset page values to current settings
+        await this.populateSelects();
+    }
+    public async saveValues() {
+        // values are saved on input change, so no need to do anything here
     }
 
     private async populateSelects() {

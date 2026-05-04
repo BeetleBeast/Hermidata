@@ -1,4 +1,4 @@
-import type { AnyNovelType, AnyReadStatus, Settings, FolderMapping as FolderMappingType, FolderRule } from "../../shared/types";
+import { type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping as FolderMappingType, type FolderRule, defaultSettings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -129,6 +129,21 @@ export class FolderMapping extends Build {
             const value = this.advancedOptions?.style.display === 'flex' ? 'none' : 'flex';
             this.advancedOptions!.style.display = value;
         });
+    }
+    public async resetValues() {
+        // reset settings in IndexedDB
+        const settings = await this.getSettings();
+        settings.FolderMapping = defaultSettings.FolderMapping;
+        await this.setSettings(settings);
+    }
+    public async cancelValues() {
+        // reset page values to current settings
+        const settings = await this.getSettings();
+        this.loadExistingRules(settings);
+    }
+    public async saveValues() {
+        // TODO: implement if needed, currently values are saved immediately on change
+        // values are saved on input change, so no need to do anything here
     }
     private setRootPathValue(value: string) {
         if (!this.rootPath) return;
@@ -287,12 +302,16 @@ export class FolderMapping extends Build {
         const statuses = Object.entries(settings.FolderMapping.statusFolders);
         const types =  Object.entries(settings.FolderMapping.typeAliases);
 
+        if (statuses.length === 0) getElement("#activeReadStatuses")!.style.display = 'none';
+        if (types.length === 0) getElement("#activeTypeAliases")!.style.display = 'none';
+        if (statuses.length === 0 && types.length === 0) getElement(".FolderMapping_ActiveAliases")!.style.display = 'none';
+
         for (const [key, value] of statuses) { 
-            const row = this.buildAliasRow(key, value)
+            const row = this.buildAliasRow(key, value, false)
             this.activeReadStatuses.appendChild(row)
         }
         for (const [key, value] of types) {
-            const row = this.buildAliasRow(key, value)
+            const row = this.buildAliasRow(key, value, true)
             this.activeTypeAliases.appendChild(row)
         }
     }
@@ -302,24 +321,48 @@ export class FolderMapping extends Build {
         this.activeCustomRules.innerHTML = ''
 
         const mapping = settings.FolderMapping
-        mapping.overrides?.forEach(rule => {
+        if (!mapping.overrides || mapping.overrides.length === 0) {
+            getElement("#CustomRulesContainer")!.style.display = 'none';
+            return
+        }
+        for (const rule of mapping.overrides) {
             const row = this.buildRuleRow(
                 rule.type   ?? 'any',
                 rule.status ?? 'any',
                 rule.path
             )
             this.activeCustomRules!.appendChild(row)
-        })
+        }
     }
-    private buildAliasRow(OriginalName: string, newAlias: string): HTMLElement {
+    private buildAliasRow(OriginalName: string, newAlias: string, isNovelType: boolean = false): HTMLElement {
         const row = document.createElement('div')
         row.className = 'folder-mapping-row'
         row.dataset.OriginalName = OriginalName
         row.dataset.newAlias = newAlias
 
         const label = document.createElement('span')
-        label.textContent = `${OriginalName} → ${newAlias}`
-        // TODO: be able to edit path
+        label.textContent = `${OriginalName} → `
+
+        const eddit = document.createElement('input');
+        eddit.type = 'text';
+        eddit.className = 'folder-mapping-edit-alias';
+        eddit.value = newAlias;
+        eddit.addEventListener('change', async () => {
+            const updatedAlias = eddit.value.trim();
+            if (!updatedAlias) {
+                eddit.value = newAlias;
+                return;
+            }
+        });
+        const edditBtn = document.createElement('button');
+        edditBtn.textContent = 'Save';
+        edditBtn.addEventListener('click', async () => {
+            const updatedAlias = eddit.value.trim();
+            if (!updatedAlias) return;
+            await this.addNewAliasToFolderMapping(OriginalName, updatedAlias, isNovelType);
+            this.temporaryStatus(`Saved: ${OriginalName} → ${updatedAlias}`, this.saveStatusFolderMapping_newAliases)
+        })
+
         const removeBtn = document.createElement('button')
         removeBtn.textContent = 'Remove'
         removeBtn.addEventListener('click', async () => {
@@ -328,7 +371,7 @@ export class FolderMapping extends Build {
             row.remove()
         })
 
-        row.append(label, removeBtn)
+        row.append(label, eddit, edditBtn, removeBtn)
         return row
     }
     private buildRuleRow(type: string, status: string, path: string): HTMLElement {
@@ -338,8 +381,29 @@ export class FolderMapping extends Build {
         row.dataset.status = status
 
         const label = document.createElement('span')
-        label.textContent = `${type} + ${status} → ${path}`
+        label.textContent = `${type} + ${status} →`
         // TODO: be able to edit path
+
+        const eddit = document.createElement('input');
+        eddit.className = 'folder-mapping-edit-overide';
+        eddit.type = 'text';
+        eddit.value = path;
+        eddit.addEventListener('change', async () => {
+            const updatedAlias = eddit.value.trim();
+            if (!updatedAlias) {
+                eddit.value = path;
+                return;
+            }
+        });
+        const edditBtn = document.createElement('button');
+        edditBtn.textContent = 'Save';
+        edditBtn.addEventListener('click', async () => {
+            const updatedAlias = eddit.value.trim();
+            if (!updatedAlias) return;
+            await this.addFolderMappingRule(type, status, updatedAlias);
+            this.temporaryStatus(`Saved: ${type} + ${status} → ${updatedAlias}`, this.saveStatusFolderMapping_newAliases)
+        })
+
         const removeBtn = document.createElement('button')
         removeBtn.textContent = 'Remove'
         removeBtn.addEventListener('click', async () => {
@@ -347,7 +411,7 @@ export class FolderMapping extends Build {
             row.remove()
         })
 
-        row.append(label, removeBtn)
+        row.append(label, eddit, edditBtn, removeBtn)
         return row
     }
 
