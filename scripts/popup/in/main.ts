@@ -1,7 +1,6 @@
 
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
-import { Duplicate } from '../../utils/dupplication';
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
@@ -10,6 +9,7 @@ import { RSS } from '../../rss/main';
 import { getGoogleSheetURL, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
 import { TagsSystem } from '../core/Tags';
+import { HermidataMigration } from '../../shared/migration/Hermidata';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -80,7 +80,7 @@ class HermidataController {
 
     public RSS: RSS | null = null;
 
-    private dupplicate: Duplicate | null = null;
+    private dupplicate: HermidataMigration | null = null;
 
     private tags: TagsSystem;
 
@@ -129,7 +129,7 @@ class HermidataController {
         await this.tags.init();
     }
     private async checkForDuplicates(): Promise<void> {
-        this.dupplicate = new Duplicate();
+        this.dupplicate = new HermidataMigration();
         await this.dupplicate.init();
         const dups = await this.dupplicate.findPotentialDuplicates(0.9);
         if (dups.length > 0) console.table(dups, ['potential duplicates']);

@@ -11,7 +11,7 @@ import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../StringOutput';
 import { getElement, setElement } from '../../utils/Selection';
 import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, defaultSettings, DEFAULT_TAGS } from '../types/index';
-import { migrateSettingsToLatest } from '../../utils/dupplication';
+import { SettingsMigration } from '../migration/Settings';
 
 // ============================================================
 // Hermidata
@@ -230,7 +230,7 @@ export async function migrateSettings(): Promise<void> {
         // if settings are not up-to-date, migrate them
         if (settingsVersion < latestVersion || !settingsVersion) {
             console.error('[Storage] migrateSettings: wrong version');
-            migrateSettingsToLatest(settings as unknown, settingsVersion);
+            await SettingsMigration.migrateSettingsToLatest(settings as unknown, settingsVersion);
             console.log('[Storage] Settings migrated');
         }
     } catch (err) {

@@ -3,7 +3,7 @@ import { TrimTitle, findByTitleOrAltV2, returnHashedTitle } from "../../shared/S
 import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
-import { migrateCopy } from "./migrate";
+import { HermidataMigration } from "../../shared/migration/Hermidata";
 
 
 // --- cashe ---
@@ -73,7 +73,7 @@ export class PastHermidata {
             if (byOtherMeans ) return byOtherMeans;
             const objs = Object.values(possibleObj);
             // Check for possible same-series different-type pairs
-            return await migrateCopy(objs)
+            return await HermidataMigration.migrateCopy(objs);
         }
 
         const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.type, this.hermidata.url);
@@ -198,7 +198,7 @@ export async function detectAltTitleNeeded(title: string, type: AnyNovelType, so
     };
 }
 
-export function CalcDiff(a: string, b: string) {
+export function CalcDiff(a: string, b: string): number {
     if (!a || !b) return 0;
 
     // Create a stable key for caching

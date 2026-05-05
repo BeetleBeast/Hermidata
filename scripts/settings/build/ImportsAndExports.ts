@@ -304,35 +304,3 @@ export class ImportsAndExports extends Build {
     }
 
 }
-
-
-
-
-export function migrateFolderMapping( old: Record<string, Record<string, { path: string }>>, root: string ): FolderMapping {
-    // Collect status → folder name from the first type's entries
-    const statusFolders: Record<string, string> = {}
-    const overrides: FolderRule[] = []
-
-    const firstType = Object.values(old)[0] ?? {}
-    for (const [status, { path }] of Object.entries(firstType)) {
-        const segment = path.split('/').at(-1) ?? status
-        statusFolders[status] = segment
-    }
-
-    // Anything that doesn't match the pattern becomes an override
-    for (const [type, statuses] of Object.entries(old)) {
-        for (const [status, { path }] of Object.entries(statuses)) {
-            const expected = `${root}/${type}/${statusFolders[status]}`
-            if (path !== expected) {
-                overrides.push({ type, status, path })
-            }
-        }
-    }
-
-    return {
-        root,
-        statusFolders,
-        overrides,
-        defaultPath: `${root}/Unsorted`
-    }
-}
