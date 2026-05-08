@@ -22,8 +22,7 @@
 </head>
 <body>
     <aside class="sidebar" class="sidebar">
-        <h1>HERMIDATA</h1>
-        <p>Settings</p>
+        <p class="sidebar-title" id="settings-title">Settings</p>
         <br>
         <nav>
             <button id="openAccount_Connection" class="openLink nav-item" data-active="true" type="button">Account & Connection</button>
@@ -361,7 +360,10 @@
                         <span class="CustomRules"> is </span>
                         <select id="addCustomRuleToSelect_ReadStatus" title="AddRuleTo"> <!-- dynamic items here --> </select>
                         <span class="CustomRules"> Save to: </span>
-                        <input type="text" id="addCustomRule" placeholder="type here..." />
+                        <div id="addCustomRuleOptions_Inputs">
+                            <input type="text" id="addCustomRule" placeholder="type here..." />
+                            <span id="customRuleGhostText"></span>
+                        </div>
                         <button type="button" id="addCustomRuleBtn">Add Rule</button>
                     </div>
                     <p id="saveStatus-folderMapping-new-overides"></p>

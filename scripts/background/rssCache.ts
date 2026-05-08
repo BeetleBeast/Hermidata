@@ -129,3 +129,31 @@ async function putAll(store: 'hermidata' | 'feeds' | 'settings', data: Record<st
         console.error(`[DB] put${store.at(0)?.toUpperCase()}All:`, err);
     }
 }
+
+export async function handleGetAllPossiblePaths(sendResponse: (r: unknown) => void, searchStart?: string): Promise<true> {
+    // Immediately start the async work
+    const results = await ext.bookmarks.search({ title: searchStart || '' });
+    const searchStartID = (results.length > 0) ? results[0].id : null;
+    
+    let bookmarkTreeNodes;
+    if (searchStartID) bookmarkTreeNodes = await ext.bookmarks.getSubTree(searchStartID)
+    else bookmarkTreeNodes = await ext.bookmarks.getTree();
+    
+    const paths = new Set<string>();
+    for (const node of bookmarkTreeNodes || []) {
+        if (!node.id || !node.title || node.url) continue; // skip if no id/title or if it's a bookmark (has url)
+        paths.add(node.title);
+        findPaths(node).forEach(path => paths.add(path));
+    }
+    
+    sendResponse({ status: 'ready', data: [...paths] }); // Match your expected response format
+    
+    return true; // Keep the message channel open
+}
+
+function findPaths(node: chrome.bookmarks.BookmarkTreeNode, currentPath = ''): string[] {
+    if (!node.id || !node.title || node.url) return [currentPath]; // skip if no id/title or if it's a bookmark (has url)
+    const newPath = currentPath ? `${currentPath}/${node.title}` : node.title;
+    if (!node.children) return [newPath];
+    return node.children.flatMap(child => findPaths(child, newPath));
+}

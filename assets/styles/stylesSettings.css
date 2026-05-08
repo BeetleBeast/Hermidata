@@ -206,6 +206,7 @@ body {
 	margin-left: 5%;
 	margin-right: 5%;
 	padding-bottom: 50px;
+	overflow: clip;
 }
 
 .main.content {
@@ -319,6 +320,8 @@ nav {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	border-radius: 15px;
+	padding: 15px;
 }
 
 .FolderMapping_RenameOrAddAlias-child {
@@ -337,18 +340,34 @@ nav {
 	gap: 5px;
 	padding: 5px;
 }
-
+/* DEFAULT  */
 /* custom Aliases */
 .FolderMapping_ActiveAliases {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	width: fit-content;
 	border: 1px solid;
 	border-radius: 15px;
 	padding: 15px;
-	max-width: 70%;
+	width: 70%;
+	margin-top: 0;
+	
+	transition: all 0.5s ease-in-out;
 }
+/* TO small screen */
+@media only screen and (max-width: 1745px) {
+.FolderMapping_ActiveAliases {
+	width: 99%;
+	margin-top: 200px;
+}
+}
+@media only screen and (max-width: 1100px) {
+.FolderMapping_ActiveAliases {
+	width: 99%;
+	margin-top: 260px;
+}
+}
+
 #AliasesHeader {
 	display: flex;
 	gap: 5px;
@@ -398,16 +417,15 @@ nav {
 }
 
 /* custom rules */
-
 .FolderMapping_ActiveCustomRules {
 	display: flex;
 	flex-direction: column;
 	border: 1px solid;
-	width: fit-content;
 	padding: 15px;
 	border-radius: 15px;
 	align-items: center;
 	justify-content: center;
+	width: 99%;
 }
 
 #activeCustomRulesContainer {
@@ -431,6 +449,25 @@ nav {
 	text-decoration: underline;
 }
 
+#addCustomRule {
+	width: 100%;
+}
+#addCustomRuleOptions_Inputs {
+	position: relative;
+	overflow: clip;
+	width: 55%;
+}
+#customRuleGhostText {
+	position: absolute;
+	top: 20px;
+	left: 10px;
+	pointer-events: none;
+	color: #888;
+	opacity: 0.5;
+	white-space: nowrap;
+	overflow: visible;
+	font-size: smaller;
+}
 /* advanced options */
 #advancedOptionsBtn {
 	width: 30%;
@@ -450,7 +487,7 @@ nav {
     border: 1px solid;
     padding: 15px;
     border-radius: 15px;
-    width: fit-content;
+    width: 99%;
 }
 
 /* sub-folders */
@@ -479,6 +516,7 @@ nav {
     flex-direction: row;
     align-items: center;
     gap: 5px;
+	width: 100%;
 }
 
 .prefixAndSuffix {
@@ -521,4 +559,5 @@ nav {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	width: 100%;
 }

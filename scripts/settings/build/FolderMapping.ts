@@ -1,3 +1,5 @@
+import { levenshteinDistance } from "../../popup/core/Past";
+import { ext } from "../../shared/BrowserCompat";
 import { type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping as FolderMappingType, type FolderRule, defaultSettings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
@@ -60,6 +62,12 @@ export class FolderMapping extends Build {
     private readonly addCustomRule = getElement<HTMLInputElement>("#addCustomRule");
     private readonly addCustomRuleBtn = getElement<HTMLButtonElement>("#addCustomRuleBtn");
     private readonly saveStatusFolderMapping_newOverides = getElement<HTMLParagraphElement>("#saveStatus-folderMapping-new-overides");
+    private readonly customRuleGhostText = getElement<HTMLParagraphElement>("#customRuleGhostText");
+
+
+    private allAbsPath: string[] = [];
+
+    private customRuleSuggestion: string | null = null;
 
 
     async init() {
@@ -129,6 +137,36 @@ export class FolderMapping extends Build {
             const value = this.advancedOptions?.style.display === 'flex' ? 'none' : 'flex';
             this.advancedOptions!.style.display = value;
         });
+        // add ghost text on change
+        this.addCustomRule?.addEventListener('input', async () => {
+            const rule = this.addCustomRule?.value.trim();
+            const ghostText = this.customRuleGhostText;
+            if (!rule || !ghostText) return;
+            const completeSuggestions = await this.getSuggestions(rule);
+            const fullSuggestion = completeSuggestions.length > 0 ? completeSuggestions[0] : null;
+            if (fullSuggestion) {
+                const suggestion = this.cutSuggestion(fullSuggestion, rule);
+                this.addCustomRule!.placeholder = suggestion;
+                this.customRuleSuggestion = suggestion;
+                this.customRuleGhostText.textContent = suggestion;
+            }
+        });
+        // pressing tab on custom rule input autocompletes the ghost text
+        this.addCustomRule?.addEventListener('keydown', async (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                this.setGhostTextForCustomRule();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                this.setGhostTextForCustomRule();
+            } else if (e.key === 'Escape') {
+                this.customRuleSuggestion = null;
+                this.customRuleGhostText!.textContent = '';
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.setGhostTextForCustomRule();
+            }
+        });
     }
     public async resetValues() {
         // reset settings in IndexedDB
@@ -144,6 +182,22 @@ export class FolderMapping extends Build {
     public async saveValues() {
         // TODO: implement if needed, currently values are saved immediately on change
         // values are saved on input change, so no need to do anything here
+    }
+    private cutSuggestion(suggestion: string, rule: string) {
+        // cut suggestion to only one section of path ( between / and / )
+        //TODO: cut suggestion to only one section of path
+        const cutIndex = suggestion.indexOf(rule);
+        if (cutIndex === -1) return suggestion;
+        return suggestion.substring(0, cutIndex);
+    }
+    private setGhostTextForCustomRule() {
+        if (!this.customRuleSuggestion) return;
+        const rule = this.addCustomRule?.value.trim();
+        const ghostText = this.customRuleGhostText;
+        if (!rule || !ghostText) return;
+        this.customRuleGhostText.textContent = "";
+        this.addCustomRule!.value = this.customRuleSuggestion;
+        this.customRuleSuggestion = null;
     }
     private setRootPathValue(value: string) {
         if (!this.rootPath) return;
@@ -366,8 +420,7 @@ export class FolderMapping extends Build {
         const removeBtn = document.createElement('button')
         removeBtn.textContent = 'Remove'
         removeBtn.addEventListener('click', async () => {
-            // TODO: Redo this 
-            // await this.removeFolderMappingRule(OriginalName, newAlias)
+            await this.removeAliasFromFolderMapping(OriginalName, isNovelType);
             row.remove()
         })
 
@@ -381,8 +434,8 @@ export class FolderMapping extends Build {
         row.dataset.status = status
 
         const label = document.createElement('span')
-        label.textContent = `${type} + ${status} →`
-        // TODO: be able to edit path
+        label.textContent = `${type} + ${status} → `
+        // TODO: make the text content better
 
         const eddit = document.createElement('input');
         eddit.className = 'folder-mapping-edit-overide';
@@ -495,10 +548,38 @@ export class FolderMapping extends Build {
             this.temporaryStatus(  `Error: ${message}`, this.saveStatusFolderMapping_newOverides, 3000)
         }
     }
+    private async removeAliasFromFolderMapping( OriginalName: string, isNovelType: boolean ): Promise<void> {
+        try {
+            const settings = await this.getSettings();
+            const mappingAlias = isNovelType ? settings.FolderMapping.typeAliases : settings.FolderMapping.statusFolders
+
+            // Early checks to prevent unnecessary operations
+            if (!mappingAlias || !mappingAlias[OriginalName]) throw new Error('Alias not found')
+
+            const before = Object.keys(mappingAlias).length ?? 0
+            const filtered = Object.values(mappingAlias)?.filter(v => v !== OriginalName) ?? []
+
+            if (filtered.length === before) throw new Error(`No rule found for ${OriginalName ?? 'any'}`)
+            
+            // remove key and value from object
+            if (isNovelType) delete settings.FolderMapping.typeAliases?.[OriginalName]
+            else delete settings.FolderMapping.statusFolders[OriginalName]
+            
+
+            this.setSettings(settings);
+
+            this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overides)
+            console.log(`[FolderMapping] Removed rule: ${OriginalName}`)
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unknown error'
+            console.error('[FolderMapping] removeAliasFromFolderMapping:', message)
+            this.temporaryStatus(`Error: ${message}`, this.saveStatusFolderMapping_newAliases, 3000)
+        }
+    }
     private async removeFolderMappingRule( type: AnyNovelType | undefined, status: AnyReadStatus | undefined ): Promise<void> {
         try {
             const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null })
-            const mapping = settings.FolderMapping
+            const mapping = settings.FolderMapping;
 
             const before = mapping.overrides?.length ?? 0
             const filtered = mapping.overrides?.filter(
@@ -507,7 +588,7 @@ export class FolderMapping extends Build {
 
             if (filtered.length === before) throw new Error(`No rule found for ${type ?? 'any'} + ${status ?? 'any'}`)
 
-            await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: { ...settings, FolderMapping: { ...mapping, overrides: filtered } }});
+            await this.setSettings({ ...settings, FolderMapping: { ...mapping, overrides: filtered } });
 
             this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overides)
 
@@ -585,5 +666,68 @@ export class FolderMapping extends Build {
             console.error('[FolderMapping] setRootPath:', message)
             this.temporaryStatus( `Error: ${message}`, this.rootPathStatus, 3000)
         }
+    }
+    private async getAllPossiblePathsFromBackground(rootPath: string | null): Promise<string[] | null> {
+        const result = new Promise<string[] | null>((resolve, reject) => {
+            ext.runtime.sendMessage({ type: 'GET_ALL_POSSIBLE_PATHS', data: rootPath }, (response: { data: string[] }) => {
+                if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
+                else resolve(response.data ?? null);
+            });
+        });
+        return result;
+    }
+    private async getAllPossiblePaths(): Promise<string[] | null> {
+        // Implementation for getting all possible paths
+        // get root path from settings
+        const settings = await this.getSettings();
+        const rootPath = settings.FolderMapping.root ?? null;
+        // send request to background
+        return await this.getAllPossiblePathsFromBackground(rootPath);
+    }
+    // Remake suggestions
+    private async getSuggestions(input: string, limit = 1): Promise<string[]> {
+        if (!input.trim()) return [];
+        
+        if (this.allAbsPath.length === 0) {
+            // Populate allAbsPath with all possible folder names from typeAliases and statusFolders
+            const allPossiblePaths = await this.getAllPossiblePaths();
+            if (allPossiblePaths) this.allAbsPath = allPossiblePaths;
+            else return [];
+        }
+
+        const normalized = input.toLowerCase().trim();
+
+        const allPathValues = Array.from(this.allAbsPath)
+        
+        // Exact match first
+        const exact = allPathValues.filter(tag => 
+            tag.toLowerCase() === normalized
+        );
+        
+        // Starts with
+        const startsWith = allPathValues.filter(tag => 
+            tag.toLowerCase().startsWith(normalized) &&
+            !exact.includes(tag)
+        );
+        
+        // Contains
+        const contains = allPathValues.filter(tag => 
+            tag.toLowerCase().includes(normalized) && 
+            !exact.includes(tag) && 
+            !startsWith.includes(tag)
+        );
+        
+        // Fuzzy match (Levenshtein distance)
+        const fuzzy = allPathValues
+            .filter(path => !exact.includes(path) && !startsWith.includes(path) && !contains.includes(path))
+            .map(path => ({
+                path,
+                distance: levenshteinDistance(normalized, path.toLowerCase())
+            }))
+            .filter(({ distance }) => distance <= 3) // Max 3 character difference
+            .sort((a, b) => a.distance - b.distance)
+            .map(({ path }) => path);
+        
+        return [...exact, ...startsWith, ...contains, ...fuzzy].slice(0, limit);
     }
 }
