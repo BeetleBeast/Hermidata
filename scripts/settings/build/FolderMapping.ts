@@ -146,7 +146,6 @@ export class FolderMapping extends Build {
             const fullSuggestion = completeSuggestions.length > 0 ? completeSuggestions[0] : null;
             if (fullSuggestion) {
                 const suggestion = this.cutSuggestion(fullSuggestion, rule);
-                this.addCustomRule!.placeholder = suggestion;
                 this.customRuleSuggestion = suggestion;
                 this.customRuleGhostText.textContent = suggestion;
             }
@@ -183,12 +182,30 @@ export class FolderMapping extends Build {
         // TODO: implement if needed, currently values are saved immediately on change
         // values are saved on input change, so no need to do anything here
     }
-    private cutSuggestion(suggestion: string, rule: string) {
-        // cut suggestion to only one section of path ( between / and / )
-        //TODO: cut suggestion to only one section of path
-        const cutIndex = suggestion.indexOf(rule);
-        if (cutIndex === -1) return suggestion;
-        return suggestion.substring(0, cutIndex);
+    private cutSuggestion(suggestion: string, rule: string): string {
+        // example suggestion: /home/user/novel/onepiece/onepiece-1/onepiece-1
+        // example rule: /home/user/
+        // result: /home/user/novel/
+        
+        // Normalize rule to ensure it doesn't end with /
+        const normalizedRule = rule.endsWith('/') ? rule.slice(0, -1) : rule;
+        
+        // Check if suggestion starts with the rule
+        if (!suggestion.startsWith(normalizedRule)) return suggestion;
+        
+        // Get the part after the rule
+        const afterRule = suggestion.slice(normalizedRule.length);
+        
+        // Split and get first segment after rule
+        const segments = afterRule.split('/').filter(s => s.length > 0);
+        
+        if (segments.length === 0) return normalizedRule + '/';
+
+        // if normalizedRule is only a section of the suggestion, don't add a trailing slash
+        const firstsegment = suggestion.at(normalizedRule.length) === '/' ? '/' + segments[0] : segments[0];
+        
+        // Return rule + first directory after it
+        return normalizedRule + firstsegment + '/';
     }
     private setGhostTextForCustomRule() {
         if (!this.customRuleSuggestion) return;

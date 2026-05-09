@@ -1,6 +1,6 @@
 import { ext } from "../../shared/BrowserCompat";
 import type { Hermidata, RawFeed } from "../../shared/types";
-import type { FolderMapping, FolderRule, Settings } from "../../shared/types/settings"
+import type { FolderMapping, FolderRule, quickBackup, Settings } from "../../shared/types/settings"
 import { getElement } from "../../utils/Selection";
 
 import { Build } from "../build";
@@ -37,6 +37,8 @@ export class ImportsAndExports extends Build {
         
         getElement("#exportFolderMappingBtn")?.addEventListener("click", () => this.exportFolderMapping());
         getElement("#importFolderMappingBtn")?.addEventListener("change", (e) => this.importFolderMapping(e));
+
+        getElement("#quickBackup")?.addEventListener("click", () => this.quickBackup());
 
         if (this.devMode) {
             getElement("#exportRSSBtn")?.addEventListener("click", () => this.exportRSSBtn() );
@@ -301,6 +303,41 @@ export class ImportsAndExports extends Build {
             }
         };
         reader.readAsText(file);
+    }
+    private async quickBackup() {
+        try {
+            // get Settings, Hermidata, RSSData, SyncData
+            const [updatedSettings, hermidataList, RSSDataList, SyncData ] = await Promise.all([
+                this.ensureSettingsUpToDate(),
+                this.dbRequest<Hermidata[]>('hermidata', 'getAll'),
+                this.dbRequest<RawFeed[]>('feeds', 'getAll'),
+                ext.storage.sync.get(null)
+            ])
+            const hermidata = Object.fromEntries(hermidataList.map(h => [h.id, h]));
+            const RSSData = Object.fromEntries(RSSDataList.map(h => [h.url, h]));
+
+            const BackupData: quickBackup = {
+                Settings: updatedSettings,
+                Hermidata: hermidata,
+                RSSData: this.devMode ? RSSData : undefined,
+                SyncData: this.devMode ? SyncData : undefined
+            }
+
+            
+            const jsonSTR = JSON.stringify(BackupData, null, 2);
+            const blob = new Blob([jsonSTR], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+        
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "quickBackup.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Extension error: Failed quickBackup: ", error)
+        }
     }
 
 }

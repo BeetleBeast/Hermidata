@@ -1,5 +1,14 @@
-import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus } from "./popup";
+import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type RawFeed } from "./popup";
 
+
+export interface quickBackup {
+    Settings: Settings,
+    Hermidata: Record<string, Hermidata>,
+    SyncData?:  {
+        [key: string]: unknown;
+    }
+    RSSData?: Record<string, RawFeed>
+}
 export interface DefaultChoice {
     novelType : AnyNovelType,
     readStatus : AnyReadStatus,

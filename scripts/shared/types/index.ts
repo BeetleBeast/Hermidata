@@ -63,6 +63,8 @@ export {
     type elementInput,
     type elementMenu,
 
+    type quickBackup,
+
     type elementsInputAndMenu,
     type ElmentsWithInputAndMenu,
 

@@ -6,6 +6,7 @@ import { ContentTypesAndStatuses } from "./build/ContentTypesAndStatuses";
 import { TagManagement } from "./build/TagManagement";
 import { FolderMapping } from "./build/FolderMapping";
 import { getElement } from "../utils/Selection";
+import { customConfirm } from "../popup/frontend/confirm";
 
 export class BuildController {
     private currentSection: string = 'account-connection';
@@ -172,6 +173,10 @@ export class BuildController {
         }
     }
     private async resetPage(sectionId: string) {
+        // confirm reset
+        const Confirmation = await customConfirm("Are you sure you want to reset all settings?");
+        if (!Confirmation) return;
+        // reset page values to current settings
         switch (sectionId) {
             case 'account-connection':
                 await this.accountConnection.resetValues();

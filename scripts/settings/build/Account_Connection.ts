@@ -1,5 +1,4 @@
 import { ext } from "../../shared/BrowserCompat";
-import type { Settings } from "../../shared/types";
 import { getElement, setElement } from "../../utils/Selection";
 import { Build } from "../build";
 
@@ -41,6 +40,8 @@ export class Account_Connection extends Build {
     private bindEvents() {
         this.saveBtn?.addEventListener("click", () => this.SetSpreadsheetUrl());
 
+        this.input?.addEventListener("change", () => this.giveFeedback());
+
         this.testBtn?.addEventListener("click", () => this.TestSpreadsheetUrl());
 
         this.LogOutBtn?.addEventListener("click", () => this.ResetLoginAuth());
@@ -68,6 +69,12 @@ export class Account_Connection extends Build {
             console.log("OAuth credentials cleared");
         });
     }
+    private giveFeedback() {
+        // give hint of how the link to google sheets needs to look like
+        if (!this.input || !this.status) return;
+        if (!this.input.value) this.status.textContent = `Go to your spreadsheet and copy the url of the sheet. It should look like this: https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit?pli=1&gid=0#gid=0`;
+        else this.status.textContent = "";
+    }
 
 
     private async loadSheetUrl() {
@@ -78,12 +85,12 @@ export class Account_Connection extends Build {
     }
 
     private async getSpreadsheetUrl(): Promise<string> {
-        const settings: Settings = await this.dbRequest('settings', 'get', { id: 'Settings', data: null });
+        const settings = await this.getSettings();
         return settings.AccountAndConnections.spreadsheetUrl;
     }
     private async setSpreadsheetUrl(url: string): Promise<void> {
-        const settings: Settings = await this.dbRequest('settings', 'get', { id: 'Settings', data: null });
+        const settings = await this.getSettings();
         settings.AccountAndConnections.spreadsheetUrl = url;
-        await this.dbRequest('settings', 'put', { id: 'Settings', data: settings });
+        await this.setSettings(settings);
     }
 }

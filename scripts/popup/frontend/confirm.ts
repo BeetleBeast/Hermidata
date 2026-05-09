@@ -109,7 +109,7 @@ export function customPrompt(msg: string, defaultInput: string): Promise<string 
         btn2.addEventListener('click', onNo);
     });
 }
-export function customConfirm(msg: string) {
+export function customConfirm(msg: string): Promise<boolean> {
     return new Promise((resolve) => {
         const container = getElement('.promptSection');
         const label = getElement('.genericLabel');
