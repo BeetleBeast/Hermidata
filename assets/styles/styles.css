@@ -29,11 +29,6 @@ body {
     /*width: minmax(360px, 400px, 700px);*/
 	transition: height 0.6s ease;
 }
-body::after {
-    content: "";
-    display: block;
-}
-
 /* --- buttons --- */
 
 .Btn {
@@ -51,6 +46,10 @@ body::after {
 .Btn:active:not(:disabled) {
     background-color: var(--Btn_active);
     transition: none;
+}
+
+.active {
+    background-color: var(--Btn_active);
 }
 
 /* --- custom context-menu --- */

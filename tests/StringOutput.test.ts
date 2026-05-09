@@ -4,6 +4,7 @@ import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../sc
 
 describe('trimTitle', () => {
     it.each([
+        ["Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
         [`Destiny Unchain Online chapter 99 - Read Manga Online`, `Destiny Unchain Online`],
         [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, 'The Wandering Fairy [LitRPG World-Hopping]'],
         [`Chapter 1 | My Villainous Family Won't Let Me Be | Weeb Central`, `My Villainous Family Won't Let Me Be`],
@@ -35,6 +36,7 @@ describe('trimTitle', () => {
         ["My Title • Chapter 12", "My Title"], // → 12 or NaN? (bullet not in your split regex)
         ["Title／Chapter 12", "Title"], // → 12 or NaN? (fullwidth slash)
         ["Title　Chapter 12", "Title"], // → 12 or NaN? (ideographic space)
+        ["Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
     ])('TrimTitle.trimTitle(%s) → %s', (input, expected) => {
         expect(TrimTitle.trimTitle(input, '').title).toBe(expected)
     })

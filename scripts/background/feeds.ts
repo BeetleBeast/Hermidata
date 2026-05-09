@@ -1,6 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
-import { getAllHermidata, getAllRawFeeds, saveHermidataV3 } from "../shared/db/Storage";
+import { getAllHermidata, getAllRawFeeds, saveHermidataV3, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
 import { TrimTitle } from "../shared/StringOutput";
 
@@ -60,6 +60,7 @@ export async function checkFeedsForUpdates() {
         }
 
         setState.lastAutoFeedCkeck(Date.now());
+        await setAllRawFeeds(Object.values(savedFeeds));
         await ext.storage.local.set({ savedFeeds });
     } catch (err) {
         console.error(`[Hermidata] [✕] Failed to check feeds:`, err);

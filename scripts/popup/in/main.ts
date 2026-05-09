@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // FIXME: this is a hack
     // After popup init — start quietly in the background
-    setTimeout(() => controller.RSS?.preloadRSS(), 200)  // slight delay so popup renders first
+    setTimeout(() => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
 
     setTimeout( () => checkSyncQuota(), 500);
 });
@@ -82,7 +82,7 @@ class HermidataController {
 
     private dupplicate: HermidataMigration | null = null;
 
-    private tags: TagsSystem;
+    private tagsSystem: TagsSystem;
 
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
@@ -92,7 +92,7 @@ class HermidataController {
     private readonly Testing = false;
 
     constructor() {
-        this.tags = new TagsSystem();
+        this.tagsSystem = new TagsSystem();
     }
 
     public async init(): Promise<void> {
@@ -126,7 +126,7 @@ class HermidataController {
         this.populateUI(settings);
         this.bindEvents();
         
-        await this.tags.init();
+        await this.tagsSystem.init();
     }
     private async checkForDuplicates(): Promise<void> {
         this.dupplicate = new HermidataMigration();
@@ -244,7 +244,7 @@ class HermidataController {
         setElement<HTMLSelectElement>('#status', el => el.value = display.status);
         setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]);
         
-        this.tags.populateTagPills(this.hermidata.meta.tags, settings.TagManagement.tagColoring);
+        this.tagsSystem.populateTagPills(this.hermidata.meta.tags, settings.TagManagement.tagColoring);
         
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
@@ -301,17 +301,31 @@ class HermidataController {
         const url = this.hermidata.url;
         const date = new Intl.DateTimeFormat('en-GB').format(new Date());
 
-        const tagsArray = this.tags.getTags();
+        const tagsArray = this.tagsSystem.tags;
 
         if (!title || !Type || !Chapter || !status) throw new Error('Missing required fields');
 
         this.hermidata.title = title;
         this.hermidata.type = Type;
         this.hermidata.chapter.current = Number(Chapter);
+        // max 20 entries in history
+        if (this.hermidata.chapter.history.length >= 20) this.hermidata.chapter.history.shift()
         this.hermidata.chapter.history.push(this.hermidata.chapter.current);
+        // only unique entries in history
+        this.hermidata.chapter.history = Array.from( new Set(this.hermidata.chapter.history) );
         this.hermidata.status = status;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;
+
+        // TODO: sheck if it works
+        // if the Hermidata is a past entry but with a mofified Type
+        // then give option to migrate it to the new type
+        const newPast = new PastHermidata(this.hermidata);
+        const newHermidata = await newPast.checkForDuplicates();
+        console.log('oldHermidata', this.hermidata);
+        console.log('newHermidata', newHermidata);
+        // if (newHermidata) this.hermidata = newHermidata;
+
 
         // save to Browser in JSON format
         const savedInStorage = await updateChapterProgress(title, Type, this.hermidata);

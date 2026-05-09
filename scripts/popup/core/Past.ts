@@ -38,6 +38,40 @@ export class PastHermidata {
         this.pastHermidata = await this.getPastHermidata();
         return this.pastHermidata;
     }
+    public async checkForDuplicates(): Promise<Hermidata | null> {
+        // get all Hermidata
+        const AllHermidata = await PastHermidata.getAllHermidata();
+        // update cashe
+        if (AllHermidataCashe && Object.keys(AllHermidataCashe).length != Object.keys(AllHermidata).length) {
+            AllHermidataCashe = AllHermidata
+        }
+
+        // find title from alt ( includes main title and alt title )
+        const potentialTrueTitle = this.getTitleFromAlt(AllHermidata) || '';
+
+        // find title from fuzzy seach
+        const { possibleObj, AltKeyNeeded, fuzzyKey } = await this.getTitleFromFuzzy(potentialTrueTitle);
+
+        // add alt title to Object
+        if (AltKeyNeeded?.needAltTitle && fuzzyKey && possibleObj[fuzzyKey]) {
+            const confirmation = await customConfirm(`${AltKeyNeeded.reason}\nAdd "${this.hermidata.title}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
+            if (confirmation) await appendAltTitle(this.hermidata.title, possibleObj[fuzzyKey]);
+        }
+
+        // only 1 result -> return
+        if ( Object.keys(possibleObj).length == 1 ) return null
+
+        // more then 1 result -> filter it
+        if ( Object.keys(possibleObj).length > 1 ) {
+            const byOtherMeans = await this.tryToFindByOtherMeans(possibleObj);
+            if (byOtherMeans ) return byOtherMeans;
+            const objs = Object.values(possibleObj);
+            // Check for possible same-series different-type pairs
+            return await HermidataMigration.migrateCopy(objs);
+        }
+
+        return null
+    }
 
 
     private async getPastHermidata(): Promise<Hermidata | null> {
@@ -98,7 +132,7 @@ export class PastHermidata {
         
         const fuzzyKey = AltKeyNeeded?.relatedKey;
         // Generate all possible keys
-        const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type));
+        const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type, this.hermidata.url, false));
         // add fuzzy key if not inside possible keys
         if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey);
         // get all posible hermidata Obj
