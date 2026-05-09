@@ -165,25 +165,8 @@ Source maps are included in dev builds. Each background module registers its own
 ### **RSS**
 
 - Alternate titles need to be set manually — if a feed uses a different title than your saved entry, it may appear as a duplicate
-- Similar tags (e.g. `fav`, `favorite`, `favorites`) are stored separately instead of being merged
 
 - notification RSS item's polygon ( to indicate that it is linked ) `sometimes` don't get set at the correct position
-
----
-
-### To-Do
-
-- [ ] Choose which save targets are active per entry (bookmark only, sheet only, or both)
-- [ ] Manual alternate title entry for out-of-sync RSS matches
-- [ ] auto link RSS to entry without setting it manually
-
-- [ ] subscribe button ( and system ) is very fidelly and can easely break if not done in correct order.
-
-- [ ] update the storage of load from build rss
-
-- [ ] update red_icon to only show when it detect the bookmark inside the allowed root & its a Hermidata its saved.
-
-- [ ] feeds are still local
 
 ---
 

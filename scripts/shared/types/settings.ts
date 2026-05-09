@@ -1,4 +1,4 @@
-import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type RawFeed } from "./popup";
+import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, DEFAULT_TAG_COLOURS, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type RawFeed } from "./popup";
 
 
 export interface quickBackup {
@@ -191,7 +191,7 @@ export const defaultSettings: Settings = {
         },
     },
     TagManagement: {
-        tagColoring: {},
+        tagColoring: DEFAULT_TAG_COLOURS,
     },
     FolderMapping: CustomFoldermapping,
 };

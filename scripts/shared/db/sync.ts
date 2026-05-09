@@ -26,7 +26,7 @@ async function getDeviceId(): Promise<string> {
 
 export async function checkSyncQuota(): Promise<void> {
     const used = (await ext.storage.sync.getKeys()).length;
-    const MAX = ext.storage.sync.MAX_ITEMS;
+    const MAX = ext.storage.sync.MAX_ITEMS ?? 512;
     console.log(`[Sync] Used ${used} of ${MAX} bytes (${Math.round(used / MAX * 100)}%)`)
     if (used > MAX * 0.9) console.warn('[Sync] Approaching sync storage limit')
 }

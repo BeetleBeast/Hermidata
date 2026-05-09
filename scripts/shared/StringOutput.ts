@@ -52,10 +52,11 @@ export function findByTitleOrAltV2(title: string, allData: { [key: string]: Herm
     );
 }
 
-export function returnHashedTitle(title: string, type: string, url: string = '' ) {
+export function returnHashedTitle(title: string, type: string, url: string = '', trimTitle: boolean = true) {
+    const finalTitle = trimTitle ? TrimTitle.trimTitle(title, url).title : title;
     return type 
-    ? simpleHash(`${type}:${TrimTitle.trimTitle(title, url).title.toLowerCase()}`) // V2
-    : simpleHash(TrimTitle.trimTitle(title, url).title.toLowerCase()) // V1
+    ? simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
+    : simpleHash(finalTitle.toLowerCase()) // V1
 }
 
 export function simpleHash(str: string) {

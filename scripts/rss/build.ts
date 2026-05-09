@@ -27,11 +27,14 @@ export abstract class RssBuild {
 
         await chrome.runtime.sendMessage({ type: 'INVALIDATE_RSS' });
 
-        const feedListLocalReload = await getHermidataWithRssFromBackground();
+        const [feeds, hermidata] = await Promise.all([
+            getHermidataWithRssFromBackground(),
+            PastHermidata.getAllHermidata()
+        ]);
     
-        NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(feedListLocalReload, false));
+        NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(feeds, false));
         AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());
-        AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(feedListLocalReload, true));
+        AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(hermidata, true));
     }
     protected GetHashItem(item: HTMLElement): string {
         const newVersion = item.dataset.hashKey;

@@ -13,7 +13,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
     
         const newChapterNumber = Number(hermidata.chapter.current);
         
-        const key = returnHashedTitle(title, type);
+        const key = returnHashedTitle(title, type, hermidata.url, false);
         const data = await getHermidataViaKey(key);
     
         

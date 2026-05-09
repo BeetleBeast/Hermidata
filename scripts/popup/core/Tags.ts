@@ -50,90 +50,17 @@ export class TagAutocomplete {
     }
 }
 
-/*
-class SimplerInlineAutocomplete {
-    private autocomplete;
-    private input: HTMLInputElement;
-    
-    constructor(inputSelector: string, AllHermidata: AllHermidata) {
-        this.autocomplete = new TagAutocomplete(AllHermidata);
-        this.input = document.querySelector(inputSelector)!;
-        this.bindEvents();
-    }
-    
-    private bindEvents(): void {
-        this.input.addEventListener('input', () => {
-            const value = this.input.value.trim();
-            
-            if (!value) {
-                this.input.placeholder = 'add tag...';
-                return;
-            }
-            
-            const suggestions = this.autocomplete.getSuggestions(value, 1);
-            const topSuggestion = suggestions[0];
-            
-            if (topSuggestion && topSuggestion.toLowerCase().startsWith(value.toLowerCase())) {
-                // Show completion hint in placeholder
-                const completion = topSuggestion.slice(value.length);
-                this.input.placeholder = value + completion;
-            } else {
-                this.input.placeholder = '';
-            }
-        });
-        
-        this.input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === 'Tab') {
-                e.preventDefault();
-                
-                const placeholder = this.input.placeholder;
-                if (placeholder && placeholder.startsWith(this.input.value)) {
-                    // Accept suggestion
-                    this.addTag(placeholder);
-                } else if (this.input.value.trim()) {
-                    // Add current value
-                    this.addTag(this.normalizeTag(this.input.value));
-                }
-            }
-        });
-        
-        this.input.addEventListener('blur', () => {
-            this.input.placeholder = 'add tag...';
-        });
-    }
-    
-    private addTag(tag: string): void {
-        //this.createTagPill(tag);
-        this.input.value = '';
-        this.input.placeholder = 'add tag...';
-    }
-    private normalizeTag(input: string): string {
-        return input
-            .trim()
-            .split(/\s+/)
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
-    }
-}
-*/
 export class TagsSystem {
     private autocomplete: TagAutocomplete | null = null;
-    private input: HTMLInputElement | null = null;
-    private ghostInput: HTMLSpanElement | null = null;
+    private input = getElement<HTMLInputElement>('#tags');
+    private ghostInput = getElement<HTMLSpanElement>('.autocomplete-ghost');
 
-    public getTags(): string[] { return this.Tags; }
+    public get tags(): string[] { return this._tags; }
 
-    private Tags: string[] = [];
+    private _tags: string[] = [];
 
     async init() {
-        const input = getElement<HTMLInputElement>('#tags');
-        const ghostInput = getElement<HTMLSpanElement>('.autocomplete-ghost');
-
         this.autocomplete = new TagAutocomplete(await PastHermidata.getAllHermidata());
-        if (!input || !ghostInput) return;
-        this.input = input;
-        this.ghostInput = ghostInput;
-
 
         this.bindEvents();
     }
@@ -167,26 +94,41 @@ export class TagsSystem {
         // pill remove button
         const removeButton = document.createElement("span");
         removeButton.classList.add("tag-pill-removeX");
-        removeButton.dataset.color = color;
+        removeButton.dataset.color = this.originalColorIsRedish(color) ? 'white' : color;
+        removeButton.style.color = `contrast-color(${color})`;
         removeButton.textContent = "x";
+
+        removeButton.addEventListener('mouseover', () => {
+            removeButton.style.color =  this.originalColorIsRedish(color) ? 'white' : 'red';
+        })
+        removeButton.addEventListener('mouseout', () => {
+            removeButton.style.color =  `contrast-color(${color})`;
+        })
 
         removeButton.addEventListener("click", () => {
             pill.remove();
-            this.Tags = this.Tags.filter(t => t !== tag);
+            this._tags = this._tags.filter(t => t !== tag);
         });
 
         pill.appendChild(pillText);
         pill.appendChild(removeButton);
 
-        this.Tags.push(tag);
+        this._tags.push(tag);
 
         return pill;
+    }
+    private originalColorIsRedish(color: string): boolean {
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        return r > g && r > b;
     }
 
     private bindEvents(): void {
         const input = this.input;
         const ghostInput = this.ghostInput;
         const autocomplete = this.autocomplete;
+        // allow if its not alrady inside tags
         if (!input || !ghostInput || !autocomplete) return;
         input.addEventListener('input', () => {
 
@@ -201,16 +143,20 @@ export class TagsSystem {
                 ghostInput.textContent = ghostValue;
             } else {
                 ghostInput.textContent = '';
-                }
+            }
         });
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === 'Tab') {
+            const inputValue = input.value.toLowerCase();
+            const ghostValue = ghostInput.textContent?.toLowerCase();
+            // Disallow suggestion if the input/ghost text already exists as a tag
+            const alreadyExists = this._tags.some(t => t.toLowerCase() === inputValue || t.toLowerCase() === ghostValue );
+            if ((e.key === 'Enter' || e.key === 'Tab') && !alreadyExists) {
                 e.preventDefault();
                 this.acceptSuggestion(input, ghostInput);
             }
 
             // Arrow right at end of input accepts suggestion
-            if (e.key === 'ArrowRight' &&  input.selectionStart === input.value.length && ghostInput.textContent) {
+            if (e.key === 'ArrowRight' &&  input.selectionStart === input.value.length && ghostInput.textContent && !alreadyExists) {
                 e.preventDefault();
                 this.acceptSuggestion(input, ghostInput);
             }

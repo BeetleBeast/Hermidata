@@ -105,25 +105,42 @@ export class EventListener extends RssBuild {
         if (!item || !target) return;
         const nameClass = 'hermidata-item-title';
         if (item.dataset.seachable == 'true') {
-            const title0 = item.querySelector(`.${nameClass}`)
-            const title1 = getElement(`.hermidata-item-title.${target.className}`);
-            const title = title0 || title1
+            const title = item.querySelector(`.${nameClass}`)
             if (!title) throw new Error('title not found');
             navigator.clipboard.writeText(title.textContent.trim());
             console.log("Copied:", title.textContent.trim());
         }
     }
     
-    private openInPage(target: HTMLDivElement | null) {
+    private async openInPage(target: HTMLDivElement | null) {
         if (!target) return;
-        const url = target.dataset.url;
-        if (url) window.open(url, "_self");
+        const item = this.getEntriesItem(target) || this.getNotificationItem(target);
+        if (!item || !target) return;
+        const hashItem = this.GetHashItem(item);
+        const entry = this.AllHermidata[hashItem];
+        if (!entry) {
+            console.warn("Entry not found for hash:", hashItem);
+            return;
+        }
+        const url = entry.url;
+        if (!url) return;
+        // Get the current active tab and update its URL
+        const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
+        if (tab?.id) await ext.tabs.update(tab.id, { url });
     }
     
-    private openInNewWindow(target: HTMLDivElement | null) {
+    private async openInNewWindow(target: HTMLDivElement | null) {
         if (!target) return;
-        const url = target.dataset.url;
-        if (url) window.open(url, "_blank");
+        const item = this.getEntriesItem(target) || this.getNotificationItem(target);
+        if (!item || !target) return;
+        const hashItem = this.GetHashItem(item);
+        const entry = this.AllHermidata[hashItem];
+        if (!entry) {
+            console.warn("Entry not found for hash:", hashItem);
+            return;
+        }
+        const url = entry.url;
+        if (url) await chrome.tabs.create({ url });
     }
     
     private clearNotification(target: HTMLDivElement | null) {
@@ -187,14 +204,13 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = returnHashedTitle(newTitle, oldData.type);
-        const newData = { ...oldData, title: TrimTitle.trimTitle(newTitle, oldData.url).title, id: newKey };
+        const newKey = returnHashedTitle(newTitle, oldData.type, oldData.url, false);
+        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.url).title
+        const newData = { ...oldData, title: newTitle, id: newKey };
     
         // Add the old title as an altTitle
-        newData.meta = newData.meta || {};
-        newData.meta.altTitles = Array.from(
-            new Set([...(newData.meta.altTitles || []), oldData.title])
-        );
+        if (TrimmedTitle === newTitle) newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), TrimmedTitle]) );
+        else newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), oldData.title, TrimmedTitle]) );
     
         // Save and clean up
         await updateHermidataV3(oldKey, newKey, newData);
