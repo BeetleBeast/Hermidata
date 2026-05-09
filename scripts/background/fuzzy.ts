@@ -72,10 +72,10 @@ export async function hasRelatedBookmarkCached(tab: chrome.tabs.Tab) {
 function getFolderPathsFromMapping(settings: Settings): string[] {
     const folderPaths: Set<string> = new Set();
     
-    if (!settings?.TYPE_OPTIONS || !settings?.STATUS_OPTIONS || !settings?.FolderMapping) return [];
+    if (!settings?.ContentTypesAndStatuses.TYPE_OPTIONS || !settings?.ContentTypesAndStatuses.STATUS_OPTIONS || !settings?.FolderMapping) return [];
     
-    for (const novelType of Object.values(settings.TYPE_OPTIONS)) {
-        for (const readStatus of Object.values(settings.STATUS_OPTIONS)) {
+    for (const novelType of Object.values(settings.ContentTypesAndStatuses.TYPE_OPTIONS)) {
+        for (const readStatus of Object.values(settings.ContentTypesAndStatuses.STATUS_OPTIONS)) {
             const path = FolderMapping.resolveFolder( novelType, readStatus, settings.FolderMapping );
             folderPaths.add(path);
         }

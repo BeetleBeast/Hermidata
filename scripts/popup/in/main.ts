@@ -1,7 +1,6 @@
 
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
-import { Duplicate } from '../../utils/dupplication';
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
@@ -10,6 +9,7 @@ import { RSS } from '../../rss/main';
 import { getGoogleSheetURL, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
 import { TagsSystem } from '../core/Tags';
+import { HermidataMigration } from '../../shared/migration/Hermidata';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -80,7 +80,7 @@ class HermidataController {
 
     public RSS: RSS | null = null;
 
-    private dupplicate: Duplicate | null = null;
+    private dupplicate: HermidataMigration | null = null;
 
     private tags: TagsSystem;
 
@@ -103,7 +103,11 @@ class HermidataController {
             getSettings(),
         ]);
         
-        this.hermidata = makeDefaultHermidata(settings.TYPE_OPTIONS[0], settings.STATUS_OPTIONS[0], settings.NOVEL_STATUS_OPTIONS[0]);
+        this.hermidata = makeDefaultHermidata(
+            settings.ContentTypesAndStatuses.TYPE_OPTIONS[0], 
+            settings.ContentTypesAndStatuses.STATUS_OPTIONS[0], 
+            settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]
+        );
 
         this.googleSheetURL = googleSheetURL;
 
@@ -125,7 +129,7 @@ class HermidataController {
         await this.tags.init();
     }
     private async checkForDuplicates(): Promise<void> {
-        this.dupplicate = new Duplicate();
+        this.dupplicate = new HermidataMigration();
         await this.dupplicate.init();
         const dups = await this.dupplicate.findPotentialDuplicates(0.9);
         if (dups.length > 0) console.table(dups, ['potential duplicates']);
@@ -221,26 +225,26 @@ class HermidataController {
         
         this.RSS?.changePageToClassic();
 
-        this.populateSelect(settings.TYPE_OPTIONS, "#Type");
-        this.populateSelect(settings.TYPE_OPTIONS, "#Type_HDRSS");
-        this.populateSelect(settings.STATUS_OPTIONS, "#status");
-        this.populateSelect(settings.NOVEL_STATUS_OPTIONS, "#NovelStatus");
+        this.populateSelect(settings.ContentTypesAndStatuses.TYPE_OPTIONS, "#Type");
+        this.populateSelect(settings.ContentTypesAndStatuses.TYPE_OPTIONS, "#Type_HDRSS");
+        this.populateSelect(settings.ContentTypesAndStatuses.STATUS_OPTIONS, "#status");
+        this.populateSelect(settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS, "#NovelStatus");
 
         this.setChapterPastNumber(this.pastHermidata);
 
 
 
         // backward compatibility for past hermidata
-        this.trycapitalizingTypesAndStatus(settings.TYPE_OPTIONS, settings.STATUS_OPTIONS);
+        this.trycapitalizingTypesAndStatus(settings.ContentTypesAndStatuses.TYPE_OPTIONS, settings.ContentTypesAndStatuses.STATUS_OPTIONS);
 
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
         setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.history.at(-1) || 0));
         setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.current));
         setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
         setElement<HTMLSelectElement>('#status', el => el.value = display.status);
-        setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.NOVEL_STATUS_OPTIONS[0]);
+        setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]);
         
-        this.tags.populateTagPills(this.hermidata.meta.tags, settings.tagColoring);
+        this.tags.populateTagPills(this.hermidata.meta.tags, settings.TagManagement.tagColoring);
         
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 

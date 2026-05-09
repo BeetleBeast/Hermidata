@@ -95,6 +95,7 @@ export async function handleDbOperation( store: 'hermidata' | 'feeds' | 'setting
         switch (operation) {
             case 'getAll':  result = await db.getAll(store); break;
             case 'putAll':  result = await putAll(store, payload!.data); break;
+            case 'update':  result = await db.put(store, payload!.data); break;
             case 'get':     result = await db.get(store, payload!.id); break;
             case 'put':     result = await db.put(store, payload!.data, payload!.id); break;
             case 'delete':  result = await db.delete(store, payload!.id); break;
@@ -108,15 +109,51 @@ export async function handleDbOperation( store: 'hermidata' | 'feeds' | 'setting
     }
     return true;
 }
-async function putAll(store: 'hermidata' | 'feeds' | 'settings', data: Hermidata[] | RawFeed[]) {
+async function putAll(store: 'hermidata' | 'feeds' | 'settings', data: Record<string, Hermidata> | RawFeed[]) {
     try {
         const db = await getDb();
         const tx = db.transaction(store, 'readwrite');
-        await Promise.all([
-            ...data.map(d => tx.store.put(d)),
-            tx.done,
-        ]);
+        if (store === 'hermidata') {
+            await Promise.all([
+                ...Object.values(data).map(d => tx.store.put(d)),
+                tx.done,
+            ]);
+        } else {
+            const feedData = data as RawFeed[]
+            await Promise.all([
+                ...feedData.map(d => tx.store.put(d)),
+                tx.done,
+            ]);
+        }
     } catch (err) {
         console.error(`[DB] put${store.at(0)?.toUpperCase()}All:`, err);
     }
+}
+
+export async function handleGetAllPossiblePaths(sendResponse: (r: unknown) => void, searchStart?: string): Promise<true> {
+    // Immediately start the async work
+    const results = await ext.bookmarks.search({ title: searchStart || '' });
+    const searchStartID = (results.length > 0) ? results[0].id : null;
+    
+    let bookmarkTreeNodes;
+    if (searchStartID) bookmarkTreeNodes = await ext.bookmarks.getSubTree(searchStartID)
+    else bookmarkTreeNodes = await ext.bookmarks.getTree();
+    
+    const paths = new Set<string>();
+    for (const node of bookmarkTreeNodes || []) {
+        if (!node.id || !node.title || node.url) continue; // skip if no id/title or if it's a bookmark (has url)
+        paths.add(node.title);
+        findPaths(node).forEach(path => paths.add(path));
+    }
+    
+    sendResponse({ status: 'ready', data: [...paths] }); // Match your expected response format
+    
+    return true; // Keep the message channel open
+}
+
+function findPaths(node: chrome.bookmarks.BookmarkTreeNode, currentPath = ''): string[] {
+    if (!node.id || !node.title || node.url) return [currentPath]; // skip if no id/title or if it's a bookmark (has url)
+    const newPath = currentPath ? `${currentPath}/${node.title}` : node.title;
+    if (!node.children) return [newPath];
+    return node.children.flatMap(child => findPaths(child, newPath));
 }

@@ -1,4 +1,5 @@
-import { defaultSettings, type Settings } from "../shared/types";
+import { defaultSettings, type Hermidata, type Settings } from "../shared/types";
+import { getElement, setElement } from "../utils/Selection";
 
 
 
@@ -10,6 +11,24 @@ export abstract class Build {
     }
     protected setSettings(data: Settings): Promise<void> {
         return this.dbRequest<void>('settings', 'put', { id: 'Settings', data });
+    }
+    protected setHermidata(data: Hermidata): Promise<void> {
+        return this.dbRequest<void>('hermidata', 'update', { id: data.id, data });
+    }
+
+    protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000) {
+        if (!elementTag) {
+            console.error(`Error in temporaryStatus: status element not found`);
+            return;
+        }
+        const statusElement = elementTag instanceof HTMLElement ? elementTag : getElement<HTMLParagraphElement>(elementTag);
+        
+        if (!statusElement) {
+            console.error(`Error in temporaryStatus: status element not found`);
+            return;
+        }
+        statusElement.textContent = status;
+        setTimeout(() => elementTag instanceof HTMLElement ? elementTag.textContent = "" : setElement(`${elementTag}`, el => el.textContent = ""), timeout);
     }
 
     protected async ensureSettingsUpToDate(): Promise<Settings> {

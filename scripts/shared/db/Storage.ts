@@ -11,6 +11,7 @@ import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../StringOutput';
 import { getElement, setElement } from '../../utils/Selection';
 import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, defaultSettings, DEFAULT_TAGS } from '../types/index';
+import { SettingsMigration } from '../migration/Settings';
 
 // ============================================================
 // Hermidata
@@ -198,6 +199,44 @@ export async function setSettings(settings: Settings): Promise<void> {
         console.error('[Storage] setSettings:', err);
     }
 }
+// For development/testing: reset to default settings (does not affect Hermidata or Feeds)
+export async function resetSettings(): Promise<void> {
+    try {
+        const settings = await getSettings();
+        const settingsVersion = settings?.version ?? 0;
+        const latestVersion = defaultSettings.version;
+        if (settingsVersion >= latestVersion) {
+            console.warn(`[Storage] resetSettings: current version (${settingsVersion}) is up-to-date, no reset needed.`);
+            return;
+        }
+        else {
+            console.error('[Storage] resetSettings: wrong version');
+            await putSettings(defaultSettings);                            // IndexedDB
+            console.log('[Storage] Settings reset');
+        }
+    } catch (err) {
+        console.error('[Storage] resetSettings:', err);
+    }
+}
+// migrate old settings to new format (called on extension update)
+export async function migrateSettings(): Promise<void> {
+    try {
+        const settings = await getSettings();
+        const settingsVersion = settings.version;
+        const latestVersion = defaultSettings.version;
+        // If settings are already up-to-date, no migration needed
+        if (settingsVersion >= latestVersion) return;
+        // if settings has no version ( version 4 or earlier), or version is less than latest, migrate it
+        // if settings are not up-to-date, migrate them
+        if (settingsVersion < latestVersion || !settingsVersion) {
+            console.error('[Storage] migrateSettings: wrong version');
+            await SettingsMigration.migrateSettingsToLatest(settings as unknown, settingsVersion);
+            console.log('[Storage] Settings migrated');
+        }
+    } catch (err) {
+        console.error('[Storage] migrateSettings:', err);
+    }
+}
 
 // ============================================================
 // Google Sheet URL — kept in storage.sync (small, needed cross-device)
@@ -206,7 +245,7 @@ export async function setSettings(settings: Settings): Promise<void> {
 async function getSpreadsheetUrl(): Promise<string> {
     try {
         const settings = await getSettings();
-        if (settings?.spreadsheetUrl) return settings.spreadsheetUrl;
+        if (settings?.AccountAndConnections.spreadsheetUrl) return settings.AccountAndConnections.spreadsheetUrl;
 
         // Fall back to old standalone key for users not yet migrated
         const urlFromSync =  await new Promise<string>((resolve, reject) => {
@@ -263,7 +302,7 @@ export function sheetUrlInput(): Promise<string> {
 
 export async function setSpreadsheetUrl(url: string): Promise<void> {
     const settings = await getSettings();
-    await setSettings({ ...settings, spreadsheetUrl: url });
+    await setSettings({ ...settings, AccountAndConnections : { ...settings.AccountAndConnections, spreadsheetUrl: url }});
 }
 
 // ============================================================

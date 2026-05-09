@@ -1,5 +1,55 @@
 
 /* new CSS ------------------------------------------*/
+body {
+	overflow: hidden;
+}
+#header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.HDRSS {
+    display: none;
+    position: absolute;
+    top: 50px;
+    width: 98vw;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    height: 500px;
+}
+#HDRSSBtn {
+    display: flex;
+    width: 100%;
+}
+#HDClassicBtn {
+    display: flex;
+    width: 100%;
+}
+.active {
+    background-color: var(--Btn_active);
+}
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 98vw;
+    height: 40px;
+    background-color: var(--bg-color);
+    border-top: 1px solid #ccc;
+    display: flex;
+    justify-content:flex-start;
+    align-items:center;
+}
+
+#spreadsheetPrompt {
+    display:none;
+}
+
+#statusSheetURL, 
+#statusSaveDefaultInput,
+#statusSaveDefaultInputInputTextMenu {
+    color: green;
+}
 
 
 /* V2 classic & RSS mode Buttons */

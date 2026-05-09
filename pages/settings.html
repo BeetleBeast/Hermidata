@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hermidata Settings</title>
+    <link rel="stylesheet" href="../assets/styles/styles.css">
     <link rel="stylesheet" href="../assets/styles/stylesSettings.css">
     <style>
         body {
@@ -21,96 +22,407 @@
     </style>
 </head>
 <body>
-    <h2>Settings</h2>
+    <aside class="sidebar" class="sidebar">
+        <p class="sidebar-title" id="settings-title">Settings</p>
+        <br>
+        <nav>
+            <button id="openAccount_Connection" class="openLink nav-item" data-active="false" type="button">Account & Connection</button>
+            <button id="openExtension_Behaviour" class="openLink nav-item" data-active="false" type="button">Extension Behaviour</button>
+            <button id="openDefaultBookmarkSettings" class="openLink nav-item" data-active="false" type="button">Default Bookmark Settings</button>
+            <button id="openContentTypes_Statuses" class="openLink nav-item" data-active="false" type="button">Content Types & Statuses</button>
+            <button id="openTagManagement" class="openLink nav-item" data-active="false" type="button">Tag Management</button>
+            <button id="openFolderMapping" class="openLink nav-item" data-active="false" type="button">Folder Mapping</button>
+            <button id="openImport_Export" class="openLink nav-item" data-active="false" type="button">Import & Export</button>
+        </nav>
+    </aside>
+    <main class="main content">
+        <h2>Settings</h2>
+        <section class="section-content Account_Connection" data-active="false">
+            <br>
+            <label for="spreadsheetUrl">Google Spreadsheet URL:</label>
+            <input type="url" id="spreadsheetUrl" placeholder="Paste Google Sheet URL" />
+            <button id="saveSpreadsheetUrl" type="button">Save</button>
+            <p id="statusSheetURL"></p>
+            <br>
+            <button id="testSpreadsheetUrl" type="button">Test connection</button>
+            <hr>
+            <br>
+            <button type="button" id="logOut">Log-out</button>
+            <br>
+        </section>
+        <section class="section-content Extension_Behaviour" data-active="false">
+            <br>
+            <label for="enableLightMode">Enable Light Mode</label>
+            <input id="enableLightMode" type="checkbox" title="Enable Light Mode">
+            <br>
+            <hr>
+            <br>
+            <label for="AllowContextMenu">Allow context menu</label>
+            <input type="checkbox" id="AllowContextMenu" title="Allow context menu" checked>
+            <br>
+            <hr>
+            <br>
+            <label for="enableNotification">Enable Notification</label>
+            <input type="checkbox" id="enableNotification" title="Enable Notification">
+            <form class="formIndented">
+                <label for="notificationBadge">Notification Badge</label>
+                <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
+                <br>
+                <label for="notificationMessageMinimum">Notification With miminimum description</label>
+                <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With miminimum description" value="MessageMinimum">
+                <br>
+                <label for="notificationMessageFull">Notification With Full description</label>
+                <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
+            </form>
+            <br>
+            <hr>
+            <br>
+            <label for="enableKeyboardShortcuts">Enable Keyboard Shortcuts ( Beta )</label>
+            <input type="checkbox" id="enableKeyboardShortcuts" title="Enable Keyboard Shortcuts" disabled>
+            <br>
+            <hr>
+            <br>
+            <label for="enableAutoSubscribe">Enable Auto-subscribe Bookmarks ( Beta )</label>
+            <input type="checkbox" id="enableAutoSubscribe" title="Enable Auto-subscribe Bookmarks" disabled>
+            <br>
+            <hr>
+            <br>
+            <h3 id="saveTarget">Save Target</h3>
+            <form class="formIndented">
+                <label for="InternalCollection">save to an Internal Collection</label>
+                <input type="checkbox" id="InternalCollection" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
+                <br>
+                <label for="SaveToGoogleSpreadsheet">save to a Google Spreadsheet</label>
+                <input type="checkbox" id="SaveToGoogleSpreadsheet" name="SaveCollection" title="save to a Google Spreadsheet" checked value="Spreadsheet">
+                <br>
+                <label for="SaveToBrowserBookmark">Save as a browser Bookmark</label>
+                <input type="checkbox" id="SaveToBrowserBookmark" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
+            </form>
+            <br>
+        </section>
+        <section class="section-content DefaultBookmarkSettings" data-active="false">
+            <br>
+            <h3>New Entry Defaults in popup</h3>
+            <br>
+            <table>change Default Input
+                <thead>
+                    <tr>
+                    <th>Type</th>
+                    <th>Read Status</th>
+                    <th>Novel Status</th>
+                    <th>Tags</th>
+                    <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><select id="Type" type="text" title="Type" ></select></td>
+                        <td><select id="ReadStatus" type="text" title="Status"></select></td>
+                        <td><select id="NovelStatus" type="text" title="Status"></select></td>
+                        <td><input id="tags" type="text" placeholder="Tags" /></td>
+                        <td><input id="notes" type="text" placeholder="Notes" /></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button id="saveDefaultInput" type="button">Save</button>
+            <p id="statusSaveDefaultInput"></p>
+                <br>
+                <hr>
+                <br>
+                
+                <br>
+                <br>
+                <h4> New Entry Defaults in the context-menu </h4>
+                <br>
+            <table>change Default context-Menu Input
+                <thead>
+                    <tr>
+                    <th>Type</th>
+                    <th>Read Status</th>
+                    <th>Novel Status</th>
+                    <th>Tags</th>
+                    <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><select id="TypeTextMenu" type="text" title="Type" ></select></td>
+                        <td><select id="ReadStatusTextMenu" type="text" title="Status"></select></td>
+                        <td><select id="NovelStatusTextMenu" type="text" title="Status"></select></td>
+                        <td><input id="tagsTextMenu" type="text" placeholder="Tags" /></td>
+                        <td><input id="notesTextMenu" type="text" placeholder="Notes" /></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button id="saveDefaultInputTextMenu" type="button">Save</button>
+            <p id="statusSaveDefaultInputInputTextMenu"></p>
+            <br>
+        </section>
+        <section class="section-content ContentTypes_Statuses" data-active="false">
+            <br>
+            <h3><strong> Content Types and Statuses </strong></h3>
+            <br>
+            <!-- add new Novel Types -->
+            <label for="newNovelType">Add New Novel Type</label>
+            <input type="text" id="newNovelType" placeholder="type here..." />
+            <button type="submit" id="newNovelTypeBtn">Add</button>
+            <br>
+            <!-- add new Novel Statuses -->
+            <label for="newNovelStatus">Add New Novel Status</label>
+            <input type="text" id="newNovelStatus" placeholder="type here..." />
+            <button type="button" id="newNovelStatusBtn">Add</button>
+            <br>
+            <!-- add new Read Statuses -->
+            <label for="newReadStatus">Add New Read Status</label>
+            <input type="text" id="newReadStatus" placeholder="type here..." />
+            <button type="button" id="newReadStatusBtn">Add</button>
+            <br>
+            <hr>
+            <br>
+            <!-- Edit and remove existing... -->
+            <div id="EditAndRemoveContainer">
+                <div id="EditNovelType">
+                    <!-- dynamic items here -->
+                </div>
+                <div id="EditNovelStatuses">
+                    <!-- dynamic items here -->
+                </div>
+                <div id="EditReadStatuses">
+                    <!-- dynamic items here -->
+                </div>
+            </div>
+            <br>
+        </section>
+        <section class="section-content TagManagement" data-active="false">
+            <br>
+            <h3><strong> Tag Management </strong></h3>
+            <hr>
+            <br>
+            <h4> Add New Tag </h4>
+            <br>
+            <label for="addTag">Add Tag</label>
+            <input type="text" id="addTag" placeholder="type here..." maxlength="60"/>
+            <button type="button" id="addTagBtn">Add</button>
+            <br>
+            <hr>
+            <br>
+            <h4> Edit Tags </h4>
+            <div id="tagEditContainer">
+                <!-- Edit AND Remove tags -->
+                <!-- dynamic items here -->
+            </div>
+            <br>
+            <button type="button" id="saveTagColoringBtn">save All Tag coloring</button>
+            <br>
+            <hr>
+            <br>
+            <h4> Merge tags </h4>
+            <sub>merge 2 tags into one</sub>
+            <br>
+            <section class="section TagMerge" id="tagMergeContainer">
+                <br>
+                <span> remove </span>
+                <select id="tagMergeSelect1" title="Tag 1">
+                    <!-- dynamic items here -->
+                </select>
+                <span> and merge with </span>
+                <select id="tagMergeSelect2" title="Tag 2">
+                    <!-- dynamic items here -->
+                </select>
+                <br>
+                <button type="button" id="mergeTags">merge</button>
+                <br>
+            </section>
+            <br>
+        </section>
+        <br>
+        <section class="section-content FolderMapping" data-active="false">
+            <br>
+            <section class="FolderMapping_Explanation">
+                <div id="folderMappingExplanationContainer">
+                    <h3><strong> How it works: </strong></h3>
+                    <br>
+                    <p>the extension will automatically 
+                        save your progress inside your
+                        browser bookmarks.</p>
+                        <p>However!</p>
+                    <p id="explainationOFolderMapping">
+                        it saves all your bookmarks using it's
+                        own formula on how each specific
+                        page is saved depending on the
+                        selection you choose during the saving
+                        moment.
+                    </p>
+                    <p>Here bellow is the formula.</p>
+                </div>
+                <br>
+                <p id="formulaOfFolderMapping"></p>
+                <br>
+                <p id="explainationOFolderMappingError">Or if something went wrong</p>
+                <p id="formulaOfErrorFolderMapping"></p>
+            </section>
+            
+            <section class="FolderMapping_RenameOrAddAlias">
+                <h3><strong> Rename or Add Alias </strong></h3>
+                <div id="rootPathContainer" class="FolderMapping_RenameOrAddAlias-child">
+                    <label for="rootPath">root path: </label>
+                    <input type="text" id="rootPath"/>
+                    <button type="button" id="saveRootPathBtn">Save</button>
+                    <span id="rootPathStatus"></span>
+                </div>
+                <div id="defaultPathContainer" class="FolderMapping_RenameOrAddAlias-child">
+                    <label for="unsortedPath">unsorted path: </label>
+                    <input type="text" id="unsortedPath"/>
+                    <button type="button" id="saveUnsortedPathBtn">Save</button>
+                    <span id="unsortedPathStatus"></span>
+                </div>
+                <br>
+                <div id="AddAliasContainer" class="FolderMapping_RenameOrAddAlias-child">
+                    <div id="AddAliasToNovelTypeContainer">
+                        <select id="addNovelTypeAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
+                        <label for="addNovelTypeAlias">Add Alias: </label>
+                        <input type="text" id="addNovelTypeAlias" placeholder="type here..." />
+                        <button type="button" id="addNovelTypeAliasBtn">Add Alias</button>
+                    </div>
+                    <br>
+                    <div id="AddAliasToReadStatusContainer">
+                        <select id="addReadStatusAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
+                        <label for="addReadStatusAlias">Add Alias: </label>
+                        <input type="text" id="addReadStatusAlias" placeholder="type here..." />
+                        <button type="button" id="addReadStatusAliasBtn">Add Alias</button>
+                    </div>
+                    <p id="saveStatus-folderMapping-new-aliases"></p>
+                </div>
+                <br>
+            </section>
+            <br>
+            <section class="FolderMapping_ActiveAliases">
+                <h3><strong> Active Aliases </strong></h3>
+                <div id="AliasesHeader">
+                    <p>Active Type Aliases</p>
+                    <p>Active Read Statuses</p>
+                </div>
+                <div id="activeAliasesContainer">
+                    <div id="activeTypeAliases"> <!-- dynamic items here --> </div>
+                    <div id="activeReadStatuses"> <!-- dynamic items here --> </div>
+                </div>
+                <p id="saveStatus-folderMapping-aliases"></p>
+                <br>
+            </section>
+            <br>
+            <section class="FolderMapping_ActiveCustomRules">
+                <h3><strong> Active Custom Rules </strong></h3>
+                <div id="activeCustomRulesContainer">
+                    <div id="activeCustomRules"> <!-- dynamic items here --> </div>
+                    <p id="saveStatus-folderMapping-overides"></p>
+                </div>
+                <br>
+            </section>
+            <br>
+            <button type="button" id="advancedOptionsBtn">Advanced Options</button>
+            <br>
+            <section class="FolderMapping_advancedOptions hidden">
+                <section class="FolderMapping_advancedOptions_AddGeneralSubfolders">
+                    <h3><strong> Add General Subfolders </strong></h3>
+                    <br>
+                    <div id="add_Subfolder_NovelTypes">
+                        <div id="add_NovelTypes_Subfolder_Options">
+                            <span for="add_NovelTypes_Subfolder">Novel Types: </span>
+                            <select id="add_NovelTypes_Subfolder_To_Select" title="AddSubfolderTo"> <!-- dynamic items here --> </select>
+                            <div id="add_NovelTypes_Subfolder_Options_Inputs">
+                                <input type="text" id="add_NovelTypes_Subfolder_Prefix" class="prefixAndSuffix" placeholder="type here..." />
+                                <span id="add_NovelTypes_Subfolder_Word"></span>
+                                <input type="text" id="add_NovelTypes_Subfolder_Suffix" class="prefixAndSuffix" placeholder="type here..." />
+                            </div>
+                            <button type="button" id="add_NovelTypes_Subfolder_Btn">Add Subfolder</button>
+                        </div>
+                    </div>
+                    <div id="add_Subfolder_ReadStatuses">
+                        <div id="add_ReadStatuses_Subfolder_Options">
+                            <span for="add_ReadStatuses_Subfolder">Read Status: </span>
+                            <select id="add_ReadStatuses_Subfolder_To_Select" title="AddSubfolderTo"> <!-- dynamic items here --> </select>
+                            <div id="add_ReadStatuses_Subfolder_Options_Inputs">
+                                <input type="text" id="add_ReadStatuses_Subfolder_Prefix" class="prefixAndSuffix" placeholder="type here..." />
+                                <span id="add_ReadStatuses_Subfolder_Word"></span>
+                                <input type="text" id="add_ReadStatuses_Subfolder_Suffix" class="prefixAndSuffix" placeholder="type here..." />
+                            </div>
+                            <button type="button" id="add_ReadStatuses_Subfolder_Btn">Add Subfolder</button>
+                        </div>
+                    </div>
+                    <br>
+                </section>
+                <br>
+                <section class="FolderMapping_advancedOptions_AddCustomRules">
+                    <h3><strong> Add Custom Rules </strong></h3>
+                    <br>
+                    <div id="addCustomRule_Options">
+                        <span class="CustomRules">When </span>
+                        <select id="addCustomRuleToSelect_NovelType" title="AddRuleTo"> <!-- dynamic items here --> </select>
+                        <span class="CustomRules"> is </span>
+                        <select id="addCustomRuleToSelect_ReadStatus" title="AddRuleTo"> <!-- dynamic items here --> </select>
+                        <span class="CustomRules"> Save to: </span>
+                        <div id="addCustomRuleOptions_Inputs">
+                            <input type="text" id="addCustomRule" placeholder="type here..." />
+                            <span id="customRuleGhostText"></span>
+                        </div>
+                        <button type="button" id="addCustomRuleBtn">Add Rule</button>
+                    </div>
+                    <p id="saveStatus-folderMapping-new-overides"></p>
+                    <br>
+                </section>
+            </section>
+            <br>
+        </section>
+        <section class="section-content Import_Export" data-active="false">
+            <br>
+            <h3><strong> Import/Export options </strong></h3>
+            <br>
+            <button type="button" id="quickBackup">Quick Backup ( everything )</button>
+            <br>
+            <br>
+            <button type="button" id="exportBtn">Export Settings as JSON</button>
+            <input type="file" accept=".json" placeholder="select Settings json" id="importBtn"></input>
+            <br>
+            <br>
+            <button type="button" id="exportDataBtn">Export Hermidata as JSON</button>
+            <input type="file" accept=".json" placeholder="select Hermidata json" id="importDataBtn"></input>
+            <br>
+            <br>
+            <button type="button" id="exportFolderMappingBtn">Export Bookmarks folder mapping as JSON</button>
+            <input type="file" accept=".json" placeholder="select Hermidata json" id="importFolderMappingBtn"></input>
+            <br>
+            <br>
+            <button type="button" id="exportRSSBtn" data-active="false">Export RSS as JSON</button>
+            <input type="file" accept=".json" placeholder="select Hermidata json" id="importRSSBtn" data-active="false"></input>
+            <br>
+            <br>
+            <button type="button" id="exportSyncDataBtn" data-active="false">Export browser sync data as JSON</button>
+            <input type="file" accept=".json" placeholder="select Hermidata json" id="importSyncDataBtn" data-active="false"></input>
+            <!-- <button type="button" id="deleteSyncDataBtn" style="background-color: red;" data-active="false">Delete browser sync data</button> -->
+            <br>
+        </section>
+        <footer class="bottomFooter">
+            <button id="resetSettingsBtn" class="footerBtn" type="button">Reset</button>
+            <div class="saveAndCancel">
+                <button id="cancelSettingsBtn" class="footerBtn" type="button">Cancel</button>
+                <button id="saveSettingsBtn" class="footerBtn" type="button">Save</button>
+            </div>
+        </footer>
+    </main>
+    <section class="promptSection">
+        <label for="genericInput" class="genericLabel"></label>
+        <input class="genericInput" type="text" placeholder="genericInput"></input>
+        <button type="button" class="genericButton1 Btn" >Save</button>
+        <button type="button" class="genericButton2 Btn" >Cancel</button>
+    </section>
 
-    <label for="spreadsheetUrl">Google Spreadsheet URL:</label>
-    <input type="text" id="spreadsheetUrl" placeholder="Paste Google Sheet URL" />
-    <button id="save" type="button">Save</button>
-    <p id="statusSheetURL"></p>
-    <br>
-    <hr>
-    <br>
-    <h3><strong> Default Table Input </strong></h3>
-    <br>
-    <table>change Default Input
-        <thead>
-            <tr>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Tags</th>
-            <th>Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><select id="Type" type="text" title="Type" ></select></td>
-                <td><select id="Status" type="text" title="Status"></select></td>
-                <td><input id="tags" type="text" placeholder="Tags" /></td>
-                <td><input id="notes" type="text" placeholder="Notes" /></td>
-            </tr>
-        </tbody>
-    </table>
-    <button id="saveDefaultInput" type="button">Save</button>
-    <p id="statusSaveDefaultInput"></p>
-        <br>
-        <hr>
-        <br>
-        <h3><strong> Context-menu </strong></h3>
-        <label for="AllowContextMenu">Allow context menu</label>
-        <input type="checkbox" id="AllowContextMenu" title="Allow context menu" checked>
-        <br>
-        <br>
-        <h4> Default Text-menu Input </h4>
-        <br>
-    <table>change Default context-Menu Input
-        <thead>
-            <tr>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Tags</th>
-            <th>Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><select id="TypeTextMenu" type="text" title="Type" ></select></td>
-                <td><select id="StatusTextMenu" type="text" title="Status"></select></td>
-                <td><input id="tagsTextMenu" type="text" placeholder="Tags" /></td>
-                <td><input id="notesTextMenu" type="text" placeholder="Notes" /></td>
-            </tr>
-        </tbody>
-    </table>
-    <button id="saveDefaultInputTextMenu" type="button">Save</button>
-    <p id="statusSaveDefaultInputInputTextMenu"></p>
-    <br>
-    <hr>
-    <br>
-    <h3><strong> Import/Export options </strong></h3>
-    <br>
-    <button type="button" id="exportBtn">Export Settings as JSON</button>
-    <input type="file" accept=".json" placeholder="select Settings json" id="importBtn"></input>
-    <br>
-    <br>
-    <button type="button" id="exportDataBtn">Export Hermidata as JSON</button>
-    <input type="file" accept=".json" placeholder="select Hermidata json" id="importDataBtn"></input>
-    <br>
-    <br>
-    <button type="button" id="exportRSSBtn">Export RSS as JSON</button>
-    <input type="file" accept=".json" placeholder="select Hermidata json" id="importRSSBtn"></input>
-    <br>
-    <br>
-    <hr>
-    <br>
+
+    
+<!-- old settings to be removed when ready
     <h3><strong> folder mapping </strong></h3>
     <br>
 
     <h4> change status options </h4>
-    <pre> NOT MADE YET!</pre>
-    <div id="changeStatusOption"></div>
-
-    <h4> change type options </h4>
-    <pre> NOT MADE YET!</pre>
-    <div id="changeTypeOption"></div>
 
     <h4> change folder name's </h4>
     <form id="newFolderMappingContainer">
@@ -139,15 +451,10 @@
         <p id="saveStatus-folderMapping"></p>
     </form>
     <div id="folderMappingContainer"></div>
-    <button id="saveFolderMapping">Save Folder Mapping</button>
+    <button id="saveFolderMapping" type="button">Save Folder Mapping</button>
     <br>
     <br>
-    <h4> Tag coloring </h4>
-    <div id="tagColoringContainer"></div>
-    <hr>
-    <br>
-    <button type="button" id="ResetAuth">Log-out</button>
-
+-->
 
 </body>
 <script src="../scripts/settings/Settings.ts" type=module></script>

@@ -281,8 +281,8 @@ export class FeedItem {
                 tagDiv.classList = `tag-div tag-div-${tagName}`;
                 tagDiv.textContent = `[${tagName}]`;
                 allTagsInString += `[${tagName}]`;
-                tagDiv.style.color = settings.tagColoring?.[tagName] || 'white';
-                tagDiv.dataset.TagColor = settings.tagColoring?.[tagName] || 'white';
+                tagDiv.style.color = settings.TagManagement.tagColoring?.[tagName] || 'white';
+                tagDiv.dataset.TagColor = settings.TagManagement.tagColoring?.[tagName] || 'white';
                 ElTagContainer.append(tagDiv)
             }
             ElTagContainer.dataset.tags = JSON.stringify(allTags);

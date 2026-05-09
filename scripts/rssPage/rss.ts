@@ -71,14 +71,14 @@ class RssPage {
         
         
 
-        settings.TYPE_OPTIONS.forEach(t=> setElement('#filterType', el => el.appendChild(new Option(t,t))));
+        settings.ContentTypesAndStatuses.TYPE_OPTIONS.forEach(t=> setElement('#filterType', el => el.appendChild(new Option(t,t))));
         this.filterStatus.innerHTML = '<option value="">All status</option>';
-        settings.STATUS_OPTIONS.forEach(s=> setElement('#filterStatus', el => el.appendChild(new Option(s,s))));
+        settings.ContentTypesAndStatuses.STATUS_OPTIONS.forEach(s=> setElement('#filterStatus', el => el.appendChild(new Option(s,s))));
         if (!this.detailType || !this.detailStatus) return;
         this.detailType.innerHTML = '';
         this.detailStatus.innerHTML = '';
-        settings.TYPE_OPTIONS.forEach(t=> setElement('#detailType', el => el.appendChild(new Option(t,t))));
-        settings.STATUS_OPTIONS.forEach(s=>setElement('#detailStatus', el => el.appendChild(new Option(s,s))));
+        settings.ContentTypesAndStatuses.TYPE_OPTIONS.forEach(t=> setElement('#detailType', el => el.appendChild(new Option(t,t))));
+        settings.ContentTypesAndStatuses.STATUS_OPTIONS.forEach(s=>setElement('#detailStatus', el => el.appendChild(new Option(s,s))));
     }
     private async renderList(filterQuery: string =''){
         if(!this.entriesEl) return;

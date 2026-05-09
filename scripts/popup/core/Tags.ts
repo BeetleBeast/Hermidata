@@ -138,7 +138,7 @@ export class TagsSystem {
         this.bindEvents();
     }
 
-    public populateTagPills(tags: string[], tagColoring: Settings['tagColoring']): void {
+    public populateTagPills(tags: string[], tagColoring: Settings['TagManagement']['tagColoring']): void {
         const container = getElement<HTMLDivElement>('#tag-pill-container');
         if (!container) return;
 

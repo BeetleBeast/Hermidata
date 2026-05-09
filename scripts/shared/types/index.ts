@@ -58,8 +58,12 @@ export {
     type DefaultChoice,
     type Settings,
 
+    type NotificationTypes,
+
     type elementInput,
     type elementMenu,
+
+    type quickBackup,
 
     type elementsInputAndMenu,
     type ElmentsWithInputAndMenu,
