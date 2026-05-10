@@ -58,6 +58,9 @@ export function returnHashedTitle(title: string, type: string, url: string = '',
     ? simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
     : simpleHash(finalTitle.toLowerCase()) // V1
 }
+export function returnBookmarkHash(bookmarkLabel: string) {
+    return simpleHash(bookmarkLabel);
+}
 
 export function simpleHash(str: string) {
     let hash = 0, i, chr;

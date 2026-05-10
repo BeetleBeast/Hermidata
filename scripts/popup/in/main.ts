@@ -10,6 +10,7 @@ import { getGoogleSheetURL, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
+import { returnBookmarkHash } from '../../shared/StringOutput';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -26,10 +27,22 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
     source: '',
     status: status,
     chapter: { 
-        current: 0,
+        bookmarks: {
+            [returnBookmarkHash('Primary')]: {
+                id: returnBookmarkHash('Primary'),
+                current: 0,
+                history: [],
+                label: 'Primary',
+                color: 'blue',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                note: '',
+                isPrimary: true
+            }
+        },
         latest: 0,
-        history: [],
-        lastChecked: new Date().toISOString()
+        lastChecked: new Date().toISOString(),
+        revisitingCount: 0
     },
     rss: null,
     import: null,
@@ -38,9 +51,11 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         notes: '',
         added: new Date().toISOString(),
         updated: new Date().toISOString(),
+        altSources: [],
         altTitles: [],
         originalRelease: null,
-        novelStatus: novelStatus
+        novelStatus: novelStatus,
+        bookmarkInUse: returnBookmarkHash('Primary')
     }
 });
 
@@ -189,7 +204,7 @@ class HermidataController {
 
         this.pageTitle = currentTabInfo.pageTitle;
         this.hermidata.url = currentTabInfo.url;
-        this.hermidata.chapter.current = currentTabInfo.currentChapter;
+        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current = currentTabInfo.currentChapter;
         
         if (!pastHermidata) {
             // set title & notes
@@ -238,8 +253,8 @@ class HermidataController {
         this.trycapitalizingTypesAndStatus(settings.ContentTypesAndStatuses.TYPE_OPTIONS, settings.ContentTypesAndStatuses.STATUS_OPTIONS);
 
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
-        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.history.at(-1) || 0));
-        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.current));
+        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.at(-1) || 0));
+        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current));
         setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
         setElement<HTMLSelectElement>('#status', el => el.value = display.status);
         setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]);
@@ -307,12 +322,14 @@ class HermidataController {
 
         this.hermidata.title = title;
         this.hermidata.type = Type;
-        this.hermidata.chapter.current = Number(Chapter);
+        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current = Number(Chapter);
         // max 20 entries in history
-        if (this.hermidata.chapter.history.length >= 20) this.hermidata.chapter.history.shift()
-        this.hermidata.chapter.history.push(this.hermidata.chapter.current);
+        if (this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.length >= 20) {
+            this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.shift()
+        }
+        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.push(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current);
         // only unique entries in history
-        this.hermidata.chapter.history = Array.from( new Set(this.hermidata.chapter.history) );
+        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = Array.from( new Set(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history) );
         this.hermidata.status = status;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;

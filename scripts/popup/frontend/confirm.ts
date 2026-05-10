@@ -1,5 +1,6 @@
 import type { Hermidata } from "../../shared/types/index";
 import { getElement, setElement } from "../../utils/Selection";
+import { getBookmarkInUse } from "../core/save";
 
 /**
  *  Create a clear confirmation message for user
@@ -16,8 +17,8 @@ export async function confirmMigrationPrompt(newer: Hermidata, older: Hermidata,
             • New type: ${newer.type}
     
             Chapters:
-            • Old: ${older.chapter?.current || "?"}
-            • New: ${newer.chapter?.current || "?"}
+            • Old: ${getBookmarkInUse(older).current || "?"}
+            • New: ${getBookmarkInUse(newer).current || "?"}
     
             Notes:
             • Old: ${older.meta?.notes || "(none)"}

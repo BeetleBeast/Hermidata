@@ -86,7 +86,7 @@ export const DEFAULT_TAG_COLOURS: Record<string, string> = {
 }
 
 
-export interface Hermidata {
+export interface HermidataV5 {
     id: string;
     title: string;
     type: AnyNovelType;
@@ -122,7 +122,7 @@ export interface Bookmark { // new
 	updatedAt: string;
 	isPrimary: boolean; // only one can be primary
 }
-export interface HermidataV6 {
+export interface Hermidata {
     id: string;
     title: string;
     type: AnyNovelType;
@@ -132,7 +132,7 @@ export interface HermidataV6 {
     chapter: {
         latest: number;
         lastChecked: string;
-        bookmarks: Bookmark[]; // Multiple saved positions
+        bookmarks: Record<string, Bookmark>; // Multiple saved positions
         revisitingCount: number; // How many times you've re-read
     };
     rss: Feed | null;
@@ -146,6 +146,7 @@ export interface HermidataV6 {
         altTitles: string[];
         originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
         novelStatus: AnyNovelStatus;
+        bookmarkInUse: string;
     };
 }
 

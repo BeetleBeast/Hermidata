@@ -1,10 +1,10 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidataV3 } from "../../popup/core/save";
 import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
-import { getAllHermidata } from "../db/db";
+import { getAllHermidata, isHermidataV6 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
 import { returnHashedTitle, TrimTitle } from "../StringOutput";
-import type { AllHermidata, Bookmark, Hermidata, HermidataV6 } from "../types";
+import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
 
 
 interface DuplicationResult {
@@ -366,13 +366,13 @@ export class HermidataMigration {
 
 
 
-    public  static async migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT') {
+    public  static async migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | null> {
         // step 1. new key
         // re-make keys
         const [ newTitle, newType ] = [newer.title, newer.type]
         const [ oldTitle, oldType ] = [older.title, older.type]
-        const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : this.getOldIDType(newer);
-        const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : this.getOldIDType(older);
+        const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : this.getOldIDType(newer as unknown as Hermidata);
+        const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : this.getOldIDType(older as unknown as Hermidata);
         // check keys validity
         if ( newKey !== newer.id || oldKey !== older.id) return null;
         // step 2. start with shell
@@ -384,7 +384,7 @@ export class HermidataMigration {
             ];
         }
         const base = makeHermidataV3(newTitle, newer.url || older.url, newType);
-        const merged: Hermidata = {
+        const merged: HermidataV5 = {
             ...base,
             id: newKey,
             title: newTitle || oldTitle,
@@ -393,9 +393,9 @@ export class HermidataMigration {
             source: newer.source || older.source,
             status: newer.status || older.status || "Planned",
             chapter: {
-                current: newer.chapter?.current ?? older.chapter?.current ?? 0,
-                latest: newer.chapter?.latest ?? older.chapter?.latest ?? null,
-                history: Array.from( new Set([...(older.chapter?.history || []), ...(newer.chapter?.history || [])]) ).sort((a, b) => a - b),
+                current: (newer as unknown as HermidataV5).chapter?.current ?? (older as unknown as HermidataV5).chapter?.current ?? 0,
+                latest: (newer as unknown as HermidataV5).chapter?.latest ?? older.chapter?.latest ?? null,
+                history: Array.from( new Set([...((older as unknown as HermidataV5).chapter?.history || []), ...((newer as unknown as HermidataV5).chapter?.history || [])]) ).sort((a, b) => a - b),
                 lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString()
             },
             rss: newer.rss || older.rss || null,
@@ -421,10 +421,12 @@ export class HermidataMigration {
 
             }
         }
+        // step 2.5. update to V6
+        const mergedV6 = HermidataMigration.migrateHermidataV6(merged);
         // step 3. save & remove key
-        updateHermidataV3(oldKey, newKey, merged);
+        updateHermidataV3(oldKey, newKey, mergedV6);
 
-        return merged;
+        return mergedV6;
     }
 
     public static detectHashType(obj: Hermidata) {
@@ -466,7 +468,7 @@ export class HermidataMigration {
      * @summary
      * upgrade Hermidata V5 to V6
      */
-    public static migrateHermidataV6(older: Hermidata): HermidataV6 {
+    public static migrateHermidataV6(older: HermidataV5): Hermidata {
         const label = 'Primary';
         const newBoomark: Bookmark = {
             id: this.NEW_simpleHash(label),
@@ -479,7 +481,7 @@ export class HermidataMigration {
             note: older.meta?.notes,
             isPrimary: true
         }
-        const result: HermidataV6 = {
+        const result: Hermidata = {
             id: older.id,
             title: older.title,
             type: older.type,
@@ -487,7 +489,9 @@ export class HermidataMigration {
             source: older.source,
             status: older.status,
             chapter: {
-                bookmarks: [newBoomark],
+                bookmarks: {
+                    [newBoomark.id]: newBoomark
+                },
                 latest: older.chapter?.latest,
                 lastChecked: older.chapter?.lastChecked,
                 revisitingCount: 0
@@ -502,9 +506,11 @@ export class HermidataMigration {
                 added: older.meta?.added,
                 updated: older.meta?.updated,
                 originalRelease: older.meta?.originalRelease,
-                novelStatus: older.meta?.novelStatus
+                novelStatus: older.meta?.novelStatus,
+                bookmarkInUse: newBoomark.id
             }
         };
         return result;
     }
+
 }

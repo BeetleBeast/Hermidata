@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { type Hermidata, type RawFeed, type Settings, defaultSettings, type AnyNovelType, type AnyReadStatus, type HermidataV6 } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, defaultSettings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types/index';
 import { ext } from '../BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
@@ -421,7 +421,7 @@ export async function migrateFromChromeStorageV6(): Promise<void> {
 
     await new Promise<void>(async (resolve) => {
         const allHermidata_v5 = await getAllHermidata();
-        const entries: HermidataV6[] = [];
+        const entries: Hermidata[] = [];
 
         for (const [key, value] of Object.entries(allHermidata_v5)) {
             if (!isHermidataV6(value)) { entries.push( HermidataMigration.migrateHermidataV6(value) ); }
@@ -440,7 +440,7 @@ export async function migrateFromChromeStorageV6(): Promise<void> {
  * @param data - Hermidata
  * @returns boolean
  */
-export function isHermidataV6( data: Hermidata | HermidataV6 ): data is HermidataV6 {
+export function isHermidataV6( data: Hermidata | HermidataV5 ): data is Hermidata {
     return (
         "bookmarks" in data.chapter &&
         Array.isArray(data.chapter.bookmarks) &&
