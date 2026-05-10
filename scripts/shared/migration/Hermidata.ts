@@ -371,8 +371,8 @@ export class HermidataMigration {
         // re-make keys
         const [ newTitle, newType ] = [newer.title, newer.type]
         const [ oldTitle, oldType ] = [older.title, older.type]
-        const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : this.getOldIDType(newer as unknown as Hermidata);
-        const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : this.getOldIDType(older as unknown as Hermidata);
+        const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : this.getOldIDType(newer);
+        const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : this.getOldIDType(older);
         // check keys validity
         if ( newKey !== newer.id || oldKey !== older.id) return null;
         // step 2. start with shell
@@ -384,7 +384,7 @@ export class HermidataMigration {
             ];
         }
         const base = makeHermidataV3(newTitle, newer.url || older.url, newType);
-        const merged: HermidataV5 = {
+        const merged: Hermidata = {
             ...base,
             id: newKey,
             title: newTitle || oldTitle,
@@ -393,10 +393,14 @@ export class HermidataMigration {
             source: newer.source || older.source,
             status: newer.status || older.status || "Planned",
             chapter: {
-                current: (newer as unknown as HermidataV5).chapter?.current ?? (older as unknown as HermidataV5).chapter?.current ?? 0,
-                latest: (newer as unknown as HermidataV5).chapter?.latest ?? older.chapter?.latest ?? null,
-                history: Array.from( new Set([...((older as unknown as HermidataV5).chapter?.history || []), ...((newer as unknown as HermidataV5).chapter?.history || [])]) ).sort((a, b) => a - b),
-                lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString()
+                bookmarks: {
+                    ...older.chapter?.bookmarks,
+                    ...newer.chapter?.bookmarks
+                },
+                latest: newer.chapter?.latest ?? older.chapter?.latest ?? null,
+                lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString(),
+                revisitingCount: newer.chapter?.revisitingCount || older.chapter?.revisitingCount || 0
+
             },
             rss: newer.rss || older.rss || null,
             import: newer.import || older.import || null,
@@ -408,6 +412,12 @@ export class HermidataMigration {
                     ])
                 ),
                 notes: newer.meta?.notes || older.meta?.notes || "",
+                altSources: mergeAltTitles(
+                    newer.source || older.source,
+                    older.meta?.altSources || [],
+                    newer.meta?.altSources || [],
+                    [newer.title, older.title]
+                ),
                 altTitles: mergeAltTitles(
                     newTitle,
                     older.meta?.altTitles || [],
@@ -417,16 +427,14 @@ export class HermidataMigration {
                 added: older.meta?.added || base.meta.added,
                 updated: new Date().toISOString(),
                 originalRelease: null, // TODO: do something with it
-                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus
-
+                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus,
+                bookmarkInUse: newer.meta?.bookmarkInUse || older.meta?.bookmarkInUse || this.NEW_simpleHash('Primary')
             }
         }
-        // step 2.5. update to V6
-        const mergedV6 = HermidataMigration.migrateHermidataV6(merged);
         // step 3. save & remove key
-        updateHermidataV3(oldKey, newKey, mergedV6);
+        updateHermidataV3(oldKey, newKey, merged);
 
-        return mergedV6;
+        return merged;
     }
 
     public static detectHashType(obj: Hermidata) {
