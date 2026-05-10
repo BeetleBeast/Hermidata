@@ -1,7 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { type Hermidata, type RawFeed, type Settings, defaultSettings, type AnyNovelType, type AnyReadStatus } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, defaultSettings, type AnyNovelType, type AnyReadStatus, type HermidataV6 } from '../types/index';
 import { ext } from '../BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
+import { HermidataMigration } from '../migration/Hermidata';
 
 
 // ============================================================
@@ -407,6 +408,44 @@ export async function migrateFromChromeStorage(): Promise<void> {
             resolve();
         });
     });
+}
+/**
+ * One-time migration from Hermidata v5 to Hermidata v6 inside IndexedDB
+ */
+export async function migrateFromChromeStorageV6(): Promise<void> {
+    const db = await getDb();
+    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v6');
+    if (alreadyMigrated) return;
+
+    console.log('[DB] Starting migration of Hermidata from V5 to V6...');
+
+    await new Promise<void>(async (resolve) => {
+        const allHermidata_v5 = await getAllHermidata();
+        const entries: HermidataV6[] = [];
+
+        for (const [key, value] of Object.entries(allHermidata_v5)) {
+            if (!isHermidataV6(value)) { entries.push( HermidataMigration.migrateHermidataV6(value) ); }
+        }
+
+        if (entries.length) await putAllHermidata(entries);
+
+        // Mark as done
+        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v6');
+        console.log(`[DB] Migrated ${entries.length} Hermidata entries from V5 to V6`);
+        resolve();
+    });
+}
+/**
+ * 
+ * @param data - Hermidata
+ * @returns boolean
+ */
+export function isHermidataV6( data: Hermidata | HermidataV6 ): data is HermidataV6 {
+    return (
+        "bookmarks" in data.chapter &&
+        Array.isArray(data.chapter.bookmarks) &&
+        "revisitingCount" in data.chapter
+    );
 }
 
 // ============================================================

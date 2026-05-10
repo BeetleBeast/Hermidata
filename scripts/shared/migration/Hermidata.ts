@@ -4,7 +4,7 @@ import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
 import { getAllHermidata } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
 import { returnHashedTitle, TrimTitle } from "../StringOutput";
-import type { AllHermidata, Hermidata } from "../types";
+import type { AllHermidata, Bookmark, Hermidata, HermidataV6 } from "../types";
 
 
 interface DuplicationResult {
@@ -432,19 +432,8 @@ export class HermidataMigration {
 
         const normalizedTitle = TrimTitle.trimTitle(obj.title, obj.url).title.toLowerCase();
 
-        const newHash = (() => {
-            let hash = 0, chr;
-            const str = `${obj.type}:${normalizedTitle}`;
-            for (let i = 0; i < str.length; i++) {
-                chr = str.codePointAt(i)!;
-                hash = ((hash << 5) - hash) + chr;
-                hash = Math.trunc(hash);
-            }
-            return hash.toString();
-        })();
-
         if (obj.id === this.OLD_simpleHash(`${obj.type}:${normalizedTitle}`)) return "old";
-        if (obj.id === newHash) return "new";
+        if (obj.id === this.NEW_simpleHash(`${obj.type}:${normalizedTitle}`)) return "new";
         return "unknown";
     }
 
@@ -458,9 +447,64 @@ export class HermidataMigration {
         }
         return hash.toString();
     }
+    private static NEW_simpleHash(str: string) {
+        let hash = 0, chr;
+        for (let i = 0; i < str.length; i++) {
+            chr = str.codePointAt(i)!;
+            hash = ((hash << 5) - hash) + chr;
+            hash = Math.trunc(hash);
+        }
+        return hash.toString();
+    }
 
 
     public static getOldIDType(Obj: Hermidata) {
         return this.OLD_simpleHash(`${Obj.type}:${TrimTitle.trimTitle(Obj.title, Obj.url).title.toLowerCase()}`);
+    }
+
+    /**
+     * @summary
+     * upgrade Hermidata V5 to V6
+     */
+    public static migrateHermidataV6(older: Hermidata): HermidataV6 {
+        const label = 'Primary';
+        const newBoomark: Bookmark = {
+            id: this.NEW_simpleHash(label),
+            current: older.chapter?.current,
+            history: older.chapter?.history,
+            label: label,
+            color: 'blue',
+            createdAt: older.meta?.added,
+            updatedAt: new Date().toISOString(),
+            note: older.meta?.notes,
+            isPrimary: true
+        }
+        const result: HermidataV6 = {
+            id: older.id,
+            title: older.title,
+            type: older.type,
+            url: older.url,
+            source: older.source,
+            status: older.status,
+            chapter: {
+                bookmarks: [newBoomark],
+                latest: older.chapter?.latest,
+                lastChecked: older.chapter?.lastChecked,
+                revisitingCount: 0
+            },
+            rss: older.rss,
+            import: older.import,
+            meta: {
+                tags: older.meta?.tags,
+                notes: older.meta?.notes,
+                altSources: [older.source], // new
+                altTitles: older.meta?.altTitles,
+                added: older.meta?.added,
+                updated: older.meta?.updated,
+                originalRelease: older.meta?.originalRelease,
+                novelStatus: older.meta?.novelStatus
+            }
+        };
+        return result;
     }
 }

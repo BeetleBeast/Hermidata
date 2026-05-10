@@ -13,6 +13,8 @@ export {
     DEFAULT_TAG_COLOURS,
 
     type Hermidata,
+    type HermidataV6,
+    type Bookmark,
 
     type HermidataDateType,
     type HermidataSortType,
