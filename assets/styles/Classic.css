@@ -65,7 +65,7 @@ footer {
 	height: 50px;
 	display: grid;
 	align-items: center;
-	grid-template-columns: 0 auto 30px;
+	grid-template-columns: 30px auto 30px;
 }
 /* title & settings */
 #title {
@@ -322,7 +322,7 @@ input[type=number]::-webkit-inner-spin-button {
 
 #tag-pill-container {
 	width: 100%;
-	z-index: 500;
+	z-index: 2;
 	height: 100%;
 	display: flex;
 	flex-direction: row-reverse;
@@ -473,3 +473,166 @@ input[type=number]::-webkit-inner-spin-button {
 
 
 
+.imgBookmark {
+	fill: lightgrey;
+	width: 30px;
+	height: 30px;
+	grid-column: 1;
+	justify-self: self-start;
+	cursor: pointer;
+	border: none;
+	background: none;
+}
+.imgBookmark:hover {
+	fill: white;
+}
+
+.bookmarkMenuContainer {
+	border-radius: 15px;
+	border: 1px solid lightgray;
+	width: 30%;
+	position: absolute;
+	top: 25%;
+	left: 5%;
+	background-color: var(--bg_disabled);
+	z-index: 5;
+}
+.bookmarkMenu {
+	display: block;
+	width: 100%;
+}
+.bookmarkMenu-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	height: 20px;
+	padding: 10px;
+	transition: background-color 0.15s ease;
+	border-radius: 15px 15px 0 0;
+}
+
+
+.addNewBookmarkBtn {
+	width: 100%;
+	height: 35px;
+	padding: 5px;
+	background-color: transparent;
+	color: var(--Text-color);
+	border: none;
+	transition: background-color 0.15s ease;
+}
+
+.bookmarkMenuBtn {
+	width: 100%;
+	height: 35px;
+	padding: 5px;
+	background-color: transparent;
+	color: var(--Text-color);
+	border: none;
+	margin-bottom: 20px;
+	transition: background-color 0.15s ease;
+}
+.bookmarkMenu-item:hover,
+.addNewBookmarkBtn:hover,
+.bookmarkMenuBtn:hover {
+	background-color: var(--Btn_hover);
+	cursor: pointer;
+}
+.bookmarkMenu-item:active,
+.addNewBookmarkBtn:active,
+.bookmarkMenuBtn:active {
+	background-color: var(--Btn_active);
+}
+
+
+hr {
+	margin: 0;
+}
+
+
+
+/* manager */
+
+.bookmarkMenuManagerContainer {
+	border: 1px solid;
+	width: 50%;
+	border-radius: 15px;
+	padding: 10px 0 10px 0;
+	position: absolute;
+	top: 60px;
+	left: 25%;
+	background-color: var(--bg_disabled);
+}
+.bookmarkMenuManager-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	height: 40px;
+	align-items: center;
+	margin-left: 10px;
+	margin-right: 10px;
+}
+
+.bookmarkMenuManager-title {
+	padding: 0;
+	margin: 10px;
+}
+#cancelBookmarkMenuBtn {
+	width: 10px;
+	height: 10px;
+	align-self: center;
+	cursor: pointer;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+}
+#cancelBookmarkMenuBtn:hover {
+	background-color: transparent;
+}
+#bookmarkMenuManager {
+	display: flex;
+	flex-direction: column;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+
+.bookmarkMenuManager-item {
+	display: grid;
+	align-items: center;
+	border-radius: 15px;
+	border: 1px solid;
+	padding: 15px;
+	grid-template: 'svg label remove' 'svg footer remove';
+}
+.bookmarkMenuManager-item-icon {
+	grid-area: svg;
+	width: 35px;
+	height: 31px;
+	fill: white;
+}
+.bookmarkLabel {
+	grid-area: label;
+}
+.bookmarkLastUpdated {
+	color: var(--Btn_disabled);
+	grid-area: footer;
+}
+
+#addNewBookmarkBtn-manager {
+	left: 20px;
+	position: relative;
+	background-color: var(--Btn_hover);
+	width: 40%;
+	border-radius: 5px;
+	border: 1px solid;
+	margin-top: 10px;
+}
+
+.bookmarkMenuManager-sub {
+	margin-left: 20px;
+	word-spacing: unset;
+	white-space: nowrap;
+}

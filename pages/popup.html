@@ -16,7 +16,13 @@
 <section id="body" class="HDClassic">
     <section class="main">
         <div class="topMain">
-            <img alt="0" class="icon openBookmarkMenu" class="imgBookmark" src='../assets/icon/icon16.png'/>
+            <svg class="openBookmarkMenu imgBookmark" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960">
+                    <g class="imgBookmark-g">
+                        <path d="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640h-80v280l-100-60-100 60v-280H240v640Zm0 0v-640 640Zm200-360 100-60 100 60-100-60-100 60Z">
+                            <title class="RSSLinkState-title">this Item is not linked to a RSS feed</title>
+                        </path>
+                    </g>
+                </svg>
             <input id="title" class="autoInput" data-name="Title" type="text" spellcheck="false" placeholder="Title" />
             <button class="openSettings" type="button" >
                 <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png'/>
@@ -118,15 +124,20 @@
     <button type="button" id="saveBookmarkBtn" class="Btn">Add Bookmark</button>
 </section>
 <section class="bookmarkMenuManagerContainer">
-    <h2>Bookmark Manager</h2>
-    <button type="button" id="cancelBookmarkMenuBtn" class="Btn">x</button>
+    <div class="bookmarkMenuManager-header">
+        <h4 class="bookmarkMenuManager-title">Bookmark Manager</h4>
+        <button type="button" id="cancelBookmarkMenuBtn" class="Btn">x</button>
+    </div>
+    <hr>
     <div id="bookmarkMenuManager"> <!-- Dynamic load Bookmarks --> </div>
-    <button type="button" id="addNewBookmarkBtn" class="Btn">Add Bookmark</button>
-    <sub>Tip: Primary bookmark can not be removed TODO: refrase this.</sub>
+    <button type="button" class="addNewBookmarkBtn" id="addNewBookmarkBtn-manager" class="Btn">Add Bookmark</button>
+    <br>
+    <sub class="bookmarkMenuManager-sub">Tip: Primary bookmark cannot be removed.</sub>
 </section>
 <section class="bookmarkMenuContainer">
     <div class="bookmarkMenu"> <!-- Dynamic load Bookmark label + chapter current --> </div>
-    <button type="button" class="addNewBookmarkBtn">Add Bookmark</button>
+    <button type="button" class="addNewBookmarkBtn" id="addNewBookmarkBtn-Menu" >Add Bookmark</button>
+    <hr>
     <button type="button" class="bookmarkMenuBtn" class="Btn">Bookmark Manager</button>
 </section>
     <div id="spreadsheetPrompt">

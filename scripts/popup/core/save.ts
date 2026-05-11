@@ -35,14 +35,15 @@ export async function updateChapterProgress(title: string, type: string, hermida
         }
     
         if ( entry.title !== title || entry.type !== type || key !== entry.id) needsToMigrate = true
-    
-        if (newChapterNumber >= getChapterFromBookmarkInUse(entry)) {
+        
+        const oldChapterNumber = getChapterFromBookmarkInUse(entry);
+        if (newChapterNumber >= oldChapterNumber) {
             entry.id = key;
 
             const bookmarkInUse = getBookmarkInUse(hermidata);
             bookmarkInUse.current = newChapterNumber;
             bookmarkInUse.updatedAt = new Date().toISOString();
-            if (!bookmarkInUse.history.some(chapter => chapter === newChapterNumber)) bookmarkInUse.history.push(bookmarkInUse.current);
+            if (!bookmarkInUse?.history.some(chapter => chapter === newChapterNumber)) bookmarkInUse?.history.push(bookmarkInUse.current);
             entry.chapter.bookmarks[bookmarkInUse.id] = bookmarkInUse;
             
             entry.meta.bookmarkInUse = bookmarkInUse.id;
@@ -139,7 +140,7 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
 
 export function getchapterFromPrimaryBookmark(hermidata: Hermidata): number {
     const primary = Object.values(hermidata.chapter.bookmarks).find(b => b.isPrimary) as Bookmark;
-    return primary.current;
+    return primary.current ?? 0;
 }
 export function getchapterFromBookmark(hermidata: Hermidata, bookmarkId: string): number {
     const primary = hermidata.chapter.bookmarks[bookmarkId]
@@ -151,7 +152,7 @@ export function getBookmarkFromHermidata(hermidata: Hermidata, bookmarkId: strin
 }
 export function getChapterFromBookmarkInUse(hermidata: Hermidata): number {
     const inUse = hermidata.chapter.bookmarks[hermidata.meta.bookmarkInUse]
-    return inUse.current;
+    return inUse.current ?? 0;
 }
 export function getBookmarkInUse(hermidata: Hermidata): Bookmark {
     const inUse = hermidata.chapter.bookmarks[hermidata.meta.bookmarkInUse]

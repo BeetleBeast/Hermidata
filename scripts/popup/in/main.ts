@@ -80,7 +80,7 @@ const stateConfig = {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const controller = new HermidataController();
-    await controller.init().catch(console.error);
+    await controller.init();
 
     // FIXME: this is a hack
     // After popup init — start quietly in the background
@@ -153,7 +153,7 @@ class HermidataController {
         this.dupplicate = new HermidataMigration();
         await this.dupplicate.init();
         const dups = await this.dupplicate.findPotentialDuplicates(0.9);
-        if (dups.length > 0) console.table(dups, ['potential duplicates']);
+        if (dups.length > 0) console.table(dups);
     }
 
     private forceSetClassic() {
@@ -259,7 +259,7 @@ class HermidataController {
         this.trycapitalizingTypesAndStatus(settings.ContentTypesAndStatuses.TYPE_OPTIONS, settings.ContentTypesAndStatuses.STATUS_OPTIONS);
 
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
-        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.at(-1) || 0));
+        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.at(-1) || 0));
         setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current));
         setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
         setElement<HTMLSelectElement>('#status', el => el.value = display.status);
@@ -317,6 +317,7 @@ class HermidataController {
         const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
         const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
         const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
+        const novelStatuses = getElement<HTMLSelectElement>('#NovelStatus')?.value as AnyNovelStatus;
         const notes = getElement<HTMLInputElement>("#notes")?.value || "";
         // from back-end
         const url = this.hermidata.url;
@@ -329,14 +330,18 @@ class HermidataController {
         this.hermidata.title = title;
         this.hermidata.type = Type;
         this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current = Number(Chapter);
+        // if history is undefined
+        if (this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history === undefined) this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = [];
         // max 20 entries in history
-        if (this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.length >= 20) {
-            this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.shift()
+        
+        if (this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.length >= 20) {
+            this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.shift()
         }
-        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.push(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current);
+        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.push(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current);
         // only unique entries in history
-        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = Array.from( new Set(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history) );
+        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = Array.from( new Set(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history) );
         this.hermidata.status = status;
+        this.hermidata.meta.novelStatus = novelStatuses;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;
 
