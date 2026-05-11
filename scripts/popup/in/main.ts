@@ -11,6 +11,7 @@ import { checkSyncQuota } from '../../shared/db/sync';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { returnBookmarkHash } from '../../shared/StringOutput';
+import { BookmarkController } from '../core/Bookmark';
 
 export type CurrentTab = {
     currentChapter: number;
@@ -99,6 +100,8 @@ class HermidataController {
 
     private tagsSystem: TagsSystem;
 
+    private bookmarkSystem: BookmarkController | null = null;
+
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
     public googleSheetURL: string | undefined;
@@ -137,6 +140,9 @@ class HermidataController {
         await this.checkForDuplicates();
         
         this.RSS = new RSS(this.hermidata);
+
+        this.bookmarkSystem = new BookmarkController(this.hermidata);
+        this.bookmarkSystem.init();
 
         this.populateUI(settings);
         this.bindEvents();
