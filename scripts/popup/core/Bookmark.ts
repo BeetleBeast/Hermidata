@@ -1,5 +1,8 @@
+import { saveHermidataV3 } from "../../shared/db/Storage";
+import { returnBookmarkHash } from "../../shared/StringOutput";
 import type { Bookmark, Hermidata } from "../../shared/types";
 import { getElement, setElement } from "../../utils/Selection";
+import { customConfirm } from "../frontend/confirm";
 
 export class BookmarkController {
 
@@ -35,6 +38,8 @@ export class BookmarkController {
     private readonly addNewBookmarkBtn = document.querySelectorAll<HTMLButtonElement>('.addNewBookmarkBtn'); // open add new bookmark form
     private readonly bookmarkMenuBtn = getElement<HTMLButtonElement>('.bookmarkMenuBtn'); // open bookmark menu manager
 
+    private readonly bookmarkSVG = getElement<SVGSVGElement>('.colorPicker');
+
     constructor(hermidata: Hermidata) {
         this.hermidata = hermidata;
     }
@@ -46,18 +51,43 @@ export class BookmarkController {
         this.bindEvents();
     }
     private bindEvents() {
-        // must be set first
-        // getElement<HTMLDivElement>('.HDClassic')?.addEventListener('click', (e) => this.setAllToDefault(e as PointerEvent));
-
+        // TODO: stop prpagation to prevent event from bubbling up and closing  popup when opening color picker
         this.imgBookmark?.addEventListener('click', (e) => this.openBookmarkMenu(e as PointerEvent));
-        for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', () => this.addNewBookmarkForm());
-        this.bookmarkMenuBtn?.addEventListener('click', () => this.openBookmarkMenuManager());
-        this.cancelBookmarkMenuBtn?.addEventListener('click', () => this.closeBookmarkMenuManager());
+        for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', (e) => {
+            // Only stop propagation if clicking on the SVG or color picker
+            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
+            e.stopPropagation();
+            this.addNewBookmarkForm()
+        }});
+        this.bookmarkMenuBtn?.addEventListener('click', (e) => {
+            // Only stop propagation if clicking on the SVG or color picker
+            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
+            e.stopPropagation();
+            this.openBookmarkMenuManager()
+        }});
+
+        this.saveBookmarkBtn?.addEventListener('click', (e) => {
+            // Only stop propagation if clicking on the SVG or color picker
+            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
+            e.stopPropagation();
+            this.saveNewBookmark()
+        }});
+
+        this.cancelBookmarkMenuBtn?.addEventListener('click', (e) => {
+            // Only stop propagation if clicking on the SVG or color picker
+            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
+            e.stopPropagation();
+            this.closeBookmarkMenuManager()
+        }});
+        this.cancelBookmarkBtn?.addEventListener('click', (e) => {
+            // Only stop propagation if clicking on the SVG or color picker
+            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
+            e.stopPropagation();
+            this.closeAddBookmark()
+        }});
     }
     private setAllToDefault(): void {
         // set all elements to default
-        // only if not pressed on other button
-        // if (e.target !== this.imgBookmark && e.target !== this.bookmarkMenuBtn && e.target !== this.addNewBookmarkBtn) return;
         this.bookmarkInUseID = null;
         this.AddNewBookmarkContainer!.style.display = 'none';
         this.bookmarkMenuContainer!.style.display = 'none';
@@ -73,9 +103,6 @@ export class BookmarkController {
             if (this.bookmarkMenuManager?.querySelector<HTMLDivElement>(`.bookmarkMenuManager-item[data-key="${key}"]`)) continue;
             this.createBookmarkMenuManager(key, value);
         }
-    }
-    private addNewBookmarkForm(): void {
-        throw new Error("Method not implemented.");
     }
     private closeBookmarkMenuManager(): void {
         if (!this.bookmarkMenuManagerContainer) return;
@@ -97,14 +124,18 @@ export class BookmarkController {
         // if created at is less than 24 hours, show created at
         // if created at is more than 24 hours, show last updated
         // show last updated as relative time if less than 2 weeks ago
-        // FIXME: this doesn't display correctly
-        const yesterday = new Date().setDate(new Date().getDate() - 1);
-        const weeksAgo_2 = new Date().setDate(new Date().getDate() - 14);
-        const isCreatedAtLessThan24Hours = new Date(value.createdAt).getTime() > yesterday && new Date(value.createdAt).getTime() < weeksAgo_2;
+
+        const yesterday = new Date().getTime() - (24 * 60 * 60 * 1000);
+        const weeksAgo_2 = new Date().getTime() - (14 * 24 * 60 * 60 * 1000);
+        const isCreatedAtLessThan24Hours = new Date(value.createdAt).getTime() > yesterday;
         const wording = isCreatedAtLessThan24Hours ? 'Created at' : 'Last updated';
-        const lastUpdatedValue = isCreatedAtLessThan24Hours ? new Date(value.createdAt).toLocaleString() : new Date(value.updatedAt).toLocaleString();
-        const relativeTime = new Date(value.updatedAt).toLocaleString([], {hourCycle: 'h23', hour: 'numeric', minute: 'numeric', day: 'numeric', month: 'numeric', year: 'numeric'});
-        const timeValue = new Date().getTime() > weeksAgo_2 ? lastUpdatedValue.toString() : relativeTime;
+        const relevantDate = isCreatedAtLessThan24Hours ? value.createdAt : value.updatedAt;
+
+        // For relative time display
+        const isOlderThan2Weeks = new Date(value.updatedAt).getTime() < weeksAgo_2;
+        const timeValue = isOlderThan2Weeks
+            ? new Date(relevantDate).toLocaleString([], {hourCycle: 'h23', hour: 'numeric', minute: 'numeric', day: 'numeric', month: 'short', year: 'numeric'})
+            : new Date(relevantDate).toLocaleString([], {hourCycle: 'h23', hour: 'numeric', minute: 'numeric'});
 
         bookmarkLastUpdated.textContent = 'chapter ' + value.current + ' - ' + wording + ': ' + timeValue;
 
@@ -119,7 +150,8 @@ export class BookmarkController {
             </path>
         </g>`;
         bookmarkSVG.style.fill = value.color;
-        bookmarkSVG.addEventListener('click', () => this.editBookmarkColor(key));
+        bookmarkSVG.style.cursor = 'pointer';
+        this.createColorPicker(bookmarkSVG, key);
 
         if (!value.isPrimary) {
             const bookmarkDelete = document.createElement('div');
@@ -135,13 +167,97 @@ export class BookmarkController {
         // TODO: update popup to have correct height as menu has a great chance to overflow
 
     }
-    private editBookmarkColor(key: string): void {
+    private createColorPicker(svg: SVGSVGElement, key: string): void {
+        const colorPicker = document.createElement('input');
+        colorPicker.type = 'color';
+        colorPicker.value = this.hermidata.chapter.bookmarks[key].color;
+        colorPicker.className = 'colorPicker svgColorPicker';
 
+        // Make SVG clickable to open color picker
+        svg.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent event from bubbling up
+        e.preventDefault();   // Prevent any default behavior
+        colorPicker.click();
+    });
+
+        colorPicker.addEventListener('input', async (e) => {
+            e.stopPropagation(); // Prevent event from bubbling up
+            const color = colorPicker.value;
+            svg.style.fill = color;
+            this.hermidata.chapter.bookmarks[key].color = color;
+            
+            try {
+                await saveHermidataV3(this.hermidata.id, this.hermidata);
+            } catch (error) {
+                console.error('Failed to save bookmark color:', error);
+                // Optionally revert the color on error
+            }
+        });
     }
-    private removeBookmark(key: string): boolean {
-        // TODO: remove bookmark
-        // TODO: add a confirmation message to remove
+
+    private async removeBookmark(key: string): Promise<boolean> {
+        const confirmation = await customConfirm('are you sure you want to remove this bookmark?');
+        if (!confirmation) return false;
+
+        // set used bookmark to primary if selected
+        if (this.hermidata.meta.bookmarkInUse === key){
+            // get primary bookmark
+            const primaryBookmarkKey = Object.keys(this.hermidata.chapter.bookmarks).find(b => this.hermidata.chapter.bookmarks[b].isPrimary);
+            if (!primaryBookmarkKey) return false;
+            this.hermidata.meta.bookmarkInUse = primaryBookmarkKey;
+        } 
+        // remove bookmark
+        delete this.hermidata.chapter.bookmarks[key];
+
+        await saveHermidataV3(this.hermidata.id, this.hermidata);
         return true;
+    }
+    private addNewBookmarkForm(): void {
+        this.closeBookmarkMenu();
+        this.closeBookmarkMenuManager();
+        if (!this.AddNewBookmarkContainer) return;
+        this.AddNewBookmarkContainer.style.display = 'block';
+        this.AddNewBookmarkContainerVisible = true;
+        this.setAddNewBookmarkFormData();
+    }
+    private setAddNewBookmarkFormData(): void {
+        const currentChapter = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current;
+        const currentNotes = this.hermidata.meta.notes;
+        this.bookmarkLabelInput!.textContent = '';
+        this.bookmarkChapterInput!.value = currentChapter.toString();
+        this.bookmarkNotesInput!.textContent = currentNotes ?? '';
+        this.bookmarkColorInput!.value = 'green';
+    }
+    private async saveNewBookmark(): Promise<void> {
+        const labelValue = this.bookmarkLabelInput?.textContent;
+        const chapterValue = this.bookmarkChapterInput?.value;
+        const notesValue = this.bookmarkNotesInput?.textContent;
+        const colorValue = this.bookmarkColorInput?.value;
+
+        if (!labelValue || !chapterValue || !colorValue) return;
+
+        const hash = returnBookmarkHash(labelValue);
+
+        this.hermidata.chapter.bookmarks[hash] = {
+            id: hash,
+            label: labelValue,
+            current: Number(chapterValue),
+            note: notesValue ?? undefined,
+            color: colorValue,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            history: [],
+            isPrimary: false
+        }
+
+        await saveHermidataV3(this.hermidata.id, this.hermidata);
+        
+        this.closeAddBookmark();
+    }
+    private closeAddBookmark(): void {
+        if (!this.AddNewBookmarkContainer) return;
+        this.AddNewBookmarkContainer.style.display = 'none';
+        this.AddNewBookmarkContainerVisible = false;
     }
     /**
      * - open or close bookmark menu depending on where the mouse points

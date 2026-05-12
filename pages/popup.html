@@ -19,7 +19,7 @@
             <svg class="openBookmarkMenu imgBookmark" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960">
                     <g class="imgBookmark-g">
                         <path d="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640h-80v280l-100-60-100 60v-280H240v640Zm0 0v-640 640Zm200-360 100-60 100 60-100-60-100 60Z">
-                            <title class="RSSLinkState-title">this Item is not linked to a RSS feed</title>
+                            <title class="RSSLinkState-title">Change Bookmark</title>
                         </path>
                     </g>
                 </svg>
@@ -110,18 +110,23 @@
     <button type="button" class="genericButton2 Btn" >Cancel</button>
 </section>
 <section class="AddNewBookmark">
-    <label for="bookmarkLabelInput">Bookmark label</label>
+    <label for="bookmarkLabelInput" id="bookmarkLabelInput-label">Bookmark label</label>
     <input type="text" id="bookmarkLabelInput" />
     <div id="bookmarkChapterContainer">
-        <label for="bookmarkChapterInput">chapter</label>
-        <input type="text" id="bookmarkChapterInput"/>
-        <label for="bookmarkNotesInput">optional notes</label>
-        <input type="text" id="bookmarkNotesInput"/>
-        <label for="bookmarkColorInput">color</label>
-        <input type="color" id="bookmarkColorInput"/>
+        <label for="bookmarkChapterInput" id="bookmarkChapterInput-label">chapter
+            <input type="number" id="bookmarkChapterInput"/>
+        </label>
+        <label for="bookmarkNotesInput" id="bookmarkNotesInput-label">optional notes
+            <input type="text" id="bookmarkNotesInput" placeholder="type here..."/>
+        </label>
+        <label for="bookmarkColorInput" id="bookmarkColorInput-label">color
+            <input type="color" id="bookmarkColorInput"/>
+        </label>
     </div>
-    <button type="button" id="cancelBookmarkBtn" class="Btn">Cancel</button>
-    <button type="button" id="saveBookmarkBtn" class="Btn">Add Bookmark</button>
+    <div class="buttonContainer">
+        <button type="button" id="cancelBookmarkBtn" class="Btn">Cancel</button>
+        <button type="button" id="saveBookmarkBtn" class="Btn">Add Bookmark</button>
+    </div>
 </section>
 <section class="bookmarkMenuManagerContainer">
     <div class="bookmarkMenuManager-header">

@@ -488,6 +488,7 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 .bookmarkMenuContainer {
+	display: none;
 	border-radius: 15px;
 	border: 1px solid lightgray;
 	width: 30%;
@@ -555,6 +556,7 @@ hr {
 /* manager */
 
 .bookmarkMenuManagerContainer {
+	display: none;
 	border: 1px solid;
 	width: 50%;
 	border-radius: 15px;
@@ -606,6 +608,7 @@ hr {
 	border: 1px solid;
 	padding: 15px;
 	grid-template: 'svg label remove' 'svg footer remove';
+	margin-top: 5px;
 }
 .bookmarkMenuManager-item-icon {
 	grid-area: svg;
@@ -635,4 +638,92 @@ hr {
 	margin-left: 20px;
 	word-spacing: unset;
 	white-space: nowrap;
+}
+
+.AddNewBookmark {
+	display: none;
+	border: 1px solid;
+	width: 50%;
+	padding: 10px;
+	border-radius: 15px;
+	position: absolute;
+	top: 20%;
+	left: 10%;
+	background-color: var(--bg_disabled);
+	z-index: 5;
+}
+
+#bookmarkChapterContainer {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+}
+
+label {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	/* width: 100%; */
+}
+#bookmarkLabelInput {
+	width: 80%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 10%;
+}
+#bookmarkLabelInput {
+	width: 80%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 10%;
+	background-color: var(--Input-colorV2);
+	border: 1px solid lightgray;
+	border-radius: 5px;
+	color: var(--Text-color);
+	height: 20px;
+}
+#bookmarkChapterInput-label {
+	width: 15%;
+}
+
+#bookmarkChapterInput {
+	width: 80%;
+	border: none;
+	border-radius: 3px;
+	background-color: var(--Input-colorV2);
+	color: var(--Text-color);
+	padding: 10px;
+}
+.buttonContainer {
+	display: flex;
+	align-items: center;
+	justify-content: space-evenly;
+	gap: 10px;
+	margin-top: 5px;
+}
+
+#saveBookmarkBtn {
+	background-color: var(--Btn_hover);
+}
+#saveBookmarkBtn:hover {
+	background-color: var(--Btn_active);
+}
+
+#bookmarkColorInput {
+	width: 40px;
+	background-color: transparent;
+	border: none;
+}
+#bookmarkColorInput-label {
+	height: 40px;
+}
+#bookmarkNotesInput {
+	border: none;
+	border-radius: 3px;
+	background-color: var(--Input-colorV2);
+	color: var(--Text-color);
+	padding: 10px;
 }
