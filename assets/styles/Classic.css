@@ -618,6 +618,15 @@ hr {
 	height: 31px;
 	fill: white;
 }
+.bookmarkDelete {
+	cursor: pointer;
+	grid-area: remove;
+	border: 1px solid;
+	padding: 5px;
+}
+.bookmarkDelete:hover {
+	color: lightcoral;
+}
 .bookmarkLabel {
 	grid-area: label;
 	background-color: transparent;

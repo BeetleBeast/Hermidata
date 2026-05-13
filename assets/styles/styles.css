@@ -106,6 +106,7 @@ body {
     width: 98vw;
     overflow: scroll;
     height: 500px;
+    z-index: 1000;
 }
 
 .genericInput {

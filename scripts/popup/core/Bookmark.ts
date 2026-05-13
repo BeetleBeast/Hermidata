@@ -10,8 +10,6 @@ export class BookmarkController {
     private hermidata: Hermidata;
     public bookmarkInUseID: string | null = null;
 
-    private AddNewBookmarkContainerVisible: boolean = false;
-    private bookmarkMenuManagerContainerVisible: boolean = false;
     private bookmarkMenuContainerVisible: boolean = false;
 
     // img bookmark
@@ -19,7 +17,6 @@ export class BookmarkController {
 
     // add new bookmark
     private readonly AddNewBookmarkContainer = getElement<HTMLDivElement>('.AddNewBookmark');
-    private readonly bookmarkChapterContainer = getElement<HTMLDivElement>('#bookmarkChapterContainer');
     private readonly bookmarkLabelInput = getElement<HTMLInputElement>('#bookmarkLabelInput');
     private readonly bookmarkChapterInput = getElement<HTMLInputElement>('#bookmarkChapterInput');
     private readonly bookmarkNotesInput = getElement<HTMLInputElement>('#bookmarkNotesInput');
@@ -39,8 +36,6 @@ export class BookmarkController {
     private readonly addNewBookmarkBtn = document.querySelectorAll<HTMLButtonElement>('.addNewBookmarkBtn'); // open add new bookmark form
     private readonly bookmarkMenuBtn = getElement<HTMLButtonElement>('.bookmarkMenuBtn'); // open bookmark menu manager
 
-    private readonly bookmarkSVG = getElement<SVGSVGElement>('.colorPicker');
-
     private readonly isNewHermidata: boolean;
 
     constructor(hermidata: Hermidata, isNew: boolean = false) {
@@ -55,41 +50,23 @@ export class BookmarkController {
         this.bindEvents();
     }
     private bindEvents() {
-        // TODO: stop prpagation to prevent event from bubbling up and closing  popup when opening color picker
-        this.imgBookmark?.addEventListener('click', (e) => this.openBookmarkMenu(e as PointerEvent));
+        // open bookmark menu
+        this.imgBookmark?.addEventListener('click', () => this.openBookmarkMenu());
+        // open new bookmark form
+        for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', () => this.addNewBookmarkForm());
+        // open bookmark menu manager
+        this.bookmarkMenuBtn?.addEventListener('click', () => this.openBookmarkMenuManager() );
+
+        // TODO: close bookmark menu on click outside
+        // close bookmark menu
         this.bookmarkMenuContainer?.addEventListener('focus', () => this.closeBookmarkMenu());
+        // save new bookmark
+        this.saveBookmarkBtn?.addEventListener('click', () => this.saveNewBookmark() );
 
-
-        for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', (e) => this.addNewBookmarkForm());
-
-        this.bookmarkMenuBtn?.addEventListener('click', (e) => {
-            // Only stop propagation if clicking on the SVG or color picker
-            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
-            e.stopPropagation();
-            deactivateother();
-            this.openBookmarkMenuManager()
-        }});
-
-        this.saveBookmarkBtn?.addEventListener('click', (e) => {
-            // Only stop propagation if clicking on the SVG or color picker
-            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
-            e.stopPropagation();
-            deactivateother();
-            this.saveNewBookmark()
-        }});
-
-        this.cancelBookmarkMenuBtn?.addEventListener('click', (e) => {
-            // Only stop propagation if clicking on the SVG or color picker
-            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
-            e.stopPropagation();
-            this.closeBookmarkMenuManager()
-        }});
-        this.cancelBookmarkBtn?.addEventListener('click', (e) => {
-            // Only stop propagation if clicking on the SVG or color picker
-            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
-            e.stopPropagation();
-            this.closeAddBookmark()
-        }});
+        // close bookmark menu manager
+        this.cancelBookmarkMenuBtn?.addEventListener('click', () => this.closeBookmarkMenuManager() );
+        // close add new bookmark
+        this.cancelBookmarkBtn?.addEventListener('click', () => this.closeAddBookmark() );
     }
     private setAllToDefault(): void {
         // set all elements to default
@@ -98,17 +75,114 @@ export class BookmarkController {
         this.bookmarkMenuContainer!.style.display = 'none';
         this.bookmarkMenuManagerContainer!.style.display = 'none';
     }
-
+    /**
+     * - open or close bookmark menu depending on where the mouse points
+     * @param e - event of where the mouse points to
+     */
+    private openBookmarkMenu(): void {
+        if (!this.bookmarkMenuContainer) return;
+        if (this.bookmarkMenuContainerVisible) {
+            this.closeBookmarkMenu();
+            return;
+        }
+        deactivateother();
+        this.bookmarkMenuContainer.style.display = 'block';
+        this.bookmarkMenuContainerVisible = true;
+        this.bookmarkMenu!.innerHTML = '';
+        // only create new bookmarks
+        for (const [key, value] of Object.entries(this.hermidata.chapter.bookmarks)) {
+            this.createBookmarkMenu(key, value);
+            this.bookmarkMenu?.appendChild( document.createElement('hr') );
+        }
+    }
+    /** open add new bookmark */
+    private addNewBookmarkForm(): void {
+        this.closeBookmarkMenu();
+        this.closeBookmarkMenuManager();
+        if (!this.AddNewBookmarkContainer) return;
+        deactivateother();
+        this.AddNewBookmarkContainer.style.display = 'block';
+        this.setAddNewBookmarkFormData();
+    }
+    /** open bookmark menu manager */
     private openBookmarkMenuManager(): void {
         if (!this.bookmarkMenuManagerContainer) return;
         this.closeBookmarkMenu();
+        deactivateother();
         this.bookmarkMenuManagerContainer.style.display = 'block';
+        this.bookmarkMenuManager!.innerHTML = '';
 
         for (const [key, value] of Object.entries(this.hermidata.chapter.bookmarks)) {
-            if (this.bookmarkMenuManager?.querySelector<HTMLDivElement>(`.bookmarkMenuManager-item[data-key="${key}"]`)) continue;
             this.createBookmarkMenuManager(key, value);
         }
     }
+    /** close bookmark menu */
+    private closeBookmarkMenu(): void {
+        if (!this.bookmarkMenuContainer) return;
+        this.bookmarkMenuContainer.style.display = 'none';
+        this.bookmarkMenuContainerVisible = false;
+        activateother();
+    }
+    /** close add bookmark */
+    private closeAddBookmark(): void {
+        if (!this.AddNewBookmarkContainer) return;
+        this.AddNewBookmarkContainer.style.display = 'none';
+        ColorPicker.destroy();
+        activateother();
+    }
+    /** close bookmark menu manager */
+    private closeBookmarkMenuManager(): void {
+        if (!this.bookmarkMenuManagerContainer) return;
+        this.bookmarkMenuManagerContainer.style.display = 'none';
+        ColorPicker.destroy();
+        activateother();
+    }
+    /** create bookmark menu */
+    private async createBookmarkMenu(key: string, bookmark: Bookmark): Promise<void> {
+        const bookmarkContainer = document.createElement('div');
+        bookmarkContainer.className = 'bookmarkMenu-item';
+        bookmarkContainer.dataset.key = key;
+        const isActiveBookmark = this.hermidata.meta.bookmarkInUse === key;
+
+        bookmarkContainer.style.backgroundColor = isActiveBookmark ? 'var(--Btn_active)' : 'var(--Input-colorV2)';
+
+        const bookmarkLabel = document.createElement('div');
+        bookmarkLabel.className = 'bookmarkLabel';
+        bookmarkLabel.textContent = bookmark.label;
+
+        const bookmarkChapter = document.createElement('div');
+        bookmarkChapter.className = 'bookmarkChapter';
+        bookmarkChapter.textContent = 'Ch. ' + bookmark.current.toString();
+
+        bookmarkContainer.addEventListener('click', () => {
+            this.closeBookmarkMenu();
+            this.switchBookmarkMenu(key);
+        });
+
+        bookmarkContainer.append(bookmarkLabel, bookmarkChapter);
+        this.bookmarkMenu!.appendChild(bookmarkContainer);
+    }
+    /** create new bookmark form */
+    private setAddNewBookmarkFormData(): void {
+        const currentChapter = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current;
+        const currentNotes = this.hermidata.meta.notes;
+        this.bookmarkLabelInput!.textContent = '';
+        this.bookmarkChapterInput!.value = currentChapter.toString();
+        this.bookmarkNotesInput!.textContent = currentNotes ?? '';
+
+        const defaultColor = '#fcfcfc';
+        const rect = document.body.getBoundingClientRect();
+
+        this.bookmarkColorInput!.addEventListener('click', () => {
+            ColorPicker.show( ColorPicker.getHexColor() ?? defaultColor,
+                async () => {
+                    this.bookmarkColorInput!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
+                },
+                { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
+            );
+        });
+    }
+    /** create bookmark menu manager */
     private createBookmarkMenuManager(key: string, value: Bookmark): void {
     
         const bookmarkContainer = document.createElement('div');
@@ -202,10 +276,10 @@ export class BookmarkController {
             
             const currentColor = this.hermidata.chapter.bookmarks[key].color;
             const rect = document.body.getBoundingClientRect();
-            
-            ColorPicker.show(  ColorPicker.getHexColor() ?? currentColor,
+            ColorPicker.show( ColorPicker.getHexColor() ?? currentColor,
                 async (newColor) => {
                     svg.style.fill = newColor;
+                    if (this.hermidata.meta.bookmarkInUse === key) this.imgBookmark!.style.fill = newColor;
                     this.hermidata.chapter.bookmarks[key].color = newColor;
                     try {
                         if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
@@ -227,40 +301,14 @@ export class BookmarkController {
             // get primary bookmark
             const primaryBookmarkKey = Object.keys(this.hermidata.chapter.bookmarks).find(b => this.hermidata.chapter.bookmarks[b].isPrimary);
             if (!primaryBookmarkKey) return false;
-            this.hermidata.meta.bookmarkInUse = primaryBookmarkKey;
+            this.switchBookmarkMenu(primaryBookmarkKey);
         } 
         // remove bookmark
         delete this.hermidata.chapter.bookmarks[key];
 
         if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
+        this.openBookmarkMenuManager(); // refresh
         return true;
-    }
-    private addNewBookmarkForm(): void {
-        this.closeBookmarkMenu();
-        this.closeBookmarkMenuManager();
-        if (!this.AddNewBookmarkContainer) return;
-        this.AddNewBookmarkContainer.style.display = 'block';
-        this.AddNewBookmarkContainerVisible = true;
-        this.setAddNewBookmarkFormData();
-    }
-    private setAddNewBookmarkFormData(): void {
-        const currentChapter = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current;
-        const currentNotes = this.hermidata.meta.notes;
-        this.bookmarkLabelInput!.textContent = '';
-        this.bookmarkChapterInput!.value = currentChapter.toString();
-        this.bookmarkNotesInput!.textContent = currentNotes ?? '';
-
-        const defaultColor = 'green';
-        const rect = document.body.getBoundingClientRect();
-
-        this.bookmarkColorInput!.addEventListener('click', () => {
-            ColorPicker.show( ColorPicker.getHexColor() ?? defaultColor,
-                async () => {
-                    this.bookmarkColorInput!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
-                },
-                { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
-            );
-        });
     }
     private async saveNewBookmark(): Promise<void> {
         const labelValue = this.bookmarkLabelInput?.value;
@@ -291,80 +339,6 @@ export class BookmarkController {
         this.switchBookmarkMenu(hash);
         this.closeAddBookmark();
     }
-    /**
-     * - open or close bookmark menu depending on where the mouse points
-     * @param e - event of where the mouse points to
-     */
-    public openBookmarkMenu(e: PointerEvent): void {
-        if (!this.bookmarkMenuContainer) return;
-        if (this.bookmarkMenuContainerVisible) {
-            this.closeBookmarkMenu();
-            return;
-        }
-        this.bookmarkMenuContainer.style.display = 'block';
-        this.bookmarkMenuContainerVisible = true;
-        this.addBookmarksToMenu();
-    }
-    // close bookmark menu
-    private closeBookmarkMenu(): void {
-        if (!this.bookmarkMenuContainer) return;
-        this.bookmarkMenuContainer.style.display = 'none';
-        this.bookmarkMenuContainerVisible = false;
-        activateother();
-    }
-    // close add bookmark
-    private closeAddBookmark(): void {
-        if (!this.AddNewBookmarkContainer) return;
-        this.AddNewBookmarkContainer.style.display = 'none';
-        this.AddNewBookmarkContainerVisible = false;
-        ColorPicker.destroy();
-        activateother();
-    }
-    // close bookmark menu manager
-    private closeBookmarkMenuManager(): void {
-        if (!this.bookmarkMenuManagerContainer) return;
-        this.bookmarkMenuManagerContainer.style.display = 'none';
-        this.bookmarkMenuManagerContainerVisible = false;
-        ColorPicker.destroy();
-        activateother();
-    }
-    /** - creates a bookmark menu with all bookmarks */
-    private addBookmarksToMenu() {
-        const bookmarks = Object.entries(this.hermidata.chapter.bookmarks);
-        this.bookmarkMenu!.innerHTML = '';
-        // only create new bookmarks
-        for (const [key, value] of bookmarks) {
-            // if (this.bookmarkMenu?.querySelector<HTMLDivElement>(`.bookmarkMenu-item[data-key="${key}"]`)) continue;
-            this.createBookmarkMenu(key, value);
-            this.bookmarkMenu?.appendChild( document.createElement('hr') );
-        }
-    }
-
-    private async createBookmarkMenu(key: string, bookmark: Bookmark): Promise<void> {
-        // 
-        const bookmarkContainer = document.createElement('div');
-        bookmarkContainer.className = 'bookmarkMenu-item';
-        bookmarkContainer.dataset.key = key;
-        const isActiveBookmark = this.hermidata.meta.bookmarkInUse === key;
-
-        bookmarkContainer.style.backgroundColor = isActiveBookmark ? 'var(--Btn_active)' : 'var(--Input-colorV2)';
-
-        const bookmarkLabel = document.createElement('div');
-        bookmarkLabel.className = 'bookmarkLabel';
-        bookmarkLabel.textContent = bookmark.label;
-
-        const bookmarkChapter = document.createElement('div');
-        bookmarkChapter.className = 'bookmarkChapter';
-        bookmarkChapter.textContent = 'Ch. ' + bookmark.current.toString();
-
-        bookmarkContainer.addEventListener('click', () => {
-            this.closeBookmarkMenu();
-            this.switchBookmarkMenu(key);
-        });
-
-        bookmarkContainer.append(bookmarkLabel, bookmarkChapter);
-        this.bookmarkMenu!.appendChild(bookmarkContainer);
-    }
     private saveBookmarkLabel(key: string, label: string): void {
         if (!this.hermidata.chapter.bookmarks[key]) return;
         if (label === this.hermidata.chapter.bookmarks[key].label) return;
@@ -387,5 +361,4 @@ export class BookmarkController {
         // update bookmark menu UI
         this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].color;
     }
-
 }
