@@ -487,6 +487,7 @@ input[type=number]::-webkit-inner-spin-button {
 	fill: white;
 }
 
+/* Bookmark menu */
 .bookmarkMenuContainer {
 	display: none;
 	border-radius: 15px;
@@ -496,7 +497,7 @@ input[type=number]::-webkit-inner-spin-button {
 	top: 25%;
 	left: 5%;
 	background-color: var(--bg_disabled);
-	z-index: 5;
+	z-index: 20;
 }
 .bookmarkMenu {
 	display: block;
@@ -565,6 +566,7 @@ hr {
 	top: 60px;
 	left: 25%;
 	background-color: var(--bg_disabled);
+	z-index: 20;
 }
 .bookmarkMenuManager-header {
 	display: flex;
@@ -632,6 +634,10 @@ hr {
 	border-radius: 5px;
 	border: 1px solid;
 	margin-top: 10px;
+	z-index: 5;
+}
+#addNewBookmarkBtn-manager:hover {
+	background-color: var(--Btn_active);
 }
 
 .bookmarkMenuManager-sub {
@@ -639,7 +645,7 @@ hr {
 	word-spacing: unset;
 	white-space: nowrap;
 }
-
+/* add new bookmark */
 .AddNewBookmark {
 	display: none;
 	border: 1px solid;
@@ -650,7 +656,7 @@ hr {
 	top: 20%;
 	left: 10%;
 	background-color: var(--bg_disabled);
-	z-index: 5;
+	z-index: 20;
 }
 
 #bookmarkChapterContainer {

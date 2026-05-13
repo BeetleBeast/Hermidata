@@ -2,7 +2,8 @@ import { saveHermidataV3 } from "../../shared/db/Storage";
 import { returnBookmarkHash } from "../../shared/StringOutput";
 import type { Bookmark, Hermidata } from "../../shared/types";
 import { getElement, setElement } from "../../utils/Selection";
-import { customConfirm } from "../frontend/confirm";
+import { ColorPicker } from "../frontend/ColorPicker";
+import { activateother, customConfirm, deactivateother } from "../frontend/confirm";
 
 export class BookmarkController {
 
@@ -63,6 +64,7 @@ export class BookmarkController {
             // Only stop propagation if clicking on the SVG or color picker
             if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
             e.stopPropagation();
+            deactivateother();
             this.openBookmarkMenuManager()
         }});
 
@@ -70,6 +72,7 @@ export class BookmarkController {
             // Only stop propagation if clicking on the SVG or color picker
             if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
             e.stopPropagation();
+            deactivateother();
             this.saveNewBookmark()
         }});
 
@@ -168,30 +171,25 @@ export class BookmarkController {
 
     }
     private createColorPicker(svg: SVGSVGElement, key: string): void {
-        const colorPicker = document.createElement('input');
-        colorPicker.type = 'color';
-        colorPicker.value = this.hermidata.chapter.bookmarks[key].color;
-        colorPicker.className = 'colorPicker svgColorPicker';
-
-        // Make SVG clickable to open color picker
         svg.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent event from bubbling up
-        e.preventDefault();   // Prevent any default behavior
-        colorPicker.click();
-    });
-
-        colorPicker.addEventListener('input', async (e) => {
-            e.stopPropagation(); // Prevent event from bubbling up
-            const color = colorPicker.value;
-            svg.style.fill = color;
-            this.hermidata.chapter.bookmarks[key].color = color;
+            e.stopPropagation();
+            e.preventDefault();
             
-            try {
-                await saveHermidataV3(this.hermidata.id, this.hermidata);
-            } catch (error) {
-                console.error('Failed to save bookmark color:', error);
-                // Optionally revert the color on error
-            }
+            const currentColor = this.hermidata.chapter.bookmarks[key].color;
+            const rect = svg.getBoundingClientRect();
+            
+            ColorPicker.show( currentColor,
+                async (newColor) => {
+                    svg.style.fill = newColor;
+                    this.hermidata.chapter.bookmarks[key].color = newColor;
+                    try {
+                        await saveHermidataV3(this.hermidata.id, this.hermidata);
+                    } catch (error) {
+                        console.error('Failed to save bookmark color:', error);
+                    }
+                },
+                { x: rect.left, y: rect.bottom + 5 }
+            );
         });
     }
 
@@ -258,6 +256,7 @@ export class BookmarkController {
         if (!this.AddNewBookmarkContainer) return;
         this.AddNewBookmarkContainer.style.display = 'none';
         this.AddNewBookmarkContainerVisible = false;
+        activateother();
     }
     /**
      * - open or close bookmark menu depending on where the mouse points
@@ -277,6 +276,7 @@ export class BookmarkController {
         if (!this.bookmarkMenuContainer) return;
         this.bookmarkMenuContainer.style.display = 'none';
         this.bookmarkMenuContainerVisible = false;
+        activateother();
     }
     /** - creates a bookmark menu with all bookmarks */
     private addBookmarksToMenu() {

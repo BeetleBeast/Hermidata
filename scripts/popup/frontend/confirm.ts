@@ -33,7 +33,7 @@ export async function confirmMigrationPrompt(newer: Hermidata, older: Hermidata,
     }
 }
 
-function deactivateother() {
+export function deactivateother() {
     // deactivate links in classic
     document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
         a.style.pointerEvents = 'none';
@@ -46,7 +46,7 @@ function deactivateother() {
     setElement(".HDRSS", el => el.style.opacity = String(classicCurrentActive ? 0 : 0.2));
     setElement(".HDClassic", el => el.style.opacity = String(classicCurrentActive ? 0.2 : 0));
 }
-function activateother() {
+export function activateother() {
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
     // de/activate links in classic depending on current active
     document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {

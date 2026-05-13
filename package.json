@@ -15,6 +15,7 @@
   "author": "X.K. BeetleBeast",
   "license": "ISC",
   "devDependencies": {
+    "@jaames/iro": "^5.5.2",
     "@types/chrome": "^0.1.40",
     "@types/firefox-webext-browser": "^143.0.0",
     "@types/node": "^25.6.0",

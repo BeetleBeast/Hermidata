@@ -354,6 +354,8 @@ class HermidataController {
         console.log('newHermidata', newHermidata);
         // if (newHermidata) this.hermidata = newHermidata;
 
+        // update tags in settings if new tags are added
+        await this.tagsSystem.saveTags();
 
         // save to Browser in JSON format
         const savedInStorage = await updateChapterProgress(title, Type, this.hermidata);
