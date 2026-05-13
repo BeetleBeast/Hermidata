@@ -1,4 +1,5 @@
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
+import { getChapterFromBookmarkInUse } from "../popup/core/save";
 import { FolderMapping } from "../settings/build/FolderMapping";
 import { getChapterFromTitle, TrimTitle } from "../shared/StringOutput";
 import { getSettings } from "../shared/db/Storage";
@@ -106,7 +107,7 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
                         bookmarkTitle: hermidata.title,
                         fuzzySearchUrl: hermidata.url,
                         currentUrl: currentTab.url,
-                        chapter: hermidata?.chapter?.current || Number.NaN,
+                        chapter: getChapterFromBookmarkInUse(hermidata) || Number.NaN,
                         similarity: score
                     });
                     console.warn(`[Fuzzy Match ${score.toFixed(2)}] "${hermidata.title}" ↔ "${trimmedTitle}"`);

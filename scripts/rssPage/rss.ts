@@ -96,7 +96,7 @@ class RssPage {
 
             const meta = document.createElement('div'); meta.className='entry-meta';
             const title = document.createElement('div'); title.className='entry-title'; title.textContent = item.title;
-            const sub = document.createElement('div'); sub.className='entry-sub'; sub.textContent = `${item.type} • ${item.status} • ch ${item.chapter.current}`;
+            const sub = document.createElement('div'); sub.className='entry-sub'; sub.textContent = `${item.type} • ${item.status} • ch ${item.chapter.bookmarks[item.meta.bookmarkInUse].current}`;
             meta.append(title, sub);
 
             const actions = document.createElement('div'); actions.className='entry-actions';
@@ -119,7 +119,7 @@ class RssPage {
         
         setElement<HTMLInputElement>('#detailTitle', el => el.value = item.title);
         setElement<HTMLInputElement>('#detailUrl', el => el.value = item.url);
-        setElement<HTMLInputElement>('#detailCurrent', el => el.value = String(item.chapter.current));
+        setElement<HTMLInputElement>('#detailCurrent', el => el.value = String(item.chapter.bookmarks[item.meta.bookmarkInUse].current));
         setElement<HTMLInputElement>('#detailNotes', el => el.value = item.meta?.notes || '');
         if (!this.detailType || !this.detailStatus) return;
         this.detailType.value = item.type;
@@ -129,7 +129,7 @@ class RssPage {
         const hist = getElement('#chapterHistory');
         if (!hist) return;
         hist.innerHTML = '';
-        (item.chapter.history || []).slice().reverse().forEach(h=>{
+        (item.chapter.bookmarks[item.meta.bookmarkInUse].history || []).slice().reverse().forEach(h=>{
             const li = document.createElement('li');
             li.textContent = `ch ${h}`;
             hist.appendChild(li);
@@ -146,10 +146,10 @@ class RssPage {
         const item = this.DATA.get(id);
         if(!item) return;
         
-        const prev = item.chapter.current;
+        const prev = item.chapter.bookmarks[item.meta.bookmarkInUse].current;
         const newCurrent = Number(getElement<HTMLInputElement>('#detailCurrent')?.value) || 0;
         if(newCurrent > prev){
-        item.chapter.history = [...(item.chapter.history||[]), prev];
+        item.chapter.bookmarks[item.meta.bookmarkInUse].history = [...(item.chapter.bookmarks[item.meta.bookmarkInUse].history||[]), prev];
         }
         const title = getElement<HTMLInputElement>('#detailTitle')?.value.trim();
         const url = getElement<HTMLInputElement>('#detailUrl')?.value.trim();
@@ -159,7 +159,7 @@ class RssPage {
         if (!this.detailType || !this.detailStatus) return;
         item.type = this.detailType.value as AnyNovelType;
         item.status = this.detailStatus.value as AnyReadStatus;
-        item.chapter.current = newCurrent;
+        item.chapter.bookmarks[item.meta.bookmarkInUse].current = newCurrent;
         item.meta = item.meta || {};
         const notes = getElement<HTMLInputElement>('#detailNotes')?.value;
         if (notes) item.meta.notes = notes;
@@ -191,9 +191,9 @@ class RssPage {
             if(!item) return;
 
             item.status = 'Finished';
-            if(!item.chapter.history) item.chapter.history = [];
-            item.chapter.history.push(item.chapter.current);
-            item.chapter.current = item.chapter.latest || item.chapter.current; // simple heuristic
+            if(!item.chapter.bookmarks[item.meta.bookmarkInUse].history) item.chapter.bookmarks[item.meta.bookmarkInUse].history = [];
+            item.chapter.bookmarks[item.meta.bookmarkInUse].history.push(item.chapter.bookmarks[item.meta.bookmarkInUse].current);
+            item.chapter.bookmarks[item.meta.bookmarkInUse].current = item.chapter.latest || item.chapter.bookmarks[item.meta.bookmarkInUse].current; // simple heuristic
             await this.saveData(item);
         }
         if (!this.searchEl) return;

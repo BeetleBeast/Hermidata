@@ -1,10 +1,10 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidataV3 } from "../../popup/core/save";
 import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
-import { getAllHermidata } from "../db/db";
+import { getAllHermidata, isHermidataV6 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
 import { returnHashedTitle, TrimTitle } from "../StringOutput";
-import type { AllHermidata, Hermidata } from "../types";
+import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
 
 
 interface DuplicationResult {
@@ -366,7 +366,7 @@ export class HermidataMigration {
 
 
 
-    public  static async migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT') {
+    public  static async migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | null> {
         // step 1. new key
         // re-make keys
         const [ newTitle, newType ] = [newer.title, newer.type]
@@ -393,10 +393,14 @@ export class HermidataMigration {
             source: newer.source || older.source,
             status: newer.status || older.status || "Planned",
             chapter: {
-                current: newer.chapter?.current ?? older.chapter?.current ?? 0,
+                bookmarks: {
+                    ...older.chapter?.bookmarks,
+                    ...newer.chapter?.bookmarks
+                },
                 latest: newer.chapter?.latest ?? older.chapter?.latest ?? null,
-                history: Array.from( new Set([...(older.chapter?.history || []), ...(newer.chapter?.history || [])]) ).sort((a, b) => a - b),
-                lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString()
+                lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString(),
+                revisitingCount: newer.chapter?.revisitingCount || older.chapter?.revisitingCount || 0
+
             },
             rss: newer.rss || older.rss || null,
             import: newer.import || older.import || null,
@@ -408,6 +412,12 @@ export class HermidataMigration {
                     ])
                 ),
                 notes: newer.meta?.notes || older.meta?.notes || "",
+                altSources: mergeAltTitles(
+                    newer.source || older.source,
+                    older.meta?.altSources || [],
+                    newer.meta?.altSources || [],
+                    [newer.title, older.title]
+                ),
                 altTitles: mergeAltTitles(
                     newTitle,
                     older.meta?.altTitles || [],
@@ -417,8 +427,8 @@ export class HermidataMigration {
                 added: older.meta?.added || base.meta.added,
                 updated: new Date().toISOString(),
                 originalRelease: null, // TODO: do something with it
-                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus
-
+                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus,
+                bookmarkInUse: newer.meta?.bookmarkInUse || older.meta?.bookmarkInUse || this.NEW_simpleHash('Primary')
             }
         }
         // step 3. save & remove key
@@ -432,19 +442,8 @@ export class HermidataMigration {
 
         const normalizedTitle = TrimTitle.trimTitle(obj.title, obj.url).title.toLowerCase();
 
-        const newHash = (() => {
-            let hash = 0, chr;
-            const str = `${obj.type}:${normalizedTitle}`;
-            for (let i = 0; i < str.length; i++) {
-                chr = str.codePointAt(i)!;
-                hash = ((hash << 5) - hash) + chr;
-                hash = Math.trunc(hash);
-            }
-            return hash.toString();
-        })();
-
         if (obj.id === this.OLD_simpleHash(`${obj.type}:${normalizedTitle}`)) return "old";
-        if (obj.id === newHash) return "new";
+        if (obj.id === this.NEW_simpleHash(`${obj.type}:${normalizedTitle}`)) return "new";
         return "unknown";
     }
 
@@ -458,9 +457,79 @@ export class HermidataMigration {
         }
         return hash.toString();
     }
+    private static NEW_simpleHash(str: string) {
+        let hash = 0, chr;
+        for (let i = 0; i < str.length; i++) {
+            chr = str.codePointAt(i)!;
+            hash = ((hash << 5) - hash) + chr;
+            hash = Math.trunc(hash);
+        }
+        return hash.toString();
+    }
 
 
     public static getOldIDType(Obj: Hermidata) {
         return this.OLD_simpleHash(`${Obj.type}:${TrimTitle.trimTitle(Obj.title, Obj.url).title.toLowerCase()}`);
     }
+
+    /**
+     * @summary
+     * upgrade Hermidata V5 to V6
+     */
+    public static migrateHermidataV6(older: HermidataV5): Hermidata {
+        const label = 'Primary';
+
+        const newBoomark: Bookmark = {
+            id: this.NEW_simpleHash(label),
+            current: Number(older.chapter?.current),
+            history: this.forceHistoryIntoNumbers(older.chapter?.history),
+            label: label,
+            color: 'blue',
+            createdAt: older.meta?.added,
+            updatedAt: new Date().toISOString(),
+            note: older.meta?.notes,
+            isPrimary: true
+        }
+        const result: Hermidata = {
+            id: older.id,
+            title: older.title,
+            type: older.type,
+            url: older.url,
+            source: older.source,
+            status: older.status,
+            chapter: {
+                bookmarks: {
+                    [newBoomark.id]: newBoomark
+                },
+                latest: older.chapter?.latest,
+                lastChecked: older.chapter?.lastChecked,
+                revisitingCount: 0
+            },
+            rss: older.rss,
+            import: older.import,
+            meta: {
+                tags: older.meta?.tags,
+                notes: older.meta?.notes,
+                altSources: [older.source], // new
+                altTitles: older.meta?.altTitles,
+                added: older.meta?.added,
+                updated: older.meta?.updated,
+                originalRelease: older.meta?.originalRelease,
+                novelStatus: older.meta?.novelStatus,
+                bookmarkInUse: newBoomark.id
+            }
+        };
+        return result;
+    }
+    private static forceHistoryIntoNumbers(history: number[] | (string | number)[]): number[] {
+        // history had once a bug where it was a string[]
+        // not all history entries are int/float values, so we have to convert them
+        let result: number[] = [];
+        for (const item of history) {
+            if (typeof item === "string") result.push(Number(item));
+            else result.push(item);
+        }
+        return result;
+    }
+
 }

@@ -1,4 +1,4 @@
-import { getAllTags } from "../../shared/db/Storage";
+import { getAllTags, setSettings, getSettings } from "../../shared/db/Storage";
 import { type AllHermidata, type Settings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { levenshteinDistance, PastHermidata } from "./Past";
@@ -59,6 +59,11 @@ export class TagsSystem {
 
     private _tags: string[] = [];
 
+    private readonly DEFAULT_AUTOCOMPLETE_TAG_COLOR: string = '#3c5ca6';
+    private readonly DEFAULT_CUSTOM_TAG_COLOR: string = '#4191b1';
+    private readonly DEFAULT_MISSING_TAG_COLOR: string = '#5541b1';
+
+
     async init() {
         this.autocomplete = new TagAutocomplete(await PastHermidata.getAllHermidata());
 
@@ -78,6 +83,7 @@ export class TagsSystem {
     }
 
     public CreatePill(tag: string, color: string): HTMLDivElement {
+        if (color === undefined) color = this.DEFAULT_MISSING_TAG_COLOR;
         // pill container
         const pill = document.createElement("div");
         pill.classList.add(`tag-pill`);
@@ -201,11 +207,11 @@ export class TagsSystem {
         
         if (placeholder) {
             // Accept suggestion
-            const pill = this.CreatePill(placeholder, '#3c5ca6');
+            const pill = this.CreatePill(placeholder, this.DEFAULT_AUTOCOMPLETE_TAG_COLOR);
             pillContainer.appendChild(pill);
         } else if (input.value.trim()) {
             // Add current value
-            const pill = this.CreatePill(this.normalizeTag(input.value), '#4191b1');
+            const pill = this.CreatePill(this.normalizeTag(input.value), this.DEFAULT_CUSTOM_TAG_COLOR);
             pillContainer.appendChild(pill);
         }
         ghostSpan.textContent = '';
@@ -217,6 +223,19 @@ export class TagsSystem {
             .split(/\s+/)
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
+    }
+    public async saveTags(): Promise<void> {
+        if (!this._tags.length) return;
+
+        const settings = await getSettings();
+        const allExistingTags = settings.TagManagement.tagColoring ? settings.TagManagement.tagColoring : {};
+        for (const tag of this._tags) {
+            if (allExistingTags[tag]) continue; // ignore existing tags
+
+            settings.TagManagement.tagColoring[tag] = this.DEFAULT_AUTOCOMPLETE_TAG_COLOR;
+        }
+        
+        await setSettings(settings);
     }
 
 }

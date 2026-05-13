@@ -4,7 +4,7 @@ import { initContextMenus } from './contextMenus'
 import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/db/sync'
-import { migrateFromChromeStorage } from '../shared/db/db'
+import { migrateFromChromeStorage, migrateFromChromeStorageV6 } from '../shared/db/db'
 import { migrateSettings, resetSettings } from '../shared/db/Storage'
 
 /*
@@ -30,6 +30,7 @@ import { migrateSettings, resetSettings } from '../shared/db/Storage'
 // await resetSettings() // dev-only
 await migrateSettings()
 await migrateFromChromeStorage()
+await migrateFromChromeStorageV6()
 initRssCache()
 initTabs()
 initMessaging()

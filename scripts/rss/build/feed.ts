@@ -212,10 +212,10 @@ export class FeedItem {
         const url = item.rss?.latestItem.link || item.url;
         
         const useAutoDetectedChapter = getChapterFromTitleReturn(title, item?.title, undefined, url);
-        const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.chapter?.current;
+        const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.chapter?.bookmarks[item.meta.bookmarkInUse].current;
         
         const currentHermidata =this.AllHermidata?.[key]
-        const currentChapter = currentHermidata?.chapter?.current
+        const currentChapter = currentHermidata?.chapter?.bookmarks[currentHermidata.meta.bookmarkInUse].current
         const clearedNotification = await getLocalNotificationItem(key);
         const isRead = !isRSSItem && (currentChapter === chapter)
         
@@ -263,7 +263,8 @@ export class FeedItem {
     private createItemChapterProgress(key: string, chapter: number): HTMLElement {
         const ELprogress = document.createElement("div");
         ELprogress.className = "hermidata-item-progress"
-        const lastRead = this.AllHermidata[key]?.chapter?.current || null;
+        const currentHermidata = this.AllHermidata[key];
+        const lastRead = currentHermidata.chapter.bookmarks[currentHermidata.meta.bookmarkInUse].current || null;
         const progress = lastRead ? ((lastRead / chapter) * 100 ).toPrecision(3) : '0';
         ELprogress.textContent = `${progress}%`;
         return ELprogress
