@@ -440,7 +440,7 @@
     transition: max-height 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
 }
 .search-container:has(.filterSectionTitle[data-filter-display="flex"]) ~ .filter-section-container {
-    max-height: 500px;
+    max-height: fit-content;
     transform: translateY(0);
     opacity: 1;
 }

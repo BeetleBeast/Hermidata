@@ -141,7 +141,9 @@ class HermidataController {
         
         this.RSS = new RSS(this.hermidata);
 
-        this.bookmarkSystem = new BookmarkController(this.hermidata);
+        const isNewHermidata = this.pastHermidata === null;
+
+        this.bookmarkSystem = new BookmarkController(this.hermidata, isNewHermidata);
         this.bookmarkSystem.init();
 
         this.populateUI(settings);

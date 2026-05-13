@@ -32,7 +32,7 @@ export class ColorPicker {
         return element;
     }
     /** Creates the custom color picker in the DIV colorPicker */
-    private static createColorPicker(defaultColor: string = '#000000'): void {
+    private static createColorPicker(defaultColor: string = '#ffffff'): void {
         const element = ColorPicker.CreateColorPickerInDOM();
         
         if (this.colorpicker) {
@@ -44,6 +44,7 @@ export class ColorPicker {
         this.colorpicker = iro.ColorPicker(element, {
             width: 200,
             color: defaultColor,
+            layoutDirection: 'horizontal',
             layout: [
                 {
                     component: iro.ui.Wheel,
@@ -51,7 +52,8 @@ export class ColorPicker {
                 {
                     component: iro.ui.Slider,
                     options: {
-                        sliderType: 'value'
+                        sliderType: 'value',
+
                     }
                 }
             ]
@@ -66,7 +68,7 @@ export class ColorPicker {
 
         // Also update on live changes (optional)
         this.colorpicker.on('color:change', (color: iro.Color) => {
-            this.hexColor = color.hexString;
+            //this.hexColor = color.hexString;
         });
     }
     /**

@@ -478,10 +478,11 @@ export class HermidataMigration {
      */
     public static migrateHermidataV6(older: HermidataV5): Hermidata {
         const label = 'Primary';
+
         const newBoomark: Bookmark = {
             id: this.NEW_simpleHash(label),
-            current: older.chapter?.current,
-            history: older.chapter?.history,
+            current: Number(older.chapter?.current),
+            history: this.forceHistoryIntoNumbers(older.chapter?.history),
             label: label,
             color: 'blue',
             createdAt: older.meta?.added,
@@ -518,6 +519,16 @@ export class HermidataMigration {
                 bookmarkInUse: newBoomark.id
             }
         };
+        return result;
+    }
+    private static forceHistoryIntoNumbers(history: number[] | (string | number)[]): number[] {
+        // history had once a bug where it was a string[]
+        // not all history entries are int/float values, so we have to convert them
+        let result: number[] = [];
+        for (const item of history) {
+            if (typeof item === "string") result.push(Number(item));
+            else result.push(item);
+        }
         return result;
     }
 

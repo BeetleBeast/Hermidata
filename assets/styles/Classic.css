@@ -620,6 +620,9 @@ hr {
 }
 .bookmarkLabel {
 	grid-area: label;
+	background-color: transparent;
+	color: var(--Text-color);
+	border: none;
 }
 .bookmarkLastUpdated {
 	color: var(--Btn_disabled);
@@ -720,11 +723,14 @@ label {
 
 #bookmarkColorInput {
 	width: 40px;
-	background-color: transparent;
+	background-color: var(--Input-colorV2);
 	border: none;
+	height: 36px;
+	border-radius: 3px;
+	padding: 10px;
 }
 #bookmarkColorInput-label {
-	height: 40px;
+	height: 50px;
 }
 #bookmarkNotesInput {
 	border: none;

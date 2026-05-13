@@ -7,7 +7,7 @@ import { activateother, customConfirm, deactivateother } from "../frontend/confi
 
 export class BookmarkController {
 
-    private readonly hermidata: Hermidata;
+    private hermidata: Hermidata;
     public bookmarkInUseID: string | null = null;
 
     private AddNewBookmarkContainerVisible: boolean = false;
@@ -23,7 +23,7 @@ export class BookmarkController {
     private readonly bookmarkLabelInput = getElement<HTMLInputElement>('#bookmarkLabelInput');
     private readonly bookmarkChapterInput = getElement<HTMLInputElement>('#bookmarkChapterInput');
     private readonly bookmarkNotesInput = getElement<HTMLInputElement>('#bookmarkNotesInput');
-    private readonly bookmarkColorInput = getElement<HTMLInputElement>('#bookmarkColorInput');
+    private readonly bookmarkColorInput = getElement<HTMLButtonElement>('#bookmarkColorInput');
     private readonly cancelBookmarkBtn = getElement<HTMLButtonElement>('#cancelBookmarkBtn');
     private readonly saveBookmarkBtn = getElement<HTMLButtonElement>('#saveBookmarkBtn');
 
@@ -41,8 +41,11 @@ export class BookmarkController {
 
     private readonly bookmarkSVG = getElement<SVGSVGElement>('.colorPicker');
 
-    constructor(hermidata: Hermidata) {
+    private readonly isNewHermidata: boolean;
+
+    constructor(hermidata: Hermidata, isNew: boolean = false) {
         this.hermidata = hermidata;
+        this.isNewHermidata = isNew;
     }
     public init(): void {
         this.setAllToDefault();
@@ -54,12 +57,11 @@ export class BookmarkController {
     private bindEvents() {
         // TODO: stop prpagation to prevent event from bubbling up and closing  popup when opening color picker
         this.imgBookmark?.addEventListener('click', (e) => this.openBookmarkMenu(e as PointerEvent));
-        for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', (e) => {
-            // Only stop propagation if clicking on the SVG or color picker
-            if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
-            e.stopPropagation();
-            this.addNewBookmarkForm()
-        }});
+        this.bookmarkMenuContainer?.addEventListener('focus', () => this.closeBookmarkMenu());
+
+
+        for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', (e) => this.addNewBookmarkForm());
+
         this.bookmarkMenuBtn?.addEventListener('click', (e) => {
             // Only stop propagation if clicking on the SVG or color picker
             if (e.target === this.bookmarkSVG || (e.target as HTMLElement).closest('svg') === this.bookmarkSVG) {
@@ -113,30 +115,19 @@ export class BookmarkController {
         bookmarkContainer.className = 'bookmarkMenuManager-item';
         bookmarkContainer.dataset.key = key;
 
-        const bookmarkLabel = document.createElement('div');
+        const bookmarkLabel = document.createElement('input');
         bookmarkLabel.className = 'bookmarkLabel';
-        bookmarkLabel.textContent = value.label;
+        bookmarkLabel.value = value.label;
+
+        bookmarkLabel.addEventListener('focusout', () => {
+            this.saveBookmarkLabel(key, bookmarkLabel.value);
+        })
 
         const bookmarkLastUpdated = document.createElement('div');
         bookmarkLastUpdated.className = 'bookmarkLastUpdated';
 
-        // if created at is less than 24 hours, show created at
-        // if created at is more than 24 hours, show last updated
-        // show last updated as relative time if less than 2 weeks ago
-
-        const yesterday = new Date().getTime() - (24 * 60 * 60 * 1000);
-        const weeksAgo_2 = new Date().getTime() - (14 * 24 * 60 * 60 * 1000);
-        const isCreatedAtLessThan24Hours = new Date(value.createdAt).getTime() > yesterday;
-        const wording = isCreatedAtLessThan24Hours ? 'Created at' : 'Last updated';
-        const relevantDate = isCreatedAtLessThan24Hours ? value.createdAt : value.updatedAt;
-
-        // For relative time display
-        const isOlderThan2Weeks = new Date(value.updatedAt).getTime() < weeksAgo_2;
-        const timeValue = isOlderThan2Weeks
-            ? new Date(relevantDate).toLocaleString([], {hourCycle: 'h23', hour: 'numeric', minute: 'numeric', day: 'numeric', month: 'short', year: 'numeric'})
-            : new Date(relevantDate).toLocaleString([], {hourCycle: 'h23', hour: 'numeric', minute: 'numeric'});
-
-        bookmarkLastUpdated.textContent = 'chapter ' + value.current + ' - ' + wording + ': ' + timeValue;
+        const relativeTimeValue = this.getTimeInWords(value.createdAt, value.updatedAt);
+        bookmarkLastUpdated.textContent = 'chapter ' + value.current + ' - ' + relativeTimeValue;
 
         const bookmarkSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         bookmarkSVG.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -166,25 +157,63 @@ export class BookmarkController {
         // TODO: update popup to have correct height as menu has a great chance to overflow
 
     }
-    private createColorPicker(svg: SVGSVGElement, key: string): void {
+    private getTimeInWords(timeCreated: string, timeUpdated: string): string {
+        /* Rules:
+            if created at is less than 24 hours, show: created today at <time>
+            if created yesterday, show: created yesterday
+            if created more than 48 hours ago, show: created this week <date>
+            if created less than 1 week ago, show: created 1 week ago
+            if created less than 2 weeks ago, show: created 2 weeks ago
+            if created more than 2 weeks ago, show: created <date>
+
+            If updated is smaller than created, update all of the above to: Last updated <text>
+        */
+        const today = new Date().getDate();
+        const yesterday = new Date().getTime() - (24 * 60 * 60 * 1000);
+        const weeksAgo_3 = new Date().getTime() - (21 * 24 * 60 * 60 * 1000);
+        const weeksAgo_2 = new Date().getTime() - (14 * 24 * 60 * 60 * 1000);
+        const weeksAgo_1 = new Date().getTime() - (7 * 24 * 60 * 60 * 1000);
+
+        const timeCreatedIsSmaller = new Date(timeCreated).getTime() < new Date(timeUpdated).getTime();
+        const wordingType = timeCreatedIsSmaller ? 'Created ' : 'Last updated ';
+        const timeCreatedOrUpdated = timeCreatedIsSmaller ? timeCreated : timeUpdated;
+
+        const SetLessThan1Week = new Date(timeCreatedOrUpdated).getTime() > weeksAgo_1;
+        const SetLessThan2Weeks = new Date(timeCreatedOrUpdated).getTime() > weeksAgo_2;
+        const SetLessThan3Weeks = new Date(timeCreatedOrUpdated).getTime() > weeksAgo_3;
+
+        const SetLessThan1Day = new Date(timeCreatedOrUpdated).getDate() === today;
+        const SetLessThan48Hours = new Date(timeCreatedOrUpdated).getTime() > new Date(yesterday).getDate();
+
+        let wording = wordingType;
+        if (SetLessThan1Day) wording += 'today'
+        else if (SetLessThan48Hours) wording += 'yesterday'
+        else if(SetLessThan1Week) wording += 'this week' 
+        else if (SetLessThan2Weeks) wording += '1 week ago' 
+        else if (SetLessThan3Weeks) wording += '2 weeks ago';
+        else wording += `at ${new Date(timeCreatedOrUpdated).toLocaleString([], {hourCycle: 'h23', hour: 'numeric', minute: 'numeric', day: 'numeric', month: 'short', year: 'numeric'})}`
+
+        return wording;
+    }
+    private createColorPicker(svg: SVGSVGElement | HTMLElement, key: string): void {
         svg.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
             
             const currentColor = this.hermidata.chapter.bookmarks[key].color;
-            const rect = svg.getBoundingClientRect();
+            const rect = document.body.getBoundingClientRect();
             
-            ColorPicker.show( currentColor,
+            ColorPicker.show(  ColorPicker.getHexColor() ?? currentColor,
                 async (newColor) => {
                     svg.style.fill = newColor;
                     this.hermidata.chapter.bookmarks[key].color = newColor;
                     try {
-                        await saveHermidataV3(this.hermidata.id, this.hermidata);
+                        if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
                     } catch (error) {
                         console.error('Failed to save bookmark color:', error);
                     }
                 },
-                { x: rect.left, y: rect.bottom + 5 }
+                { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
             );
         });
     }
@@ -203,7 +232,7 @@ export class BookmarkController {
         // remove bookmark
         delete this.hermidata.chapter.bookmarks[key];
 
-        await saveHermidataV3(this.hermidata.id, this.hermidata);
+        if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
         return true;
     }
     private addNewBookmarkForm(): void {
@@ -220,13 +249,24 @@ export class BookmarkController {
         this.bookmarkLabelInput!.textContent = '';
         this.bookmarkChapterInput!.value = currentChapter.toString();
         this.bookmarkNotesInput!.textContent = currentNotes ?? '';
-        this.bookmarkColorInput!.value = 'green';
+
+        const defaultColor = 'green';
+        const rect = document.body.getBoundingClientRect();
+
+        this.bookmarkColorInput!.addEventListener('click', () => {
+            ColorPicker.show( ColorPicker.getHexColor() ?? defaultColor,
+                async () => {
+                    this.bookmarkColorInput!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
+                },
+                { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
+            );
+        });
     }
     private async saveNewBookmark(): Promise<void> {
-        const labelValue = this.bookmarkLabelInput?.textContent;
+        const labelValue = this.bookmarkLabelInput?.value;
         const chapterValue = this.bookmarkChapterInput?.value;
-        const notesValue = this.bookmarkNotesInput?.textContent;
-        const colorValue = this.bookmarkColorInput?.value;
+        const notesValue = this.bookmarkNotesInput?.value;
+        const colorValue = ColorPicker.getHexColor();
 
         if (!labelValue || !chapterValue || !colorValue) return;
 
@@ -244,8 +284,11 @@ export class BookmarkController {
             isPrimary: false
         }
 
-        await saveHermidataV3(this.hermidata.id, this.hermidata);
-        
+        // if re-reading, update revisiting count
+        if (this.hermidata.chapter.latest === this.hermidata.chapter.bookmarks[hash].current) this.hermidata.chapter.revisitingCount++;
+
+        if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
+        this.switchBookmarkMenu(hash);
         this.closeAddBookmark();
     }
     /**
@@ -274,6 +317,7 @@ export class BookmarkController {
         if (!this.AddNewBookmarkContainer) return;
         this.AddNewBookmarkContainer.style.display = 'none';
         this.AddNewBookmarkContainerVisible = false;
+        ColorPicker.destroy();
         activateother();
     }
     // close bookmark menu manager
@@ -281,16 +325,16 @@ export class BookmarkController {
         if (!this.bookmarkMenuManagerContainer) return;
         this.bookmarkMenuManagerContainer.style.display = 'none';
         this.bookmarkMenuManagerContainerVisible = false;
+        ColorPicker.destroy();
         activateother();
     }
     /** - creates a bookmark menu with all bookmarks */
     private addBookmarksToMenu() {
         const bookmarks = Object.entries(this.hermidata.chapter.bookmarks);
-
+        this.bookmarkMenu!.innerHTML = '';
         // only create new bookmarks
         for (const [key, value] of bookmarks) {
-            // document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="true"]');
-            if (this.bookmarkMenu?.querySelector<HTMLDivElement>(`.bookmarkMenu-item[data-key="${key}"]`)) continue;
+            // if (this.bookmarkMenu?.querySelector<HTMLDivElement>(`.bookmarkMenu-item[data-key="${key}"]`)) continue;
             this.createBookmarkMenu(key, value);
             this.bookmarkMenu?.appendChild( document.createElement('hr') );
         }
@@ -301,7 +345,9 @@ export class BookmarkController {
         const bookmarkContainer = document.createElement('div');
         bookmarkContainer.className = 'bookmarkMenu-item';
         bookmarkContainer.dataset.key = key;
-        bookmarkContainer.style.backgroundColor = 'var(--Btn_active)';
+        const isActiveBookmark = this.hermidata.meta.bookmarkInUse === key;
+
+        bookmarkContainer.style.backgroundColor = isActiveBookmark ? 'var(--Btn_active)' : 'var(--Input-colorV2)';
 
         const bookmarkLabel = document.createElement('div');
         bookmarkLabel.className = 'bookmarkLabel';
@@ -319,6 +365,15 @@ export class BookmarkController {
         bookmarkContainer.append(bookmarkLabel, bookmarkChapter);
         this.bookmarkMenu!.appendChild(bookmarkContainer);
     }
+    private saveBookmarkLabel(key: string, label: string): void {
+        if (!this.hermidata.chapter.bookmarks[key]) return;
+        if (label === this.hermidata.chapter.bookmarks[key].label) return;
+
+        this.hermidata.chapter.bookmarks[key].label = label;
+        this.hermidata.chapter.bookmarks[key].updatedAt = new Date().toISOString();
+
+        if (!this.isNewHermidata) saveHermidataV3(this.hermidata.id, this.hermidata);
+    }
 
     private switchBookmarkMenu(key: string): void {
         // check if bookmark is already in use
@@ -330,7 +385,7 @@ export class BookmarkController {
         setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current));
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
         // update bookmark menu UI
-        this.imgBookmark!.style.backgroundColor = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].color;
+        this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].color;
     }
 
 }
