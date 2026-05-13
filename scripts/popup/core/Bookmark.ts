@@ -107,10 +107,6 @@ export class BookmarkController {
             this.createBookmarkMenuManager(key, value);
         }
     }
-    private closeBookmarkMenuManager(): void {
-        if (!this.bookmarkMenuManagerContainer) return;
-        this.bookmarkMenuManagerContainer.style.display = 'none';
-    }
     private createBookmarkMenuManager(key: string, value: Bookmark): void {
     
         const bookmarkContainer = document.createElement('div');
@@ -252,12 +248,6 @@ export class BookmarkController {
         
         this.closeAddBookmark();
     }
-    private closeAddBookmark(): void {
-        if (!this.AddNewBookmarkContainer) return;
-        this.AddNewBookmarkContainer.style.display = 'none';
-        this.AddNewBookmarkContainerVisible = false;
-        activateother();
-    }
     /**
      * - open or close bookmark menu depending on where the mouse points
      * @param e - event of where the mouse points to
@@ -272,10 +262,25 @@ export class BookmarkController {
         this.bookmarkMenuContainerVisible = true;
         this.addBookmarksToMenu();
     }
+    // close bookmark menu
     private closeBookmarkMenu(): void {
         if (!this.bookmarkMenuContainer) return;
         this.bookmarkMenuContainer.style.display = 'none';
         this.bookmarkMenuContainerVisible = false;
+        activateother();
+    }
+    // close add bookmark
+    private closeAddBookmark(): void {
+        if (!this.AddNewBookmarkContainer) return;
+        this.AddNewBookmarkContainer.style.display = 'none';
+        this.AddNewBookmarkContainerVisible = false;
+        activateother();
+    }
+    // close bookmark menu manager
+    private closeBookmarkMenuManager(): void {
+        if (!this.bookmarkMenuManagerContainer) return;
+        this.bookmarkMenuManagerContainer.style.display = 'none';
+        this.bookmarkMenuManagerContainerVisible = false;
         activateother();
     }
     /** - creates a bookmark menu with all bookmarks */

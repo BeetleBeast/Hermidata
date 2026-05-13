@@ -7,10 +7,11 @@ export class ColorPicker {
     private static currentCallback: ((color: string) => void) | null = null;
     private static isVisible: boolean = false;
 
+    /** Returns the current hex color */
     public static getHexColor(): string | null {
         return this.hexColor;
     }
-
+    /** Creates the color picker DIV in the DOM */
     private static CreateColorPickerInDOM(): HTMLDivElement {
         if (this.colorPickerDiv) return this.colorPickerDiv;
         
@@ -30,7 +31,7 @@ export class ColorPicker {
         this.colorPickerDiv = element;
         return element;
     }
-
+    /** Creates the custom color picker in the DIV colorPicker */
     private static createColorPicker(defaultColor: string = '#000000'): void {
         const element = ColorPicker.CreateColorPickerInDOM();
         
@@ -68,7 +69,12 @@ export class ColorPicker {
             this.hexColor = color.hexString;
         });
     }
-
+    /**
+     * - Shows the color picker
+     * @param defaultColor - Default color
+     * @param callback - Callback function to be called when color is selected
+     * @param position - Position of the color picker
+     */
     public static show( defaultColor: string,  callback: (color: string) => void, position?: { x: number; y: number } ): void {
         this.createColorPicker(defaultColor);
         this.currentCallback = callback;
@@ -89,11 +95,11 @@ export class ColorPicker {
             document.addEventListener('click', this.handleDocumentClick);
         }, 0);
     }
-
+    /** Hides the custom color picker */
     private static handleDocumentClick = (): void => {
         ColorPicker.hide();
     };
-
+    /** Hides the color picker including the callback */
     public static hide(): void {
         if (this.colorPickerDiv) {
             this.colorPickerDiv.style.display = 'none';
@@ -102,16 +108,21 @@ export class ColorPicker {
         this.currentCallback = null;
         document.removeEventListener('click', this.handleDocumentClick);
     }
-
+    /**
+     * - Toggles the color picker
+     * @param defaultColor - Default color
+     * @param callback - Callback function to be called when color is selected
+     * @param position - Position of the color picker
+     */
     public static toggle( defaultColor: string, callback: (color: string) => void, position?: { x: number; y: number } ): void {
         if (this.isVisible) this.hide();
         else this.show(defaultColor, callback, position);
     }
-
+    /** Updates the color */
     public static updateColor(color: string): void {
         if (this.colorpicker) this.colorpicker.color.hexString = color;
     }
-
+    /** Destroys the color picker */
     public static destroy(): void {
         // iro doesn't have a destroy method, but we can clean up
         if (this.colorpicker) this.colorpicker = null;
