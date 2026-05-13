@@ -16,12 +16,31 @@ type RateLimitStatus = {
     cooldownUntil: number; // Timestamp when cooldown expires
 };
 
+/** Domain restrictions tracking (no-HEAD or no-requests) */
+type DomainRestriction = {
+    domain: string;
+    type: "normal" | "no-head" | "no-requests"; // restriction type
+    since: number; // timestamp when restriction was set
+};
+
+/** Feed validation result with error details */
+type FeedValidationResult = {
+    valid: boolean;
+    errors: string[]; // List of validation errors
+    itemsValidated: number;
+};
+
 /** Storage key for rate limit tracking */
 const RATE_LIMIT_STORAGE_KEY = "feedRateLimits";
 /** Error count threshold before triggering cooldown */
 const RATE_LIMIT_THRESHOLD = 5;
 /** Cooldown duration in milliseconds (30 minutes for AWS standard reset) */
 const RATE_LIMIT_COOLDOWN_MS = 30 * 60 * 1000;
+
+/** Storage key for domain restrictions */
+const DOMAIN_RESTRICTIONS_KEY = "domainRestrictions";
+/** Storage key for feed validation history */
+const FEED_VALIDATION_LOG_KEY = "feedValidationLog";
 
 /**
  * Initialize the feed checking system.
@@ -36,6 +55,8 @@ export function initFeeds() {
  * Performs a web search for new feeds, then checks all saved feeds for updates.
  * Updates are detected via HTTP headers (ETag, Last-Modified) and content hashing.
  * Respects rate limiting by skipping feeds in cooldown period.
+ * Filters feeds by domain - only processes feeds from followed websites.
+ * Validates feed content for malformed data.
  */
 export async function checkFeedsForUpdates() {
     try {
@@ -51,6 +72,18 @@ export async function checkFeedsForUpdates() {
         for (const feed of Object.values(savedFeeds)) {
             try {
                 if (shouldSkipFeed(feed, allHermidata)) continue;
+
+                // Skip feed if domain is not in followed list
+                if (!isFollowedDomain(feed.domain, allHermidata)) {
+                    console.log(`[Hermidata] Domain ${feed.domain} is not in followed sites, skipping feed ${feed.title}.`);
+                    continue;
+                }
+
+                // Skip if domain is fully restricted from requests
+                if (isDomainRestricted(feed.domain, "no-requests")) {
+                    console.log(`[Hermidata] Domain ${feed.domain} is blocked from requests, skipping feed ${feed.title}.`);
+                    continue;
+                }
 
                 // Skip feed if it's currently rate-limited
                 if (isRateLimited(feed.url)) {
@@ -68,14 +101,21 @@ export async function checkFeedsForUpdates() {
                 const text = await fetchFeedText(feed);
                 if (!text) continue;
 
-                // Detect content changes via token or hash
-                if (!await hasFeedChanged(feed, text)) {
-                    continue;
-                }
-
-                // Parse and handle feed contents
+                // Parse and validate feed content
                 const xml = parseXmlSafely(text, feed.title);
                 const items = parseItems(xml, feed.title);
+                
+                // Validate feed items before processing
+                const validationResult = validateFeedItems(items, feed.url);
+                if (!validationResult.valid) {
+                    console.warn(
+                        `[Hermidata] Feed ${feed.url} failed validation: ${validationResult.errors.join(", ")}`
+                    );
+                    logFeedValidation(feed.url, false, validationResult.errors);
+                    continue;
+                }
+                
+                logFeedValidation(feed.url, true, []);
                 compareLastSeen(items, feed);
 
                 // Save metadata
@@ -202,6 +242,161 @@ async function webSearch() {
 function shouldSkipFeed(feed: RawFeed, allHermidata: Record<string, Hermidata>) {
     const novel = Object.values(allHermidata).find(novel => novel?.rss?.url === feed.url);
     return novel === undefined;
+}
+
+// ===== Domain Filtering Helpers =====
+
+/**
+ * Checks if a domain is in the user's followed websites list.
+ * A domain is considered followed if it has any Hermidata entry.
+ * Compares feed domain against all Hermidata domains.
+ */
+function isFollowedDomain(feedDomain: string, allHermidata: Record<string, Hermidata>): boolean {
+    return Object.values(allHermidata).some(entry => {
+        const entryDomain = entry?.rss?.domain || entry?.url?.split("/")[2];
+        return entryDomain && entryDomain.toLowerCase() === feedDomain.toLowerCase();
+    });
+}
+
+/**
+ * Checks if a domain has restrictions (no HEAD requests or no requests at all).
+ * Returns true if the domain has the specified restriction type.
+ */
+function isDomainRestricted(domain: string, restrictionType: "no-head" | "no-requests"): boolean {
+    const restriction = getDomainRestriction(domain);
+    return restriction.type === restrictionType;
+}
+
+/**
+ * Retrieves domain restriction data from localStorage.
+ * Returns "normal" if no restriction exists.
+ */
+function getDomainRestriction(domain: string): DomainRestriction {
+    try {
+        const storage = localStorage.getItem(DOMAIN_RESTRICTIONS_KEY);
+        if (!storage) return { domain, type: "normal", since: 0 };
+
+        const restrictions = JSON.parse(storage) as Record<string, DomainRestriction>;
+        return restrictions[domain] || { domain, type: "normal", since: 0 };
+    } catch {
+        return { domain, type: "normal", since: 0 };
+    }
+}
+
+/**
+ * Marks a domain as restricted in localStorage.
+ * Call when a domain fails HEAD request or refuses all requests.
+ * Types: "no-head" (skip HEAD, use GET only) or "no-requests" (don't fetch at all)
+ */
+function setDomainRestriction(domain: string, restrictionType: "no-head" | "no-requests"): void {
+    try {
+        const storage = localStorage.getItem(DOMAIN_RESTRICTIONS_KEY);
+        const restrictions = storage ? JSON.parse(storage) : {};
+
+        restrictions[domain] = {
+            domain,
+            type: restrictionType,
+            since: Date.now()
+        };
+
+        localStorage.setItem(DOMAIN_RESTRICTIONS_KEY, JSON.stringify(restrictions));
+        console.log(`[Hermidata] Marked domain ${domain} as ${restrictionType}`);
+    } catch (err) {
+        console.error("[Hermidata] Failed to set domain restriction:", err);
+    }
+}
+
+// ===== Feed Validation Helpers =====
+
+/**
+ * Validates feed items for required fields and data integrity.
+ * Checks each item for title, link, pubDate, and guid.
+ * Returns validation result with list of errors.
+ */
+function validateFeedItems(items: FeedItem[], feedUrl: string): FeedValidationResult {
+    const errors: string[] = [];
+    let validCount = 0;
+
+    if (!items || items.length === 0) {
+        return {
+            valid: false,
+            errors: ["No items found in feed"],
+            itemsValidated: 0
+        };
+    }
+
+    items.forEach((item, index) => {
+        const itemErrors: string[] = [];
+
+        // Check required fields
+        if (!item.title || item.title.trim().length === 0) {
+            itemErrors.push(`Item ${index}: missing or empty title`);
+        }
+        if (!item.link || item.link.trim().length === 0) {
+            itemErrors.push(`Item ${index}: missing or empty link`);
+        }
+        if (!item.pubDate || !(item.pubDate instanceof Date) || isNaN(item.pubDate.getTime())) {
+            itemErrors.push(`Item ${index}: missing or invalid pubDate`);
+        }
+        if (!item.guid || item.guid.trim().length === 0) {
+            itemErrors.push(`Item ${index}: missing or empty guid`);
+        }
+
+        if (itemErrors.length === 0) {
+            validCount++;
+        } else {
+            errors.push(...itemErrors);
+        }
+    });
+
+    const valid = errors.length === 0;
+    if (!valid) {
+        console.warn(`[Hermidata] Feed validation errors for ${feedUrl}: ${validCount}/${items.length} items valid`);
+    }
+
+    return {
+        valid,
+        errors,
+        itemsValidated: validCount
+    };
+}
+
+/**
+ * Validates XML feed structure for well-formedness.
+ * Checks for parser errors and required root elements.
+ * Returns true if XML is valid and parseable.
+ */
+function validateXmlStructure(xml: Document): boolean {
+    // Check for parser errors
+    if (xml.querySelector("parsererror")) {
+        return false;
+    }
+
+    // Check for required feed elements
+    const hasFeedElements = xml.querySelectorAll("item, entry").length > 0;
+    return hasFeedElements;
+}
+
+/**
+ * Logs feed validation result to localStorage for history and debugging.
+ * Tracks whether feed passed validation and any errors encountered.
+ */
+function logFeedValidation(feedUrl: string, valid: boolean, errors: string[]): void {
+    try {
+        const storage = localStorage.getItem(FEED_VALIDATION_LOG_KEY);
+        const log = storage ? JSON.parse(storage) : {};
+
+        log[feedUrl] = {
+            lastValidation: Date.now(),
+            valid,
+            errors,
+            validationCount: (log[feedUrl]?.validationCount || 0) + 1
+        };
+
+        localStorage.setItem(FEED_VALIDATION_LOG_KEY, JSON.stringify(log));
+    } catch (err) {
+        console.error("[Hermidata] Failed to log feed validation:", err);
+    }
 }
 
 // ===== Rate Limiting Helpers =====
@@ -339,9 +534,17 @@ function getFeedLatestToken(xmlText: string) {
  * Returns ETag and Last-Modified headers if available, which can be used
  * to detect if the feed has changed without downloading the full content.
  * Tracks 429 errors for rate-limit detection.
+ * Skips HEAD request if domain has "no-head" restriction.
  */
 async function fetchFeedHead(feed: RawFeed) {
     let meta: Meta = { etag: null, lastModified: null };
+    
+    // Skip HEAD request if domain is restricted
+    if (isDomainRestricted(feed.domain, "no-head")) {
+        console.log(`[Hermidata] Skipping HEAD request for ${feed.domain} (restricted), will use GET only.`);
+        return meta;
+    }
+    
     try {
         const head = await fetch(feed.url, { method: "HEAD" });
         
@@ -355,11 +558,15 @@ async function fetchFeedHead(feed: RawFeed) {
         if (head.ok) {
             meta.etag = head.headers.get("etag");
             meta.lastModified = head.headers.get("last-modified");
+        } else if (head.status === 405 || head.status === 403) {
+            // 405 Method Not Allowed, 403 Forbidden - mark domain as no-head
+            setDomainRestriction(feed.domain, "no-head");
+            console.warn(`[Hermidata] Domain ${feed.domain} doesn't allow HEAD requests, marked for future requests.`);
         } else {
             console.warn(`[Hermidata] HEAD not allowed for ${feed.domain} (${feed.title} | ${head.status}). Falling back to GET.`);
         }
-    } catch {
-        console.warn(`[Hermidata] HEAD failed for ${feed.title}, using GET fallback`);
+    } catch (err) {
+        console.warn(`[Hermidata] HEAD failed for ${feed.title}, using GET fallback. Error: ${err}`);
     }
     return meta;
 }
