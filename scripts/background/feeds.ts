@@ -10,6 +10,19 @@ type Meta = {
     lastModified: string | null;
 };
 
+/** Rate limit tracking for per-feed throttling on 429 errors */
+type RateLimitStatus = {
+    count: number; // Number of 429 errors encountered
+    cooldownUntil: number; // Timestamp when cooldown expires
+};
+
+/** Storage key for rate limit tracking */
+const RATE_LIMIT_STORAGE_KEY = "feedRateLimits";
+/** Error count threshold before triggering cooldown */
+const RATE_LIMIT_THRESHOLD = 5;
+/** Cooldown duration in milliseconds (30 minutes for AWS standard reset) */
+const RATE_LIMIT_COOLDOWN_MS = 30 * 60 * 1000;
+
 /**
  * Initialize the feed checking system.
  * Starts a background interval that checks feeds for updates every 30 minutes.
@@ -22,6 +35,7 @@ export function initFeeds() {
  * Main feed checking routine.
  * Performs a web search for new feeds, then checks all saved feeds for updates.
  * Updates are detected via HTTP headers (ETag, Last-Modified) and content hashing.
+ * Respects rate limiting by skipping feeds in cooldown period.
  */
 export async function checkFeedsForUpdates() {
     try {
@@ -37,6 +51,12 @@ export async function checkFeedsForUpdates() {
         for (const feed of Object.values(savedFeeds)) {
             try {
                 if (shouldSkipFeed(feed, allHermidata)) continue;
+
+                // Skip feed if it's currently rate-limited
+                if (isRateLimited(feed.url)) {
+                    console.log(`[Hermidata] Feed ${feed.title} is rate-limited, skipping until cooldown expires.`);
+                    continue;
+                }
 
                 // Try to get HEAD metadata (ETag, Last-Modified)
                 const meta = await fetchFeedHead(feed);
@@ -60,6 +80,9 @@ export async function checkFeedsForUpdates() {
 
                 // Save metadata
                 saveFeedMetaData(feed, meta);
+                
+                // Reset rate limit counter on successful fetch
+                resetRateLimitCounter(feed.url);
 
             } catch (err) {
                 console.error(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
@@ -181,6 +204,85 @@ function shouldSkipFeed(feed: RawFeed, allHermidata: Record<string, Hermidata>) 
     return novel === undefined;
 }
 
+// ===== Rate Limiting Helpers =====
+
+/**
+ * Checks if a feed is currently under rate-limit cooldown.
+ * Returns true if the feed has exceeded the error threshold and cooldown hasn't expired.
+ */
+function isRateLimited(feedUrl: string): boolean {
+    const status = getRateLimitStatus(feedUrl);
+    if (status.count < RATE_LIMIT_THRESHOLD) {
+        return false;
+    }
+    const now = Date.now();
+    return now < status.cooldownUntil;
+}
+
+/**
+ * Retrieves the current rate-limit status for a feed.
+ * Returns default values if feed has no recorded issues.
+ */
+function getRateLimitStatus(feedUrl: string): RateLimitStatus {
+    try {
+        const storage = localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
+        if (!storage) return { count: 0, cooldownUntil: 0 };
+
+        const rateLimits = JSON.parse(storage) as Record<string, RateLimitStatus>;
+        return rateLimits[feedUrl] || { count: 0, cooldownUntil: 0 };
+    } catch {
+        return { count: 0, cooldownUntil: 0 };
+    }
+}
+
+/**
+ * Updates the rate-limit status for a feed after encountering a 429 error.
+ * Increments the error count and starts cooldown when threshold is reached.
+ */
+function incrementRateLimitCounter(feedUrl: string): void {
+    try {
+        const storage = localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
+        const rateLimits = storage ? JSON.parse(storage) : {};
+
+        const status = rateLimits[feedUrl] || { count: 0, cooldownUntil: 0 };
+        status.count += 1;
+
+        // Activate cooldown when threshold is reached
+        if (status.count >= RATE_LIMIT_THRESHOLD) {
+            status.cooldownUntil = Date.now() + RATE_LIMIT_COOLDOWN_MS;
+            console.warn(
+                `[Hermidata] Feed ${feedUrl} hit rate limit threshold. ` +
+                `Cooling down for ${RATE_LIMIT_COOLDOWN_MS / 1000 / 60} minutes.`
+            );
+        }
+
+        rateLimits[feedUrl] = status;
+        localStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(rateLimits));
+    } catch (err) {
+        console.error("[Hermidata] Failed to update rate limit status:", err);
+    }
+}
+
+/**
+ * Resets the rate-limit counter for a feed after a successful fetch.
+ * This allows the feed to be checked again without cooldown penalties.
+ */
+function resetRateLimitCounter(feedUrl: string): void {
+    try {
+        const storage = localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
+        if (!storage) return;
+
+        const rateLimits = JSON.parse(storage) as Record<string, RateLimitStatus>;
+        if (rateLimits[feedUrl]) {
+            rateLimits[feedUrl] = { count: 0, cooldownUntil: 0 };
+            localStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(rateLimits));
+            console.log(`[Hermidata] Reset rate limit counter for ${feedUrl}`);
+        }
+    } catch (err) {
+        console.error("[Hermidata] Failed to reset rate limit counter:", err);
+    }
+}
+
 /**
  * Computes SHA-1 hash of a string and returns it as a hex string.
  * Used as a fallback change detector when no token is available.
@@ -236,11 +338,20 @@ function getFeedLatestToken(xmlText: string) {
  * Fetches HTTP response headers from a feed URL using a HEAD request.
  * Returns ETag and Last-Modified headers if available, which can be used
  * to detect if the feed has changed without downloading the full content.
+ * Tracks 429 errors for rate-limit detection.
  */
 async function fetchFeedHead(feed: RawFeed) {
     let meta: Meta = { etag: null, lastModified: null };
     try {
         const head = await fetch(feed.url, { method: "HEAD" });
+        
+        // Detect rate limiting response
+        if (head.status === 429) {
+            incrementRateLimitCounter(feed.url);
+            console.warn(`[Hermidata] Feed ${feed.url} returned 429 Too Many Requests`);
+            return meta;
+        }
+        
         if (head.ok) {
             meta.etag = head.headers.get("etag");
             meta.lastModified = head.headers.get("last-modified");
@@ -278,9 +389,18 @@ function isFeedUnchanged(feed: RawFeed, meta: Meta) {
 /**
  * Fetches the complete feed content as text.
  * Handles both RawFeed and Feed types.
+ * Tracks 429 errors for rate-limit detection.
  */
 async function fetchFeedText(feed: RawFeed | Feed) {
     const response = await fetch(feed.url);
+    
+    // Detect rate limiting response
+    if (response.status === 429) {
+        incrementRateLimitCounter(feed.url);
+        console.warn(`[Hermidata] Feed ${feed.url} returned 429 Too Many Requests`);
+        return null;
+    }
+    
     if (!response.ok) {
         console.warn(`[Hermidata] Feed GET failed: ${feed.url} (${response.status})`);
         return null;
