@@ -33,7 +33,7 @@ export async function confirmMigrationPrompt(newer: Hermidata, older: Hermidata,
     }
 }
 
-export function deactivateother() {
+export function deactivateother(execptionElement: HTMLElement | null = null) {
     // deactivate links in classic
     document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
         a.style.pointerEvents = 'none';
@@ -45,8 +45,27 @@ export function deactivateother() {
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
     setElement(".HDRSS", el => el.style.opacity = String(classicCurrentActive ? 0 : 0.2));
     setElement(".HDClassic", el => el.style.opacity = String(classicCurrentActive ? 0.2 : 0));
+    toggleBookmarkPopups(false, execptionElement);
 }
-export function activateother() {
+export function toggleBookmarkPopups(toggleOn: boolean, execptionElement: HTMLElement | null = null) {
+    const bookmarkMenuContainer = getElement<HTMLDivElement>('.bookmarkMenuContainer');
+    const bookmarkMenuManagerContainer = getElement<HTMLDivElement>('.bookmarkMenuManagerContainer');
+    const AddNewBookmarkContainer = getElement<HTMLDivElement>('.AddNewBookmark');
+
+    if (bookmarkMenuContainer && bookmarkMenuContainer !== execptionElement) {
+        bookmarkMenuContainer.style.opacity = toggleOn ? '1' : '0.2';
+        bookmarkMenuContainer.style.pointerEvents = toggleOn ? 'auto' : 'none';
+    }
+    if (bookmarkMenuManagerContainer && bookmarkMenuManagerContainer !== execptionElement) {
+        bookmarkMenuManagerContainer.style.opacity = toggleOn ? '1' : '0.2';
+        bookmarkMenuManagerContainer.style.pointerEvents = toggleOn ? 'auto' : 'none';
+    }
+    if (AddNewBookmarkContainer && AddNewBookmarkContainer !== execptionElement) {
+        AddNewBookmarkContainer.style.opacity = toggleOn ? '1' : '0.2';
+        AddNewBookmarkContainer.style.pointerEvents = toggleOn ? 'auto' : 'none';
+    }
+}
+export function activateother(execptionElement: HTMLElement | null = null) {
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
     // de/activate links in classic depending on current active
     document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
@@ -58,6 +77,7 @@ export function activateother() {
     });
     setElement(".HDRSS", el => el.style.opacity = String(classicCurrentActive ? 0 : 1));
     setElement(".HDClassic", el => el.style.opacity = String(classicCurrentActive ? 1 : 0));
+    toggleBookmarkPopups(true, execptionElement);
 }
 
 

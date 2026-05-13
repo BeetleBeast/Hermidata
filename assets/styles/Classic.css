@@ -494,7 +494,7 @@ input[type=number]::-webkit-inner-spin-button {
 	border: 1px solid lightgray;
 	width: 30%;
 	position: absolute;
-	top: 25%;
+	top: 75px;
 	left: 5%;
 	background-color: var(--bg_disabled);
 	z-index: 20;

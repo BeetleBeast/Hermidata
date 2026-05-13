@@ -51,15 +51,17 @@ export class BookmarkController {
     }
     private bindEvents() {
         // open bookmark menu
-        this.imgBookmark?.addEventListener('click', () => this.openBookmarkMenu());
+        this.imgBookmark?.addEventListener('click', (e) => {
+            e.stopPropagation()
+            this.openBookmarkMenu()
+        });
         // open new bookmark form
         for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', () => this.addNewBookmarkForm());
         // open bookmark menu manager
         this.bookmarkMenuBtn?.addEventListener('click', () => this.openBookmarkMenuManager() );
 
-        // TODO: close bookmark menu on click outside
-        // close bookmark menu
-        this.bookmarkMenuContainer?.addEventListener('focus', () => this.closeBookmarkMenu());
+        // Close bookmark menu when clicking outside (on HDClassic)
+        getElement('.HDClassic')?.addEventListener('click', () => this.closeBookmarkMenu() );
         // save new bookmark
         this.saveBookmarkBtn?.addEventListener('click', () => this.saveNewBookmark() );
 
@@ -75,17 +77,26 @@ export class BookmarkController {
         this.bookmarkMenuContainer!.style.display = 'none';
         this.bookmarkMenuManagerContainer!.style.display = 'none';
     }
+    private handleOutsideClick = (e: MouseEvent): void => {
+        const menu = this.bookmarkMenuManager;
+        if (menu && !menu.contains(e.target as Node)) {
+            this.closeBookmarkMenu();
+        }
+    };
     /**
      * - open or close bookmark menu depending on where the mouse points
      * @param e - event of where the mouse points to
      */
     private openBookmarkMenu(): void {
+        // Prevent the open click from immediately closing the menu
+        setTimeout(() => {
+            document.addEventListener('click', this.handleOutsideClick);
+        }, 0);
         if (!this.bookmarkMenuContainer) return;
         if (this.bookmarkMenuContainerVisible) {
             this.closeBookmarkMenu();
             return;
         }
-        deactivateother();
         this.bookmarkMenuContainer.style.display = 'block';
         this.bookmarkMenuContainerVisible = true;
         this.bookmarkMenu!.innerHTML = '';
@@ -94,13 +105,18 @@ export class BookmarkController {
             this.createBookmarkMenu(key, value);
             this.bookmarkMenu?.appendChild( document.createElement('hr') );
         }
+        const extraMargin = 20;
+        const newSize = this.bookmarkMenuContainer.clientHeight + this.bookmarkMenuContainer.offsetTop + extraMargin;
+        if (newSize >= document.body.clientHeight) document.body.style.height = `${newSize}px`;
+        const maxSize = 600;
+        if (newSize >= maxSize + 10) (document.body as HTMLBodyElement).style.overflowY = 'scroll';
     }
     /** open add new bookmark */
     private addNewBookmarkForm(): void {
         this.closeBookmarkMenu();
         this.closeBookmarkMenuManager();
         if (!this.AddNewBookmarkContainer) return;
-        deactivateother();
+        deactivateother(this.AddNewBookmarkContainer);
         this.AddNewBookmarkContainer.style.display = 'block';
         this.setAddNewBookmarkFormData();
     }
@@ -108,13 +124,18 @@ export class BookmarkController {
     private openBookmarkMenuManager(): void {
         if (!this.bookmarkMenuManagerContainer) return;
         this.closeBookmarkMenu();
-        deactivateother();
+        deactivateother(this.bookmarkMenuManagerContainer);
         this.bookmarkMenuManagerContainer.style.display = 'block';
         this.bookmarkMenuManager!.innerHTML = '';
 
         for (const [key, value] of Object.entries(this.hermidata.chapter.bookmarks)) {
             this.createBookmarkMenuManager(key, value);
         }
+        const extraMargin = 20;
+        const newSize = this.bookmarkMenuManagerContainer.clientHeight + this.bookmarkMenuManagerContainer.offsetTop + extraMargin;
+        if (newSize >= document.body.clientHeight) document.body.style.height = `${newSize}px`;
+        const maxSize = 600;
+        if (newSize >= maxSize + 10) (document.body as HTMLBodyElement).style.overflowY = 'scroll';
     }
     /** close bookmark menu */
     private closeBookmarkMenu(): void {
@@ -122,6 +143,8 @@ export class BookmarkController {
         this.bookmarkMenuContainer.style.display = 'none';
         this.bookmarkMenuContainerVisible = false;
         activateother();
+        // Remove the listener when menu closes
+        document.removeEventListener('click', this.handleOutsideClick);
     }
     /** close add bookmark */
     private closeAddBookmark(): void {
