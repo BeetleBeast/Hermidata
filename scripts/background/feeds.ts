@@ -4,18 +4,25 @@ import { getAllHermidata, getAllRawFeeds, saveHermidataV3, setAllRawFeeds } from
 import { allHermidataCashed, setState } from "./state";
 import { TrimTitle } from "../shared/StringOutput";
 
-
+/** HTTP response metadata used to detect feed changes */
 type Meta = {
     etag: string | null;
-    lastModified: string | null
-}
+    lastModified: string | null;
+};
 
-
-
+/**
+ * Initialize the feed checking system.
+ * Starts a background interval that checks feeds for updates every 30 minutes.
+ */
 export function initFeeds() {
-    setInterval(checkFeedsForUpdates, 30 * 60 * 1000)
+    setInterval(checkFeedsForUpdates, 30 * 60 * 1000);
 }
 
+/**
+ * Main feed checking routine.
+ * Performs a web search for new feeds, then checks all saved feeds for updates.
+ * Updates are detected via HTTP headers (ETag, Last-Modified) and content hashing.
+ */
 export async function checkFeedsForUpdates() {
     try {
         await webSearch();
@@ -59,7 +66,7 @@ export async function checkFeedsForUpdates() {
             }
         }
 
-        setState.lastAutoFeedCkeck(Date.now());
+        setState.lastAutoFeedCheck(Date.now());
         await setAllRawFeeds(Object.values(savedFeeds));
         await ext.storage.local.set({ savedFeeds });
     } catch (err) {
@@ -67,18 +74,19 @@ export async function checkFeedsForUpdates() {
     }
 }
 
+/**
+ * Searches all configured RSS feeds and updates the combined feed list.
+ * Fetches feeds from Hermidata entries, parses them, and updates local storage.
+ * Also updates Hermidata with the latest fetch metadata.
+ */
 async function webSearch() {
-    // search the web for new releases
-
-    // get the links to check
     const savedFeeds = await getAllRawFeeds();
     const allHermidata = await getAllHermidata();
     const allnovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
 
     console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allnovelRSS.length}`);
 
-    const combined = Object.values(savedFeeds)
-    //const test = Object.values(savedFeeds).flatMap(f => f?.items).filter(Boolean);
+    const combined = Object.values(savedFeeds) ?? [];
 
     for (const novel of allnovelRSS) {
         if (!novel) continue;
@@ -95,7 +103,7 @@ async function webSearch() {
             console.groupEnd();
             continue;
         }
-        
+
         // get the latest token
         const token = getFeedLatestToken(feedText);
         if (!token) {
@@ -111,7 +119,7 @@ async function webSearch() {
         if (!items.length) {
             console.warn("No items found in feed:", novel.url);
             console.groupEnd();
-            continue;   
+            continue;
         }
 
         const newFeed: RawFeed = {
@@ -125,16 +133,8 @@ async function webSearch() {
             lastToken: token,
         };
 
-        // check if the feed is already in savedFeeds via token
-        // const existingFeed = savedFeeds.find(f => f.lastToken === token);
-        // if (existingFeed?.items?.[0]?.title === items[0].title) {
-        //     console.log(`[Hermidata] Feed already exists v1: ${existingFeed.items[0].title}`);
-        //     console.log(`[Hermidata] Feed already exists v2: ${items[0].title}`);
-        //     console.groupEnd();
-        //     continue;
-        // }
         console.log(`[Hermidata] Adding feed title: ${items[0].title}`);
-        
+
         const existingIndex = combined.findIndex(f => f.url === newFeed.url && f.url !== undefined);
         console.log(`[Hermidata] existingIndex: ${existingIndex}`);
         if (existingIndex === -1) {
@@ -150,15 +150,13 @@ async function webSearch() {
                 console.log(`[Hermidata] Updated feed: ${newFeed.items[0].title}`);
             }
         }
-        
-        
-        
+
         console.groupEnd();
     }
-    ext.storage.local.set({ savedFeeds: combined }).then(() => {
-        console.log(`[Hermidata] ${Object.keys(savedFeeds).length} feeds saved to local storage`);
-    });
-    
+
+    await ext.storage.local.set({ savedFeeds: combined });
+    console.log(`[Hermidata] ${combined.length} feeds saved to local storage`);
+
     const HermidataToUpdate: Record<string, Hermidata> = {};
     for (const feed of combined) {
         const related = Object.values(allHermidata).find(h => h.rss?.url === feed.url);
@@ -168,16 +166,25 @@ async function webSearch() {
             HermidataToUpdate[related.id] = related;
         }
     }
-    for (const [key, value] of Object.entries(HermidataToUpdate)) await saveHermidataV3(key, value);
+    for (const [key, value] of Object.entries(HermidataToUpdate)) {
+        await saveHermidataV3(key, value);
+    }
 
     console.groupEnd();
 }
+/**
+ * Checks if a feed should be skipped during processing.
+ * A feed is skipped if it's not associated with any Hermidata entry.
+ */
 function shouldSkipFeed(feed: RawFeed, allHermidata: Record<string, Hermidata>) {
     const novel = Object.values(allHermidata).find(novel => novel?.rss?.url === feed.url);
     return novel === undefined;
 }
 
-// Helper: SHA-1 hash as hex
+/**
+ * Computes SHA-1 hash of a string and returns it as a hex string.
+ * Used as a fallback change detector when no token is available.
+ */
 async function sha1Hex(str: string) {
     const enc = new TextEncoder();
     const data = enc.encode(str);
@@ -187,17 +194,18 @@ async function sha1Hex(str: string) {
         .join("");
 }
 
-// ==== feed helpers ====
-
-// Helper: parse only the first 1–2 items
+/**
+ * Extracts a unique identifier token from the latest feed items.
+ * Attempts multiple fallbacks: guid, id, link, pubDate, or title.
+ * This token is used to detect if the feed has new content.
+ */
 function getFeedLatestToken(xmlText: string) {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, "text/xml");
-        const items = [...doc.querySelectorAll("item, entry")].slice(0, 2); // Only first 2
+        const items = [...doc.querySelectorAll("item, entry")].slice(0, 2);
         if (items.length === 0) return null;
 
-        // Prefer guid/id/link/pubDate/title — whichever exists first
         const item = items[0];
         const guid = item.querySelector("guid")?.textContent?.trim();
         if (guid) return `guid:${guid}`;
@@ -224,8 +232,12 @@ function getFeedLatestToken(xmlText: string) {
 }
 
 
+/**
+ * Fetches HTTP response headers from a feed URL using a HEAD request.
+ * Returns ETag and Last-Modified headers if available, which can be used
+ * to detect if the feed has changed without downloading the full content.
+ */
 async function fetchFeedHead(feed: RawFeed) {
-    
     let meta: Meta = { etag: null, lastModified: null };
     try {
         const head = await fetch(feed.url, { method: "HEAD" });
@@ -233,21 +245,40 @@ async function fetchFeedHead(feed: RawFeed) {
             meta.etag = head.headers.get("etag");
             meta.lastModified = head.headers.get("last-modified");
         } else {
-        console.warn(`[Hermidata] HEAD not allowed for ${feed.domain} ( ${feed.title} | ${head.status} ). Falling back to GET.`);
-    }
+            console.warn(`[Hermidata] HEAD not allowed for ${feed.domain} (${feed.title} | ${head.status}). Falling back to GET.`);
+        }
     } catch {
         console.warn(`[Hermidata] HEAD failed for ${feed.title}, using GET fallback`);
     }
     return meta;
 }
+/**
+ * Determines if a feed has changed by comparing HTTP metadata.
+ * Checks both ETag (exact match) and Last-Modified date.
+ * Returns true if feed appears unchanged.
+ */
 function isFeedUnchanged(feed: RawFeed, meta: Meta) {
-    return (
-        meta.etag &&
-        meta.lastModified &&
-        feed.lastToken === meta.etag &&
-        feed.lastBuildDate.getDate() === new Date(meta.lastModified).getDate() // FIXME: check this out, bullsh*t
-    );
+    if (!meta.etag || !meta.lastModified) {
+        return false;
+    }
+
+    // Check ETag first (most reliable)
+    if (feed.lastToken === meta.etag) {
+        return true;
+    }
+
+    // Fallback: compare modification date (day-level granularity)
+    const lastModifiedDate = new Date(meta.lastModified);
+    const feedBuildDate = feed.lastBuildDate instanceof Date
+        ? feed.lastBuildDate
+        : new Date(feed.lastBuildDate);
+
+    return feedBuildDate.getTime() >= lastModifiedDate.getTime();
 }
+/**
+ * Fetches the complete feed content as text.
+ * Handles both RawFeed and Feed types.
+ */
 async function fetchFeedText(feed: RawFeed | Feed) {
     const response = await fetch(feed.url);
     if (!response.ok) {
@@ -256,6 +287,12 @@ async function fetchFeedText(feed: RawFeed | Feed) {
     }
     return await response.text();
 }
+/**
+ * Detects if feed content has changed since last check.
+ * Primary method: compares unique token from latest items.
+ * Fallback: SHA-1 hash of first 5KB if no token available.
+ * Updates feed.lastToken on change for future comparisons.
+ */
 async function hasFeedChanged(feed: RawFeed, text: string) {
     const latestToken = getFeedLatestToken(text);
     let feedChanged = false;
@@ -275,6 +312,10 @@ async function hasFeedChanged(feed: RawFeed, text: string) {
 
     return feedChanged;
 }
+/**
+ * Parses XML feed content with fallback to HTML parsing.
+ * If XML parsing produces errors, retries with HTML mode.
+ */
 function parseXmlSafely(text: string, title: string) {
     const parser = new DOMParser();
     let xml = parser.parseFromString(text, "text/xml");
@@ -287,51 +328,58 @@ function parseXmlSafely(text: string, title: string) {
     return xml;
 }
 
+/**
+ * Parses feed items (entries) from XML document.
+ * Extracts title, link, pubDate, and guid from each item.
+ * Limits results to first 10 items.
+ */
 function parseItems(xml: Document, title: string): FeedItem[] {
     const entries = [...xml.querySelectorAll("item, entry")];
     if (!entries.length) {
         console.warn(`[Hermidata] No <item> or <entry> elements found in ${title}.`);
         return [];
     }
-    
+
     return entries.slice(0, 10).map(item => ({
-        title: item.querySelector("title")?.textContent.trim() ?? "",
+        title: item.querySelector("title")?.textContent?.trim() ?? "",
         link: (
             item.querySelector("link")?.getAttribute?.("href") ??
-            item.querySelector("link")?.textContent ??
+            item.querySelector("link")?.textContent?.trim() ??
             ""
         ).trim(),
-        pubDate: new Date(item.querySelector("pubDate, updated, published")?.textContent.trim() ?? new Date().toISOString()),
+        pubDate: new Date(item.querySelector("pubDate, updated, published")?.textContent?.trim() ?? new Date().toISOString()),
         guid:
-        item.querySelector("guid")?.textContent ??
-        item.querySelector("id")?.textContent ??
-        item.querySelector("link")?.textContent ??
-        ""
+            item.querySelector("guid")?.textContent?.trim() ??
+            item.querySelector("id")?.textContent?.trim() ??
+            item.querySelector("link")?.textContent?.trim() ??
+            ""
     }));
 }
 
+/**
+ * Updates feed metadata with HTTP response headers and current timestamp.
+ * Sets lastBuildDate from Last-Modified header if available.
+ * Always updates lastFetched to current time.
+ */
 function saveFeedMetaData(feed: RawFeed, meta: Meta) {
     if (meta.lastModified) feed.lastBuildDate = new Date(meta.lastModified);
     feed.lastFetched = new Date().toISOString();
 }
 
+/**
+ * Placeholder for feed item tracking logic.
+ * TODO: Implement tracking of items seen by user to detect truly new items.
+ * Currently a no-op as the original implementation was incomplete.
+ */
 function compareLastSeen(items: FeedItem[], feed: RawFeed) {
-    if (!items.length) return feed;
-    // FIXME: this was bullsh*t redo it
-    /*
-    const latest = items[0];
-    if (latest.guid !== feed.lastToken || latest.pubDate !== feed.lastBuildDate) {
-        const newCount = items.findIndex(i => i.guid === feed.lastSeenGuid && i.pubDate === feed.lastSeenDate);
-        const newItems = newCount === -1 ? items : items.slice(0, newCount);
-        notifyUser(feed, newItems);
-
-        const Foo = latest.pubDate;
-    }
-    */
-
-    return feed;
+    // Implementation pending - would track which items user has already seen
+    // to determine which items are actually new since last check
 }
 
+/**
+ * Sends a browser notification to the user when new feed items are found.
+ * Uses cached Hermidata if available, otherwise fetches from storage.
+ */
 async function notifyUser(feed: RawFeed, newItems: FeedItem[]) {
     const allHermidata = allHermidataCashed || await getAllHermidata();
     if (shouldSkipFeed(feed, allHermidata)) return;
@@ -345,6 +393,9 @@ async function notifyUser(feed: RawFeed, newItems: FeedItem[]) {
     });
 }
 
+/**
+ * Returns the current date formatted as DD/MM/YYYY.
+ */
 export function getCurrentDate() {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');

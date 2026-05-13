@@ -73,7 +73,7 @@ export class TagsSystem {
     public populateTagPills(tags: string[], tagColoring: Settings['TagManagement']['tagColoring']): void {
         const container = getElement<HTMLDivElement>('#tag-pill-container');
         if (!container) return;
-
+        if (!tags.length || tags.length === 0) return;
         tags.forEach(tag => {
             const tagTrimmed = tag.trim();
             if (!tagTrimmed) return;
