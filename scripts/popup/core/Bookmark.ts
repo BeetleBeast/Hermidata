@@ -189,11 +189,13 @@ export class BookmarkController {
     private setAddNewBookmarkFormData(): void {
         const currentChapter = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current;
         const currentNotes = this.hermidata.meta.notes;
-        this.bookmarkLabelInput!.textContent = '';
+        this.bookmarkLabelInput!.value = '';
+        const defaultColor = '#fcfcfc';
+        ColorPicker.updateColor(defaultColor);
+        this.bookmarkColorInput!.style.backgroundColor = 'var(--Input-colorV2)';
         this.bookmarkChapterInput!.value = currentChapter.toString();
         this.bookmarkNotesInput!.textContent = currentNotes ?? '';
 
-        const defaultColor = '#fcfcfc';
         const rect = document.body.getBoundingClientRect();
 
         this.bookmarkColorInput!.addEventListener('click', () => {
