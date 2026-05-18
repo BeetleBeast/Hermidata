@@ -127,12 +127,13 @@ export class SortLogic extends Sort {
         const hashItem = this.GetHashItem(entry);
         const entryData = this.AllHermidata[hashItem];
         const Type = entryData.type;
-        const Status = entryData.status;
+        const ReadStatus = entryData.status;
+        const NovelStatus = entryData.meta?.novelStatus
         const Source = entryData.source;
         const Tag = entryData.meta.tags || "";
         const DateFilter = this.getYearBucket(entryData.meta.added);
 
-        const inputs = [Type, Status, Source, Tag, DateFilter];
+        const inputs = [Type, ReadStatus, Source, NovelStatus, Tag, DateFilter];
 
 
         let visible = true;

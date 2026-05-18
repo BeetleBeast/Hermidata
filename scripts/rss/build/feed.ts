@@ -224,7 +224,7 @@ export class FeedItem {
     private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
         pubDate.className = "hermidata-item-pubDate"
-        const dateString = item.rss?.latestItem.pubDate ? new Date(item.rss.latestItem.pubDate).toLocaleDateString() : 'N/A';
+        const dateString = item.rss?.latestItem.pubDate ? new Date(item.rss.latestItem.pubDate).toLocaleDateString() : new Date(item.meta.added).toLocaleDateString();
         const pubDateText = `Published: ${dateString}`;
         pubDate.textContent = pubDateText;
         pubDate.title = pubDateText;
@@ -234,8 +234,9 @@ export class FeedItem {
         const Elfooter = document.createElement("div");
 
         Elfooter.className = "hermidata-item-footer"
-        const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
-        Elfooter.textContent = String(domain);
+        const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+        const altDomains = item.meta.altSources.length >= 2 ? item.meta.altSources.join(', ') : '';
+        Elfooter.textContent = altDomains ? String(altDomains) : String(domain);
         Elfooter.title = String(domain);
         return Elfooter
     }

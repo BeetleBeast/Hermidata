@@ -4,6 +4,8 @@ import { getElement, setElement } from "../../utils/Selection";
 import { Sort } from "./Sort";
 export class SortOption extends Sort {
 
+    private allSearchableItems: Set<HTMLDivElement> = new Set();
+
     private selectedIndex: number = -1;
     
     public async makeSortOptions(parent_section: HTMLElement): Promise<void> {
@@ -65,7 +67,7 @@ export class SortOption extends Sort {
         const novelStatusSection = this.createFilterSection(filterName.NovelStatus, settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS, filterClassName.NovelStatus);
     
         // 4. Source
-        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).map(item => item.source).filter(Boolean)));
+        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta.altSources).filter(Boolean)));
         const sourceSection = this.createFilterSection(filterName.Source, allSources, filterClassName.Source);
 
         // 5. Tags
@@ -174,15 +176,22 @@ export class SortOption extends Sort {
         const query = target.value.trim().toLowerCase();
         suggestionBox.innerHTML = '';
 
-        if (!query) {
+        if (!query || query == '') {
             this.filterEntries('');
             return;
         }
 
-        const filtered = Object.values(this.AllHermidata).filter(item =>
-            [item.title, ...(item.meta?.altTitles || [])]
-            .some(t => t.toLowerCase().includes(query))
-        );
+        const visibleItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-seachable="true"]`);
+        for (const item of visibleItems) this.allSearchableItems.add(item);
+        const visibleHashes = Array.from(visibleItems).map(item => this.GetHashItem(item));
+    
+        const filtered = Object.entries(this.AllHermidata).filter(([hash, item]) => {
+            // Only include if item is currently visible
+            if (!visibleHashes.includes(hash)) return false;
+            
+            return [item.title, ...(item.meta?.altTitles || [])].some(t => t.toLowerCase().includes(query));
+        }).map(([, item]) => item);
+
 
         this.filterEntries(query, filtered);
 
@@ -208,19 +217,39 @@ export class SortOption extends Sort {
     private filterEntries(query: string, filtered: Hermidata[] | null = null) {
         const allItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"]`);
 
+        // If no query, restore all items to their filter-determined state
+        if (!query) {
+            allItems.forEach(item => {
+                // Restore visibility based on what filters decided
+                const isFilteredIn = item.dataset.seachable === 'true';
+                item.style.display = isFilteredIn ? '' : 'none';
+            });
+            return;
+        }
+
+        // With a query: check both filter state AND search match
         allItems.forEach(item => {
+            // First check: Is this item allowed by current filters?
+            const isFilteredIn = item.dataset.seachable === 'true';
+            if (!isFilteredIn) {
+                // Filters say NO - keep it hidden, don't even check search
+                item.style.display = 'none';
+                return;
+            }
+
+            // Second check: Item passed filters, now check if it matches search
             const titleEl = getElement('.hermidata-item-title', item);
             const ItemTitleText = titleEl?.textContent?.toLowerCase() || '';
 
             const hashItem = this.GetHashItem(item);
             const titleText = this.AllHermidata[hashItem]?.title?.toLowerCase() || ItemTitleText;
 
-            const match = ( filtered
+            const match = filtered
             ? filtered.some(f => f.title.toLowerCase() === titleText)
-            : !query ) || titleText.includes(query);
+            : titleText.includes(query);
 
+            // Show only if it passes BOTH filters AND search
             item.style.display = match ? '' : 'none';
-            item.dataset.seachable = match ? 'true' : 'false';
         });
     }
     private applySearchSelection(input: HTMLInputElement, suggestionBox: HTMLDivElement, value: string) {
@@ -237,7 +266,8 @@ export class SortOption extends Sort {
 
         if (!searchInput) throw new Error('Element not found');
 
-        const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
+        const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-seachable="true"]`);
+        // const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
         if (!items.length) return;
 
         if (e_.key === 'ArrowDown') {
@@ -287,7 +317,7 @@ export class SortOption extends Sort {
     
             const thisYeay = new Date().getFullYear()
             const everySingleYear = thisYeay - 2020
-            const sortOrderOldType = ["2020s", "2015s", "2010s", "90s", "80s & older"];
+            const sortOrderOldType = ["2020s", "2010s", "2000s", "1990s", "1980s", "Unknown"];
             const sortOrderEveryYearType = []
             for (let index = 0; index < everySingleYear; index++) {
                 sortOrderEveryYearType.push(String(thisYeay - index))

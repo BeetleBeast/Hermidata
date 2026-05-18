@@ -218,3 +218,15 @@ export type FeedItem = {
     pubDate: Date,
     guid: string
 }
+
+export interface LatestValue {
+    title: string;
+    Type: AnyNovelType;
+    Chapter: number;
+    url: string;
+    status: AnyReadStatus;
+    novelStatuses: AnyNovelStatus;
+    tagsArray: string[];
+    notes: string;
+    date: string;
+}

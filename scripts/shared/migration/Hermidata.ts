@@ -293,7 +293,7 @@ export class HermidataMigration {
             }
         }
         console.warn("No migratable pair found, returning most recent");
-        objs.sort((a, b) => new Date(b.meta.updated || 0).getDate() - new Date(a.meta.updated || 0).getDate());
+        objs.sort((a, b) => new Date(b.meta.updated || 0).getTime() - new Date(a.meta.updated || 0).getTime());
         return objs[0] || {};
     }
     private static async migrationSteps(obj1: Hermidata, obj2: Hermidata, options = {}) {
@@ -347,7 +347,7 @@ export class HermidataMigration {
             return TrimTitle.trimTitle(item.title, item.url).title.toLowerCase() === TrimTitle.trimTitle(HermidataV3.title, HermidataV3.url).title.toLowerCase();
         });
         if (sameTitleMatches.length) {
-            sameTitleMatches.sort((a, b) => new Date(b.meta.updated || 0).getDate() - new Date(a.meta.updated || 0).getDate());
+            sameTitleMatches.sort((a, b) => new Date(b.meta.updated || 0).getTime() - new Date(a.meta.updated || 0).getTime());
             return sameTitleMatches[0];
         }
         // Prefer the same type if exists

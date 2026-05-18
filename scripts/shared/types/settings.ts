@@ -163,7 +163,7 @@ export const defaultSettings: Settings = {
         SaveTarget: {
             internalCollection: true,
             BrowserBookmark: true,
-            GoogleSpreadsheet: true,
+            GoogleSpreadsheet: false,
         },
         EnableKeyboardShortcuts: false,
         EnableAutoSubscribe: false,
@@ -179,14 +179,14 @@ export const defaultSettings: Settings = {
             novelType: 'Manga',
             readStatus: 'Viewing',
             novelStatus: 'Ongoing',
-            tags : [''],
+            tags : [],
             notes : ''
         },
         DefaultChoiceText_Menu: {
             novelType: 'Manga',
             readStatus: 'Planned',
             novelStatus: 'Ongoing',
-            tags: [''],
+            tags: [],
             notes: ''
         },
     },

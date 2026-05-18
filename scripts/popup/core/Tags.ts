@@ -224,10 +224,10 @@ export class TagsSystem {
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
     }
-    public async saveTags(): Promise<void> {
+    public async saveTags(settings: Settings | null): Promise<void> {
         if (!this._tags.length) return;
 
-        const settings = await getSettings();
+        settings = settings ?? await getSettings();
         const allExistingTags = settings.TagManagement.tagColoring ? settings.TagManagement.tagColoring : {};
         for (const tag of this._tags) {
             if (allExistingTags[tag]) continue; // ignore existing tags

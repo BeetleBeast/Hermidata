@@ -1,6 +1,6 @@
 import { ext } from "../shared/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
-import { getAllHermidata, getAllRawFeeds, saveHermidataV3, setAllRawFeeds } from "../shared/db/Storage";
+import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidataV3, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
 import { TrimTitle } from "../shared/StringOutput";
 
@@ -245,7 +245,7 @@ function isFeedUnchanged(feed: RawFeed, meta: Meta) {
         meta.etag &&
         meta.lastModified &&
         feed.lastToken === meta.etag &&
-        feed.lastBuildDate.getDate() === new Date(meta.lastModified).getDate() // FIXME: check this out, bullsh*t
+        feed.lastBuildDate.getTime() === new Date(meta.lastModified).getTime() // FIXME: check this out, bullsh*t
     );
 }
 async function fetchFeedText(feed: RawFeed | Feed) {
@@ -318,31 +318,26 @@ function saveFeedMetaData(feed: RawFeed, meta: Meta) {
 function compareLastSeen(items: FeedItem[], feed: RawFeed) {
     if (!items.length) return feed;
     // FIXME: this was bullsh*t redo it
-    /*
+    
     const latest = items[0];
     if (latest.guid !== feed.lastToken || latest.pubDate !== feed.lastBuildDate) {
-        const newCount = items.findIndex(i => i.guid === feed.lastSeenGuid && i.pubDate === feed.lastSeenDate);
+        const newCount = items.findIndex(i => i.guid === feed.lastToken && i.pubDate === feed.lastBuildDate);
         const newItems = newCount === -1 ? items : items.slice(0, newCount);
         notifyUser(feed, newItems);
-
-        const Foo = latest.pubDate;
     }
-    */
-
     return feed;
 }
 
 async function notifyUser(feed: RawFeed, newItems: FeedItem[]) {
     const allHermidata = allHermidataCashed || await getAllHermidata();
     if (shouldSkipFeed(feed, allHermidata)) return;
-    const title = `${feed.title}: ${newItems.length} new chapter${newItems.length > 1 ? "s" : ""}`;
-    const message = newItems[0].title.concat("\n");
-    ext.notifications.create({
-        type: "basic",
-        iconUrl: "assets/icon48.png",
-        title,
-        message
-    });
+    const settings = await getSettings();
+    // "Badge" | "MessageMinimum" | "MessageFull" | "None"
+    const notificationType = settings.ExtensionBehaviour.EnableNotification
+    if (notificationType === "None") return;
+    if (notificationType === "Badge") return createBadgeNotification(feed, newItems[0]);
+    if (notificationType === "MessageMinimum") return createMessageMinimumNotification(feed, newItems[0]);
+    if (notificationType === "MessageFull") return createMessageFullNotification(feed, newItems[0]);
 }
 
 export function getCurrentDate() {
@@ -352,3 +347,38 @@ export function getCurrentDate() {
     const year = now.getFullYear();
     return `${day}/${month}/${year}`;
 }
+
+function createBadgeNotification(rawFeed: RawFeed, feed: FeedItem) {
+    ext.notifications.create({
+        type: "image",
+        iconUrl: rawFeed.image || "assets/icon48.png",
+        title: rawFeed.items[0].title,
+        message: ""
+    });
+}
+function createMessageMinimumNotification(rawFeed: RawFeed, feed: FeedItem) {
+    const title = `${rawFeed.items[0].title}: new chapters`;
+    const message = rawFeed.items[0].title.concat("\n");
+    ext.notifications.create({
+        type: "basic",
+        iconUrl: rawFeed.image || "assets/icon48.png",
+        title,
+        message
+    });
+}
+function createMessageFullNotification(rawFeed: RawFeed, feed: FeedItem) {
+    const title = `${rawFeed.items[0].title}: new chapters`;
+    const message = `
+        title: ${rawFeed.items[0].title.concat("\n")}
+        domain: ${rawFeed.domain}
+        link: ${feed.link}
+    `;
+    
+    ext.notifications.create({
+        type: "basic",
+        iconUrl: rawFeed.image || "assets/icon48.png",
+        title,
+        message
+    });
+}
+

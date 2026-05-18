@@ -1,3 +1,4 @@
+import { ext } from "../../shared/BrowserCompat";
 import { defaultSettings, type Hermidata, type Settings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
@@ -238,6 +239,7 @@ export class TagManagement extends Build {
                 await this.setHermidata(hermidata);
             }
         }
+        await this.ResetLocalFilters();
     }
     private async deleteTag(tag: string) {
         // remove tag color
@@ -252,6 +254,7 @@ export class TagManagement extends Build {
                 await this.setHermidata(hermidata);
             }
         }
+        await this.ResetLocalFilters();
     }
     private async mergeTags(toBeRemovedTag: string, trueTag: string) {
         const allHermidata = await this.getAllHermidata();
@@ -261,12 +264,11 @@ export class TagManagement extends Build {
                 await this.setHermidata(hermidata);
             }
         }
+        await this.ResetLocalFilters();
     }
 
     private async getAllHermidata(): Promise<Record<string, Hermidata>> {
         const getAllHermidataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
         return Object.fromEntries(getAllHermidataList.map(h => [h.id, h]));
     }
-
-
 }

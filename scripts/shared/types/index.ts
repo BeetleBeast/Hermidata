@@ -31,6 +31,8 @@ export {
     type RawFeed,
     type FeedItem,
 
+    type LatestValue,
+
 } from "./popup";
 
 export type { AnyNovelType, AnyNovelStatus, AnyReadStatus } from "./popup";
