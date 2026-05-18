@@ -268,7 +268,10 @@ export async function getGoogleSheetURL(): Promise<string> {
     try {
         const url = await getSpreadsheetUrl();
         if (url && isValidGoogleSheetUrl(url)) return url;
-        return sheetUrlInput();
+        const settings = await getSettings();
+        const googleSpreadsheet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
+        if (googleSpreadsheet) return sheetUrlInput();
+        return '';
     } catch (error) {
         console.error('[Storage] getGoogleSheetURL:', error);
         return sheetUrlInput();

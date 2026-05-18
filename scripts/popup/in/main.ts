@@ -1,7 +1,7 @@
 
 import { ext } from '../../shared/BrowserCompat';
 import * as StringOutput from '../../shared/StringOutput';
-import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type Settings } from '../../shared/types/index';
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type InputArrayType, type LatestValue, type NovelStatus, type ReadStatus, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
@@ -104,7 +104,6 @@ class HermidataController {
 
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
-    public googleSheetURL: string | undefined;
     public pageTitle: string | undefined;
 
     private readonly Testing = false;
@@ -115,9 +114,8 @@ class HermidataController {
 
     public async init(): Promise<void> {
         this.forceSetClassic()
-        const [ CurrentTabInfo, googleSheetURL, settings ]: [CurrentTab, string, Settings] = await Promise.all([
+        const [ CurrentTabInfo, settings ]: [CurrentTab, Settings] = await Promise.all([
             this.getCurrentTabInfo(),
-            getGoogleSheetURL(),
             getSettings(),
         ]);
         
@@ -126,8 +124,6 @@ class HermidataController {
             settings.ContentTypesAndStatuses.STATUS_OPTIONS[0], 
             settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]
         );
-
-        this.googleSheetURL = googleSheetURL;
 
         // initialize Hermidata with current tab info
         await this.setHermidata(CurrentTabInfo);
@@ -314,24 +310,74 @@ class HermidataController {
 
     private async saveSheet(): Promise<void> { 
 
-        // from front-end
-        const title = getElement<HTMLInputElement>("#title")?.value;
-        const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
-        const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
-        const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
-        const novelStatuses = getElement<HTMLSelectElement>('#NovelStatus')?.value as AnyNovelStatus;
-        const notes = getElement<HTMLInputElement>("#notes")?.value || "";
-        // from back-end
-        const url = this.hermidata.url;
-        const date = new Intl.DateTimeFormat('en-GB').format(new Date());
+        // get latest values from UI and back-end
+        const latestValue = this.getLatestValue();
+        // update this.hermidata with latest values
+        this.updateHermidata(latestValue);
 
-        const tagsArray = this.tagsSystem.tags;
+        
+        // TODO: sheck if it works
+        // migrate if duplicate
+        const hasMigrated = await this.migrateIfDuplicate();
+        
+        const settings = await getSettings();
+        const allowedSendSHeet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
+        const allowedSendBookmark = settings.ExtensionBehaviour.SaveTarget.BrowserBookmark;
+        // update settings ( add new tags if new added in UI )
+        await this.updateSettings(settings);
 
-        if (!title || !Type || !Chapter || !status) throw new Error('Missing required fields');
+        // save to Browser in JSON format
+        const savedInStorage = await updateChapterProgress(latestValue.title, latestValue.Type, this.hermidata);
+        // save to google sheet
+        const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet}, latestValue);
 
+        if (!this.Testing && savedInStorage && saved ) setTimeout( () => window.close(), 400);
+    }
+    private async saveBookmarkOrAndSheet(allowenced: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }, latestValue: LatestValue): Promise<boolean> {
+        const data: InputArrayType = [latestValue.title, latestValue.Type, latestValue.Chapter, latestValue.url, latestValue.status, latestValue.date, latestValue.tagsArray, latestValue.notes]
+        // save to google sheet & bookmark/replace bookmark
+        if (allowenced.allowedSendBookmark || allowenced.allowedSendSHeet || (allowenced.allowedSendBookmark && allowenced.allowedSendSHeet)) {
+            const saved = await ext.runtime.sendMessage({
+                type: "SAVE_NOVEL",
+                data: data,
+                args: { 
+                    allowedSendSHeet: allowenced.allowedSendSHeet, 
+                    allowedSendBookmark: allowenced.allowedSendBookmark
+                },
+            }) as boolean;
+            return saved
+        }
+        return true
+    }
+    private async updateSettings(settings: Settings): Promise<void> {
+        // update tags in settings if new tags are added
+        await this.tagsSystem.saveTags(settings);
+    }
+    private async migrateIfDuplicate(): Promise<boolean> {
+        // if the Hermidata is a past entry but with a mofified Type
+        // then give option to migrate it to the new type
+        const newPast = new PastHermidata(this.hermidata);
+        const newHermidata = await newPast.checkForDuplicates();
+        console.log('oldHermidata', this.hermidata);
+        console.log('newHermidata', newHermidata);
+        if (newHermidata) {
+        // this.hermidata = newHermidata;
+        return true
+        }
+        return false
+    }
+    private updateHermidata(latestValue: LatestValue) {
+        const { title, Type, Chapter, status, novelStatuses, tagsArray, notes } = latestValue;
         this.hermidata.title = title;
         this.hermidata.type = Type;
         this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current = Number(Chapter);
+        this.updateHermidataChapterHistory();
+        this.hermidata.status = status;
+        this.hermidata.meta.novelStatus = novelStatuses;
+        this.hermidata.meta.tags = tagsArray;
+        this.hermidata.meta.notes = notes;
+    }
+    private updateHermidataChapterHistory() {
         // if history is undefined
         if (this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history === undefined) this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = [];
         // max 20 entries in history
@@ -342,37 +388,45 @@ class HermidataController {
         this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.push(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current);
         // only unique entries in history
         this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = Array.from( new Set(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history) );
-        this.hermidata.status = status;
-        this.hermidata.meta.novelStatus = novelStatuses;
-        this.hermidata.meta.tags = tagsArray;
-        this.hermidata.meta.notes = notes;
+        
+    }
+    private getLatestValue(): LatestValue {
+        // from front-end
+        const { title, Type, Chapter, status, novelStatuses, notes } = this.getLatestValueFromUI();
+        // from back-end
+        const { url, date, tagsArray } = this.getLatestValueFromBackEnd();
 
-        // TODO: sheck if it works
-        // if the Hermidata is a past entry but with a mofified Type
-        // then give option to migrate it to the new type
-        const newPast = new PastHermidata(this.hermidata);
-        const newHermidata = await newPast.checkForDuplicates();
-        console.log('oldHermidata', this.hermidata);
-        console.log('newHermidata', newHermidata);
-        // if (newHermidata) this.hermidata = newHermidata;
+        if (!title || !Type || !Chapter || !status) throw new Error('Missing required fields');
 
-        // update tags in settings if new tags are added
-        await this.tagsSystem.saveTags();
+        return { title, Type, Chapter: Number(Chapter), url, status, novelStatuses, date, tagsArray, notes }
+    }
+    private getLatestValueFromUI() {
+        const title = getElement<HTMLInputElement>("#title")?.value;
+        const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
+        const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
+        const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
+        const novelStatuses = getElement<HTMLSelectElement>('#NovelStatus')?.value as AnyNovelStatus;
+        const notes = getElement<HTMLInputElement>("#notes")?.value || "";
+        return {
+            title,
+            Type,
+            Chapter,
+            status,
+            novelStatuses,
+            notes
+        }
+    }
+    private getLatestValueFromBackEnd() {
+        const url = this.hermidata.url;
+        const date = new Intl.DateTimeFormat('en-GB').format(new Date());
 
-        // save to Browser in JSON format
-        const savedInStorage = await updateChapterProgress(title, Type, this.hermidata);
-        this.past = null;
+        const tagsArray = this.tagsSystem.tags;
 
-        const data: InputArrayType = [title, Type, Number(Chapter), url, status, date, tagsArray, notes]
-
-        // save to google sheet & bookmark/replace bookmark
-        const savedAsBookmarkAndSheet = await ext.runtime.sendMessage({
-            type: "SAVE_NOVEL",
-            data: data,
-            args: ""
-        }) as boolean;
-
-        if (!this.Testing && savedInStorage && savedAsBookmarkAndSheet ) setTimeout( () => window.close(), 400);
+        return {
+            url,
+            date,
+            tagsArray
+        }
     }
 }
 

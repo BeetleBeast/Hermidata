@@ -7,7 +7,7 @@ import { handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handle
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         switch (msg.type) {
-            case 'SAVE_NOVEL':    return handleSaveNovel(msg.data, sendResponse);
+            case 'SAVE_NOVEL':    return handleSaveNovel(msg.data, msg.args, sendResponse);
             case 'RELOAD_RSS_SYNC': return handleReloadRss();
             case 'GET_LAST_SYNC': return handleGetLastSync(sendResponse)
             case 'GET_RSS':       return handleGetRSS(sendResponse)

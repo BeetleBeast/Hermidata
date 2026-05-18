@@ -34,11 +34,11 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export function handleSaveNovel(data: InputArrayType, sendResponse: (r: unknown) => void): true {
+export function handleSaveNovel(data: InputArrayType, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): true {
     try {
         getToken((token: number) => {
-            writeToSheet(token, data);
-            writeToBookmarks(data);
+            if (args.allowedSendSHeet) writeToSheet(token, data);
+            if (args.allowedSendBookmark) writeToBookmarks(data);
         });
         updateCurrentBookmarkAndIcon(data[3]);
         console.log('[Background] SAVE_NOVEL complete');

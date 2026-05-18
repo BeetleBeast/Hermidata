@@ -3,7 +3,6 @@ import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/S
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidataV3 } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
-import { HermidataMigration } from "../../shared/migration/Hermidata";
 
 
 

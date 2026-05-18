@@ -163,7 +163,7 @@ export const defaultSettings: Settings = {
         SaveTarget: {
             internalCollection: true,
             BrowserBookmark: true,
-            GoogleSpreadsheet: true,
+            GoogleSpreadsheet: false,
         },
         EnableKeyboardShortcuts: false,
         EnableAutoSubscribe: false,
