@@ -1,3 +1,4 @@
+import { ext } from "../shared/BrowserCompat";
 import { defaultSettings, type Hermidata, type Settings } from "../shared/types";
 import { getElement, setElement } from "../utils/Selection";
 
@@ -76,6 +77,20 @@ export abstract class Build {
                 chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
                     if (!response.success) reject(new Error(response.error));
                     resolve(await response.result as T);
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+    protected async ResetLocalFilters(): Promise<boolean> {
+        // when tags are changed / removed the local ( browser extension local storage ) filters need to be reset
+        try {
+            return new Promise((resolve, reject) => {
+                ext.runtime.sendMessage({ type: "RESET_LOCAL_FILTERS" }, (response: { success: boolean, error?: string }) => {
+                    if (!response.success) reject(new Error(response.error));
+                    resolve(true);
                 });
             });
         } catch (error) {

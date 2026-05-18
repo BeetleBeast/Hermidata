@@ -97,6 +97,7 @@ export class ContentTypesAndStatuses extends Build {
             settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS = settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS.filter((novelStatus) => novelStatus !== input);
             settings.ContentTypesAndStatuses.STATUS_OPTIONS = settings.ContentTypesAndStatuses.STATUS_OPTIONS.filter((readStatus) => readStatus !== input);
             this.setSettings(settings);
+            this.ResetLocalFilters();
         });
 
         item.append(inputElement, removeBtn);
@@ -113,7 +114,7 @@ export class ContentTypesAndStatuses extends Build {
         if (!newNovelType) return;
 
         settings.ContentTypesAndStatuses.TYPE_OPTIONS.push(newNovelType);
-
+        this.ResetLocalFilters();
         this.setSettings(settings);
     }
     private async saveNewNovelStatus() {
@@ -123,7 +124,7 @@ export class ContentTypesAndStatuses extends Build {
         if (!newNovelStatus) return;
         
         settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS.push(newNovelStatus);
-
+        this.ResetLocalFilters();
         this.setSettings(settings);
     }
     private async saveNewReadStatus() {
@@ -133,7 +134,7 @@ export class ContentTypesAndStatuses extends Build {
         if (!newReadStatus) return;
         
         settings.ContentTypesAndStatuses.STATUS_OPTIONS.push(newReadStatus);
-
+        this.ResetLocalFilters();
         this.setSettings(settings);
     }
 

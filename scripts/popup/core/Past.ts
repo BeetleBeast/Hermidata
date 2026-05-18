@@ -166,7 +166,7 @@ export class PastHermidata {
             return TrimTitle.trimTitle(item.title, item.url).title.toLowerCase() === TrimTitle.trimTitle(this.hermidata.title, this.hermidata.url).title.toLowerCase();
         });
         if (sameTitleMatches.length) {
-            sameTitleMatches.sort((a, b) => new Date(b.meta.updated).getDate() - new Date(a.meta.updated).getDate());
+            sameTitleMatches.sort((a, b) => new Date(b.meta.updated).getTime() - new Date(a.meta.updated).getTime());
             return sameTitleMatches[0];
         }
          // Prefer the same type if exists

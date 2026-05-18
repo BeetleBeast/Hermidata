@@ -1,7 +1,7 @@
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/BrowserCompat"
 import { getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
-import type { Hermidata, InputArrayType, RawFeed } from "../shared/types/index"
+import type { Filters, Hermidata, InputArrayType, RawFeed } from "../shared/types/index"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
@@ -156,4 +156,12 @@ function findPaths(node: chrome.bookmarks.BookmarkTreeNode, currentPath = ''): s
     const newPath = currentPath ? `${currentPath}/${node.title}` : node.title;
     if (!node.children) return [newPath];
     return node.children.flatMap(child => findPaths(child, newPath));
+}
+export function handleLocalFilterReset(sendResponse: (r: unknown) => void): true {
+    ext.storage.local.get('lastFilter', (result: { lastFilter: Filters }) => {
+        if (ext.runtime.lastError) return console.error(ext.runtime.lastError.message);
+        if (result.lastFilter) ext.storage.local.remove('lastFilter');
+    })
+    sendResponse({ status: 'ok' });
+    return true;
 }

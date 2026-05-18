@@ -224,7 +224,7 @@ export class FeedItem {
     private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
         pubDate.className = "hermidata-item-pubDate"
-        const dateString = item.rss?.latestItem.pubDate ? new Date(item.rss.latestItem.pubDate).toLocaleDateString() : 'N/A';
+        const dateString = item.rss?.latestItem.pubDate ? new Date(item.rss.latestItem.pubDate).toLocaleDateString() : new Date(item.meta.added).toLocaleDateString();
         const pubDateText = `Published: ${dateString}`;
         pubDate.textContent = pubDateText;
         pubDate.title = pubDateText;

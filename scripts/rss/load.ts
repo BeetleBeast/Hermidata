@@ -146,7 +146,6 @@ export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFe
 
     if (latestChapter) {
         feed.chapter.latest = latestChapter;
-        feed.meta.updated = new Date().toISOString();
     }
 
     // Update feed info
@@ -166,8 +165,7 @@ export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFe
             latest: latestChapter ?? feed.chapter.latest
         },
         meta: {
-            ...feed.meta,
-            updated: latestChapter ? new Date().toISOString() : feed.meta.updated
+            ...feed.meta
         }
     };
     return newFeed;

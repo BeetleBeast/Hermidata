@@ -28,9 +28,21 @@ export abstract class Sort extends RssBuild {
         };
 
         const compareDate = (a: HTMLDivElement, b: HTMLDivElement, key: HermidataDateType, reverse: boolean = false) => {
-            const dateA = new Date(getData(a).meta[key] || 0);
-            const dateB = new Date(getData(b).meta[key] || 0);
-            return reverse ? dateA.getDate() - dateB.getDate() : dateB.getDate() - dateA.getDate();
+            const dateA = new Date(getData(a).meta[key] || 0).getTime();
+            const dateB = new Date(getData(b).meta[key] || 0).getTime();
+            return reverse ? dateA - dateB : dateB - dateA;
+        };
+        const compareTypeAndTitle = (a: HTMLDivElement, b: HTMLDivElement, reverse: boolean = false) => {
+            // Sort by type
+            // and then alphabeticly
+            const typeA = getData(a).type;
+            const typeB = getData(b).type;
+            const titleA = getData(a).title?.toLowerCase() || '';
+            const titleB = getData(b).title?.toLowerCase() || '';
+            const positionSoterByType = reverse ? typeB.localeCompare(typeA) : typeA.localeCompare(typeB);
+            const positionSortByTitle = reverse ? titleB.localeCompare(titleA) : titleA.localeCompare(titleB);
+            if (positionSoterByType === 0) return positionSortByTitle;
+            return positionSoterByType || positionSortByTitle;
         };
 
         // Normalize sort type
@@ -46,6 +58,9 @@ export abstract class Sort extends RssBuild {
                 break;
             case "Latest-Updates":
                 entries.sort((a, b) => compareDate(a, b, "updated", reverse));
+                break;
+            case 'Novel-Type':
+                entries.sort((a, b) => compareTypeAndTitle(a, b, reverse));
                 break;
             default:
                 return;
@@ -70,9 +85,9 @@ export abstract class Sort extends RssBuild {
         };
 
         const compareDate = (a: HTMLDivElement, b: HTMLDivElement, key: HermidataSortType, reverse = false) => {
-            const dateA = new Date(getData(a).rss?.latestItem[key] || 0);
-            const dateB = new Date(getData(b).rss?.latestItem[key] || 0);
-            return reverse ? dateA.getDate() - dateB.getDate() : dateB.getDate() - dateA.getDate();
+            const dateA = new Date(getData(a).rss?.latestItem[key] || 0).getTime();
+            const dateB = new Date(getData(b).rss?.latestItem[key] || 0).getTime();
+            return reverse ? dateA - dateB : dateB - dateA;
         };
 
         // Normalize sort type
@@ -109,9 +124,9 @@ export abstract class Sort extends RssBuild {
     }
     private createDacadeBucket(year: string): string {
 
-        const dacade = year.slice(0, -1).concat('0s');
+        const decade = year.slice(0, -1).concat('0s');
 
-        return dacade;
+        return decade;
     }
     private createYearBucket(year: string): string {
 

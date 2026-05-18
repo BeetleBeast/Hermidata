@@ -1,10 +1,10 @@
-export type NormalSortsType = 'Alphabet' | 'Recently-Added' | 'Latest-Updates';
+export type NormalSortsType = 'Alphabet' | 'Novel-Type' | 'Recently-Added' | 'Latest-Updates';
 export type ExeptionSortsType = '';
 export type ReverseAllsortsType = `Reverse-${NormalSortsType}`;
 
 export type AllsortsType = (NormalSortsType | ReverseAllsortsType) | ExeptionSortsType;
 
-export const AllSorts: AllsortsType[] = ['Alphabet', 'Recently-Added', 'Latest-Updates']
+export const AllSorts: AllsortsType[] = ['Alphabet', 'Novel-Type', 'Recently-Added', 'Latest-Updates']
 
 export type MenuOption = {
     label: string;
