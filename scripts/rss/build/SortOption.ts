@@ -67,7 +67,7 @@ export class SortOption extends Sort {
         const novelStatusSection = this.createFilterSection(filterName.NovelStatus, settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS, filterClassName.NovelStatus);
     
         // 4. Source
-        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).map(item => item.source).filter(Boolean)));
+        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta.altSources).filter(Boolean)));
         const sourceSection = this.createFilterSection(filterName.Source, allSources, filterClassName.Source);
 
         // 5. Tags

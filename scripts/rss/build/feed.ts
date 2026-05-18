@@ -234,8 +234,9 @@ export class FeedItem {
         const Elfooter = document.createElement("div");
 
         Elfooter.className = "hermidata-item-footer"
-        const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]
-        Elfooter.textContent = String(domain);
+        const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+        const altDomains = item.meta.altSources.length >= 2 ? item.meta.altSources.join(', ') : '';
+        Elfooter.textContent = altDomains ? String(altDomains) : String(domain);
         Elfooter.title = String(domain);
         return Elfooter
     }
