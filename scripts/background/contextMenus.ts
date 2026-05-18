@@ -18,6 +18,7 @@ export function initContextMenus() {
 
 function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Settings) {
     // Send tab info to your saving logic
+    
     if (!info.linkUrl) return
     fetch(info.linkUrl, { method: "HEAD" })
     .then(response => {
@@ -30,7 +31,7 @@ function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Sett
         let tags = Settings.DefaultBookmarkSettings.DefaultChoiceText_Menu.tags;
         let notes = Settings.DefaultBookmarkSettings.DefaultChoiceText_Menu.notes;
         const data: InputArrayType = [title ?? "", type, chapter, url, status, date, tags, notes];
-        handleSaveNovel(data, () => {});
+        handleSaveNovel(data, { allowedSendSHeet: Settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, allowedSendBookmark: Settings.ExtensionBehaviour.SaveTarget.BrowserBookmark }, () => {});
     })
     .catch(err => console.error("Failed to resolve redirect:", err));
 }
