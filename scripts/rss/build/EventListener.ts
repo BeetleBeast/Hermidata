@@ -225,6 +225,7 @@ export class EventListener extends RssBuild {
         item.className = item.className.replace(oldKey, newKey);
     
         console.log(`[Hermidata] Renamed "${oldData.title}" → "${newTitle}"`);
+        await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
     }
     
     private async remove(target: HTMLDivElement | null) {
@@ -241,6 +242,7 @@ export class EventListener extends RssBuild {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
             deleteHermidata(hashItem)
         }
+        await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
     }
     
     private async unsubscribe(target: HTMLDivElement | null) {
@@ -262,6 +264,7 @@ export class EventListener extends RssBuild {
         console.log('un-link RSS to extention')
         this.reloadContent(NotificationSection, AllItemSection)
         console.log('reloading notification')
+        await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
     }
     private async unLinkRSSFeed({hash, title = '', type = '', }: { hash?: string; title?: string; type?: string; }) {
         const key = hash || returnHashedTitle(title, type);
