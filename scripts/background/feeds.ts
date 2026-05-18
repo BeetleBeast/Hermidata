@@ -352,13 +352,13 @@ function createBadgeNotification(rawFeed: RawFeed, feed: FeedItem) {
     ext.notifications.create({
         type: "image",
         iconUrl: rawFeed.image || "assets/icon48.png",
-        title: feed.title,
+        title: rawFeed.items[0].title,
         message: ""
     });
 }
 function createMessageMinimumNotification(rawFeed: RawFeed, feed: FeedItem) {
-    const title = `${feed.title}: new chapters`;
-    const message = feed.title.concat("\n");
+    const title = `${rawFeed.items[0].title}: new chapters`;
+    const message = rawFeed.items[0].title.concat("\n");
     ext.notifications.create({
         type: "basic",
         iconUrl: rawFeed.image || "assets/icon48.png",
@@ -367,8 +367,8 @@ function createMessageMinimumNotification(rawFeed: RawFeed, feed: FeedItem) {
     });
 }
 function createMessageFullNotification(rawFeed: RawFeed, feed: FeedItem) {
-    const title = `${feed.title}: new chapters`;
-    const message = `${feed.title.concat("\n")}
+    const title = `${rawFeed.items[0].title}: new chapters`;
+    const message = `${rawFeed.items[0].title.concat("\n")}
     domain: ${rawFeed.domain}
     link: ${feed.link}`;
     
