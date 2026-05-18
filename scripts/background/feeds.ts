@@ -368,9 +368,11 @@ function createMessageMinimumNotification(rawFeed: RawFeed, feed: FeedItem) {
 }
 function createMessageFullNotification(rawFeed: RawFeed, feed: FeedItem) {
     const title = `${rawFeed.items[0].title}: new chapters`;
-    const message = `${rawFeed.items[0].title.concat("\n")}
-    domain: ${rawFeed.domain}
-    link: ${feed.link}`;
+    const message = `
+        title: ${rawFeed.items[0].title.concat("\n")}
+        domain: ${rawFeed.domain}
+        link: ${feed.link}
+    `;
     
     ext.notifications.create({
         type: "basic",
