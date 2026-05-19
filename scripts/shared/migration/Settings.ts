@@ -1,5 +1,6 @@
 import { putSettings } from "../db/db";
 import { defaultSettings, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type NotificationTypes, type Settings, type FolderMapping, type FolderRule } from "../types/index";
+import type { DefaultChoice, SaveTargets } from "../types/settings";
 
 type FolderEntry = { path: string }
 
@@ -52,6 +53,35 @@ interface oldSettingsV5 {
     AllowContextMenu: boolean
 }
 
+interface oldSettingsV6 {
+    version: number;
+
+    AccountAndConnections: {
+        spreadsheetUrl: string;
+    }
+    ExtensionBehaviour: {
+        EnableLightMode: boolean;
+        AllowContextMenu: boolean
+        EnableNotification: NotificationTypes;
+        EnableKeyboardShortcuts: boolean;
+        EnableAutoSubscribe: boolean;
+        SaveTarget: SaveTargets;
+    }
+    DefaultBookmarkSettings: {
+        DefaultChoice: DefaultChoice,
+        DefaultChoiceText_Menu: DefaultChoice,
+    }
+    ContentTypesAndStatuses: {
+        TYPE_OPTIONS : AnyNovelType[],
+        STATUS_OPTIONS : AnyReadStatus[],
+        NOVEL_STATUS_OPTIONS: AnyNovelStatus[],
+    }
+    TagManagement: {
+        tagColoring: Record<string, string>,
+    }
+    FolderMapping: FolderMapping,
+}
+
 type oldFoldermapping = Record<string, Record<string, FolderEntry>>;
 
 export class SettingsMigration {
@@ -72,7 +102,7 @@ export class SettingsMigration {
         
 
         const result: Settings = {
-            version: 6,
+            version: 7,
             AccountAndConnections: {
                 spreadsheetUrl: knownSettings.spreadsheetUrl
             },
@@ -81,7 +111,11 @@ export class SettingsMigration {
                 AllowContextMenu: knownSettings.AllowContextMenu,
                 EnableNotification: "None" as NotificationTypes,
                 EnableKeyboardShortcuts: false as boolean,
-                EnableAutoSubscribe: false as boolean,
+                AutoSubscribe: {
+                    EnableAutoSubscribe: false as boolean,
+                    AllowSimilarityScanning: false as boolean,
+                    Threshold: 1.0
+                },
                 SaveTarget: {
                     internalCollection: true,
                     GoogleSpreadsheet: true as boolean,
@@ -116,8 +150,27 @@ export class SettingsMigration {
         };
         return result;
     };
-    public static async migrateSettingsToLatest(settings: oldSettingsV5 | oldSettingsV4 | unknown, version: number): Promise<void> {
-        
+    public static async migrateSettingsToLatest(settings: oldSettingsV6 | oldSettingsV5 | oldSettingsV4 | unknown, version: number): Promise<void> {
+        if (version === 6) {
+            const knownSettings = settings as oldSettingsV6;
+            const result: Settings = {
+                ...knownSettings,
+                version: 7,
+                ExtensionBehaviour: {
+                    EnableLightMode: knownSettings.ExtensionBehaviour.EnableLightMode,
+                    AllowContextMenu: knownSettings.ExtensionBehaviour.AllowContextMenu,
+                    AutoSubscribe: {
+                        EnableAutoSubscribe: knownSettings.ExtensionBehaviour.AllowContextMenu,
+                        AllowSimilarityScanning: false as boolean,
+                        Threshold: 1.0
+                    },
+                    EnableNotification: knownSettings.ExtensionBehaviour.EnableNotification,
+                    EnableKeyboardShortcuts: knownSettings.ExtensionBehaviour.EnableKeyboardShortcuts,
+                    SaveTarget: knownSettings.ExtensionBehaviour.SaveTarget,
+                }
+            }
+            await putSettings(result);
+        }
         if (version === 5) {
             console.warn("Settings version is newer than expected. Attempting best-effort migration.");
             const knownSettings = settings as oldSettingsV5;

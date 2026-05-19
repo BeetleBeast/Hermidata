@@ -83,7 +83,16 @@
             <hr>
             <br>
             <label for="enableAutoSubscribe">Enable Auto-subscribe Bookmarks ( Beta )</label>
-            <input type="checkbox" id="enableAutoSubscribe" title="Enable Auto-subscribe Bookmarks" disabled>
+            <input type="checkbox" id="enableAutoSubscribe" title="Enable Auto-subscribe Bookmarks">
+            <form class="formIndented">
+                <label for="enableAutoSubscribeThreshold">Notification With miminimum description</label>
+                <input type="radio" id="enableAutoSubscribeThreshold" name="enableAutoSubscribeThreshold" title="enable auto subscribe threshold" value="false">
+                <form class="formIndented">
+                    <label for="autoSubscribeThreshold">Auto-subscribe similarity threshold ( between 0.9 and 1 )</label>
+                    <p>The percentage of similarity between two bookmarks to auto-subscribe</p>
+                    <input type="range" min="0.9" max="1"  id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold" value="1.0" disabled>
+                </form>
+            </form>
             <br>
             <hr>
             <br>

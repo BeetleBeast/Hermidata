@@ -20,10 +20,15 @@ export interface DefaultChoice {
 export type NotificationTypes = "Badge" | "MessageMinimum" | "MessageFull" | "None";
 
 export type SaveTargets = {
-        internalCollection: true,
-        GoogleSpreadsheet: boolean,
-        BrowserBookmark: boolean
-    }
+    internalCollection: true,
+    GoogleSpreadsheet: boolean,
+    BrowserBookmark: boolean
+}
+export type AutoSubscribe = {
+    EnableAutoSubscribe: boolean;
+    AllowSimilarityScanning: boolean,
+    Threshold: number; // only allow between 0.9 and 1.0
+}
 export interface Settings {
     version: number;
 
@@ -35,7 +40,7 @@ export interface Settings {
         AllowContextMenu: boolean
         EnableNotification: NotificationTypes;
         EnableKeyboardShortcuts: boolean;
-        EnableAutoSubscribe: boolean;
+        AutoSubscribe: AutoSubscribe;
         SaveTarget: SaveTargets;
     }
     DefaultBookmarkSettings: {
@@ -153,7 +158,7 @@ export const DefaultFoldermapping: FolderMapping = {
 
 
 export const defaultSettings: Settings = {
-    version: 6,
+    version: 7,
     AccountAndConnections: {
         spreadsheetUrl: '',
     },
@@ -166,7 +171,11 @@ export const defaultSettings: Settings = {
             GoogleSpreadsheet: false,
         },
         EnableKeyboardShortcuts: false,
-        EnableAutoSubscribe: false,
+        AutoSubscribe: {
+            EnableAutoSubscribe: false,
+            AllowSimilarityScanning: false,
+            Threshold: 1.0
+        },
         EnableNotification: 'None',
     },
     ContentTypesAndStatuses: {

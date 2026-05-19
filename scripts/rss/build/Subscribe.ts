@@ -1,11 +1,17 @@
 import { PastHermidata } from "../../popup/core/Past";
-import { getAllRawFeeds } from "../../shared/db/Storage";
+import { getAllRawFeeds, getSettings } from "../../shared/db/Storage";
+import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { findByTitleOrAltV2, TrimTitle } from "../../shared/StringOutput";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
 import { getElement } from "../../utils/Selection";
 import { RssBuild } from "../build";
 import { linkRSSFeed } from "../load";
 
+type match = {
+    Hermidata: Hermidata,
+    RawFeed: RawFeed
+}
+type AtLeastPointNine = number & { readonly __brand: 'AtLeastPointNine' };
 export class Subscribe extends RssBuild {
 
     private matchedFeed: RawFeed | null = null;
@@ -66,5 +72,56 @@ export class Subscribe extends RssBuild {
         linkRSSFeed(currentTitle, currentType, this.hermidata.url, this.matchedFeed);
         await this.reloadContent(notificationSection, allItemSection);
         console.log('Linked RSS to extension');
+    }
+    private async autoSubscribe(): Promise<boolean> {
+        const settings = await getSettings();
+        const autoSubscribe = settings?.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe ?? false;
+        const allowSimilarityScanning = settings?.ExtensionBehaviour.AutoSubscribe.AllowSimilarityScanning ?? false;
+        const autoSubscribeThreshold = settings?.ExtensionBehaviour.AutoSubscribe.Threshold ?? false;
+        if (!autoSubscribe) return false;
+        // 1. take all raw feeds
+        // raw feeds are automaticly collected by the background script
+        const allRawFeeds = await getAllRawFeeds();
+        
+        // 2. take all hermidata
+        const allHermidata = await PastHermidata.getAllHermidata();
+
+        // 3. find matching feed
+        const mathingFeeds = await this.findMatchingFeeds(allRawFeeds, allHermidata, allowSimilarityScanning, autoSubscribeThreshold);
+        if (!mathingFeeds || mathingFeeds.length === 0) return false;
+        
+        // 4. link matching feed
+        for (const { RawFeed, Hermidata } of mathingFeeds) {
+            linkRSSFeed(Hermidata.title, Hermidata.type, Hermidata.url, RawFeed);
+        }
+        return true;
+    }
+    private async findMatchingFeeds(allRawFeeds: Record<string, RawFeed>, allHermidata: Record<string, Hermidata>, allowSimilarityScanning = false, _threshold = 1.0,): Promise<match[] | null> {
+        // enforce at least 90%
+        const threshold = this.enforcePointNine(_threshold);
+        if (!threshold) return null;
+
+        const matches: match[] = [];
+        for (const RawFeed of Object.values(allRawFeeds)) {
+            // find matching entry
+            const rawFeedTitle = RawFeed.items[0].title ?? RawFeed.title; // use first item title if available otherwise use raw feed title ( some feeds have no items )
+            const rawFeedTitleTrimmed = TrimTitle.trimTitle(rawFeedTitle, RawFeed.url).title;
+            const matchedEntry = findByTitleOrAltV2(rawFeedTitleTrimmed, allHermidata); // 100% match only
+            if (matchedEntry) matches.push({ RawFeed, Hermidata: matchedEntry });
+            else if (threshold < 1.0 && allowSimilarityScanning) {
+                const possibleMatchList = await HermidataMigration.findPotentialSameHermidata(rawFeedTitleTrimmed, allHermidata, threshold); // 90% at least match
+                if (possibleMatchList) {
+                    const possibleMatch = possibleMatchList[0];
+                    console.table(possibleMatchList);
+                    matches.push({ RawFeed, Hermidata: this.AllHermidata[possibleMatch.key] });
+                }
+            }
+        }
+        if (matches.length > 0) return matches;
+        return null;
+    }
+    private enforcePointNine(value: number): AtLeastPointNine | null {
+        if (value < 0.9 || value > 1.1 || typeof value !== 'number') return null
+        return value as AtLeastPointNine;
     }
 }
