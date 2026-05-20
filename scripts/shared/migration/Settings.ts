@@ -114,7 +114,8 @@ export class SettingsMigration {
                 AutoSubscribe: {
                     EnableAutoSubscribe: false as boolean,
                     AllowSimilarityScanning: false as boolean,
-                    Threshold: 1.0
+                    Threshold: 1.0,
+                    HermidataNotLinkedToRSS: {}
                 },
                 SaveTarget: {
                     internalCollection: true,
@@ -162,7 +163,8 @@ export class SettingsMigration {
                     AutoSubscribe: {
                         EnableAutoSubscribe: knownSettings.ExtensionBehaviour.AllowContextMenu,
                         AllowSimilarityScanning: false as boolean,
-                        Threshold: 1.0
+                        Threshold: 1.0,
+                        HermidataNotLinkedToRSS: {}
                     },
                     EnableNotification: knownSettings.ExtensionBehaviour.EnableNotification,
                     EnableKeyboardShortcuts: knownSettings.ExtensionBehaviour.EnableKeyboardShortcuts,

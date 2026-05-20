@@ -21,6 +21,9 @@ export class BuildRSSController {
     public async makeSubscibeBtn(): Promise<void> {
         new Subscribe(this.hermidata, await RssBuild.init()).makeSubscibeBtn();
     }
+    public async activateAutoSubscribe(): Promise<void> {
+        new Subscribe(this.hermidata, await RssBuild.init()).autoSubscribe();
+    }
 
     public async makeSortSection(sortSection: HTMLElement): Promise<void> {
         // makeSortHeader(sortSection);

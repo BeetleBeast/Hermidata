@@ -61,6 +61,9 @@ export function returnHashedTitle(title: string, type: string, url: string = '',
 export function returnBookmarkHash(bookmarkLabel: string) {
     return simpleHash(bookmarkLabel);
 }
+export function returnRawFeedHash(title: string, url: string) {
+    return simpleHash(title + url);
+}
 
 export function simpleHash(str: string) {
     let hash = 0, i, chr;

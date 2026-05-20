@@ -32,6 +32,7 @@ export {
     type FeedItem,
 
     type LatestValue,
+    type PotentialSameHermidata,
 
 } from "./popup";
 

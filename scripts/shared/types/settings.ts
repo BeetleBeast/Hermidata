@@ -28,6 +28,8 @@ export type AutoSubscribe = {
     EnableAutoSubscribe: boolean;
     AllowSimilarityScanning: boolean,
     Threshold: number; // only allow between 0.9 and 1.0
+    // Record<Hermidata id, RSS id>
+    HermidataNotLinkedToRSS: Record<string, string>;
 }
 export interface Settings {
     version: number;
@@ -174,7 +176,8 @@ export const defaultSettings: Settings = {
         AutoSubscribe: {
             EnableAutoSubscribe: false,
             AllowSimilarityScanning: false,
-            Threshold: 1.0
+            Threshold: 1.0,
+            HermidataNotLinkedToRSS: {},
         },
         EnableNotification: 'None',
     },

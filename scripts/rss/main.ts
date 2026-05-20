@@ -64,6 +64,8 @@ export class RSS {
         await this.BuildRSS.attachEventListeners()
 
         await this.BuildRSS.makeFooterSection();
+
+        await this.BuildRSS.activateAutoSubscribe();
     }
     public changePageToClassic() {
         setElement("#HDRSSBtn", el => el.classList = "Btn");

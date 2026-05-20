@@ -4,7 +4,7 @@ import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
 import { getAllHermidata, isHermidataV6 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
 import { returnHashedTitle, TrimTitle } from "../StringOutput";
-import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
+import type { AllHermidata, Bookmark, Hermidata, HermidataV5, PotentialSameHermidata } from "../types";
 
 
 interface DuplicationResult {
@@ -152,8 +152,8 @@ export class HermidataMigration {
         }
     }
 
-    public static async findPotentialSameHermidata(title: string, allHermidata: { [key: string]: Hermidata }, threshold: number): Promise<{ key: string, titleFound: string, titleGiven: string, score: number}[]> {
-        const data = allHermidata || await getAllHermidata();
+    public static async findPotentialSameHermidata(title: string, allHermidata: { [key: string]: Hermidata }, threshold: number): Promise<PotentialSameHermidata> {
+        const data = allHermidata;
         const entries = Object.entries(data);
         const HermidataFound = [];
 
@@ -181,10 +181,24 @@ export class HermidataMigration {
                     Score: d.score.toFixed(2),
                 }))
             );
-            return []; // Return an empty array if multiple Hermidata are found
+            return {
+                result: null,
+                found: true,
+                amountFound: HermidataFound.length
+            }
         }
-
-        return HermidataFound;
+        if (HermidataFound.length === 0) {
+            return {
+                result: null,
+                found: false,
+                amountFound: 0
+            }
+        }
+        return {
+            result: HermidataFound[0],
+            found: true,
+            amountFound: HermidataFound.length
+        }
     }
     
     
