@@ -17,6 +17,7 @@ export class ExtensionBehaviour extends Build {
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
     private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
     private readonly autoSubscribeThreshold = getElement<HTMLInputElement>("#autoSubscribeThreshold"); // input ( number )
+    private readonly autoSubscribeThresholdValue = getElement<HTMLSpanElement>("#autoSubscribeThresholdValue");
 
     private readonly saveTarget = getElement<HTMLInputElement>("#saveTarget");
 
@@ -36,6 +37,8 @@ export class ExtensionBehaviour extends Build {
         this.setValueOptionKeyboardShortcuts(settings);
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
+        // Auto Subscribe Threshold
+        this.setValueOptionAutoSubscribeThreshold();
         // Save Target
         this.setValueOptionSaveTarget(settings);
 
@@ -241,6 +244,15 @@ export class ExtensionBehaviour extends Build {
         const parsedValue = Number(value);
         if (isNaN(parsedValue)) return false;
         return parsedValue <= 1 && parsedValue >= 0.9;
+    }
+    private setValueOptionAutoSubscribeThreshold() {
+        if (!this.autoSubscribeThreshold || !this.autoSubscribeThresholdValue) return;
+        this.autoSubscribeThresholdValue.textContent = this.autoSubscribeThreshold.value;
+        this.autoSubscribeThreshold.addEventListener("input", (event) => {
+            if (!this.autoSubscribeThreshold || !this.autoSubscribeThresholdValue) return;
+            const target = event.target as HTMLInputElement;
+            this.autoSubscribeThresholdValue.textContent = target.value;
+        });
     }
     
     // Save Target

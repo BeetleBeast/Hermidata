@@ -330,7 +330,7 @@ export class ImportsAndExports extends Build {
         
             const a = document.createElement("a");
             a.href = url;
-            a.download = "quickBackup.json";
+            a.download = "QuickBackup.json";
             document.body.appendChild(a);
             a.click();
             a.remove();
