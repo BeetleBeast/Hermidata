@@ -58,18 +58,7 @@ export interface HermidataV5 {
         novelStatus: AnyNovelStatus;
     };
 }
-export interface Bookmark { // new
-	id: string;
-	current: number;
-	history: number[];
-	label: string; // "favorite scene", "reread from here", "primary"
-	note?: string; // Optional note about why you bookmarked createdAt: string;
-	color: string; // hex rgb for visual distinction
-	createdAt: string;
-	updatedAt: string;
-	isPrimary: boolean; // only one can be primary
-}
-export interface Hermidata {
+export interface HermidataV6 {
     id: string;
     title: string;
     type: AnyNovelType;
@@ -94,6 +83,44 @@ export interface Hermidata {
         originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
         novelStatus: AnyNovelStatus;
         bookmarkInUse: string;
+    };
+}
+export interface Bookmark { // new
+	id: string;
+	current: number;
+	history: number[];
+	label: string; // "favorite scene", "reread from here", "primary"
+	note?: string; // Optional note about why you bookmarked createdAt: string;
+	color: string; // hex rgb for visual distinction
+	createdAt: string;
+	updatedAt: string;
+	isPrimary: boolean; // only one can be primary
+}
+export interface Hermidata {
+    id: string;
+    title: string;
+    type: AnyNovelType;
+    url: string;
+    source: string;
+    status: AnyReadStatus;
+    chapter: {
+        latest: number;
+        lastChecked: string;
+        bookmarks: Record<string, Bookmark>; // Multiple saved positions
+        revisitingCount: number; // How many times you've re-read
+        bookmarkInUse: string;
+    };
+    rss: Feed | null;
+    import: string | null;
+    meta: {
+        tags: string[]; // old versions might have string, but we will convert them to array
+        notes: string;
+        added: string;
+        updated: string;
+        altSources: string[]; // for multiple souces ( with the first one the same as above )
+        altTitles: string[];
+        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
+        novelStatus: AnyNovelStatus;
     };
 }
 

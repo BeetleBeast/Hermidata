@@ -1,8 +1,8 @@
 import { PastHermidata } from "../../popup/core/Past";
 import { getAllRawFeeds } from "../../shared/db/Storage";
-import { findByTitleOrAltV2, TrimTitle } from "../../shared/StringOutput";
+import { findByTitleOrAltV2, TrimTitle } from "../../shared/utils/StringOutput";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { linkRSSFeed } from "../load";
 

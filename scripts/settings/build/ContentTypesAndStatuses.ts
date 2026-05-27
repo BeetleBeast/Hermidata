@@ -1,6 +1,6 @@
 import { defaultSettings } from "../../shared/constants";
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings } from "../../shared/types";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 export class ContentTypesAndStatuses extends Build {

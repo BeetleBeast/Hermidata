@@ -1,7 +1,7 @@
 
 import { defaultSettings } from "../../shared/constants";
 import { type Hermidata } from "../../shared/types";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 export class TagManagement extends Build {

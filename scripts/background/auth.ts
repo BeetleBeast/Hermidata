@@ -1,4 +1,4 @@
-import { ext } from "../shared/BrowserCompat";
+import { ext } from "../shared/utils/BrowserCompat";
 
 type BackgroundStorageItems = {
     googleAccessToken: string;

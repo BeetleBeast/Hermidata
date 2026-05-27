@@ -1,5 +1,5 @@
 import { getAllHermidata, getHermidataViaKey, getSettings } from "../../shared/db/Storage";
-import { TrimTitle, findByTitleOrAltV2, returnHashedTitle } from "../../shared/StringOutput";
+import { TrimTitle, findByTitleOrAltV2, returnHashedTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";

@@ -1,6 +1,6 @@
 import { type Hermidata, type Settings } from "../../shared/types/index";
 import { getLastSortOption, getSettings } from "../../shared/db/Storage";
-import { getElement, setElement } from "../../utils/Selection";
+import { getElement, setElement } from "../../shared/utils/Selection";
 import { Sort } from "./Sort";
 import { AllSorts, filterClassName, filterName } from "../../shared/constants";
 export class SortOption extends Sort {

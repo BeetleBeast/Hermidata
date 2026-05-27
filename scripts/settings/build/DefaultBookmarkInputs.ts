@@ -1,6 +1,6 @@
 import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, defaultSettings } from "../../shared/constants";
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type DefaultChoice, type elementsInputAndMenu, type ElmentsWithInputAndMenu, type Settings } from "../../shared/types";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 

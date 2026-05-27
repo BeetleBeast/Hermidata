@@ -1,4 +1,4 @@
-import { ext } from "../shared/BrowserCompat"
+import { ext } from "../shared/utils/BrowserCompat"
 import { getSettings } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"

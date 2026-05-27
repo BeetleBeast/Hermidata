@@ -1,4 +1,4 @@
-import type { Hermidata, RegexConfig, TrimmedTitle } from './types/index';
+import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
 
 export function getChapterFromTitle(title: string | undefined, url: string): number {
     if (!title) return Number.NaN;

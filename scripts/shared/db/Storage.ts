@@ -1,4 +1,4 @@
-import { ext } from '../BrowserCompat';
+import { ext } from '../utils/BrowserCompat';
 import { getHermidataByKey, putHermidata, deleteHermidata,
     getAllHermidata as dbGetAllHermidata,
     getSettings as dbGetSettings, 
@@ -8,8 +8,8 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     putAllHermidata} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
-import { returnHashedTitle } from '../StringOutput';
-import { getElement, setElement } from '../../utils/Selection';
+import { returnHashedTitle } from '../utils/StringOutput';
+import { getElement, setElement } from '../utils/Selection';
 import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types/index';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';

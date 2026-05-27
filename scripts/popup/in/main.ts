@@ -1,8 +1,8 @@
 
-import { ext } from '../../shared/BrowserCompat';
-import * as StringOutput from '../../shared/StringOutput';
+import { ext } from '../../shared/utils/BrowserCompat';
+import * as StringOutput from '../../shared/utils/StringOutput';
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type InputArrayType, type LatestValue, type NovelStatus, type ReadStatus, type Settings } from '../../shared/types/index';
-import { getElement, setElement } from '../../utils/Selection';
+import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
@@ -108,7 +108,7 @@ class HermidataController {
         Hermidata.url = CurrentTabInfo.url;
         Hermidata.title = trimmedTitle.title;
         Hermidata.meta.notes = trimmedTitle.note ?? '';
-        Hermidata.chapter.bookmarks[Hermidata.meta.bookmarkInUse].current = CurrentTabInfo.currentChapter;
+        Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].current = CurrentTabInfo.currentChapter;
 
         return Hermidata
     }
@@ -121,11 +121,11 @@ class HermidataController {
 
         // replace hermidata
         Hermidata = pastHermidata;
-        const currentChapterFromCopy = hermidataCopy.chapter.bookmarks[hermidataCopy.meta.bookmarkInUse].current;
-        const currentChapterFromPast = Hermidata.chapter.bookmarks[Hermidata.meta.bookmarkInUse].current;
+        const currentChapterFromCopy = hermidataCopy.chapter.bookmarks[hermidataCopy.chapter.bookmarkInUse].current;
+        const currentChapterFromPast = Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].current;
         // add changes with the past as a template 
         Hermidata.url = hermidataCopy.url;
-        Hermidata.chapter.bookmarks[Hermidata.meta.bookmarkInUse].current = currentChapterFromCopy;
+        Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].current = currentChapterFromCopy;
         Hermidata.source = hermidataCopy.source;
         Hermidata.chapter.latest = currentChapterFromPast > Hermidata.chapter.latest ? currentChapterFromPast : Hermidata.chapter.latest;
 
@@ -223,8 +223,8 @@ class HermidataController {
         this.trycapitalizingTypesAndStatus(settings.ContentTypesAndStatuses.TYPE_OPTIONS, settings.ContentTypesAndStatuses.STATUS_OPTIONS);
 
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
-        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.at(-1) || 0));
-        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current));
+        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history?.at(-1) || 0));
+        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current));
         setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
         setElement<HTMLSelectElement>('#status', el => el.value = display.status);
         setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]);
@@ -336,7 +336,7 @@ class HermidataController {
         const { title, Type, Chapter, status, novelStatuses, tagsArray, notes } = latestValue;
         this.hermidata.title = title;
         this.hermidata.type = Type;
-        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current = Number(Chapter);
+        this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current = Number(Chapter);
         this.updateHermidataChapterHistory();
         this.hermidata.status = status;
         this.hermidata.meta.novelStatus = novelStatuses;
@@ -345,15 +345,15 @@ class HermidataController {
     }
     private updateHermidataChapterHistory() {
         // if history is undefined
-        if (this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history === undefined) this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = [];
+        if (this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history === undefined) this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].history = [];
         // max 20 entries in history
         
-        if (this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.length >= 20) {
-            this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.shift()
+        if (this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history?.length >= 20) {
+            this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history?.shift()
         }
-        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history?.push(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current);
+        this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history?.push(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current);
         // only unique entries in history
-        this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history = Array.from( new Set(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse]?.history) );
+        this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].history = Array.from( new Set(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history) );
         
     }
     private getLatestValue(): LatestValue {

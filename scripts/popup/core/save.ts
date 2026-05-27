@@ -1,5 +1,5 @@
 
-import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/StringOutput";
+import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/utils/StringOutput";
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidataV3 } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
@@ -45,7 +45,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
             if (!bookmarkInUse?.history.some(chapter => chapter === newChapterNumber)) bookmarkInUse?.history.push(bookmarkInUse.current);
             entry.chapter.bookmarks[bookmarkInUse.id] = bookmarkInUse;
             
-            entry.meta.bookmarkInUse = bookmarkInUse.id;
+            entry.chapter.bookmarkInUse = bookmarkInUse.id;
             entry.chapter.lastChecked = new Date().toISOString();
             
             entry.type = hermidata.type;
@@ -105,7 +105,8 @@ export function makeHermidataV3(title: string, url: string, type: AnyNovelType =
                 [newBoomark.id]: newBoomark
             },
             revisitingCount: 0,
-            lastChecked: new Date().toISOString()
+            lastChecked: new Date().toISOString(),
+            bookmarkInUse: returnBookmarkHash(label)
         },
         rss: null,
         import: null,
@@ -117,8 +118,7 @@ export function makeHermidataV3(title: string, url: string, type: AnyNovelType =
             added: new Date().toISOString(),
             updated: new Date().toISOString(),
             originalRelease: null,
-            novelStatus: 'Ongoing',
-            bookmarkInUse: returnBookmarkHash(label)
+            novelStatus: 'Ongoing'
         }
     };
 }
@@ -150,10 +150,10 @@ export function getBookmarkFromHermidata(hermidata: Hermidata, bookmarkId: strin
     return bookmark;
 }
 export function getChapterFromBookmarkInUse(hermidata: Hermidata): number {
-    const inUse = hermidata.chapter.bookmarks[hermidata.meta.bookmarkInUse]
+    const inUse = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse]
     return inUse.current ?? 0;
 }
 export function getBookmarkInUse(hermidata: Hermidata): Bookmark {
-    const inUse = hermidata.chapter.bookmarks[hermidata.meta.bookmarkInUse]
+    const inUse = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse]
     return inUse;
 }

@@ -1,5 +1,5 @@
 import { getHermidataWithRss } from "../rss/load"
-import { ext } from "../shared/BrowserCompat"
+import { ext } from "../shared/utils/BrowserCompat"
 import { getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
 import type { Filters, Hermidata, InputArrayType, RawFeed } from "../shared/types/index"
 import { getToken } from "./auth"

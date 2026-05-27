@@ -1,4 +1,4 @@
-import { returnBookmarkHash } from "../StringOutput";
+import { returnBookmarkHash } from "../utils/StringOutput";
 import type { AllsortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
 
 // Default arrays — used to seed settings on first install
@@ -101,7 +101,8 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         },
         latest: 0,
         lastChecked: new Date().toISOString(),
-        revisitingCount: 0
+        revisitingCount: 0,
+        bookmarkInUse: returnBookmarkHash('Primary')
     },
     rss: null,
     import: null,
@@ -113,7 +114,6 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         altSources: [],
         altTitles: [],
         originalRelease: null,
-        novelStatus: novelStatus,
-        bookmarkInUse: returnBookmarkHash('Primary')
+        novelStatus: novelStatus
     }
 });

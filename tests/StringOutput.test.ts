@@ -1,6 +1,6 @@
 // scripts/shared/titleUtils.test.ts
 import { describe, it, expect } from 'vitest'
-import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../scripts/shared/StringOutput';
+import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../scripts/shared/utils/StringOutput';
 
 describe('trimTitle', () => {
     it.each([

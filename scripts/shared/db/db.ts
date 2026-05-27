@@ -1,9 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { type Hermidata, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types/index';
-import { ext } from '../BrowserCompat';
+import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
+import type { HermidataV6 } from '../types/popup';
 
 
 // ============================================================
@@ -437,6 +438,32 @@ export async function migrateFromChromeStorageV6(): Promise<void> {
     });
 }
 /**
+ * One-time migration from Hermidata v6 to Hermidata v7
+ */
+export async function migrateFromChromeStorageV7(): Promise<void> {
+    const db = await getDb();
+    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v7');
+    if (alreadyMigrated) return;
+
+    console.log('[DB] Starting migration of Hermidata from V6 to V7...');
+
+    await new Promise<void>(async (resolve) => {
+        const allHermidata_v6 = await getAllHermidata();
+        const entries: Hermidata[] = [];
+
+        for (const [key, value] of Object.entries(allHermidata_v6)) {
+            if (!isHermidataV7(value)) { entries.push( HermidataMigration.migrateHermidataV7(value) ); }
+        }
+
+        if (entries.length) await putAllHermidata(entries);
+
+        // Mark as done
+        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v7');
+        console.log(`[DB] Migrated ${entries.length} Hermidata entries from V6 to V7`);
+        resolve();
+    });
+}
+/**
  * 
  * @param data - Hermidata
  * @returns boolean
@@ -446,6 +473,11 @@ export function isHermidataV6( data: Hermidata | HermidataV5 ): data is Hermidat
         "bookmarks" in data.chapter &&
         Array.isArray(data.chapter.bookmarks) &&
         "revisitingCount" in data.chapter
+    );
+}
+export function isHermidataV7( data: Hermidata | HermidataV6 ): data is Hermidata {
+    return (
+        "bookmarkInUse" in data.chapter
     );
 }
 
