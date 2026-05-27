@@ -1,5 +1,5 @@
-import { it } from "vitest";
-import { defaultSettings, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings } from "../../shared/types";
+import { defaultSettings } from "../../shared/constants";
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings } from "../../shared/types";
 import { getElement } from "../../utils/Selection";
 import { Build } from "../build";
 

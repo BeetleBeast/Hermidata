@@ -1,4 +1,5 @@
-import { defaultSettings, type NotificationTypes, type Settings } from "../../shared/types";
+import { defaultSettings } from "../../shared/constants";
+import { type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../utils/Selection";
 import { Build } from "../build";
 

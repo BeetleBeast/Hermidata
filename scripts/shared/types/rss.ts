@@ -1,10 +1,12 @@
+import type { AllHermidata } from "./popup";
+
 export type NormalSortsType = 'Alphabet' | 'Novel-Type' | 'Recently-Added' | 'Latest-Updates';
 export type ExeptionSortsType = '';
 export type ReverseAllsortsType = `Reverse-${NormalSortsType}`;
 
 export type AllsortsType = (NormalSortsType | ReverseAllsortsType) | ExeptionSortsType;
 
-export const AllSorts: AllsortsType[] = ['Alphabet', 'Novel-Type', 'Recently-Added', 'Latest-Updates']
+
 
 export type MenuOption = {
     label: string;
@@ -37,28 +39,6 @@ export interface FilterClassName {
     Tag: string,
     Date: string,
 }
-
-export const filterClassName: FilterClassName = {
-    Sort: 'filter-sort',
-    Type: 'filter-type', 
-    Status: 'filter-status', 
-    NovelStatus: 'filter-novel-status',
-    Source: 'filter-source', 
-    Tag: 'filter-tag', 
-    Date: 'filter-date'
-}
-export const filterName: FilterName = {
-    Sort: 'Sort',
-    Type: 'Type', 
-    Status: 'Read-Status', 
-    NovelStatus: 'Novel-Status',
-    Source: 'Source', 
-    Tag: 'Tag', 
-    Date: 'Date'
-}
-
-
-import type { AllHermidata } from "./popup";
 
 export type RSSDOM = {
     notifications: {

@@ -1,5 +1,6 @@
+import { defaultSettings } from "../constants";
 import { putSettings } from "../db/db";
-import { defaultSettings, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type NotificationTypes, type Settings, type FolderMapping, type FolderRule } from "../types/index";
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type NotificationTypes, type Settings, type FolderMapping, type FolderRule } from "../types/index";
 
 type FolderEntry = { path: string }
 

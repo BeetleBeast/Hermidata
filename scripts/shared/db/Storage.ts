@@ -10,8 +10,9 @@ import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../StringOutput';
 import { getElement, setElement } from '../../utils/Selection';
-import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, defaultSettings, DEFAULT_TAGS } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types/index';
 import { SettingsMigration } from '../migration/Settings';
+import { DEFAULT_TAGS, defaultSettings } from '../constants';
 
 // ============================================================
 // Hermidata
@@ -181,7 +182,7 @@ export async function getSettings(): Promise<Settings> {
         return await new Promise<Settings>((resolve, reject) => {
             ext.storage.sync.get('Settings', (result: { Settings: Settings }) => {
                 if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
-                else resolve(defaultSettings);
+                else resolve(result.Settings ?? defaultSettings); // TEMP: if you remove the result.setings you can regain the default settings
             });
         });
     } catch (err) {

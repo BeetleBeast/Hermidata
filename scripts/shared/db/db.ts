@@ -1,8 +1,9 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { type Hermidata, type RawFeed, type Settings, defaultSettings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types/index';
 import { ext } from '../BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
+import { defaultSettings } from '../constants';
 
 
 // ============================================================
