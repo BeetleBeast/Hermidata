@@ -1,4 +1,5 @@
-import type { AnyNovelStatus, AnyNovelType } from "./types"
+import { getAllHermidata, getHermidataViaKey, getSettings, saveHermidataV3, setAllHermidata } from "./db/Storage"
+import type { AnyNovelStatus, AnyNovelType, Hermidata } from "./types"
 
 
 
@@ -87,69 +88,154 @@ const statusScore: statusScore = {
     }
 }
 // TODO: should be able to set status Score inside settings
-export class NovelStatusCalculator {
+/*
+Options: 
+    Based on any Date field
+    Based only on RSS Date** - this option is the default & recommended option
 
-    private readonly numberOfDaysInactive: number;
+* RSS Date is the date of the latest RSS item
+* This will only work on linked Hermidata's, all otyhers will be ignored
 
-    constructor(HermidataUpdated: number, lastChecked: number,  RSSLatestItemPubDate?: Date) {
-        // Hermidata.updated, and Hermidata.lastChecked, and Hermidata?.RSS.LatestItem.PubDate
+---
+
+inside settings be able to set the status score
+
+*/
+
+export async function calculateNovelStatusForAll(): Promise<boolean> {
+
+    const newHermidataMap: Record<string, Hermidata> = {};
+
+    const allHermidata = await getAllHermidata();
+    for (const [key, hermidata] of Object.entries(allHermidata)) {
+
+        const result = await logStatus(hermidata);
+
+        // if the status or novel type is not found return null
+        if (!result.EnoughInfo) continue
+        // if the status is not yet expired return null
+        if (result.value?.Decision === 'Keep') continue
+
+        // if the status is expired
+        if (result.value?.Decision === 'Change') {
+            hermidata.meta.novelStatus = result.value.Status;
+            console.table(result.value);
+            newHermidataMap[key] = hermidata;
+        }
+    }
+    
+    // update all the hermidata at once
+    if (Object.keys(newHermidataMap).length > 0) {
+        await setAllHermidata(Object.values(newHermidataMap));
+        return true
+    }
+
+    return false
+}
+export async function calculateNovelSatus(hermidataKey: string): Promise<boolean>;
+export async function calculateNovelSatus(hermidata: Hermidata): Promise<boolean>;
+export async function calculateNovelSatus(hermidataValue: string | Hermidata): Promise<boolean> {
+
+    const hermidata =  (typeof hermidataValue === 'string') ? await getHermidataViaKey(hermidataValue) : hermidataValue;
+
+    // if the hermidata is not found return false
+    if (!hermidata) return false;
+
+    const result = await logStatus(hermidata);
+
+    // if the status or novel type is not found return null
+    if (!result.EnoughInfo) return false
+    // if the status is not yet expired return null
+    if (result.value?.Decision === 'Keep') return false
+
+    // if the status is expired
+    if (result.value?.Decision === 'Change') {
+
+        hermidata.meta.novelStatus = result.value.Status;
+        console.table(result.value);
+        // update hermidata
+        await saveHermidataV3(hermidata.id, hermidata);
+        return true
+    }
+    return false
+}
+async function init(HermidataUpdated: string, lastChecked: string, RSSLatestItemPubDate: Date | undefined): Promise<number> {
+    
+    const settings = await getSettings();
+    // TEMP: update this when adding it to settings
+    const onlyRSSStatusScore = (settings.ExtensionBehaviour as any).AutoSetStatusScore.onlyRSS = true as boolean;
+    const allowAllDateFields = (settings.ExtensionBehaviour as any).AutoSetStatusScore.allowAllDateFields = false as boolean;
+
+    // if both options are false return 0
+    if (!allowAllDateFields && !onlyRSSStatusScore) return 0
+    // of both options are true return 0
+    else if (onlyRSSStatusScore && allowAllDateFields) return 0 // this is a impossible case but implemented just in case
+    // if onlyRSSStatusScore is set but has no value
+    else if (onlyRSSStatusScore && !RSSLatestItemPubDate) return 0
+    else if (allowAllDateFields) {
         const updated = new Date(HermidataUpdated).getTime();
         const checked = new Date(lastChecked).getTime();
         const rss = new Date(RSSLatestItemPubDate || 0).getTime();
         
         // take only the latest one
         const lastDateUpdated = Math.max(updated, checked, rss);
-
+    
         const today = new Date().getTime();
-
+    
         // get the amount of days since last update
-        this.numberOfDaysInactive = Math.floor((today - lastDateUpdated) / (1000 * 60 * 60 * 24));
+        const numberOfDaysInactive = Math.floor((today - lastDateUpdated) / (1000 * 60 * 60 * 24));
+        return numberOfDaysInactive
     }
+    else if (onlyRSSStatusScore) {
+        const rss = new Date(RSSLatestItemPubDate || 0).getTime();
+        const today = new Date().getTime();
+    
+        // get the amount of days since last update
+        const numberOfDaysInactive = Math.floor((today - rss) / (1000 * 60 * 60 * 24));
+        return numberOfDaysInactive
+    }
+    else return 0
+}
+async function logStatus(Hermidata: Hermidata): Promise<CalculateStatusReturnObject> {
+    const numberOfDaysInactive = await init(Hermidata.meta.updated, Hermidata.chapter.lastChecked, Hermidata.rss?.latestItem?.pubDate);
+    const nextStatus = calculateNextStatus(Hermidata.status);
+
+    // if the status or novel type is not found give return null
+    if (!statusScore[Hermidata.status][Hermidata.type]) return { EnoughInfo: false, value: null };
     
 
+        if (numberOfDaysInactive >= statusScore[nextStatus][Hermidata.type].numberOfDaysInactive) return { 
+            EnoughInfo: true, 
+            value: {
+                Decision: 'Change',
+                Status: nextStatus, 
+                Reason: statusScore[nextStatus][Hermidata.type].reason ?? 'The novel has been inactive for ' + numberOfDaysInactive + ' days',
+                InactiveDays: numberOfDaysInactive,
+                Score: numberOfDaysInactive / statusScore[nextStatus][Hermidata.type].numberOfDaysInactive
 
-    public calculateStatus(currentStatus: AnyNovelStatus, novelType: AnyNovelType ): CalculateStatusReturnObject {
+            }
+        };
 
-        const nextStatus = this.calculateNextStatus(currentStatus)
+        return { 
+            EnoughInfo: true, 
+            value: {
+                Decision: 'Keep',
+                Status: Hermidata.status, 
+                Reason: statusScore[Hermidata.status][Hermidata.type].reason ?? 'The novel has been inactive for ' + numberOfDaysInactive + ' days well below the next  threshold',
+                InactiveDays: numberOfDaysInactive,
+                Score: numberOfDaysInactive / statusScore[nextStatus][Hermidata.type].numberOfDaysInactive
+            } 
+        };
+}
+function calculateNextStatus(currentStatus: Exclude<AnyNovelStatus, 'Completed'>): AnyNovelStatus {
 
-        // if the status or novel type is not found give return null
-        if (!statusScore[currentStatus][novelType]) return { EnoughInfo: false, value: null };
-        
-
-            if (this.numberOfDaysInactive >= statusScore[nextStatus][novelType].numberOfDaysInactive) return { 
-                EnoughInfo: true, 
-                value: {
-                    Decision: 'Change',
-                    Status: nextStatus, 
-                    Reason: statusScore[nextStatus][novelType].reason ?? 'The novel has been inactive for ' + this.numberOfDaysInactive + ' days',
-                    InactiveDays: this.numberOfDaysInactive,
-                    Score: this.numberOfDaysInactive / statusScore[nextStatus][novelType].numberOfDaysInactive
-
-                }
-            };
-
-            return { 
-                EnoughInfo: true, 
-                value: {
-                    Decision: 'Keep',
-                    Status: currentStatus, 
-                    Reason: statusScore[currentStatus][novelType].reason ?? 'The novel has been inactive for ' + this.numberOfDaysInactive + ' days well below the next  threshold',
-                    InactiveDays: this.numberOfDaysInactive,
-                    Score: this.numberOfDaysInactive / statusScore[nextStatus][novelType].numberOfDaysInactive
-                } 
-            };
+    switch (currentStatus) {
+        case 'Ongoing':
+            return 'Hiatus';
+        case 'Hiatus':
+            return 'Canceled';
+        case 'Canceled':
+            return 'Canceled';
     }
-    private calculateNextStatus(currentStatus: Exclude<AnyNovelStatus, 'Completed'>): AnyNovelStatus {
-
-        switch (currentStatus) {
-            case 'Ongoing':
-                return 'Hiatus';
-            case 'Hiatus':
-                return 'Canceled';
-            case 'Canceled':
-                return 'Canceled';
-        }
-        return 'Ongoing';
-    }
-
+    return 'Ongoing';
 }
