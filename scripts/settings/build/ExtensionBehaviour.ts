@@ -41,8 +41,11 @@ export class ExtensionBehaviour extends Build {
         this.setValueOptionKeyboardShortcuts(settings);
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
-        // Auto Subscribe Threshold
-        this.setValueOptionAutoSubscribeThreshold();
+        // Auto Subscribe - Threshold
+        this.setValueOptionAutoSubscribeThreshold(settings)
+
+        // Auto Subscribe Threshold vaule only
+        this.setValueOptionAutoSubscribeThresholdOnly();
         // Save Target
         this.setValueOptionSaveTarget(settings);
         // Auto Update Novel Status
@@ -254,7 +257,7 @@ export class ExtensionBehaviour extends Build {
         if (isNaN(parsedValue)) return false;
         return parsedValue <= 1 && parsedValue >= 0.9;
     }
-    private setValueOptionAutoSubscribeThreshold() {
+    private setValueOptionAutoSubscribeThresholdOnly() {
         if (!this.autoSubscribeThreshold || !this.autoSubscribeThresholdValue) return;
         this.autoSubscribeThresholdValue.textContent = this.autoSubscribeThreshold.value;
         this.autoSubscribeThreshold.addEventListener("input", (event) => {
@@ -262,6 +265,20 @@ export class ExtensionBehaviour extends Build {
             const target = event.target as HTMLInputElement;
             this.autoSubscribeThresholdValue.textContent = target.value;
         });
+    }
+    private setValueOptionAutoSubscribeThreshold(settings: Settings) {
+        if (!this.enableAutoSubscribe || !this.enableAutoSubscribeThreshold || !this.autoSubscribeThreshold) return;
+        const threshold = settings.ExtensionBehaviour.AutoSubscribe.Threshold;
+        const ennableAutoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
+        const enableAutoSubscribeThreshold = settings.ExtensionBehaviour.AutoSubscribe.AllowSimilarityScanning;
+        this.autoSubscribeThreshold.value = String(threshold);
+        this.enableAutoSubscribe.checked = ennableAutoSubscribe;
+        this.enableAutoSubscribeThreshold.checked = enableAutoSubscribeThreshold;
+
+        
+        this.enableAutoSubscribeThreshold.disabled = !this.enableAutoSubscribe.checked; // threshold changer
+        this.autoSubscribeThreshold.disabled = !this.enableAutoSubscribeThreshold.checked; // slider
+        
     }
     
     // Save Target
@@ -284,8 +301,8 @@ export class ExtensionBehaviour extends Build {
         const RSSOnly = autoUpdateNovelStatus.onlyRSS;
         const allowAll = autoUpdateNovelStatus.allowAllDateFields;
 
-        this.autoUpdateNovelStatusAllValue.checked = RSSOnly;
-        this.autoUpdateNovelStatusOnlyRSS.checked = allowAll;
+        this.autoUpdateNovelStatusAllValue.checked = allowAll;
+        this.autoUpdateNovelStatusOnlyRSS.checked = RSSOnly;
     }
     private async AutoUpdateNovelStatus(e: Event, type: "onlyRSS" | "allowAll") {
         if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;

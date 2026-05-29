@@ -224,7 +224,7 @@ export class FeedItem {
     private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
         pubDate.className = "hermidata-item-pubDate"
-        const dateString = item.rss?.latestItem.pubDate ? new Date(item.rss.latestItem.pubDate).toLocaleDateString() : new Date(item.meta.added).toLocaleDateString();
+        const dateString = this.showLatestDate(item).toLocaleString().split(',')[0];
         const pubDateText = `Published: ${dateString}`;
         pubDate.textContent = pubDateText;
         pubDate.title = pubDateText;
@@ -263,7 +263,7 @@ export class FeedItem {
     }
     private createItemChapterProgress(key: string, chapter: number): HTMLElement {
         const ELprogress = document.createElement("div");
-        ELprogress.className = "hermidata-item-progress"
+        ELprogress.className = "hermidata-item-progress";
         const currentHermidata = this.AllHermidata[key];
         const lastRead = currentHermidata.chapter.bookmarks[currentHermidata.chapter.bookmarkInUse].current || null;
         const progress = lastRead ? ((lastRead / chapter) * 100 ).toPrecision(3) : '0';
@@ -347,6 +347,28 @@ export class FeedItem {
         li.classList.add('hermidata-item');
     
         return li
+    }
+
+    private showLatestDate(item: Hermidata): Date {
+
+        const allDatesExeptBookmarks = item.rss ? {
+            added: new Date(item.meta.added),
+            updated: new Date(item.meta.updated),
+            latestrss: new Date(item.rss.latestItem.pubDate)
+        } : {
+            added: new Date(item.meta.added),
+            updated: new Date(item.meta.updated)
+        }
+        const allBookmarkDates = Object.values(item.chapter.bookmarks).flatMap(bookmark =>  {
+            return {
+                updatedAt: new Date(bookmark.updatedAt),
+                createdAt: new Date(bookmark.createdAt)
+            };
+        });
+        const allDates = [...Object.values(allDatesExeptBookmarks), ...allBookmarkDates];
+        const date = allDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+
+        return date;
     }
 }
 

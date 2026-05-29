@@ -110,17 +110,17 @@ export class Subscribe extends RssBuild {
             // 4. confirm with user
             const confirmationMsg = `
                 Subscribe to "${Hermidata.title}"?
-
-                example of linked feed:
-                ${RawFeed.image ? `image: ${RawFeed.image}` : ''}\n
-                title: ${RawFeed.items[0].title}\n
-                <a href="${RawFeed.url}" target="_blank">${RawFeed.items[0].title}</a>
-
-                Is this the feed you want to subscribe to?
                 <br>
-                <b>note:</b> you can always unsubscribe at any time by clicking the "Unsubscribe" button by right clicking on the RSS feed item
+                ${RawFeed.image ? `<img src="${RawFeed.image}" alt="${RawFeed.items[0].title}" style="width: 45px; height: auto;">` : ''}\n
+                <br>
+                title: ${RawFeed.items[0].title}\n
+                <br>
+                <a href="${RawFeed.url}" target="_blank">${RawFeed.items[0].title}</a>
+                <br>
+                <br>
+                <small>Tip: you can always unsubscribe at any time by clicking the "Unsubscribe" button by right clicking on the RSS feed item</small>
                 `;
-            const shouldSubscribe = await customConfirm(confirmationMsg);
+            const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel' });
             if (!shouldSubscribe) {
                 const RawFeedID = returnRawFeedHash(RawFeed.items[0].title, RawFeed.url);
                 const newRecord: Record<string, string> = { [Hermidata.id]: RawFeedID };
@@ -147,9 +147,19 @@ export class Subscribe extends RssBuild {
 
         for (const RawFeed of Object.values(allRawFeeds)) {
             // find matching entry
+            if (!RawFeed.items || RawFeed.items.length === 0) {
+                // TODO: auto remove raw feeds with no items
+                continue;
+            }
             const rawFeedTitle = RawFeed.items[0].title ?? RawFeed.title; // use first item title if available otherwise use raw feed title ( some feeds have no items )
             const rawFeedTitleTrimmed = TrimTitle.trimTitle(rawFeedTitle, RawFeed.url).title;
             const matchedEntry = findByTitleOrAltV2(rawFeedTitleTrimmed, allHermidata); // 100% match only
+
+            // check if this check is a not excluded
+            const settings = await getSettings();
+            const RSSIdsNotAllowed = settings?.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
+            // skip if this Hermidata is excluded
+            if (Object.keys(RSSIdsNotAllowed).includes(matchedEntry?.id ?? '')) continue;
 
             // add to matches
             if (matchedEntry) matches.push({ RawFeed, Hermidata: matchedEntry });

@@ -107,6 +107,7 @@ export async function calculateNovelStatusForAll(): Promise<boolean> {
     const newHermidataMap: Record<string, Hermidata> = {};
 
     const allHermidata = await getAllHermidata();
+    console.groupCollapsed("[Novel Status Calculator] Calculating novel status for all hermidata");
     for (const [key, hermidata] of Object.entries(allHermidata)) {
 
         const result = await logStatus(hermidata);
@@ -119,10 +120,13 @@ export async function calculateNovelStatusForAll(): Promise<boolean> {
         // if the status is expired
         if (result.value?.Decision === 'Change') {
             hermidata.meta.novelStatus = result.value.Status;
+            console.log(`[Novel Status Calculator] checking ${hermidata.title} for status change`);
+            console.log(`[Novel Status Calculator] Changing novel status for ${key} to ${result.value.Status}`);
             console.table(result.value);
             newHermidataMap[key] = hermidata;
         }
     }
+    console.groupEnd();
     
     // update all the hermidata at once
     if (Object.keys(newHermidataMap).length > 0) {
@@ -197,20 +201,33 @@ async function init(HermidataUpdated: string, lastChecked: string, RSSLatestItem
 }
 async function logStatus(Hermidata: Hermidata): Promise<CalculateStatusReturnObject> {
     const numberOfDaysInactive = await init(Hermidata.meta.updated, Hermidata.chapter.lastChecked, Hermidata.rss?.latestItem?.pubDate);
-    const nextStatus = calculateNextStatus(Hermidata.status);
+    
+    const settings = await getSettings();
+    const typeAliases = settings.FolderMapping.typeAliases;
+
+    const findKeyOfValue = (obj: Record<string, string>, value: string) => Object.keys(obj).find(key => obj[key] === value);
+
+    const trueCurrentType = typeAliases ? findKeyOfValue(typeAliases, Hermidata.type) ?? Hermidata.type : Hermidata.type;
+    const currentNovelStatus = Hermidata.meta.novelStatus ?? 'Ongoing';
+
+    if (currentNovelStatus === "Completed") return { EnoughInfo: false, value: null };
+
+    const nextNovelStatus = calculateNextStatus(currentNovelStatus);
+
+    if (currentNovelStatus === nextNovelStatus) return { EnoughInfo: false, value: null };
 
     // if the status or novel type is not found give return null
-    if (!statusScore[Hermidata.status][Hermidata.type]) return { EnoughInfo: false, value: null };
+    if (!statusScore[currentNovelStatus][trueCurrentType]) return { EnoughInfo: false, value: null };
     
 
-        if (numberOfDaysInactive >= statusScore[nextStatus][Hermidata.type].numberOfDaysInactive) return { 
+        if (numberOfDaysInactive >= statusScore[nextNovelStatus][trueCurrentType].numberOfDaysInactive) return { 
             EnoughInfo: true, 
             value: {
                 Decision: 'Change',
-                Status: nextStatus, 
-                Reason: statusScore[nextStatus][Hermidata.type].reason ?? 'The novel has been inactive for ' + numberOfDaysInactive + ' days',
+                Status: nextNovelStatus, 
+                Reason: statusScore[nextNovelStatus][trueCurrentType].reason ?? 'The novel has been inactive for ' + numberOfDaysInactive + ' days',
                 InactiveDays: numberOfDaysInactive,
-                Score: numberOfDaysInactive / statusScore[nextStatus][Hermidata.type].numberOfDaysInactive
+                Score: numberOfDaysInactive / statusScore[nextNovelStatus][trueCurrentType].numberOfDaysInactive
 
             }
         };
@@ -219,10 +236,10 @@ async function logStatus(Hermidata: Hermidata): Promise<CalculateStatusReturnObj
             EnoughInfo: true, 
             value: {
                 Decision: 'Keep',
-                Status: Hermidata.status, 
-                Reason: statusScore[Hermidata.status][Hermidata.type].reason ?? 'The novel has been inactive for ' + numberOfDaysInactive + ' days well below the next  threshold',
+                Status: currentNovelStatus, 
+                Reason: statusScore[currentNovelStatus][trueCurrentType].reason ?? 'The novel has been inactive for ' + numberOfDaysInactive + ' days well below the next  threshold',
                 InactiveDays: numberOfDaysInactive,
-                Score: numberOfDaysInactive / statusScore[nextStatus][Hermidata.type].numberOfDaysInactive
+                Score: numberOfDaysInactive / statusScore[nextNovelStatus][trueCurrentType].numberOfDaysInactive
             } 
         };
 }

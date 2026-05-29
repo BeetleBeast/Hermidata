@@ -130,20 +130,23 @@ export function customPrompt(msg: string, defaultInput: string): Promise<string 
         btn2.addEventListener('click', onNo);
     });
 }
-export function customConfirm(msg: string): Promise<boolean> {
+export function customConfirm(msg: string, inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }): Promise<boolean> {
     return new Promise((resolve) => {
         const container = getElement('.promptSection');
         const label = getElement('.genericLabel');
         const btn1 = getElement('.genericButton1');
         const btn2 = getElement('.genericButton2');
-
+        
         if (!container || !label || !btn1 || !btn2) return resolve(false);
+        
+        btn1.innerHTML = inputText.accept;
+        btn2.innerHTML = inputText.reject;
 
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
             container.style.height = `${document.body.offsetHeight / 2}px`;
-            label.style.display = 'block';
+            label.style.display = 'flex';
             btn1.style.display = 'block';
             btn2.style.display = 'block';
         }
@@ -169,7 +172,7 @@ export function customConfirm(msg: string): Promise<boolean> {
         };
 
         activateConfirmSetup();
-        label.textContent = msg;
+        label.innerHTML = msg;
 
         btn1.addEventListener('click', onYes);
         btn2.addEventListener('click', onNo);
