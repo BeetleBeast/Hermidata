@@ -1,4 +1,4 @@
-import { type AllHermidata, type Hermidata } from "../shared/types/index";
+import { type Hermidata } from "../shared/types/index";
 import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
 
@@ -7,13 +7,13 @@ import { FeedItem } from "./build/feed";
 export abstract class RssBuild {
     protected readonly hermidata: Hermidata;
 
-    protected AllHermidata: AllHermidata;
+    protected AllHermidata: Record<string, Hermidata>;
 
-    constructor(hermidata: Hermidata, AllHermidata: AllHermidata) {
+    constructor(hermidata: Hermidata, AllHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;
         this.AllHermidata = AllHermidata;
     }
-    public static async init(): Promise<AllHermidata> {
+    public static async init(): Promise<Record<string, Hermidata>> {
         return await PastHermidata.getAllHermidata();
     }
     protected removeAllChildNodes(parent: HTMLElement) {
