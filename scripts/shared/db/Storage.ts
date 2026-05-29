@@ -223,7 +223,7 @@ export async function resetSettings(): Promise<void> {
 export async function migrateSettings(): Promise<void> {
     try {
         const settings = await getSettings();
-        const settingsVersion = settings.version;
+        const settingsVersion = settings.version ?? 0;
         const latestVersion = defaultSettings.version;
         // If settings are already up-to-date, no migration needed
         if (settingsVersion >= latestVersion) return;

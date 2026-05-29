@@ -97,103 +97,92 @@ export class SettingsMigration {
             ? folderMapping : SettingsMigration.migrateFolderMapping( folderMapping as oldFoldermapping,  defaultSettings.FolderMapping.root );
         return migratedFolderMapping;
     }
-    private static upgrade(knownSettings: oldSettingsV5 | oldSettingsV4, defaultSettings: Settings): Settings {
-        // Type guard to check if it's already the new FolderMapping format
-        
+    public static async migrateSettingsToLatest(settings: oldSettingsV6 | oldSettingsV5 | oldSettingsV4 | unknown, version: number): Promise<void> {
+        let current = settings;
 
-        const result: Settings = {
-            version: 7,
-            AccountAndConnections: {
-                spreadsheetUrl: knownSettings.spreadsheetUrl
-            },
+        if (version <= 4) current = this.migrateV4toV5(current as oldSettingsV4);
+        if (version <= 5) current = this.migrateV5toV6(current as oldSettingsV5);
+        if (version <= 6) current = this.migrateV6toV7(current as oldSettingsV6);
+
+        await putSettings(current as Settings);
+    }
+
+    private static migrateV4toV5(data: oldSettingsV4): oldSettingsV5 {
+        return {
+            version: 5,
+            spreadsheetUrl: data.spreadsheetUrl,
+            darkMode: data.darkMode,
+            DefaultChoice: data.DefaultChoice,
+            DefaultChoiceText_Menu: data.DefaultChoiceText_Menu,
+            TYPE_OPTIONS: data.TYPE_OPTIONS,
+            STATUS_OPTIONS: data.STATUS_OPTIONS,
+            NOVEL_STATUS_OPTIONS: data.NOVEL_STATUS_OPTIONS,
+            tagColoring: data.tagColoring,
+            FolderMapping: this.getLatestFolderMappingFromPotentiallyOldFolderMapping(data.FolderMappingV2 ?? data.FolderMapping),
+            AllowContextMenu: data.AllowContextMenu,
+        };
+    }
+
+    private static migrateV5toV6(data: oldSettingsV5): oldSettingsV6 {
+        return {
+            version: 6,
+            AccountAndConnections: { spreadsheetUrl: data.spreadsheetUrl },
             ExtensionBehaviour: {
-                EnableLightMode: knownSettings.darkMode ? false : true,
-                AllowContextMenu: knownSettings.AllowContextMenu,
-                EnableNotification: "None" as NotificationTypes,
-                EnableKeyboardShortcuts: false as boolean,
-                AutoSubscribe: {
-                    EnableAutoSubscribe: false as boolean,
-                    AllowSimilarityScanning: false as boolean,
-                    Threshold: 1.0,
-                    HermidataNotLinkedToRSS: {}
+                EnableLightMode: !data.darkMode,
+                AllowContextMenu: data.AllowContextMenu,
+                EnableNotification: "None",
+                EnableKeyboardShortcuts: false,
+                EnableAutoSubscribe: false,
+                SaveTarget: { internalCollection: true, GoogleSpreadsheet: true, BrowserBookmark: true },
+            },
+            DefaultBookmarkSettings: {
+                DefaultChoice: {
+                    novelStatus: defaultSettings.DefaultBookmarkSettings.DefaultChoice.novelStatus,
+                    novelType: data.DefaultChoice.Type,
+                    readStatus: data.DefaultChoice.status,
+                    tags: data.DefaultChoice.tags,
+                    notes: data.DefaultChoice.notes,
                 },
-                SaveTarget: {
-                    internalCollection: true,
-                    GoogleSpreadsheet: true as boolean,
-                    BrowserBookmark: true as boolean
+                DefaultChoiceText_Menu: {
+                    novelStatus: defaultSettings.DefaultBookmarkSettings.DefaultChoiceText_Menu.novelStatus,
+                    novelType: data.DefaultChoiceText_Menu.Type,
+                    readStatus: data.DefaultChoiceText_Menu.status,
+                    tags: data.DefaultChoiceText_Menu.tags,
+                    notes: data.DefaultChoiceText_Menu.notes,
+                },
+            },
+            ContentTypesAndStatuses: {
+                TYPE_OPTIONS: data.TYPE_OPTIONS,
+                STATUS_OPTIONS: data.STATUS_OPTIONS,
+                NOVEL_STATUS_OPTIONS: data.NOVEL_STATUS_OPTIONS,
+            },
+            TagManagement: { tagColoring: data.tagColoring },
+            FolderMapping: data.FolderMapping,
+        };
+    }
+
+    private static migrateV6toV7(data: oldSettingsV6): Settings {
+        return {
+            version: 7,
+            ExtensionBehaviour: {
+                ...data.ExtensionBehaviour,
+                AutoSubscribe: {
+                    EnableAutoSubscribe: false,
+                    AllowSimilarityScanning: false,
+                    Threshold: 1.0,
+                    HermidataNotLinkedToRSS: {},
                 },
                 AutoSetStatusScore: {
                     onlyRSS: false,
                     allowAllDateFields: false,
-                }
-            },
-            DefaultBookmarkSettings: {
-                DefaultChoice: { 
-                    novelStatus: defaultSettings.DefaultBookmarkSettings.DefaultChoice.novelStatus,
-                    novelType: knownSettings.DefaultChoice.Type, 
-                    readStatus: knownSettings.DefaultChoice.status,
-                    tags: knownSettings.DefaultChoice.tags,
-                    notes: knownSettings.DefaultChoice.notes
                 },
-                DefaultChoiceText_Menu: {
-                    novelStatus: defaultSettings.DefaultBookmarkSettings.DefaultChoiceText_Menu.novelStatus,
-                    novelType: knownSettings.DefaultChoiceText_Menu.Type, 
-                    readStatus: knownSettings.DefaultChoiceText_Menu.status,
-                    tags: knownSettings.DefaultChoiceText_Menu.tags,
-                    notes: knownSettings.DefaultChoiceText_Menu.notes
-                }
             },
-            ContentTypesAndStatuses: {
-                TYPE_OPTIONS: knownSettings.TYPE_OPTIONS,
-                STATUS_OPTIONS: knownSettings.STATUS_OPTIONS,
-                NOVEL_STATUS_OPTIONS: knownSettings.NOVEL_STATUS_OPTIONS,
-            },
-            TagManagement: {
-                tagColoring: knownSettings.tagColoring
-            },
-            FolderMapping: SettingsMigration.getLatestFolderMappingFromPotentiallyOldFolderMapping( knownSettings.FolderMapping ),
+            AccountAndConnections: data.AccountAndConnections,
+            DefaultBookmarkSettings: data.DefaultBookmarkSettings,
+            ContentTypesAndStatuses: data.ContentTypesAndStatuses,
+            TagManagement: data.TagManagement,
+            FolderMapping: data.FolderMapping,
         };
-        return result;
-    };
-    public static async migrateSettingsToLatest(settings: oldSettingsV6 | oldSettingsV5 | oldSettingsV4 | unknown, version: number): Promise<void> {
-        if (version === 6) {
-            const knownSettings = settings as oldSettingsV6;
-            const result: Settings = {
-                ...knownSettings,
-                version: 7,
-                ExtensionBehaviour: {
-                    EnableLightMode: knownSettings.ExtensionBehaviour.EnableLightMode,
-                    AllowContextMenu: knownSettings.ExtensionBehaviour.AllowContextMenu,
-                    AutoSubscribe: {
-                        EnableAutoSubscribe: knownSettings.ExtensionBehaviour.AllowContextMenu,
-                        AllowSimilarityScanning: false as boolean,
-                        Threshold: 1.0,
-                        HermidataNotLinkedToRSS: {}
-                    },
-                    EnableNotification: knownSettings.ExtensionBehaviour.EnableNotification,
-                    EnableKeyboardShortcuts: knownSettings.ExtensionBehaviour.EnableKeyboardShortcuts,
-                    SaveTarget: knownSettings.ExtensionBehaviour.SaveTarget,
-                    AutoSetStatusScore: {
-                        onlyRSS: false,
-                        allowAllDateFields: false
-                    },
-                }
-            }
-            await putSettings(result);
-        }
-        if (version === 5) {
-            console.warn("Settings version is newer than expected. Attempting best-effort migration.");
-            const knownSettings = settings as oldSettingsV5;
-            const result: Settings = SettingsMigration.upgrade(knownSettings, defaultSettings);
-            await putSettings(result);
-        }
-
-        if (version === 4 || !version || version < 4) {
-            const knownSettings = settings as oldSettingsV4;
-            
-            const result: Settings = SettingsMigration.upgrade(knownSettings, defaultSettings);
-            await putSettings(result);
-        }
     }
     public static migrateFolderMapping( old: oldFoldermapping, root: string ): FolderMapping {
         // Collect status → folder name from the first type's entries
