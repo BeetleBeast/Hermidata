@@ -1,6 +1,6 @@
 
 import { ext } from '../../shared/utils/BrowserCompat';
-import * as StringOutput from '../../shared/utils/StringOutput';
+import { TrimTitle, getChapterFromTitle } from '../../shared/utils/StringOutput';
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type InputArrayType, type LatestValue, type NovelStatus, type ReadStatus, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
@@ -98,7 +98,7 @@ class HermidataController {
             this.getCurrentTabInfo(),
             getSettings(),
         ]);
-        const trimmedTitle = StringOutput.TrimTitle.trimTitle( CurrentTabInfo.pageTitle, CurrentTabInfo.url );
+        const trimmedTitle = TrimTitle.trimTitle( CurrentTabInfo.pageTitle, CurrentTabInfo.url );
 
         let Hermidata = makeDefaultHermidata(
             settings.ContentTypesAndStatuses.TYPE_OPTIONS[0], 
@@ -163,7 +163,7 @@ class HermidataController {
                 const tab = tabs[0];
                 if (!tab.title || !tab.url) reject(new Error(ext.runtime.lastError?.message)); 
                 const currentTab: CurrentTab = {
-                    currentChapter: StringOutput.getChapterFromTitle(tab.title, tab.url!) || 0,
+                    currentChapter: getChapterFromTitle(tab.title, tab.url!) || 0,
                     pageTitle: tab.title || "Untitled Page",
                     url: tab.url || "NO URL FOUND"
                 };
