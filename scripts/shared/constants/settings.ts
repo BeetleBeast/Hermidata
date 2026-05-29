@@ -48,7 +48,7 @@ export const DefaultFoldermapping: FolderMapping = {
 
 
 export const defaultSettings: Settings = {
-    version: 6,
+    version: 7,
     AccountAndConnections: {
         spreadsheetUrl: '',
     },
@@ -61,8 +61,17 @@ export const defaultSettings: Settings = {
             GoogleSpreadsheet: false,
         },
         EnableKeyboardShortcuts: false,
-        EnableAutoSubscribe: false,
+        AutoSubscribe: {
+            EnableAutoSubscribe: false,
+            AllowSimilarityScanning: false,
+            Threshold: 1.0,
+            HermidataNotLinkedToRSS: {},
+        },
         EnableNotification: 'None',
+        AutoSetStatusScore: {
+            onlyRSS: false,
+            allowAllDateFields: false,
+        },
     },
     ContentTypesAndStatuses: {
         TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],

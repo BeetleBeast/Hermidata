@@ -25,6 +25,14 @@ export type SaveTargets = {
     BrowserBookmark: boolean
 }
 
+export type AutoSubscribe = {
+    EnableAutoSubscribe: boolean;
+    AllowSimilarityScanning: boolean,
+    Threshold: number; // only allow between 0.9 and 1.0
+    // Record<Hermidata id, RSS id>
+    HermidataNotLinkedToRSS: Record<string, string>;
+}
+
 export type StatusScores = {
     onlyRSS: boolean,
     allowAllDateFields: boolean
@@ -41,7 +49,7 @@ export interface Settings {
         AllowContextMenu: boolean
         EnableNotification: NotificationTypes;
         EnableKeyboardShortcuts: boolean;
-        EnableAutoSubscribe: boolean;
+        AutoSubscribe: AutoSubscribe;
         SaveTarget: SaveTargets;
         AutoSetStatusScore: StatusScores;
     }

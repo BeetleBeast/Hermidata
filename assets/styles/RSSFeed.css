@@ -523,6 +523,18 @@
     align-items: center;
     gap: 0.4rem;
     cursor: pointer;
+    border-radius: 4px;
+}
+.filter-item-container:has(.custom-checkbox[data-state="2"]) {
+    background-color: var(--filterExcludeOption);
+}
+
+.custom-checkbox[data-state="2"]  ~ .filter-item-label {
+    color: var(--muted);
+}
+
+.custom-checkbox[data-state="1"]  ~ .filter-item-label {
+    color: var(--filterIncludeOptionText);
 }
 
 /* Custom SVG checkbox box */
@@ -552,6 +564,7 @@
 /* Include (+) */
 .custom-checkbox[data-state="1"] {
     background: url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">\<line x1="8" y1="2" x2="8" y2="14" stroke="%2300aa00" stroke-width="2"/>\<line x1="2" y1="8" x2="14" y2="8" stroke="%2300aa00" stroke-width="2"/>\</svg>') center/contain no-repeat;
+    /* background-color: var(--filterIncludeOption); */
 }
 
 /* Exclude (-) */

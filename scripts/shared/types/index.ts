@@ -25,13 +25,12 @@ export type {
     RawFeed,
     FeedItem,
 
-    LatestValue,
-
-    CurrentTab,
-
     AnyNovelType,
-    AnyNovelStatus, 
-    AnyReadStatus
+    AnyNovelStatus,
+    AnyReadStatus,
+
+    LatestValue,
+    CurrentTab,
 
 } from "./popup";
 
@@ -61,8 +60,6 @@ export type {
     DefaultChoice,
     Settings,
 
-    NotificationTypes,
-
     elementInput,
     elementMenu,
 
@@ -73,5 +70,8 @@ export type {
 
     FolderMapping,
     FolderRule,
+
+    NotificationTypes,
+    SaveTargets
 
 } from "./settings";

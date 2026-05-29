@@ -3,9 +3,9 @@ import { makeHermidataV3 } from "../../popup/core/save";
 import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
 import { getAllHermidata, isHermidataV6 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
-import { returnHashedTitle, TrimTitle } from "../utils/StringOutput";
+import { returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
-import type { HermidataV6 } from "../types/popup";
+import type { HermidataV6, PotentialSameHermidata } from "../types/popup";
 
 
 interface DuplicationResult {
@@ -150,6 +150,55 @@ export class HermidataMigration {
             console.log(`Merged "${older.title}" into "${newer.title}"`);
         } else {
             console.error(`Merge failed for:`, older.title, newer.title);
+        }
+    }
+
+    public static async findPotentialSameHermidata(title: string, allHermidata: { [key: string]: Hermidata }, threshold: number): Promise<PotentialSameHermidata> {
+        const data = allHermidata;
+        const entries = Object.entries(data);
+        const HermidataFound = [];
+
+        for (let i = 0; i < entries.length; i++) {
+            const [keyA, valA] = entries[i];
+            // Skip if same source and title already identical
+            if (valA.title === title) continue;
+
+            const score = CalcDiff(valA.title, title);
+            if (score >= threshold) {
+                HermidataFound.push({
+                    key: keyA,
+                    titleFound: valA.title,
+                    titleGiven: title,
+                    score
+                });
+            }
+        }
+        if (HermidataFound.length > 1) {
+            console.warn(`Found ${HermidataFound.length} potential Hermidata for title "${title}":`);
+            console.table(
+                HermidataFound.map(d => ({
+                    TitleA: d.titleFound,
+                    TitleB: d.titleGiven,
+                    Score: d.score.toFixed(2),
+                }))
+            );
+            return {
+                result: null,
+                found: true,
+                amountFound: HermidataFound.length
+            }
+        }
+        if (HermidataFound.length === 0) {
+            return {
+                result: null,
+                found: false,
+                amountFound: 0
+            }
+        }
+        return {
+            result: HermidataFound[0],
+            found: true,
+            amountFound: HermidataFound.length
         }
     }
     

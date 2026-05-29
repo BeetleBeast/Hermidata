@@ -204,6 +204,16 @@ export interface LatestValue {
     notes: string;
     date: string;
 }
+export type PotentialSameHermidata = {
+    result: {
+        key: string,
+        titleFound: string,
+        titleGiven: string,
+        score: number
+    } | null,
+    found: boolean,
+    amountFound: number
+}
 
 export type CurrentTab = {
     currentChapter: number;

@@ -66,6 +66,8 @@ class HermidataController {
 
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
+    public pageTitle: string | undefined;
+
     private readonly Testing = false;
 
     constructor(Hermidata: Hermidata, past: PastHermidata) {
@@ -342,6 +344,27 @@ class HermidataController {
         this.hermidata.meta.novelStatus = novelStatuses;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;
+        this.updateHermidataSources();
+    }
+    private updateHermidataSources() {
+        const url = this.hermidata.url;
+        if (!url) return
+        const currentUrlSource = new URL(url).hostname.replace(/^www\./, "");
+        const savedUrlSource = new URL(this.hermidata.url).hostname.replace(/^www\./, "");
+        const possibleRSSSource = this.hermidata.rss?.domain;
+        const altSources = this.hermidata.meta.altSources;
+
+        // check if url is already in sources
+        if (!altSources.includes(currentUrlSource)) this.hermidata.meta.altSources.push(currentUrlSource);
+        // check if RSS source is different / isn't saved in alt sources
+        if (possibleRSSSource && !altSources.includes(possibleRSSSource)) this.hermidata.meta.altSources.push(possibleRSSSource);
+        // check if current url source is different from saved url source
+        // NOTE: hermidata.source is the latest source used NOT the first used
+        // NOTE: first used is the first item in altSources
+        if (currentUrlSource !== savedUrlSource) this.hermidata.source = currentUrlSource;
+
+        // remove duplicates & empty entries
+        this.hermidata.meta.altSources = Array.from( new Set(this.hermidata.meta.altSources) ).filter(Boolean);
     }
     private updateHermidataChapterHistory() {
         // if history is undefined

@@ -18,7 +18,14 @@
     --Btn_disabled: rgb(120, 120, 120);
     --bg_disabled: rgb(24, 28, 36);
 
-    --hr: #555
+    --hr: #555;
+
+    --filterExcludeOption: #04060a;
+
+    --filterIncludeOptionText: #fff;
+
+    --muted: #989898;
+    
 }
 
 body {
