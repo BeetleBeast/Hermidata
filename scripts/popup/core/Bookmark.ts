@@ -175,7 +175,7 @@ export class BookmarkController {
 
         const bookmarkChapter = document.createElement('div');
         bookmarkChapter.className = 'bookmarkChapter';
-        bookmarkChapter.textContent = 'Ch. ' + bookmark.current.toString();
+        bookmarkChapter.textContent = 'Ch. ' + String(bookmark?.history?.at(-1) || bookmark.current);
 
         bookmarkContainer.addEventListener('click', () => {
             this.closeBookmarkMenu();
@@ -378,6 +378,7 @@ export class BookmarkController {
         if (this.hermidata.chapter.bookmarkInUse == key) return;
         // update current bookmark in use
         this.hermidata.chapter.bookmarkInUse = key;
+        this.bookmarkInUseID = key;
         // update popup UI
         setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].history.at(-1) || 0));
         setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current));

@@ -35,7 +35,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
     
         if ( entry.title !== title || entry.type !== type || key !== entry.id) needsToMigrate = true
         
-        const oldChapterNumber = getChapterFromBookmarkInUse(entry);
+        const oldChapterNumber = entry.chapter.bookmarks[hermidata.chapter.bookmarkInUse]?.current || getChapterFromBookmarkInUse(entry);
         if (newChapterNumber >= oldChapterNumber) {
             entry.id = key;
 

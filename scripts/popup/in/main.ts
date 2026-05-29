@@ -336,6 +336,7 @@ class HermidataController {
     }
     private updateHermidata(latestValue: LatestValue) {
         const { title, Type, Chapter, status, novelStatuses, tagsArray, notes } = latestValue;
+        this.hermidata.chapter.bookmarkInUse = this.bookmarkSystem.bookmarkInUseID ?? this.hermidata.chapter.bookmarkInUse;
         this.hermidata.title = title;
         this.hermidata.type = Type;
         this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current = Number(Chapter);
