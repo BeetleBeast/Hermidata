@@ -1,5 +1,5 @@
-import { getAllHermidata, getHermidataViaKey, getSettings, saveHermidataV3, setAllHermidata } from "./db/Storage"
-import type { AnyNovelStatus, AnyNovelType, Hermidata } from "./types"
+import { getAllHermidata, getHermidataViaKey, getSettings, saveHermidataV3, setAllHermidata } from "../db/Storage"
+import type { AnyNovelStatus, AnyNovelType, Hermidata } from "../types"
 
 
 
