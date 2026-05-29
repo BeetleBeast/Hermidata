@@ -1,5 +1,5 @@
 import { PastHermidata } from "../../popup/core/Past";
-import { getAllRawFeeds, getSettings, setSettings } from "../../shared/db/Storage";
+import { getAllRawFeeds, getSettings, removeRawFeedByUrl, setSettings } from "../../shared/db/Storage";
 import { findByTitleOrAltV2, returnRawFeedHash, TrimTitle } from "../../shared/utils/StringOutput";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
@@ -7,6 +7,7 @@ import { RssBuild } from "../build";
 import { linkRSSFeed } from "../load";
 import { customConfirm } from "../../popup/frontend/confirm";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
+import { ext } from "../../shared/utils/BrowserCompat";
 
 type match = {
     Hermidata: Hermidata,
@@ -148,7 +149,10 @@ export class Subscribe extends RssBuild {
         for (const RawFeed of Object.values(allRawFeeds)) {
             // find matching entry
             if (!RawFeed.items || RawFeed.items.length === 0) {
-                // TODO: auto remove raw feeds with no items
+                // remove from db
+                await removeRawFeedByUrl(RawFeed.url);
+                // remove from local
+                await removeRawFeedFromLocal(RawFeed.url);
                 continue;
             }
             const rawFeedTitle = RawFeed.items[0].title ?? RawFeed.title; // use first item title if available otherwise use raw feed title ( some feeds have no items )
@@ -186,8 +190,15 @@ export class Subscribe extends RssBuild {
         if (matches.length > 0) return matches;
         return null;
     }
+    
     private enforcePointNine(value: number): AtLeastPointNine | null {
         if (value < 0.9 || value > 1.1 || typeof value !== 'number') return null
         return value as AtLeastPointNine;
     }
+}
+async function removeRawFeedFromLocal(url: string) {
+    const savedFeeds = await ext.storage.local.get<Record<string, RawFeed>>('rawFeeds');
+    if (!savedFeeds || !(url in savedFeeds)) return;
+    delete savedFeeds[url];
+    await ext.storage.local.set({ rawFeeds: savedFeeds });
 }

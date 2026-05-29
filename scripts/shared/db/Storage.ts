@@ -5,7 +5,8 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     getAllRawFeeds as dbGetAllRawFeeds, 
     putSettings, 
     putAllRawFeeds,
-    putAllHermidata} from './db';
+    putAllHermidata,
+    deleteRawFeed} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
@@ -163,6 +164,16 @@ export async function getRawFeedByTitle(title: string): Promise<RawFeed | null> 
     } catch (err) {
         console.error('[Storage] getRawFeedByTitle:', err);
         return null;
+    }
+}
+export async function removeRawFeedByUrl(url: string): Promise<boolean> {
+    try {
+        // feeds are keyed by URL — remove by URL
+        await deleteRawFeed(url);
+        return true;
+    } catch (err) {
+        console.error('[Storage] removeRawFeedByUrl:', err);
+        return false;
     }
 }
 
