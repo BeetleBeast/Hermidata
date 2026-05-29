@@ -1,7 +1,7 @@
-import { findByTitleOrAltV2, getChapterFromTitleReturn } from "../../shared/StringOutput";
+import { findByTitleOrAltV2, getChapterFromTitleReturn } from "../../shared/utils/StringOutput";
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
 import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 
 
 interface ItemInfo {
@@ -212,10 +212,10 @@ export class FeedItem {
         const url = item.rss?.latestItem.link || item.url;
         
         const useAutoDetectedChapter = getChapterFromTitleReturn(title, item?.title, undefined, url);
-        const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.chapter?.bookmarks[item.meta.bookmarkInUse].current;
+        const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.chapter?.bookmarks[item.chapter.bookmarkInUse].current;
         
         const currentHermidata =this.AllHermidata?.[key]
-        const currentChapter = currentHermidata?.chapter?.bookmarks[currentHermidata.meta.bookmarkInUse].current
+        const currentChapter = currentHermidata?.chapter?.bookmarks[currentHermidata.chapter.bookmarkInUse].current
         const clearedNotification = await getLocalNotificationItem(key);
         const isRead = !isRSSItem && (currentChapter === chapter)
         
@@ -265,7 +265,7 @@ export class FeedItem {
         const ELprogress = document.createElement("div");
         ELprogress.className = "hermidata-item-progress"
         const currentHermidata = this.AllHermidata[key];
-        const lastRead = currentHermidata.chapter.bookmarks[currentHermidata.meta.bookmarkInUse].current || null;
+        const lastRead = currentHermidata.chapter.bookmarks[currentHermidata.chapter.bookmarkInUse].current || null;
         const progress = lastRead ? ((lastRead / chapter) * 100 ).toPrecision(3) : '0';
         ELprogress.textContent = `${progress}%`;
         return ELprogress

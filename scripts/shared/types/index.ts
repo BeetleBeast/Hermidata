@@ -1,82 +1,77 @@
-export { 
-    type RegexConfig,
-    type TrimmedTitle,
+export type { 
+    RegexConfig,
+    TrimmedTitle,
 
-    type NovelType,
-    type NovelStatus,
-    type ReadStatus,
+    NovelType,
+    NovelStatus,
+    ReadStatus,
 
-    DEFAULT_NOVEL_TYPES,
-    DEFAULT_NOVEL_STATUSES,
-    DEFAULT_READ_STATUSES,
-    DEFAULT_TAGS,
-    DEFAULT_TAG_COLOURS,
+    Hermidata,
+    HermidataV5,
+    Bookmark,
 
-    type Hermidata,
-    type HermidataV5,
-    type Bookmark,
+    HermidataDateType,
+    HermidataSortType,
+    AllHermidata,
 
-    type HermidataDateType,
-    type HermidataSortType,
-    type AllHermidata,
+    AltCheck,
 
-    type AltCheck,
+    InputArrayType,
+    InputArraySheetType,
 
-    type InputArrayType,
-    type InputArraySheetType,
+    AllFeeds,
 
-    type AllFeeds,
+    Feed,
+    RawFeed,
+    FeedItem,
 
-    type Feed,
-    type RawFeed,
-    type FeedItem,
+    AnyNovelType,
+    AnyNovelStatus,
+    AnyReadStatus,
 
-    type LatestValue,
-    type PotentialSameHermidata,
+    LatestValue,
+    CurrentTab,
 
 } from "./popup";
 
-export type { AnyNovelType, AnyNovelStatus, AnyReadStatus } from "./popup";
+export type {
+    NormalSortsType,
+    ExeptionSortsType,
+    ReverseAllsortsType,
 
-export {
-    type NormalSortsType,
-    type ExeptionSortsType,
-    type ReverseAllsortsType,
+    AllsortsType,
+    
 
-    type AllsortsType,
-    AllSorts,
+    MenuOption,
+    separator,
 
-    type MenuOption,
-    type separator,
+    Filters,
 
-    type Filters,
+    FilterName,
+    FilterClassName,
+    
 
-    type FilterName,
-    type FilterClassName,
-    filterClassName,
-    filterName,
-
-    type RSSDOM,
-    type RSSData,
+    RSSDOM,
+    RSSData,
 } from "./rss";
-export {
 
-    type DefaultChoice,
-    type Settings,
+export type {
 
-    type NotificationTypes,
+    DefaultChoice,
+    Settings,
 
-    type elementInput,
-    type elementMenu,
+    elementInput,
+    elementMenu,
 
-    type quickBackup,
+    quickBackup,
 
-    type elementsInputAndMenu,
-    type ElmentsWithInputAndMenu,
+    elementsInputAndMenu,
+    ElmentsWithInputAndMenu,
 
-    type FolderMapping,
-    type FolderRule,
+    FolderMapping,
+    FolderRule,
 
-    defaultSettings,
+    NotificationTypes,
+    SaveTargets
 
 } from "./settings";

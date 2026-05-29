@@ -1,10 +1,10 @@
-import { ext } from "../shared/BrowserCompat";
+import { ext } from "../shared/utils/BrowserCompat";
 import type { InputArrayType } from "../shared/types/index";
 import { getSettings } from "../shared/db/Storage";
 import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";
-import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
+import { getTitleAndChapterFromUrl } from "../shared/utils/StringOutput";
 import { FolderMapping } from "../settings/build/FolderMapping";
 
 declare const browser: typeof chrome | undefined;

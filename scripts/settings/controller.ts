@@ -5,7 +5,7 @@ import { Account_Connection } from "./build/Account_Connection";
 import { ContentTypesAndStatuses } from "./build/ContentTypesAndStatuses";
 import { TagManagement } from "./build/TagManagement";
 import { FolderMapping } from "./build/FolderMapping";
-import { getElement } from "../utils/Selection";
+import { getElement } from "../shared/utils/Selection";
 import { customConfirm } from "../popup/frontend/confirm";
 
 export class BuildController {

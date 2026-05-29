@@ -1,5 +1,5 @@
 import type { Hermidata } from "../../shared/types/index";
-import { getElement, setElement } from "../../utils/Selection";
+import { getElement, setElement } from "../../shared/utils/Selection";
 import { getBookmarkInUse } from "../core/save";
 
 /**

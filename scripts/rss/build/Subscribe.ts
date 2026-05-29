@@ -1,12 +1,12 @@
 import { PastHermidata } from "../../popup/core/Past";
-import { customConfirm } from "../../popup/frontend/confirm";
 import { getAllRawFeeds, getSettings, setSettings } from "../../shared/db/Storage";
-import { HermidataMigration } from "../../shared/migration/Hermidata";
-import { findByTitleOrAltV2, returnRawFeedHash, TrimTitle } from "../../shared/StringOutput";
+import { findByTitleOrAltV2, returnRawFeedHash, TrimTitle } from "../../shared/utils/StringOutput";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { linkRSSFeed } from "../load";
+import { customConfirm } from "../../popup/frontend/confirm";
+import { HermidataMigration } from "../../shared/migration/Hermidata";
 
 type match = {
     Hermidata: Hermidata,

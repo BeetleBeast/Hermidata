@@ -3,8 +3,9 @@ import { makeHermidataV3 } from "../../popup/core/save";
 import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
 import { getAllHermidata, isHermidataV6 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
-import { returnHashedTitle, TrimTitle } from "../StringOutput";
-import type { AllHermidata, Bookmark, Hermidata, HermidataV5, PotentialSameHermidata } from "../types";
+import { returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
+import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
+import type { HermidataV6, PotentialSameHermidata } from "../types/popup";
 
 
 interface DuplicationResult {
@@ -448,7 +449,8 @@ export class HermidataMigration {
                 },
                 latest: newer.chapter?.latest ?? older.chapter?.latest ?? null,
                 lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString(),
-                revisitingCount: newer.chapter?.revisitingCount || older.chapter?.revisitingCount || 0
+                revisitingCount: newer.chapter?.revisitingCount || older.chapter?.revisitingCount || 0,
+                bookmarkInUse: newer.chapter?.bookmarkInUse || older.chapter?.bookmarkInUse || this.NEW_simpleHash('Primary')
 
             },
             rss: newer.rss || older.rss || null,
@@ -476,8 +478,7 @@ export class HermidataMigration {
                 added: older.meta?.added || base.meta.added,
                 updated: new Date().toISOString(),
                 originalRelease: null, // TODO: do something with it
-                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus,
-                bookmarkInUse: newer.meta?.bookmarkInUse || older.meta?.bookmarkInUse || this.NEW_simpleHash('Primary')
+                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus
             }
         }
         // step 3. save & remove key
@@ -525,6 +526,41 @@ export class HermidataMigration {
      * @summary
      * upgrade Hermidata V5 to V6
      */
+    public static migrateHermidataV7(older: HermidataV6): Hermidata {
+        const result: Hermidata = {
+            id: older.id,
+            title: older.title,
+            type: older.type,
+            url: older.url,
+            source: older.source,
+            status: older.status,
+            chapter: {
+                bookmarks: older.chapter?.bookmarks,
+                latest: older.chapter?.latest,
+                lastChecked: older.chapter?.lastChecked,
+                revisitingCount: older.chapter?.revisitingCount,
+                bookmarkInUse: older.meta.bookmarkInUse
+            },
+            rss: older.rss,
+            import: older.import,
+            meta: {
+                tags: older.meta?.tags,
+                notes: older.meta?.notes,
+                altSources: older.meta?.altSources,
+                altTitles: older.meta?.altTitles,
+                added: older.meta?.added,
+                updated: older.meta?.updated,
+                originalRelease: older.meta?.originalRelease,
+                novelStatus: older.meta?.novelStatus
+            }
+        };
+        return result;
+    }
+
+    /**
+     * @summary
+     * upgrade Hermidata V5 to V6
+     */
     public static migrateHermidataV6(older: HermidataV5): Hermidata {
         const label = 'Primary';
 
@@ -552,7 +588,8 @@ export class HermidataMigration {
                 },
                 latest: older.chapter?.latest,
                 lastChecked: older.chapter?.lastChecked,
-                revisitingCount: 0
+                revisitingCount: 0,
+                bookmarkInUse: newBoomark.id
             },
             rss: older.rss,
             import: older.import,
@@ -564,8 +601,7 @@ export class HermidataMigration {
                 added: older.meta?.added,
                 updated: older.meta?.updated,
                 originalRelease: older.meta?.originalRelease,
-                novelStatus: older.meta?.novelStatus,
-                bookmarkInUse: newBoomark.id
+                novelStatus: older.meta?.novelStatus
             }
         };
         return result;

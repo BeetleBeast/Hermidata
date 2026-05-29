@@ -1,5 +1,6 @@
-import { defaultSettings, type NotificationTypes, type Settings } from "../../shared/types";
-import { getElement, setElement } from "../../utils/Selection";
+import { defaultSettings } from "../../shared/constants";
+import { type NotificationTypes, type Settings } from "../../shared/types";
+import { getElement, setElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 export class ExtensionBehaviour extends Build {

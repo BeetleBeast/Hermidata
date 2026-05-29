@@ -1,8 +1,8 @@
-import { ext } from "../shared/BrowserCompat";
+import { ext } from "../shared/utils/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
 import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidataV3, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
-import { TrimTitle } from "../shared/StringOutput";
+import { TrimTitle } from "../shared/utils/StringOutput";
 
 
 type Meta = {

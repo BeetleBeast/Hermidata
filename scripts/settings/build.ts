@@ -1,6 +1,7 @@
-import { ext } from "../shared/BrowserCompat";
-import { defaultSettings, type Hermidata, type Settings } from "../shared/types";
-import { getElement, setElement } from "../utils/Selection";
+import { ext } from "../shared/utils/BrowserCompat";
+import { defaultSettings } from "../shared/constants";
+import { type Hermidata, type Settings } from "../shared/types";
+import { getElement, setElement } from "../shared/utils/Selection";
 
 
 

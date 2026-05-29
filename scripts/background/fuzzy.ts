@@ -1,7 +1,7 @@
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
 import { getChapterFromBookmarkInUse } from "../popup/core/save";
 import { FolderMapping } from "../settings/build/FolderMapping";
-import { getChapterFromTitle, TrimTitle } from "../shared/StringOutput";
+import { getChapterFromTitle, TrimTitle } from "../shared/utils/StringOutput";
 import { getSettings } from "../shared/db/Storage";
 import type { Settings } from "../shared/types";
 import { findNestedFolder, getBookmarkChildren } from "./bookmarks";

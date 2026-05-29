@@ -1,7 +1,7 @@
-import { ext } from "../../shared/BrowserCompat";
+import { ext } from "../../shared/utils/BrowserCompat";
 import type { Hermidata, RawFeed } from "../../shared/types";
-import type { FolderMapping, FolderRule, quickBackup, Settings } from "../../shared/types/settings"
-import { getElement } from "../../utils/Selection";
+import type { quickBackup, Settings } from "../../shared/types/settings"
+import { getElement } from "../../shared/utils/Selection";
 
 import { Build } from "../build";
 

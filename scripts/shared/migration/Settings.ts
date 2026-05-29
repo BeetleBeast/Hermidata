@@ -1,6 +1,6 @@
+import { defaultSettings } from "../constants";
 import { putSettings } from "../db/db";
-import { defaultSettings, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type NotificationTypes, type Settings, type FolderMapping, type FolderRule } from "../types/index";
-import type { DefaultChoice, SaveTargets } from "../types/settings";
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping, type FolderRule, type NotificationTypes, type SaveTargets, type DefaultChoice } from "../types/index";
 
 type FolderEntry = { path: string }
 
@@ -121,6 +121,10 @@ export class SettingsMigration {
                     internalCollection: true,
                     GoogleSpreadsheet: true as boolean,
                     BrowserBookmark: true as boolean
+                },
+                AutoSetStatusScore: {
+                    onlyRSS: false,
+                    allowAllDateFields: false,
                 }
             },
             DefaultBookmarkSettings: {
@@ -169,6 +173,10 @@ export class SettingsMigration {
                     EnableNotification: knownSettings.ExtensionBehaviour.EnableNotification,
                     EnableKeyboardShortcuts: knownSettings.ExtensionBehaviour.EnableKeyboardShortcuts,
                     SaveTarget: knownSettings.ExtensionBehaviour.SaveTarget,
+                    AutoSetStatusScore: {
+                        onlyRSS: false,
+                        allowAllDateFields: false
+                    },
                 }
             }
             await putSettings(result);

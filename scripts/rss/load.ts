@@ -1,8 +1,8 @@
 import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
 import { appendAltTitle, makeHermidataV3 } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
-import { ext } from "../shared/BrowserCompat";
-import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/StringOutput";
+import { ext } from "../shared/utils/BrowserCompat";
+import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidataV3 } from "../shared/db/Storage";
 import { getAllHermidataWithRss } from "../shared/db/db";

@@ -1,9 +1,9 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
-import { ext } from "../../shared/BrowserCompat";
-import { returnHashedTitle, TrimTitle } from "../../shared/StringOutput";
+import { ext } from "../../shared/utils/BrowserCompat";
+import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
 import type { MenuOption, Hermidata } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidataV3, setNotificationList, updateHermidataV3 } from "../../shared/db/Storage";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
 import { deleteHermidata } from "../../shared/db/db";

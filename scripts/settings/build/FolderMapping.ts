@@ -1,7 +1,8 @@
 import { levenshteinDistance } from "../../popup/core/Past";
-import { ext } from "../../shared/BrowserCompat";
-import { type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping as FolderMappingType, type FolderRule, defaultSettings } from "../../shared/types";
-import { getElement } from "../../utils/Selection";
+import { ext } from "../../shared/utils/BrowserCompat";
+import { defaultSettings } from "../../shared/constants";
+import { type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping as FolderMappingType, type FolderRule } from "../../shared/types";
+import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 export class FolderMapping extends Build {
