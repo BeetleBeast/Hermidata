@@ -253,7 +253,6 @@ export class BookmarkController {
 
         bookmarkContainer.append(bookmarkSVG, bookmarkLabel, bookmarkLastUpdated);
         this.bookmarkMenuManager?.appendChild(bookmarkContainer);
-        // TODO: update popup to have correct height as menu has a great chance to overflow
 
     }
     private getTimeInWords(timeCreated: string, timeUpdated: string): string {
