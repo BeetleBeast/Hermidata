@@ -20,6 +20,9 @@ export class ExtensionBehaviour extends Build {
     private readonly autoSubscribeThreshold = getElement<HTMLInputElement>("#autoSubscribeThreshold"); // input ( number )
     private readonly autoSubscribeThresholdValue = getElement<HTMLSpanElement>("#autoSubscribeThresholdValue");
 
+    private readonly autoUpdateNovelStatusOnlyRSS = getElement<HTMLInputElement>("#autoUpdateNovelStatusOnlyRSS");
+    private readonly autoUpdateNovelStatusAllValue = getElement<HTMLInputElement>("#autoUpdateNovelStatusAllValue");
+
     private readonly saveTarget = getElement<HTMLInputElement>("#saveTarget");
 
 
@@ -42,6 +45,8 @@ export class ExtensionBehaviour extends Build {
         this.setValueOptionAutoSubscribeThreshold();
         // Save Target
         this.setValueOptionSaveTarget(settings);
+        // Auto Update Novel Status
+        this.setValueOptionAutoUpdateNovelStatus(settings);
 
 
         this.bindEvents();
@@ -61,6 +66,9 @@ export class ExtensionBehaviour extends Build {
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
         this.autoSubscribeThreshold?.addEventListener("change", (e) => this.AutoSubscribeThreshold(e));
+
+        this.autoUpdateNovelStatusOnlyRSS?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'onlyRSS'));
+        this.autoUpdateNovelStatusAllValue?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'allowAll'));
         
         this.saveTarget?.addEventListener("change", (e) => this.SaveTarget(e));
     }
@@ -266,6 +274,38 @@ export class ExtensionBehaviour extends Build {
         const settingsTarget = target == "Spreadsheet" ? "GoogleSpreadsheet" : "BrowserBookmark";
         updatedSettings.ExtensionBehaviour.SaveTarget[settingsTarget] = isChecked;
 
+        this.setSettings(updatedSettings);
+    }
+
+    // Auto Update Novel Status
+    private setValueOptionAutoUpdateNovelStatus(settings: Settings) {
+        if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
+        const autoUpdateNovelStatus = settings.ExtensionBehaviour.AutoSetStatusScore;
+        const RSSOnly = autoUpdateNovelStatus.onlyRSS;
+        const allowAll = autoUpdateNovelStatus.allowAllDateFields;
+
+        this.autoUpdateNovelStatusAllValue.checked = RSSOnly;
+        this.autoUpdateNovelStatusOnlyRSS.checked = allowAll;
+    }
+    private async AutoUpdateNovelStatus(e: Event, type: "onlyRSS" | "allowAll") {
+        if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
+        const event = e.target as HTMLInputElement;
+        const isChecked = event.checked;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+
+        const settingsTarget = type == 'allowAll' ? 'allowAllDateFields' : 'onlyRSS';
+        if (!settingsTarget) return;
+
+        // make sure only one can be checked at a time
+        if (settingsTarget == 'onlyRSS') {
+            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.allowAllDateFields = false;
+            this.autoUpdateNovelStatusAllValue.checked = false;
+        } else if (settingsTarget == 'allowAllDateFields') {
+            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.onlyRSS = false;
+            this.autoUpdateNovelStatusOnlyRSS.checked = false;
+        }
+
+        updatedSettings.ExtensionBehaviour.AutoSetStatusScore[settingsTarget] = isChecked;
         this.setSettings(updatedSettings);
     }
 

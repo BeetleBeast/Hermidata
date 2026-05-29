@@ -162,9 +162,8 @@ export async function calculateNovelSatus(hermidataValue: string | Hermidata): P
 async function init(HermidataUpdated: string, lastChecked: string, RSSLatestItemPubDate: Date | undefined): Promise<number> {
     
     const settings = await getSettings();
-    // TEMP: update this when adding it to settings
-    const onlyRSSStatusScore = (settings.ExtensionBehaviour as any).AutoSetStatusScore.onlyRSS = true as boolean;
-    const allowAllDateFields = (settings.ExtensionBehaviour as any).AutoSetStatusScore.allowAllDateFields = false as boolean;
+    const onlyRSSStatusScore = settings.ExtensionBehaviour.AutoSetStatusScore.onlyRSS;
+    const allowAllDateFields = settings.ExtensionBehaviour.AutoSetStatusScore.allowAllDateFields;
 
     // if both options are false return 0
     if (!allowAllDateFields && !onlyRSSStatusScore) return 0
