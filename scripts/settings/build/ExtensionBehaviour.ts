@@ -1,5 +1,6 @@
-import { defaultSettings, type NotificationTypes, type Settings } from "../../shared/types";
-import { getElement, setElement } from "../../utils/Selection";
+import { defaultSettings } from "../../shared/constants";
+import { type NotificationTypes, type Settings } from "../../shared/types";
+import { getElement, setElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 export class ExtensionBehaviour extends Build {
@@ -13,7 +14,15 @@ export class ExtensionBehaviour extends Build {
     private readonly notificationMessageFull = getElement<HTMLInputElement>("#notificationMessageFull");
 
     private readonly enableKeyboardShortcuts = getElement<HTMLInputElement>("#enableKeyboardShortcuts");
+
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
+    private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
+    private readonly autoSubscribeThreshold = getElement<HTMLInputElement>("#autoSubscribeThreshold"); // input ( number )
+    private readonly autoSubscribeThresholdValue = getElement<HTMLSpanElement>("#autoSubscribeThresholdValue");
+
+    private readonly autoUpdateNovelStatusOnlyRSS = getElement<HTMLInputElement>("#autoUpdateNovelStatusOnlyRSS");
+    private readonly autoUpdateNovelStatusAllValue = getElement<HTMLInputElement>("#autoUpdateNovelStatusAllValue");
+
     private readonly saveTarget = getElement<HTMLInputElement>("#saveTarget");
 
 
@@ -32,8 +41,12 @@ export class ExtensionBehaviour extends Build {
         this.setValueOptionKeyboardShortcuts(settings);
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
+        // Auto Subscribe Threshold
+        this.setValueOptionAutoSubscribeThreshold();
         // Save Target
         this.setValueOptionSaveTarget(settings);
+        // Auto Update Novel Status
+        this.setValueOptionAutoUpdateNovelStatus(settings);
 
 
         this.bindEvents();
@@ -49,7 +62,14 @@ export class ExtensionBehaviour extends Build {
         this.notificationMessageFull?.addEventListener("change", (e) => this.NotificationType(e));
 
         this.enableKeyboardShortcuts?.addEventListener("change", (e) => this.EnableKeyboardShortcuts(e));
+        
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
+        this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
+        this.autoSubscribeThreshold?.addEventListener("change", (e) => this.AutoSubscribeThreshold(e));
+
+        this.autoUpdateNovelStatusOnlyRSS?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'onlyRSS'));
+        this.autoUpdateNovelStatusAllValue?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'allowAll'));
+        
         this.saveTarget?.addEventListener("change", (e) => this.SaveTarget(e));
     }
     public async resetValues() {
@@ -116,7 +136,7 @@ export class ExtensionBehaviour extends Build {
         setElement<HTMLInputElement>("#enableKeyboardShortcuts", el => el.checked = keyboardShortcuts);
     }
     private setValueOptionAutoSubscribe(settings: Settings) {
-        const autoSubscribe = settings.ExtensionBehaviour.EnableAutoSubscribe;
+        const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
         setElement<HTMLInputElement>("#autoSubscribe", el => el.checked = autoSubscribe);
     }
     private setValueOptionSaveTarget(settings: Settings) {
@@ -201,9 +221,47 @@ export class ExtensionBehaviour extends Build {
         const event = e.target as HTMLInputElement;
         const isChecked = event.checked;
         const updatedSettings = await this.ensureSettingsUpToDate();
-        updatedSettings.ExtensionBehaviour.EnableAutoSubscribe = isChecked;
+        updatedSettings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe = isChecked;
+
+        this.enableAutoSubscribeThreshold!.disabled = !isChecked;
 
         this.setSettings(updatedSettings);
+    }
+    // Auto Subscribe - Allow Similarity Scanning
+    private async AllowSimilarityScanning(e: Event) {
+        const event = e.target as HTMLInputElement;
+        const isChecked = event.checked;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.AutoSubscribe.AllowSimilarityScanning = isChecked;
+
+        this.autoSubscribeThreshold!.disabled = !isChecked;
+
+        this.setSettings(updatedSettings);
+    }
+    // Auto Subscribe - Threshold
+    private async AutoSubscribeThreshold(e: Event) {
+        const event = e.target as HTMLInputElement;
+        const isPointNine = this.ensurePointNine(event.value);
+        if (!isPointNine) return;
+
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.AutoSubscribe.Threshold = Number(event.value);
+
+        this.setSettings(updatedSettings);
+    }
+    private ensurePointNine(value: string) {
+        const parsedValue = Number(value);
+        if (isNaN(parsedValue)) return false;
+        return parsedValue <= 1 && parsedValue >= 0.9;
+    }
+    private setValueOptionAutoSubscribeThreshold() {
+        if (!this.autoSubscribeThreshold || !this.autoSubscribeThresholdValue) return;
+        this.autoSubscribeThresholdValue.textContent = this.autoSubscribeThreshold.value;
+        this.autoSubscribeThreshold.addEventListener("input", (event) => {
+            if (!this.autoSubscribeThreshold || !this.autoSubscribeThresholdValue) return;
+            const target = event.target as HTMLInputElement;
+            this.autoSubscribeThresholdValue.textContent = target.value;
+        });
     }
     
     // Save Target
@@ -216,6 +274,38 @@ export class ExtensionBehaviour extends Build {
         const settingsTarget = target == "Spreadsheet" ? "GoogleSpreadsheet" : "BrowserBookmark";
         updatedSettings.ExtensionBehaviour.SaveTarget[settingsTarget] = isChecked;
 
+        this.setSettings(updatedSettings);
+    }
+
+    // Auto Update Novel Status
+    private setValueOptionAutoUpdateNovelStatus(settings: Settings) {
+        if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
+        const autoUpdateNovelStatus = settings.ExtensionBehaviour.AutoSetStatusScore;
+        const RSSOnly = autoUpdateNovelStatus.onlyRSS;
+        const allowAll = autoUpdateNovelStatus.allowAllDateFields;
+
+        this.autoUpdateNovelStatusAllValue.checked = RSSOnly;
+        this.autoUpdateNovelStatusOnlyRSS.checked = allowAll;
+    }
+    private async AutoUpdateNovelStatus(e: Event, type: "onlyRSS" | "allowAll") {
+        if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
+        const event = e.target as HTMLInputElement;
+        const isChecked = event.checked;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+
+        const settingsTarget = type == 'allowAll' ? 'allowAllDateFields' : 'onlyRSS';
+        if (!settingsTarget) return;
+
+        // make sure only one can be checked at a time
+        if (settingsTarget == 'onlyRSS') {
+            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.allowAllDateFields = false;
+            this.autoUpdateNovelStatusAllValue.checked = false;
+        } else if (settingsTarget == 'allowAllDateFields') {
+            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.onlyRSS = false;
+            this.autoUpdateNovelStatusOnlyRSS.checked = false;
+        }
+
+        updatedSettings.ExtensionBehaviour.AutoSetStatusScore[settingsTarget] = isChecked;
         this.setSettings(updatedSettings);
     }
 

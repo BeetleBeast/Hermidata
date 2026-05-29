@@ -1,4 +1,4 @@
-import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, DEFAULT_TAG_COLOURS, type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type RawFeed } from "./popup";
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Hermidata, type RawFeed } from "./popup";
 
 
 export interface quickBackup {
@@ -20,10 +20,24 @@ export interface DefaultChoice {
 export type NotificationTypes = "Badge" | "MessageMinimum" | "MessageFull" | "None";
 
 export type SaveTargets = {
-        internalCollection: true,
-        GoogleSpreadsheet: boolean,
-        BrowserBookmark: boolean
-    }
+    internalCollection: true,
+    GoogleSpreadsheet: boolean,
+    BrowserBookmark: boolean
+}
+
+export type AutoSubscribe = {
+    EnableAutoSubscribe: boolean;
+    AllowSimilarityScanning: boolean,
+    Threshold: number; // only allow between 0.9 and 1.0
+    // Record<Hermidata id, RSS id>
+    HermidataNotLinkedToRSS: Record<string, string>;
+}
+
+export type StatusScores = {
+    onlyRSS: boolean,
+    allowAllDateFields: boolean
+}
+
 export interface Settings {
     version: number;
 
@@ -35,8 +49,9 @@ export interface Settings {
         AllowContextMenu: boolean
         EnableNotification: NotificationTypes;
         EnableKeyboardShortcuts: boolean;
-        EnableAutoSubscribe: boolean;
+        AutoSubscribe: AutoSubscribe;
         SaveTarget: SaveTargets;
+        AutoSetStatusScore: StatusScores;
     }
     DefaultBookmarkSettings: {
         DefaultChoice: DefaultChoice,
@@ -105,93 +120,3 @@ export interface ElmentsWithInputAndMenu {
         saveButton: HTMLButtonElement | null
     }
 }
-
-const CustomFoldermapping: FolderMapping = {
-    root: 'Manga - Anime - Novels - TV-Series',
-    statusFolders: {
-        'Finished': 'Finished',
-        'Viewing':  'Currently - Reading',
-        'Dropped':  'Abandond',
-        'Planned':  'Planned',
-        'On-hold':  'On-hold',
-    },
-    typeAliases: {
-        "Manga": "Manga",
-        "Manhwa": "Manga",    // Manhwa → Manga folder
-        "Manhua": "Manga",    // Manhua → Manga folder
-        "Novel": "Novels",    // Novel → Novels (with s)
-        "Webnovel": "Novels", // Webnovel → Novels
-        "Anime": "Anime",
-        "TV-Series": "TV-Series"
-    },
-    overrides: [
-        // Manga / Manhwa / Manhua ->  from Reading to Currently - Reading/Reading
-        { type: 'Manga', status: 'Viewing', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading' },
-        { type: 'Manhwa', status: 'Viewing', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading'},
-        { type: 'Manhua', status: 'Viewing', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/Reading' },
-        // Manga / Manhwa / Manhua -> from Planned to Currently - Reading/future watch
-        { type: 'Manga', status: 'Planned', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch' },
-        { type: 'Manhwa', status: 'Planned', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch' },
-        { type: 'Manhua', status: 'Planned', path: 'Manga - Anime - Novels - TV-Series/Manga/Currently - Reading/future watch' },
-        // Novel / Webnovel -> from Reading to Currently - Reading/Reading
-        { type: "Novel", status: "Viewing", path: "Manga - Anime - Novels - TV-Series/Novels/Currently - Reading" },
-        { type: "Webnovel", status: "Viewing", path: "Manga - Anime - Novels - TV-Series/Novels/Currently - Reading" },
-    ],
-    defaultPath: 'Unsorted'
-}
-export const DefaultFoldermapping: FolderMapping = {
-    root: 'Hermidata',
-    statusFolders: {
-        'Finished': 'Finished',
-        'Viewing':  'Viewing',
-        'Dropped':  'Dropped',
-        'Planned':  'Planned',
-        'On-hold':  'On-hold',
-    },
-    defaultPath: 'Unsorted'
-}
-
-
-export const defaultSettings: Settings = {
-    version: 6,
-    AccountAndConnections: {
-        spreadsheetUrl: '',
-    },
-    ExtensionBehaviour: {
-        EnableLightMode: false,
-        AllowContextMenu : true,
-        SaveTarget: {
-            internalCollection: true,
-            BrowserBookmark: true,
-            GoogleSpreadsheet: false,
-        },
-        EnableKeyboardShortcuts: false,
-        EnableAutoSubscribe: false,
-        EnableNotification: 'None',
-    },
-    ContentTypesAndStatuses: {
-        TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],
-        STATUS_OPTIONS : [...DEFAULT_READ_STATUSES],
-        NOVEL_STATUS_OPTIONS: [...DEFAULT_NOVEL_STATUSES],
-    },
-    DefaultBookmarkSettings: {
-        DefaultChoice: {
-            novelType: 'Manga',
-            readStatus: 'Viewing',
-            novelStatus: 'Ongoing',
-            tags : [],
-            notes : ''
-        },
-        DefaultChoiceText_Menu: {
-            novelType: 'Manga',
-            readStatus: 'Planned',
-            novelStatus: 'Ongoing',
-            tags: [],
-            notes: ''
-        },
-    },
-    TagManagement: {
-        tagColoring: DEFAULT_TAG_COLOURS,
-    },
-    FolderMapping: CustomFoldermapping,
-};

@@ -1,6 +1,6 @@
 import { getAllTags, setSettings, getSettings } from "../../shared/db/Storage";
 import { type AllHermidata, type Settings } from "../../shared/types";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { levenshteinDistance, PastHermidata } from "./Past";
 
 export class TagAutocomplete {

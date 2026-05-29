@@ -1,6 +1,7 @@
-import type { Hermidata, RegexConfig, TrimmedTitle } from './types/index';
+import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
 
-export function getChapterFromTitle(title: string, url: string): number {
+export function getChapterFromTitle(title: string | undefined, url: string): number {
+    if (!title) return Number.NaN;
     // Regex to find the first number (optionally after "chapter", "chap", "ch")
     const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
 
@@ -60,6 +61,9 @@ export function returnHashedTitle(title: string, type: string, url: string = '',
 }
 export function returnBookmarkHash(bookmarkLabel: string) {
     return simpleHash(bookmarkLabel);
+}
+export function returnRawFeedHash(title: string, url: string) {
+    return simpleHash(title + url);
 }
 
 export function simpleHash(str: string) {

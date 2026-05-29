@@ -1,5 +1,5 @@
 // shared/sync.ts
-import { ext } from '../BrowserCompat'
+import { ext } from '../utils/BrowserCompat'
 import { putHermidata, deleteHermidata } from './db'
 import type { Hermidata } from '../types/index'
 

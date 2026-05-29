@@ -1,7 +1,7 @@
 import { saveHermidataV3 } from "../../shared/db/Storage";
-import { returnBookmarkHash } from "../../shared/StringOutput";
+import { returnBookmarkHash } from "../../shared/utils/StringOutput";
 import type { Bookmark, Hermidata } from "../../shared/types";
-import { getElement, setElement } from "../../utils/Selection";
+import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { activateother, customConfirm, deactivateother } from "../frontend/confirm";
 
@@ -45,7 +45,7 @@ export class BookmarkController {
     public init(): void {
         this.setAllToDefault();
 
-        this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].color;
+        this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].color;
 
         this.bindEvents();
     }
@@ -165,7 +165,7 @@ export class BookmarkController {
         const bookmarkContainer = document.createElement('div');
         bookmarkContainer.className = 'bookmarkMenu-item';
         bookmarkContainer.dataset.key = key;
-        const isActiveBookmark = this.hermidata.meta.bookmarkInUse === key;
+        const isActiveBookmark = this.hermidata.chapter.bookmarkInUse === key;
 
         bookmarkContainer.style.backgroundColor = isActiveBookmark ? 'var(--Btn_active)' : 'var(--Input-colorV2)';
 
@@ -187,7 +187,7 @@ export class BookmarkController {
     }
     /** create new bookmark form */
     private setAddNewBookmarkFormData(): void {
-        const currentChapter = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current;
+        const currentChapter = this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current;
         const currentNotes = this.hermidata.meta.notes;
         this.bookmarkLabelInput!.value = '';
         const defaultColor = '#fcfcfc';
@@ -253,7 +253,6 @@ export class BookmarkController {
 
         bookmarkContainer.append(bookmarkSVG, bookmarkLabel, bookmarkLastUpdated);
         this.bookmarkMenuManager?.appendChild(bookmarkContainer);
-        // TODO: update popup to have correct height as menu has a great chance to overflow
 
     }
     private getTimeInWords(timeCreated: string, timeUpdated: string): string {
@@ -304,7 +303,7 @@ export class BookmarkController {
             ColorPicker.show( ColorPicker.getHexColor() ?? currentColor,
                 async (newColor) => {
                     svg.style.fill = newColor;
-                    if (this.hermidata.meta.bookmarkInUse === key) this.imgBookmark!.style.fill = newColor;
+                    if (this.hermidata.chapter.bookmarkInUse === key) this.imgBookmark!.style.fill = newColor;
                     this.hermidata.chapter.bookmarks[key].color = newColor;
                     try {
                         if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
@@ -322,7 +321,7 @@ export class BookmarkController {
         if (!confirmation) return false;
 
         // set used bookmark to primary if selected
-        if (this.hermidata.meta.bookmarkInUse === key){
+        if (this.hermidata.chapter.bookmarkInUse === key){
             // get primary bookmark
             const primaryBookmarkKey = Object.keys(this.hermidata.chapter.bookmarks).find(b => this.hermidata.chapter.bookmarks[b].isPrimary);
             if (!primaryBookmarkKey) return false;
@@ -376,14 +375,14 @@ export class BookmarkController {
 
     private switchBookmarkMenu(key: string): void {
         // check if bookmark is already in use
-        if (this.hermidata.meta.bookmarkInUse == key) return;
+        if (this.hermidata.chapter.bookmarkInUse == key) return;
         // update current bookmark in use
-        this.hermidata.meta.bookmarkInUse = key;
+        this.hermidata.chapter.bookmarkInUse = key;
         // update popup UI
-        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].history.at(-1) || 0));
-        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].current));
+        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].history.at(-1) || 0));
+        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current));
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
         // update bookmark menu UI
-        this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.meta.bookmarkInUse].color;
+        this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].color;
     }
 }

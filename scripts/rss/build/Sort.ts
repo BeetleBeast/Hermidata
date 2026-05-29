@@ -1,5 +1,5 @@
 import type { AllsortsType, HermidataDateType, HermidataSortType } from "../../shared/types/index";
-import { getElement } from "../../utils/Selection";
+import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 
 export abstract class Sort extends RssBuild {

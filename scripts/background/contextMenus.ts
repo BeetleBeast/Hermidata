@@ -1,8 +1,8 @@
-import { ext } from "../shared/BrowserCompat";
+import { ext } from "../shared/utils/BrowserCompat";
 import type { Settings, InputArrayType } from "../shared/types/index";
 import { getCurrentDate } from "./feeds";
 import { handleSaveNovel } from "./rssCache";
-import { getTitleAndChapterFromUrl } from "../shared/StringOutput";
+import { getTitleAndChapterFromUrl } from "../shared/utils/StringOutput";
 
 export function initContextMenus() {
     ext.contextMenus.onClicked.addListener((info) => {

@@ -32,59 +32,6 @@ export type AnyNovelType = NovelType  | (string & {});
 export type AnyReadStatus = ReadStatus | (string & {});
 export type AnyNovelStatus = NovelStatus | (string & {});
 
-// Default arrays — used to seed settings on first install
-export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
-export const DEFAULT_NOVEL_STATUSES: NovelStatus[] = ['Ongoing', 'Completed', 'Hiatus', 'Canceled'];
-export const DEFAULT_READ_STATUSES: ReadStatus[] = ['Viewing', 'Finished', 'On-hold', 'Dropped', 'Planned'];
-
-
-// hardcoded default tags
-export const DEFAULT_TAGS: string[] = [
-    'Action', 'Romance', 'Comedy', 'Drama', 'Slice of Life', 'Adventure', 'Parody', 'Magic',
-    'Fantasy', 'Mystery', 'Thriller', 'Horror', 'Sci-Fi', 'Historical', 'Supernatural', 
-    'Ecchi', 'Harem', 'Hentai',
-    'Seinen', 'Shoujo', 'Shoujoai', 'Shounen', 'Shounenai', 'Josei', 'Yaoi', 'Yuri',
-    'Isekai', 'Mecha', 'Demons', 'Ghosts', 'Vampire', 'Psychological', 'Super Power', 
-];
-// hardcoded default tag colours in hex | <tag, hex colour>
-// hardcoded default tag colours in hex | <tag, hex colour>
-export const DEFAULT_TAG_COLOURS: Record<string, string> = {
-    'Action': '#E74C3C',           // Red
-    'Romance': '#E91E63',          // Pink
-    'Comedy': '#FFC107',           // Amber
-    'Drama': '#9C27B0',            // Purple
-    'Slice of Life': '#4CAF50',    // Green
-    'Adventure': '#FF9800',        // Orange
-    'Parody': '#FFD54F',           // Light Yellow
-    'Magic': '#9C27B0',            // Purple
-    'Fantasy': '#673AB7',          // Deep Purple
-    'Mystery': '#607D8B',          // Blue Grey
-    'Thriller': '#424242',         // Dark Grey
-    'Horror': '#B71C1C',           // Dark Red
-    'Sci-Fi': '#00BCD4',           // Cyan
-    'Historical': '#8D6E63',       // Brown
-    'Supernatural': '#7B1FA2',     // Dark Purple
-    
-    'Ecchi': '#F48FB1',            // Light Pink
-    'Harem': '#EC407A',            // Hot Pink
-    'Hentai': '#C2185B',           // Dark Pink
-    'Seinen': '#455A64',           // Dark Blue Grey
-    'Shoujo': '#F06292',           // Rose Pink
-    'Shoujoai': '#F8BBD0',         // Soft Pink
-    'Shounen': '#FF5722',          // Deep Orange
-    'Shounenai': '#64B5F6',        // Light Blue
-    'Josei': '#BA68C8',            // Medium Purple
-    'Yaoi': '#5C6BC0',             // Indigo
-    'Yuri': '#FF80AB',             // Pink Accent
-    'Isekai': '#26C6DA',           // Light Cyan
-    'Mecha': '#78909C',            // Grey Blue
-    'Demons': '#6A1B9A',           // Dark Magenta
-    'Ghosts': '#E0E0E0',           // Light Grey
-    'Vampire': '#880E4F',          // Dark Maroon
-    'Psychological': '#5D4037',    // Deep Brown
-    'Super Power': '#1976D2',      // Blue
-}
-
 
 export interface HermidataV5 {
     id: string;
@@ -111,18 +58,7 @@ export interface HermidataV5 {
         novelStatus: AnyNovelStatus;
     };
 }
-export interface Bookmark { // new
-	id: string;
-	current: number;
-	history: number[];
-	label: string; // "favorite scene", "reread from here", "primary"
-	note?: string; // Optional note about why you bookmarked createdAt: string;
-	color: string; // hex rgb for visual distinction
-	createdAt: string;
-	updatedAt: string;
-	isPrimary: boolean; // only one can be primary
-}
-export interface Hermidata {
+export interface HermidataV6 {
     id: string;
     title: string;
     type: AnyNovelType;
@@ -147,6 +83,44 @@ export interface Hermidata {
         originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
         novelStatus: AnyNovelStatus;
         bookmarkInUse: string;
+    };
+}
+export interface Bookmark { // new
+	id: string;
+	current: number;
+	history: number[];
+	label: string; // "favorite scene", "reread from here", "primary"
+	note?: string; // Optional note about why you bookmarked createdAt: string;
+	color: string; // hex rgb for visual distinction
+	createdAt: string;
+	updatedAt: string;
+	isPrimary: boolean; // only one can be primary
+}
+export interface Hermidata {
+    id: string;
+    title: string;
+    type: AnyNovelType;
+    url: string;
+    source: string;
+    status: AnyReadStatus;
+    chapter: {
+        latest: number;
+        lastChecked: string;
+        bookmarks: Record<string, Bookmark>; // Multiple saved positions
+        revisitingCount: number; // How many times you've re-read
+        bookmarkInUse: string;
+    };
+    rss: Feed | null;
+    import: string | null;
+    meta: {
+        tags: string[]; // old versions might have string, but we will convert them to array
+        notes: string;
+        added: string;
+        updated: string;
+        altSources: string[]; // for multiple souces ( with the first one the same as above )
+        altTitles: string[];
+        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
+        novelStatus: AnyNovelStatus;
     };
 }
 
@@ -229,4 +203,20 @@ export interface LatestValue {
     tagsArray: string[];
     notes: string;
     date: string;
+}
+export type PotentialSameHermidata = {
+    result: {
+        key: string,
+        titleFound: string,
+        titleGiven: string,
+        score: number
+    } | null,
+    found: boolean,
+    amountFound: number
+}
+
+export type CurrentTab = {
+    currentChapter: number;
+    pageTitle: string;
+    url: string;
 }

@@ -1,6 +1,6 @@
 import { PastHermidata } from "../popup/core/Past";
 import type { RSSData, RSSDOM, Hermidata } from "../shared/types/index";
-import { getElement, setElement } from "../utils/Selection";
+import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
 import { getHermidataWithRssFromBackground } from "./load";
 
@@ -64,6 +64,8 @@ export class RSS {
         await this.BuildRSS.attachEventListeners()
 
         await this.BuildRSS.makeFooterSection();
+
+        await this.BuildRSS.activateAutoSubscribe();
     }
     public changePageToClassic() {
         setElement("#HDRSSBtn", el => el.classList = "Btn");

@@ -1,5 +1,5 @@
-import { ext } from "../../shared/BrowserCompat";
-import { getElement, setElement } from "../../utils/Selection";
+import { ext } from "../../shared/utils/BrowserCompat";
+import { getElement, setElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 export class Account_Connection extends Build {

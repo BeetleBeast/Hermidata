@@ -83,7 +83,17 @@
             <hr>
             <br>
             <label for="enableAutoSubscribe">Enable Auto-subscribe Bookmarks ( Beta )</label>
-            <input type="checkbox" id="enableAutoSubscribe" title="Enable Auto-subscribe Bookmarks" disabled>
+            <input type="checkbox" id="enableAutoSubscribe" title="Enable Auto-subscribe Bookmarks">
+            <form class="formIndented" id="autoSubscribeForm">
+                <label for="enableAutoSubscribeThreshold">Enable Auto-subscribe threshold changer</label>
+                <input type="checkbox" id="enableAutoSubscribeThreshold" name="enableAutoSubscribeThreshold" title="enable auto subscribe threshold" value="false" disabled>
+                <br>
+                <form class="formIndented" id="autoSubscribeThresholdForm">
+                    <label for="autoSubscribeThreshold">Change the Auto-subscribe similarity threshold</label>
+                    <input type="range" min="0.9" max="1" step="0.01" id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold" value="1.0" disabled>
+                    <span id="autoSubscribeThresholdValue">1.0</span>
+                </form>
+            </form>
             <br>
             <hr>
             <br>
@@ -98,6 +108,19 @@
                 <label for="SaveToBrowserBookmark">Save as a browser Bookmark</label>
                 <input type="checkbox" id="SaveToBrowserBookmark" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
             </form>
+            <br>
+            <hr>
+            <br>
+            <h3 id="Novel Status auto update">Novel Status auto update</h3>
+            <form class="formIndented">
+                <label for="autoUpdateNovelStatusOnlyRSS">auto update Novel Status on RSS update only ( Recommended )</label>
+                <input type="checkbox" id="autoUpdateNovelStatusOnlyRSS" name="autoUpdateNovelStatus" title="auto update Novel Status" value="RSSOnly">
+                <br>
+                <label for="autoUpdateNovelStatusAllValue">auto update Novel Status on all updates</label>
+                <input type="checkbox" id="autoUpdateNovelStatusAllValue" name="autoUpdateNovelStatus" title="auto update Novel Status" value="All">
+            </form>
+            <br>
+            <hr>
             <br>
         </section>
         <section class="section-content DefaultBookmarkSettings" data-active="false">
