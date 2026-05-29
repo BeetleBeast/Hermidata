@@ -110,7 +110,7 @@ export class PastHermidata {
             return await HermidataMigration.migrateCopy(objs);
         }
 
-        const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.type, this.hermidata.url);
+        const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.url);
 
         return getHermidataViaKey(key).catch(error => {
             console.error('Extention error: Failed Premise getHermidata: ',error);
@@ -127,7 +127,7 @@ export class PastHermidata {
         return TrueTitle
     }
     private async getTitleFromFuzzy(trueTitle: string): Promise<{ possibleObj: AllHermidata, AltKeyNeeded: { needAltTitle: boolean, reason: string }, fuzzyKey: string | null | undefined  }> {
-        const AltKeyNeeded = await detectAltTitleNeeded(this.hermidata.title, this.hermidata.type, this.hermidata.source, this.hermidata.url);
+        const AltKeyNeeded = await detectAltTitleNeeded(this.hermidata.title, this.hermidata.novelType, this.hermidata.source, this.hermidata.url);
         const settings = await getSettings();
         
         const fuzzyKey = AltKeyNeeded?.relatedKey;
@@ -170,11 +170,11 @@ export class PastHermidata {
             return sameTitleMatches[0];
         }
          // Prefer the same type if exists
-        const typeKey = returnHashedTitle(this.hermidata.title, this.hermidata.type);
+        const typeKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType);
         if (possibleObj[typeKey]) return possibleObj[typeKey];
     
         // Fallback: old V1 hash (title only)
-        const fallbackKey = returnHashedTitle(this.hermidata.title, this.hermidata.type, this.hermidata.url);
+        const fallbackKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.url);
         const fallbackObj = await getHermidataViaKey(fallbackKey);
         if (fallbackObj) return fallbackObj;
     
@@ -201,7 +201,7 @@ export async function detectAltTitleNeeded(title: string, type: AnyNovelType, so
 
     // 2. Compute candidate similarities (same source/type only)
     const candidates = Object.entries(data)
-        .filter(([, entry]) => entry.source !== source && entry.type === type);
+        .filter(([, entry]) => entry.source !== source && entry.novelType === type);
 
     let bestMatch = null;
     let bestScore = 0;

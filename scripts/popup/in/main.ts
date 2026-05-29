@@ -227,8 +227,8 @@ class HermidataController {
         setElement<HTMLInputElement>('#title', el => el.value = display.title);
         setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history?.at(-1) || 0));
         setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current));
-        setElement<HTMLSelectElement>('#Type', el => el.value = display.type);
-        setElement<HTMLSelectElement>('#status', el => el.value = display.status);
+        setElement<HTMLSelectElement>('#Type', el => el.value = display.novelType);
+        setElement<HTMLSelectElement>('#status', el => el.value = display.chapter.bookmarks[display.chapter.bookmarkInUse].readStatus);
         setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]);
         
         this.tagsSystem.populateTagPills(this.hermidata.meta.tags, settings.TagManagement.tagColoring);
@@ -244,7 +244,7 @@ class HermidataController {
 
         // HDR RSS
         setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
-        setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.type);
+        setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.novelType);
     }
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
@@ -259,18 +259,18 @@ class HermidataController {
     }
     private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
-            if (!novelTypes.includes(this.pastHermidata.type)) {
-                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.type)
-                if ( novelTypes.includes(capitalizeFirstLetterOfStringLetterType) ) this.pastHermidata.type = capitalizeFirstLetterOfStringLetterType
+            if (!novelTypes.includes(this.pastHermidata.novelType)) {
+                let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.novelType)
+                if ( novelTypes.includes(capitalizeFirstLetterOfStringLetterType) ) this.pastHermidata.novelType = capitalizeFirstLetterOfStringLetterType
                 else {
-                    console.warn('type can\'t be found in past', this.pastHermidata.type)
+                    console.warn('type can\'t be found in past', this.pastHermidata.novelType)
                 }
             }
-            if (!readStatus.includes(this.pastHermidata.status)) {
-                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.status)
-                if ( readStatus.includes(capitalizeFirstLetterOfStringLetterStatus) ) this.pastHermidata.status = capitalizeFirstLetterOfStringLetterStatus
+            if (!readStatus.includes(this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus)) {
+                let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus)
+                if ( readStatus.includes(capitalizeFirstLetterOfStringLetterStatus) ) this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus = capitalizeFirstLetterOfStringLetterStatus
                 else {
-                    console.warn('status can\'t be found in past', this.pastHermidata.status)
+                    console.warn('status can\'t be found in past', this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus)
                 }
             }
         } else console.log('[Main Popup] no past hermidata')
@@ -338,10 +338,10 @@ class HermidataController {
         const { title, Type, Chapter, status, novelStatuses, tagsArray, notes } = latestValue;
         this.hermidata.chapter.bookmarkInUse = this.bookmarkSystem.bookmarkInUseID ?? this.hermidata.chapter.bookmarkInUse;
         this.hermidata.title = title;
-        this.hermidata.type = Type;
+        this.hermidata.novelType = Type;
         this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current = Number(Chapter);
         this.updateHermidataChapterHistory();
-        this.hermidata.status = status;
+        this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].readStatus = status;
         this.hermidata.meta.novelStatus = novelStatuses;
         this.hermidata.meta.tags = tagsArray;
         this.hermidata.meta.notes = notes;

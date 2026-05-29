@@ -25,7 +25,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
             // id entry is new/can't be found in storage
             const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
             if (Hermidata) entry = Hermidata
-            else entry = makeHermidataV3(title, hermidata.url, hermidata.type);
+            else entry = makeHermidataV3(title, hermidata.url, hermidata.novelType);
         }
     
         if (!entry) {
@@ -33,7 +33,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
             return false;
         }
     
-        if ( entry.title !== title || entry.type !== type || key !== entry.id) needsToMigrate = true
+        if ( entry.title !== title || entry.novelType !== type || key !== entry.id) needsToMigrate = true
         
         const oldChapterNumber = entry.chapter.bookmarks[hermidata.chapter.bookmarkInUse]?.current || getChapterFromBookmarkInUse(entry);
         if (newChapterNumber >= oldChapterNumber) {
@@ -48,8 +48,8 @@ export async function updateChapterProgress(title: string, type: string, hermida
             entry.chapter.bookmarkInUse = bookmarkInUse.id;
             entry.chapter.lastChecked = new Date().toISOString();
             
-            entry.type = hermidata.type;
-            entry.status = hermidata.status;
+            entry.novelType = hermidata.novelType;
+            entry.chapter.bookmarks[hermidata.chapter.bookmarkInUse].readStatus = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].readStatus;
             entry.meta.novelStatus = hermidata.meta.novelStatus;
     
             const rawTags = hermidata.meta.tags as string[] | string;
@@ -75,9 +75,9 @@ export async function updateChapterProgress(title: string, type: string, hermida
 }
 
 
-export function makeHermidataV3(title: string, url: string, type: AnyNovelType = "Manga", isPrimary: boolean = true): Hermidata {
+export function makeHermidataV3(title: string, url: string, novelType: AnyNovelType = "Manga", isPrimary: boolean = true): Hermidata {
     const Title = TrimTitle.trimTitle(title, url);
-    const hash = returnHashedTitle(title, type, url);
+    const hash = returnHashedTitle(title, novelType, url);
     const source = new URL(url).hostname.replace(/^www\./, "");
     const label = 'Primary';
     const newBoomark: Bookmark = {
@@ -89,16 +89,16 @@ export function makeHermidataV3(title: string, url: string, type: AnyNovelType =
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         note: '',
-        isPrimary
+        isPrimary,
+        readStatus: 'Viewing'
     }
 
     return {
         id: hash,
         title: Title.title,
-        type,
+        novelType,
         url,
         source,
-        status: "Viewing",
         chapter: {
             latest: 0,
             bookmarks: {
@@ -131,7 +131,7 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
         new Set([...(entry.meta.altTitles || []), trimmed])
     );
 
-    const entryKey = entry.id || returnHashedTitle(entry.title, entry.type);
+    const entryKey = entry.id || returnHashedTitle(entry.title, entry.novelType);
 
     await saveHermidataV3(entryKey, entry);
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);

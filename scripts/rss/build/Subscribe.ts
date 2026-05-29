@@ -68,7 +68,7 @@ export class Subscribe extends RssBuild {
     private async onSubscribeClick( notificationSection: HTMLElement, allItemSection: HTMLElement ): Promise<void> {
         if (!this.matchedFeed) return;
 
-        const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as AnyNovelType || this.hermidata.type;
+        const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as AnyNovelType || this.hermidata.novelType;
         const currentTitle = getElement<HTMLInputElement>('#title_HDRSS')?.value || this.hermidata.title;
 
         linkRSSFeed(currentTitle, currentType, this.hermidata.url, this.matchedFeed);
@@ -131,7 +131,7 @@ export class Subscribe extends RssBuild {
                 continue;
             }
             // 5. link matching feed
-            linkRSSFeed(Hermidata.title, Hermidata.type, Hermidata.url, RawFeed);
+            linkRSSFeed(Hermidata.title, Hermidata.novelType, Hermidata.url, RawFeed);
         }
         return true;
     }

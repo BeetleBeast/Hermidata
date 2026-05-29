@@ -207,7 +207,7 @@ async function logStatus(Hermidata: Hermidata): Promise<CalculateStatusReturnObj
 
     const findKeyOfValue = (obj: Record<string, string>, value: string) => Object.keys(obj).find(key => obj[key] === value);
 
-    const trueCurrentType = typeAliases ? findKeyOfValue(typeAliases, Hermidata.type) ?? Hermidata.type : Hermidata.type;
+    const trueCurrentType = typeAliases ? findKeyOfValue(typeAliases, Hermidata.novelType) ?? Hermidata.novelType : Hermidata.novelType;
     const currentNovelStatus = Hermidata.meta.novelStatus ?? 'Ongoing';
 
     if (currentNovelStatus === "Completed") return { EnoughInfo: false, value: null };

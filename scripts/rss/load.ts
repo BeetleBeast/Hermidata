@@ -76,7 +76,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
             continue;
         }
         
-        const type = matched?.type ?? TYPE_OPTIONS[0];
+        const type = matched?.novelType ?? TYPE_OPTIONS[0];
         const id = returnHashedTitle(feedTitle, type, feed.url);
 
         filteredRawFeeds[id] = Object.freeze({ ...feed, items: [...(feed.items ?? [])] });
@@ -185,7 +185,7 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
 
     const existingEntry = findByTitleOrAltV2(title, AllHermidata)
     const resolvedTitle = existingEntry ? existingEntry.title : title;
-    const resolvedType = existingEntry ? existingEntry.type : type;
+    const resolvedType = existingEntry ? existingEntry.novelType : type;
     const key = returnHashedTitle( resolvedTitle, resolvedType);
 
     const KeysToFetch = [key];

@@ -204,7 +204,7 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = returnHashedTitle(newTitle, oldData.type, oldData.url, false);
+        const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.url, false);
         const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.url).title
         const newData = { ...oldData, title: newTitle, id: newKey };
     

@@ -81,10 +81,9 @@ export const filterName: FilterName = {
 export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
     id: '',
     title: '',
-    type:  type,
+    novelType: type,
     url: '',
     source: '',
-    status: status,
     chapter: { 
         bookmarks: {
             [returnBookmarkHash('Primary')]: {
@@ -96,7 +95,8 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 note: '',
-                isPrimary: true
+                isPrimary: true,
+                readStatus: status
             }
         },
         latest: 0,

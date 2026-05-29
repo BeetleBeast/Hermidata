@@ -247,13 +247,13 @@ export class HermidataMigration {
 
         for (const [key, obj] of Object.entries(all)) {
             const oldHash = HermidataMigration.getOldIDType(obj);
-            const newHash = returnHashedTitle(obj.title, obj.type);
+            const newHash = returnHashedTitle(obj.title, obj.novelType);
 
             if (obj.id === oldHash && oldHash !== newHash) {
                 results.push({
                     key,
                     title: obj.title,
-                    type: obj.type,
+                    type: obj.novelType,
                     source: obj.source,
                     oldHash,
                     newHash
@@ -339,7 +339,7 @@ export class HermidataMigration {
             for (let j = i + 1; j < objs.length; j++) {
                 const obj1 = objs[i];
                 const obj2 = objs[j];
-                if (this.isSameSeries(obj1, obj2) && obj1.type !== obj2.type) return await this.migrationSteps(obj1, obj2);
+                if (this.isSameSeries(obj1, obj2) && obj1.novelType !== obj2.novelType) return await this.migrationSteps(obj1, obj2);
             }
         }
         console.warn("No migratable pair found, returning most recent");
@@ -401,11 +401,11 @@ export class HermidataMigration {
             return sameTitleMatches[0];
         }
         // Prefer the same type if exists
-        const typeKey = returnHashedTitle(HermidataV3.title, HermidataV3.type);
+        const typeKey = returnHashedTitle(HermidataV3.title, HermidataV3.novelType);
         if (possibleObj.some(item => item.id === typeKey)) return possibleObj.some(item => item.id === typeKey);
 
         // Fallback: old V1 hash (title only)
-        const fallbackKey = returnHashedTitle(HermidataV3.title, HermidataV3.type, HermidataV3.url);
+        const fallbackKey = returnHashedTitle(HermidataV3.title, HermidataV3.novelType, HermidataV3.url);
         const fallbackObj = await getHermidataViaKey(fallbackKey);
         if (fallbackObj) return fallbackObj;
 
@@ -416,11 +416,11 @@ export class HermidataMigration {
 
 
 
-    public  static async migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | null> {
+    public static async migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | null> {
         // step 1. new key
         // re-make keys
-        const [ newTitle, newType ] = [newer.title, newer.type]
-        const [ oldTitle, oldType ] = [older.title, older.type]
+        const [ newTitle, newType ] = [newer.title, newer.novelType]
+        const [ oldTitle, oldType ] = [older.title, older.novelType]
         const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : this.getOldIDType(newer);
         const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : this.getOldIDType(older);
         // check keys validity
@@ -438,10 +438,9 @@ export class HermidataMigration {
             ...base,
             id: newKey,
             title: newTitle || oldTitle,
-            type: newType || oldType,
+            novelType: newType || oldType,
             url: newer.url || older.url,
             source: newer.source || older.source,
-            status: newer.status || older.status || "Planned",
             chapter: {
                 bookmarks: {
                     ...older.chapter?.bookmarks,
@@ -488,12 +487,12 @@ export class HermidataMigration {
     }
 
     public static detectHashType(obj: Hermidata) {
-        if (!obj?.title || !obj?.type || !obj?.id) return "unknown";
+        if (!obj?.title || !obj?.novelType || !obj?.id) return "unknown";
 
         const normalizedTitle = TrimTitle.trimTitle(obj.title, obj.url).title.toLowerCase();
 
-        if (obj.id === this.OLD_simpleHash(`${obj.type}:${normalizedTitle}`)) return "old";
-        if (obj.id === this.NEW_simpleHash(`${obj.type}:${normalizedTitle}`)) return "new";
+        if (obj.id === this.OLD_simpleHash(`${obj.novelType}:${normalizedTitle}`)) return "old";
+        if (obj.id === this.NEW_simpleHash(`${obj.novelType}:${normalizedTitle}`)) return "new";
         return "unknown";
     }
 
@@ -519,7 +518,7 @@ export class HermidataMigration {
 
 
     public static getOldIDType(Obj: Hermidata) {
-        return this.OLD_simpleHash(`${Obj.type}:${TrimTitle.trimTitle(Obj.title, Obj.url).title.toLowerCase()}`);
+        return this.OLD_simpleHash(`${Obj.novelType}:${TrimTitle.trimTitle(Obj.title, Obj.url).title.toLowerCase()}`);
     }
 
     /**
@@ -527,15 +526,29 @@ export class HermidataMigration {
      * upgrade Hermidata V5 to V6
      */
     public static migrateHermidataV7(older: HermidataV6): Hermidata {
+        const updatedBookmarks: Record<string, Bookmark> = {}
+        for (const bookmark of Object.values(older.chapter?.bookmarks)) {
+            updatedBookmarks[bookmark.id] = {
+                id: bookmark.id,
+                current: bookmark.current,
+                history: bookmark.history,
+                label: bookmark.label,
+                note: bookmark.note,
+                color: bookmark.color,
+                createdAt: bookmark.createdAt,
+                updatedAt: bookmark.updatedAt,
+                isPrimary: bookmark.isPrimary,
+                readStatus: bookmark.isPrimary ? older.status : 'Viewing'
+            }
+        }
         const result: Hermidata = {
             id: older.id,
             title: older.title,
-            type: older.type,
+            novelType: older.type,
             url: older.url,
             source: older.source,
-            status: older.status,
             chapter: {
-                bookmarks: older.chapter?.bookmarks,
+                bookmarks: updatedBookmarks,
                 latest: older.chapter?.latest,
                 lastChecked: older.chapter?.lastChecked,
                 revisitingCount: older.chapter?.revisitingCount,
@@ -567,6 +580,7 @@ export class HermidataMigration {
         const newBoomark: Bookmark = {
             id: this.NEW_simpleHash(label),
             current: Number(older.chapter?.current),
+            readStatus: older.status,
             history: this.forceHistoryIntoNumbers(older.chapter?.history),
             label: label,
             color: 'blue',
@@ -578,10 +592,9 @@ export class HermidataMigration {
         const result: Hermidata = {
             id: older.id,
             title: older.title,
-            type: older.type,
+            novelType: older.type,
             url: older.url,
             source: older.source,
-            status: older.status,
             chapter: {
                 bookmarks: {
                     [newBoomark.id]: newBoomark
