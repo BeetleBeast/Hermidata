@@ -20,10 +20,16 @@ export interface DefaultChoice {
 export type NotificationTypes = "Badge" | "MessageMinimum" | "MessageFull" | "None";
 
 export type SaveTargets = {
-        internalCollection: true,
-        GoogleSpreadsheet: boolean,
-        BrowserBookmark: boolean
-    }
+    internalCollection: true,
+    GoogleSpreadsheet: boolean,
+    BrowserBookmark: boolean
+}
+
+export type StatusScores = {
+    onlyRSS: boolean,
+    allowAllDateFields: boolean
+}
+
 export interface Settings {
     version: number;
 
@@ -37,6 +43,7 @@ export interface Settings {
         EnableKeyboardShortcuts: boolean;
         EnableAutoSubscribe: boolean;
         SaveTarget: SaveTargets;
+        AutoSetStatusScore: StatusScores;
     }
     DefaultBookmarkSettings: {
         DefaultChoice: DefaultChoice,

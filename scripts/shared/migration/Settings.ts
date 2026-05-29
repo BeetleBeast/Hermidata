@@ -87,6 +87,10 @@ export class SettingsMigration {
                     internalCollection: true,
                     GoogleSpreadsheet: true as boolean,
                     BrowserBookmark: true as boolean
+                },
+                AutoSetStatusScore: {
+                    onlyRSS: false,
+                    allowAllDateFields: false,
                 }
             },
             DefaultBookmarkSettings: {
