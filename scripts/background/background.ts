@@ -4,7 +4,7 @@ import { initContextMenus } from './contextMenus'
 import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/db/sync'
-import { migrateFromChromeStorage, migrateFromChromeStorageV6, migrateFromChromeStorageV7 } from '../shared/db/db'
+import { migrateFromChromeStorage, migrateHermidataToLatest } from '../shared/db/db'
 import { migrateSettings, resetSettings } from '../shared/db/Storage'
 import { calculateNovelStatusForAll } from '../shared/utils/NovelStatusCalculator'
 
@@ -31,8 +31,7 @@ import { calculateNovelStatusForAll } from '../shared/utils/NovelStatusCalculato
 // await resetSettings() // dev-only
 await migrateSettings()
 await migrateFromChromeStorage()
-await migrateFromChromeStorageV6()
-await migrateFromChromeStorageV7()
+await migrateHermidataToLatest()
 await calculateNovelStatusForAll()
 initRssCache()
 initTabs()

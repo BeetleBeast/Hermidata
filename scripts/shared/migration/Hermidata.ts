@@ -1,6 +1,6 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidataV3 } from "../../popup/core/save";
-import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
+import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
 import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
@@ -484,6 +484,20 @@ export class HermidataMigration {
         updateHermidataV3(oldKey, newKey, merged);
 
         return merged;
+    }
+    public static async mergeTwoHermidataWithConfirmation(newer: Hermidata, older: Hermidata): Promise<boolean> { 
+        const msg = `
+            Are you sure you want to merge "${older.title}" with "${newer.title}".
+
+            here is the new one: ${JSON.stringify(newer, null, 4)}
+            here is the old one: ${JSON.stringify(older, null, 4)}
+        `;
+        const confirmed = await customConfirm(msg, { accept: "Merge", reject: "Cancel"});
+        if (!confirmed) return false;
+        const merged = await this.mergeTwoHermidata(newer, older);
+        if (!merged) return false;
+        console.log(`Merged "${older.title}" with "${newer.title}"`);
+        return true;
     }
 
     public static detectHashType(obj: Hermidata) {
