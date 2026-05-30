@@ -4,7 +4,7 @@ import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
-import type { HermidataV6 } from '../types/popup';
+import type { HermidataV4, HermidataV6, HermidataV7 } from '../types/popup';
 
 
 // ============================================================
@@ -412,54 +412,28 @@ export async function migrateFromChromeStorage(): Promise<void> {
     });
 }
 /**
- * One-time migration from Hermidata v5 to Hermidata v6 inside IndexedDB
+ * One-time migration from Hermidata to latest
  */
-export async function migrateFromChromeStorageV6(): Promise<void> {
+export async function migrateHermidataToLatest(): Promise<void> {
     const db = await getDb();
-    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v6');
+    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v8');
     if (alreadyMigrated) return;
 
-    console.log('[DB] Starting migration of Hermidata from V5 to V6...');
-
-    await new Promise<void>(async (resolve) => {
-        const allHermidata_v5 = await getAllHermidata();
-        const entries: Hermidata[] = [];
-
-        for (const [key, value] of Object.entries(allHermidata_v5)) {
-            if (!isHermidataV6(value)) { entries.push( HermidataMigration.migrateHermidataV6(value) ); }
-        }
-
-        if (entries.length) await putAllHermidata(entries);
-
-        // Mark as done
-        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v6');
-        console.log(`[DB] Migrated ${entries.length} Hermidata entries from V5 to V6`);
-        resolve();
-    });
-}
-/**
- * One-time migration from Hermidata v6 to Hermidata v7
- */
-export async function migrateFromChromeStorageV7(): Promise<void> {
-    const db = await getDb();
-    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v7');
-    if (alreadyMigrated) return;
-
-    console.log('[DB] Starting migration of Hermidata from V6 to V7...');
+    console.log('[DB] Starting migration of Hermidata to latest (V8)...');
 
     await new Promise<void>(async (resolve) => {
         const allHermidata_v6 = await getAllHermidata();
         const entries: Hermidata[] = [];
 
         for (const [key, value] of Object.entries(allHermidata_v6)) {
-            if (!isHermidataV7(value)) { entries.push( HermidataMigration.migrateHermidataV7(value) ); }
+            if (!isHermidataV7(value)) { entries.push( HermidataMigration.migrateAllHermidataToLatest(value) ); }
         }
 
         if (entries.length) await putAllHermidata(entries);
 
         // Mark as done
-        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v7');
-        console.log(`[DB] Migrated ${entries.length} Hermidata entries from V6 to V7`);
+        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v8');
+        console.log(`[DB] Migrated ${entries.length} Hermidata entries to V8`);
         resolve();
     });
 }
@@ -468,17 +442,48 @@ export async function migrateFromChromeStorageV7(): Promise<void> {
  * @param data - Hermidata
  * @returns boolean
  */
-export function isHermidataV6( data: Hermidata | HermidataV5 ): data is Hermidata {
+export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+    return (
+        !("bookmarks" in data.chapter) &&
+        !("bookmarkInUse" in data.meta) &&
+        "type" in data &&
+        "status" in data &&
+        !("originalRelease" in data) &&
+        (typeof data.meta.tags === 'string')
+    );
+}
+export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+    return (
+        !("bookmarks" in data.chapter) &&
+        !("bookmarkInUse" in data.meta) &&
+        "type" in data &&
+        "status" in data &&
+        "originalRelease" in data || "originalRelease" in data.meta == null
+    );
+}
+export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
     return (
         "bookmarks" in data.chapter &&
         Array.isArray(data.chapter.bookmarks) &&
-        "revisitingCount" in data.chapter
+        "revisitingCount" in data.chapter &&
+        "type" in data &&
+        "status" in data &&
+        "bookmarkInUse" in data.meta
     );
 }
-export function isHermidataV7( data: Hermidata | HermidataV6 ): data is Hermidata {
+export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
     return (
-        "bookmarkInUse" in data.chapter
+        "bookmarkInUse" in data.chapter &&
+        "type" in data &&
+        "status" in data
     );
+}
+export function isHermidataV8( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+    return (
+        "bookmarkInUse" in data.chapter &&
+        "novelType" in data &&
+        !("status" in data)
+    )
 }
 
 // ============================================================
