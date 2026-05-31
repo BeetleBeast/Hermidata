@@ -21,7 +21,7 @@ export class ImportsAndExports extends Build {
     private readonly massImportFromBookmarkFolderBtn = getElement<HTMLButtonElement>("#massImportFromBookmarkFolderBtn");
     private readonly massImportFromBookmarkFolderCheckContainer = getElement<HTMLDivElement>("#massImportFromBookmarkFolderCheckContainer");
     private readonly massImportFromBookmarkFolder = getElement<HTMLInputElement>("#bookmarkFolder");
-    private readonly massImportFromBookmarkFolderSaveAllBtn = getElement<HTMLButtonElement>("massImportFromBookmarkFolder-saveAllBtn");
+    private readonly massImportFromBookmarkFolderSaveAllBtn = getElement<HTMLButtonElement>("#massImportFromBookmarkFolder-saveAllBtn");
     private readonly massImportFromBookmarkFolderGhostText = getElement<HTMLParagraphElement>("#massImportFromBookmarkFolderGhostText");
     private readonly massImportFromBookmarkFolderStatus = getElement<HTMLDivElement>("#massImportFromBookmarkFolderStatus");
 
@@ -538,7 +538,7 @@ export class ImportsAndExports extends Build {
                 NovelTypeChanger.appendChild(option);
             }
 
-            NovelTypeChanger.value = hermidata.novelType ?? "Manga"; // default
+            NovelTypeChanger.value = hermidata.novelType ?? allNovelTypes[0]; // default
             NovelTypeChanger.addEventListener('change', () => {
                 this.finalAllHermidatas[hermidata.id].novelType = NovelTypeChanger.value as AnyNovelType;
             });
@@ -558,11 +558,11 @@ export class ImportsAndExports extends Build {
     }
     private async massImportFromBookmarkFolderSaveAllBtnClick() {
 
-        await this.finilizeAllHermidatas(this.finalAllHermidatas);
+        await this.finalizeAllHermidatas(this.finalAllHermidatas);
         this.massImportFromBookmarkFolderCheckContainer!.innerHTML = '';
         this.temporaryStatus('Done', this.massImportFromBookmarkFolderStatus);
     }
-    private async finilizeAllHermidatas(data: Record<string, Hermidata>) {
+    private async finalizeAllHermidatas(data: Record<string, Hermidata>) {
         const newArray = new Array<[AnyNovelType, Hermidata]>();
         for (const [id, hermidata] of Object.entries(data)) {
             newArray.push([hermidata.novelType, hermidata]);
