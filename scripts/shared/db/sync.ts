@@ -1,7 +1,8 @@
 // shared/sync.ts
 import { ext } from '../utils/BrowserCompat'
-import { putHermidata, deleteHermidata } from './db'
+import { putHermidata, deleteHermidata, isHermidataV7, isHermidataV8 } from './db'
 import type { Hermidata } from '../types/index'
+import { HermidataMigration } from '../migration/Hermidata';
 
 let _deviceId: string | null = null;
 
@@ -68,7 +69,10 @@ export function initSync(): void {
 
             if (newValue) {
                 // Strip the transit metadata before writing to IndexedDB
-                const { _syncedBy, ...entry } = newValue
+                let { _syncedBy, ...entry } = newValue
+                // make sure to have the hermidata in the latest format before putting it in the db
+                if (!isHermidataV7(entry)) entry = HermidataMigration.migrateAllHermidataToLatest(entry);
+
                 await putHermidata(entry, false) // false to avoid re-syncing
                 console.log(`[Sync] Pulled entry from another device: ${entry.title}`)
             } else if (oldValue && !newValue) {
