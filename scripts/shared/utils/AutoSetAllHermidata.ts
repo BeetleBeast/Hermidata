@@ -6,15 +6,19 @@ import { getChapterFromTitle, returnBookmarkHash, returnHashedTitle, TrimTitle }
 export class AutoSetAllHermidata {
 
     private readonly allHermidata: Record<string, Hermidata>;
+    private readonly allNovelTypes: AnyNovelType[];
 
-    constructor(allHermidata: Record<string, Hermidata>) {
+    constructor(allHermidata: Record<string, Hermidata>, allNovelTypes: AnyNovelType[]) {
         this.allHermidata = allHermidata;
+        this.allNovelTypes = allNovelTypes;
     }
 
 
     public async getAllPotentialHermidata(folderPath: string, rootTitle: string): Promise<Hermidata[] | null> {
         // check if there are any bookmarks in the folder
-        const folderId = await findNestedFolder(folderPath.split('/').filter(Boolean), rootTitle);
+        const folderPaths: string[] = folderPath.split('/').filter(Boolean);
+        folderPaths.shift()?.split('/').filter(Boolean);
+        const folderId = await findNestedFolder(folderPaths, rootTitle);
         if (!folderId) return null;
         const bookmarks = await this.getBookmarkChildren(folderId);
         if (!bookmarks.length) return null;
@@ -50,9 +54,13 @@ export class AutoSetAllHermidata {
             const rawUrl = bookmark.url ?? '';
 
             const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
-
-            const novel = Object.values(this.allHermidata).find(novel => novel.title === trimmedTitle);
-            if (novel) continue;
+            // create all posible id with all posible types
+            const allPosibleIDs = this.allNovelTypes.map(type => returnHashedTitle(rawTitle, type, rawUrl));
+            const allPosibleIDsIncludes = Object.keys(this.allHermidata).find(novelId => allPosibleIDs.includes(novelId));
+            if (allPosibleIDsIncludes) continue;
+            // also check if there is a novel with the same title.
+            const novelFoundByID = Object.values(this.allHermidata).find(novel => novel.title === trimmedTitle);
+            if (novelFoundByID) continue;
 
             const hermidata = AutoSetAllHermidata.createNewHermidata(bookmark.title, bookmark.url, bookmark.dateAdded);
 

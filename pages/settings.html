@@ -426,8 +426,11 @@
             <br>
             <h3 id="massImportFromBookmarkFolder">mass import new Hermidata from bookmark folder</h3>
             <form class="formIndented">
-                <label for="bookmarkFolder">Select bookmark folder: </label>
-                <input type="file" id="bookmarkFolder" name="bookmarkFolder" webkitdirectory directory multiple>
+                <label for="bookmarkFolder">Write the bookmark path to the folder: </label>
+                <div id="bookmarkFolderInputContainer">
+                    <input type="text" id="bookmarkFolder" name="bookmarkFolder">
+                    <span id="massImportFromBookmarkFolderGhostText"></span>
+                </div>
                 <button type="button" id="massImportFromBookmarkFolderBtn">Import</button>
             </form>
             <br>
