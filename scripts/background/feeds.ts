@@ -31,15 +31,18 @@ export async function checkFeedsForUpdates() {
             try {
                 if (shouldSkipFeed(feed, allHermidata)) continue;
 
-                // Try to get HEAD metadata (ETag, Last-Modified)
-                const meta = await fetchFeedHead(feed);
+                
+                // Fetch the full feed
+                // And try to get HEAD metadata (ETag, Last-Modified)
+                const savedMeta: Meta = {
+                    etag: feed.lastToken,
+                    lastModified: feed.lastBuildDate ? feed.lastBuildDate.toUTCString() : null
+                }
+                const {text, meta} = await fetchFeedText(feed, savedMeta);
+                if (!text) continue;
                 if (isFeedUnchanged(feed, meta)) {
                     continue;
                 }
-
-                // Fetch the full feed
-                const text = await fetchFeedText(feed);
-                if (!text) continue;
 
                 // Detect content changes via token or hash
                 if (!await hasFeedChanged(feed, text)) {
@@ -89,7 +92,7 @@ async function webSearch() {
         console.groupCollapsed(`[Hermidata] Web search for ${novel.latestItem?.title} in ${novel.domain}`);
 
         // get the rss feed text
-        const feedText = await fetchFeedText(novel);
+        const {text: feedText, meta} = await fetchFeedText(novel);
         if (!feedText) {
             console.warn("No feed text found:", novel.url);
             console.groupEnd();
@@ -223,23 +226,6 @@ function getFeedLatestToken(xmlText: string) {
     }
 }
 
-
-async function fetchFeedHead(feed: RawFeed) {
-    
-    let meta: Meta = { etag: null, lastModified: null };
-    try {
-        const head = await fetch(feed.url, { method: "HEAD" });
-        if (head.ok) {
-            meta.etag = head.headers.get("etag");
-            meta.lastModified = head.headers.get("last-modified");
-        } else {
-        console.warn(`[Hermidata] HEAD not allowed for ${feed.domain} ( ${feed.title} | ${head.status} ). Falling back to GET.`);
-    }
-    } catch {
-        console.warn(`[Hermidata] HEAD failed for ${feed.title}, using GET fallback`);
-    }
-    return meta;
-}
 function isFeedUnchanged(feed: RawFeed, meta: Meta) {
     return (
         meta.etag &&
@@ -248,13 +234,45 @@ function isFeedUnchanged(feed: RawFeed, meta: Meta) {
         feed.lastBuildDate.getTime() === new Date(meta.lastModified).getTime() // FIXME: check this out, bullsh*t
     );
 }
-async function fetchFeedText(feed: RawFeed | Feed) {
-    const response = await fetch(feed.url);
+
+async function fetchWithRetry(url: string, headers: HeadersInit = {}, retries = 3): Promise<Response | null> {
+    for (let i = 0; i < retries; i++) {
+        const res = await fetch(url, { headers });
+        if (res.status === 429) {
+            const wait = parseInt(res.headers.get("Retry-After") ?? "60") * 1000;
+            console.warn(`[Hermidata] 429 on ${url}, waiting ${wait}ms`);
+            await new Promise(r => setTimeout(r, wait));
+            continue;
+        }
+        return res;
+    }
+    return null;
+}
+
+async function fetchFeedText(feed: RawFeed | Feed, savedMeta?: Meta): Promise<{ text: string | null; meta: Meta }> {
+    const headers: HeadersInit = {};
+
+    // Add If-None-Match or If-Modified-Since based on saved metadata
+    if (savedMeta?.etag) headers["If-None-Match"] = savedMeta.etag;
+    else if (savedMeta?.lastModified) headers["If-Modified-Since"] = savedMeta.lastModified;
+
+    const response = await fetchWithRetry(feed.url, headers, 3);
+    if (!response) return { text: null, meta: { etag: null, lastModified: null } };
+
+    if (response.status === 304) return { text: null, meta: { etag: null, lastModified: null } }; // unchanged, skip
+    
     if (!response.ok) {
         console.warn(`[Hermidata] Feed GET failed: ${feed.url} (${response.status})`);
-        return null;
+        return { text: null, meta: { etag: null, lastModified: null } };
     }
-    return await response.text();
+
+    return {
+        text: await response.text(),
+        meta: {
+        etag: response.headers.get("etag"),
+        lastModified: response.headers.get("last-modified"),
+        }
+    };
 }
 async function hasFeedChanged(feed: RawFeed, text: string) {
     const latestToken = getFeedLatestToken(text);

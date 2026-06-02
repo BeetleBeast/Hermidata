@@ -267,8 +267,8 @@ export class SortOption extends Sort {
 
         if (!searchInput) throw new Error('Element not found');
 
-        const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-seachable="true"]`);
-        // const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
+        // const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-seachable="true"]`);
+        const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
         if (!items.length) return;
 
         if (e_.key === 'ArrowDown') {
