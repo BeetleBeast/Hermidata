@@ -618,3 +618,7 @@ nav {
 .massImportFromBookmarkFolder-removeBtn {
 	grid-area: btn;
 }
+
+#bookmarkFolder {
+	width: -moz-available;
+}

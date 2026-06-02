@@ -630,7 +630,7 @@ export class HermidataMigration {
                     [bookmark.id]: bookmark
                 },
                 revisitingCount: 0,
-                latest: data.chapter?.latest ?? 0,
+                latest: Number(data.chapter?.latest) ?? 0,
                 lastChecked: data.chapter?.lastChecked ?? new Date().toISOString()
             },
             meta: {
@@ -662,8 +662,8 @@ export class HermidataMigration {
             import: data.import ?? null,
             chapter: {
                 bookmarks: allBookmarks,
-                revisitingCount: data.chapter?.revisitingCount ?? 0,
-                latest: data.chapter?.latest ?? 0,
+                revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
+                latest: Number(data.chapter?.latest) ?? 0,
                 lastChecked: data.chapter?.lastChecked ?? new Date().toISOString(),
                 bookmarkInUse: data.meta?.bookmarkInUse
             },
@@ -705,8 +705,8 @@ export class HermidataMigration {
             import: data.import ?? null,
             chapter: {
                 bookmarks: allBookmarks,
-                revisitingCount: data.chapter?.revisitingCount ?? 0,
-                latest: data.chapter?.latest ?? 0,
+                revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
+                latest: Number(data.chapter?.latest) ?? 0,
                 lastChecked: data.chapter?.lastChecked ?? new Date().toISOString(),
                 bookmarkInUse: data.chapter?.bookmarkInUse
             },
