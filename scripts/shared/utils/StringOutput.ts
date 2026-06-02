@@ -41,8 +41,6 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
     const finalChapter = url ? getChapterFromTitle(isNotPartOfTitle, url) : chapter;
     return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
-// input
-// HermidataV3.chapter.current = getChapterFromTitleReturn(HermidataV3.title, HermidataNeededKeys.Page_Title, HermidataV3.chapter.current, HermidataV3.url) || HermidataV3.chapter.current;
 
 
 export function findByTitleOrAlt(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
@@ -122,11 +120,52 @@ export class TrimTitle {
 
         return siteName
     }
+    private static looksLikeTitleContinuation(prev: string, curr: string): boolean {
+        // A real boundary segment tends to be short (site name, "Vol 3", "Chapter 2")
+        // or starts with a known keyword. A continuation tends to be long prose.
+        const SHORT_THRESHOLD = 30; // chars — tune as needed
+        const chapterLike  = /^\s*(?:episode|chapter|chap|ch|vol|volume)[\s.]*\d+/i;
+        const numberOnly   = /^\d+(\.\d+)?[A-Z]?$/i;
+
+        // If either side is clearly chapter/volume info, it's a real boundary
+        if (chapterLike.test(curr) || chapterLike.test(prev)) return false;
+        if (numberOnly.test(curr)  || numberOnly.test(prev))  return false;
+
+        // If the second part is very short it's probably a tag/label, not a continuation
+        if (curr.length < SHORT_THRESHOLD) return false;
+
+        // Both sides are long prose → continuation dash
+        return true;
+    }
     private static splitTitleByCommonSeparators(title: string): string[] {
-        // Split title by common separators
         const cleanstring = TrimTitle.CleanString(title);
-        const parts = cleanstring.split(/ (?:(?:-+)|–|-|:|#|—|,|\|) /g).map(p => p.trim()).filter(Boolean);
-        return parts
+
+        // Split only on strong separators first (em-dash, pipe, colon, hash, comma)
+        // Leave plain ' - ' for a second pass with smarter logic
+        const strongSplit = cleanstring.split(/ (?:–|—|:|#|,|\|) /g).map(p => p.trim()).filter(Boolean);
+
+        // Now handle ' - ' within each strong-split part
+        const result: string[] = [];
+        for (const part of strongSplit) {
+            const dashParts = part.split(/ -+ /g).map(p => p.trim()).filter(Boolean);
+            if (dashParts.length === 1) {
+                result.push(part);
+                continue;
+            }
+            // Merge adjacent parts if both look like title content (long, no keywords)
+            const merged = [dashParts[0]];
+            for (let i = 1; i < dashParts.length; i++) {
+                const prev = merged[merged.length - 1];
+                const curr = dashParts[i];
+                if (TrimTitle.looksLikeTitleContinuation(prev, curr)) {
+                    merged[merged.length - 1] = `${prev} - ${curr}`; // re-join
+                } else {
+                    merged.push(curr);
+                }
+            }
+            result.push(...merged);
+        }
+        return result;
     }
     private static setRegexConfig(siteName: string): RegexConfig {
         // Keep words lowercase; the /gi flag handles case-insensitive matching.
@@ -136,7 +175,7 @@ export class TrimTitle {
         const junkKeyWords = ['all page', 'bin', 'page'];
         const junkKeywordPattern = junkKeyWords.join('|');
 
-        const keyword = ['manga', 'novel', 'anime', 'tv-series'];
+        const keyword = ['manga', 'novel', 'anime', 'tv-series', 'comic', 'webtoon', 'ln'];
         const keywordPattern = keyword.join('|');
 
         /**
@@ -162,7 +201,10 @@ export class TrimTitle {
         const chapterRegex = new RegExp( String.raw`\b(?:${chapterKeywordPattern})\.?\s*\d+[A-Z]*`, 'gi' );
     
         // Regex for "read online"
-        const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
+        // Matches ONLY bare "read online" / "read now" with no embedded title content
+        // const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
+        const readRegex = /^\s*read(\s+online|\s+now)?\s*$/i;
+
         // Regex for "novel bin"
         const junkRegex = new RegExp(String.raw`\b(${junkKeywordPattern})\b`, 'i');
 
@@ -171,7 +213,8 @@ export class TrimTitle {
 
         const cleanTitleKeywordStart = new RegExp(startRemoveSiteNameKeywords, 'i');
         const cleanTitleKeywordEnd   = new RegExp(endRemoveSiteNameKeywords, 'i');
-            
+        
+        const stripReadOnline = /^\s*read\s+(.+?)\s+online\s*$/i;
 
         const siteNameRegex = new RegExp(String.raw`\b${siteName}\b`, 'i');
         const flexibleSiteNameRegex = new RegExp(String.raw`\b${siteName
@@ -188,11 +231,16 @@ export class TrimTitle {
             siteNameRegex,
             flexibleSiteNameRegex,
             cleanTitleKeywordEnd,
-            cleanTitleKeywordStart
+            cleanTitleKeywordStart,
+            stripReadOnline
         }
     }
     private static removeJunkAndSiteName(parts: string[], regexUsed: RegexConfig) {
         let filtered = parts
+            .map(p => {
+                const m = regexUsed.stripReadOnline.exec(p);
+                return m ? m[1] : p; // if it matches "read X online", keep "X"
+            })
             .filter(p => !regexUsed.readRegex.test(p))
             .filter(p => !regexUsed.junkRegex.test(p))
             .filter(p => !regexUsed.siteNameRegex.test(p))
@@ -272,27 +320,35 @@ export class TrimTitle {
         finalTrimmedTitle = { title: mainTitle, note: `Chapter Title: ${Chapter_Title}` };
         return finalTrimmedTitle;
     }
+    private static TakeLongestPartsBackup(parts: string[], regexUsed: RegexConfig, HermidataUrl: string): TrimmedTitle | null {
+        return TrimTitle.makeTitle(parts // pre-filter parts
+                .filter(p => !regexUsed.siteNameRegex.test(p) && !regexUsed.flexibleSiteNameRegex.test(p))
+                .sort((a, b) => b.length - a.length)       // longest first = most likely the real title
+                .slice(0, 1),
+            regexUsed,
+            HermidataUrl
+        );
+    }
 
     public static trimTitle(title: string, HermidataUrl: string): TrimmedTitle {
         if (!title) return {title: '', note: ''};
 
-
+        // --- Site name ---
         const siteName = TrimTitle.extractDomainFromUrl(HermidataUrl);
-    
-        const parts = TrimTitle.splitTitleByCommonSeparators(title);
         
-        // examples
-        // "Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road"
-
         // --- Regex config ---
         const regexUsed: RegexConfig = TrimTitle.setRegexConfig(siteName);
 
+        // spilt title
+        const parts = TrimTitle.splitTitleByCommonSeparators(title);
+        
         // Remove junk and site name
-        // can return an empty array wich causes makeTitle to return null
         const filtered = TrimTitle.removeJunkAndSiteName(parts, regexUsed);
 
-        const trimmedTitleOnly = TrimTitle.makeTitle(filtered, regexUsed, HermidataUrl);
-        
+        // make title and note. 
+        // If no title is found, try to take longest parts as backup
+        const trimmedTitleOnly = TrimTitle.makeTitle(filtered, regexUsed, HermidataUrl) ?? TrimTitle.TakeLongestPartsBackup(parts, regexUsed, HermidataUrl);
+
         const trimmedTitle: TrimmedTitle = {
             title: trimmedTitleOnly?.title.trim() || title,
             note: trimmedTitleOnly?.note || ''

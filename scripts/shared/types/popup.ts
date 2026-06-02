@@ -10,7 +10,8 @@ export type RegexConfig = {
     siteNameRegex: RegExp,
     flexibleSiteNameRegex: RegExp,
     cleanTitleKeywordEnd: RegExp,
-    cleanTitleKeywordStart: RegExp
+    cleanTitleKeywordStart: RegExp,
+    stripReadOnline: RegExp
 }
 /**
  * @fileoverview Types
