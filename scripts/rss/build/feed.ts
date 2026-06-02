@@ -1,4 +1,4 @@
-import { findByTitleOrAltV2, getChapterFromTitleReturn } from "../../shared/utils/StringOutput";
+import { findByTitleOrAlt, getChapterFromTitleReturn } from "../../shared/utils/StringOutput";
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
 import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
@@ -208,7 +208,7 @@ export class FeedItem {
         return elTitle;
     }
     private async getItemInfo(key: string, item: Hermidata, isRSSItem: boolean = false): Promise<ItemInfo> {
-        const title = findByTitleOrAltV2(item.title, this.AllHermidata)?.title || item.title;
+        const title = findByTitleOrAlt(item.title, this.AllHermidata)?.title || item.title;
         const url = item.rss?.latestItem.link || item.url;
         
         const useAutoDetectedChapter = getChapterFromTitleReturn(title, item?.title, undefined, url);

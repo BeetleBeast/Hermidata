@@ -25,7 +25,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
             // id entry is new/can't be found in storage
             const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
             if (Hermidata) entry = Hermidata
-            else entry = makeHermidataV3(title, hermidata.url, hermidata.novelType);
+            else entry = makeHermidata(title, hermidata.url, hermidata.novelType);
         }
     
         if (!entry) {
@@ -75,7 +75,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
 }
 
 
-export function makeHermidataV3(title: string, url: string, novelType: AnyNovelType = "Manga", isPrimary: boolean = true): Hermidata {
+export function makeHermidata(title: string, url: string, novelType: AnyNovelType = "Manga", isPrimary: boolean = true): Hermidata {
     const Title = TrimTitle.trimTitle(title, url);
     const hash = returnHashedTitle(title, novelType, url);
     const source = new URL(url).hostname.replace(/^www\./, "");

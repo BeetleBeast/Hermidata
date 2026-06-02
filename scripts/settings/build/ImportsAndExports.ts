@@ -495,7 +495,7 @@ export class ImportsAndExports extends Build {
         const folderPath = this.massImportFromBookmarkFolder?.value.trim() ?? null;
         if (!folderPath) return;
         // get all potential hermidata
-        const importFromBookmarkFolder = new AutoSetAllHermidata(allHermidata);
+        const importFromBookmarkFolder = new AutoSetAllHermidata(allHermidata, allNovelTypes);
         const newHermidatas = await importFromBookmarkFolder.getAllPotentialHermidata(folderPath, this.getBrowserRoot());
         if (!newHermidatas?.length) return;
         // set all values in settings to be reviewed

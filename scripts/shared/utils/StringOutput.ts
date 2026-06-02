@@ -45,7 +45,7 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
 // HermidataV3.chapter.current = getChapterFromTitleReturn(HermidataV3.title, HermidataNeededKeys.Page_Title, HermidataV3.chapter.current, HermidataV3.url) || HermidataV3.chapter.current;
 
 
-export function findByTitleOrAltV2(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
+export function findByTitleOrAlt(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
     title = TrimTitle.trimTitle(title, '').title;
     return Object.values(allData).find(novel => 
         TrimTitle.trimTitle(novel.title, novel.url).title === title ||

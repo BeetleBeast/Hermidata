@@ -1,6 +1,6 @@
 import { PastHermidata } from "../../popup/core/Past";
 import { getAllRawFeeds, getSettings, removeRawFeedByUrl, setSettings } from "../../shared/db/Storage";
-import { findByTitleOrAltV2, returnRawFeedHash, TrimTitle } from "../../shared/utils/StringOutput";
+import { findByTitleOrAlt, returnRawFeedHash, TrimTitle } from "../../shared/utils/StringOutput";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -59,7 +59,7 @@ export class Subscribe extends RssBuild {
     private async findMatchingFeed( feedList: Record<string, RawFeed>, allHermidata: Record<string, Hermidata>, currentTitle: string ): Promise<RawFeed | null> {
         for (const feed of Object.values(feedList)) {
             const feedTitle = TrimTitle.trimTitle( feed?.items?.[0]?.title || feed.title, feed.url ).title;
-            const matchedTitle = findByTitleOrAltV2(feedTitle, allHermidata)?.title;
+            const matchedTitle = findByTitleOrAlt(feedTitle, allHermidata)?.title;
             if (matchedTitle === currentTitle) return feed;
         }
         return null;
@@ -157,7 +157,7 @@ export class Subscribe extends RssBuild {
             }
             const rawFeedTitle = RawFeed.items[0].title ?? RawFeed.title; // use first item title if available otherwise use raw feed title ( some feeds have no items )
             const rawFeedTitleTrimmed = TrimTitle.trimTitle(rawFeedTitle, RawFeed.url).title;
-            const matchedEntry = findByTitleOrAltV2(rawFeedTitleTrimmed, allHermidata); // 100% match only
+            const matchedEntry = findByTitleOrAlt(rawFeedTitleTrimmed, allHermidata); // 100% match only
 
             // check if this check is a not excluded
             const settings = await getSettings();

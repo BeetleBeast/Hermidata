@@ -1,5 +1,5 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
-import { makeHermidataV3 } from "../../popup/core/save";
+import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
@@ -433,7 +433,7 @@ export class HermidataMigration {
                     altLists.flat().filter(t => TrimTitle.trimTitle(t, '').title && TrimTitle.trimTitle(t, '').title !== TrimTitle.trimTitle(mainTitle, '').title) ) )
             ];
         }
-        const base = makeHermidataV3(newTitle, newer.url || older.url, newType);
+        const base = makeHermidata(newTitle, newer.url || older.url, newType);
         const merged: Hermidata = {
             ...base,
             id: newKey,
@@ -551,11 +551,11 @@ export class HermidataMigration {
         return Array.from(new Set(list));
     }
 
-    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata): Hermidata {
+    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata): [Hermidata, boolean] {
         let current = older;
 
         // early return if already latest
-        if (isHermidataV8(older)) return older;
+        if (isHermidataV8(older)) return [older, true];
         
         if (isHermidataV4OrOlder(older)) current = this.migrateHermidataV3OrOlderToV5(older as HermidataV3 | HermidataV4);
         if (isHermidataV5(older)) current = this.migrateHermidataV5ToV6(older as HermidataV5);
@@ -564,8 +564,21 @@ export class HermidataMigration {
         
         // return current;
         // WARN: 
-        if (!isHermidataV8(older)) console.warn(`Hermidata is not set to the latest version.`, older, current);
-        return current as Hermidata;
+        if (!isHermidataV8(older))  {
+            console.warn(`Hermidata is not set to the latest version.`, older, current);
+            // guess version
+            if (isHermidataV4OrOlder(older)) console.warn(`Detected version: V3 or V4`);
+            else if (isHermidataV5(older)) console.warn(`Detected version: V5`);
+            else if (isHermidataV6(older)) console.warn(`Detected version: V6`);
+            else if (isHermidataV7(older)) console.warn(`Detected version: V7`);
+            else {
+                console.warn(`Detected version: Unknown`);
+                return [current as Hermidata, false];
+
+            }
+        }
+
+        return [current as Hermidata, true];
         
     }
 
@@ -582,13 +595,13 @@ export class HermidataMigration {
             chapter: {
                 current: Number(older?.chapter?.current) ?? 0,
                 history: this.setNumbersFromstringToList(older.chapter?.history) ?? [],
-                latest: older.chapter?.latest ?? 0,
+                latest: Number(older.chapter?.latest) ?? 0,
                 lastChecked: older.chapter?.lastChecked ?? new Date().toISOString()
             },
             meta: {
                 tags: this.setTagsFromstringToList(older.meta?.tags) ?? [],
                 notes: older.meta?.notes ?? "",
-                altTitles:  older.meta?.altTitles ?? [],
+                altTitles: older.meta?.altTitles ?? [older.title],
                 added: older.meta?.added ?? new Date().toISOString(),
                 updated: older.meta?.updated ?? new Date().toISOString(),
                 originalRelease: null, // TODO: do something with it
@@ -633,7 +646,7 @@ export class HermidataMigration {
             meta: {
                 tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
                 notes: data.meta?.notes ?? "",
-                altTitles:  data.meta?.altTitles ?? [],
+                altTitles:  data.meta?.altTitles ?? [data.title],
                 altSources: [data.source],
                 added: data.meta?.added ?? new Date().toISOString(),
                 updated: data.meta?.updated ?? new Date().toISOString(),
@@ -667,7 +680,7 @@ export class HermidataMigration {
             meta: {
                 tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
                 notes: data.meta?.notes ?? "",
-                altTitles:  data.meta?.altTitles ?? [],
+                altTitles:  data.meta?.altTitles ?? [data.title],
                 altSources: data.meta?.altSources ?? [data.source],
                 added: data.meta?.added ?? new Date().toISOString(),
                 updated: data.meta?.updated ?? new Date().toISOString(),
@@ -710,7 +723,7 @@ export class HermidataMigration {
             meta: {
                 tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
                 notes: data.meta?.notes ?? "",
-                altTitles:  data.meta?.altTitles ?? [],
+                altTitles:  data.meta?.altTitles ?? [data.title],
                 altSources: data.meta?.altSources ?? [data.source],
                 added: data.meta?.added ?? new Date().toISOString(),
                 updated: data.meta?.updated ?? new Date().toISOString(),

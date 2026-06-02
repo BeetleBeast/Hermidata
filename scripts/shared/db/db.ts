@@ -424,9 +424,14 @@ export async function migrateHermidataToLatest(): Promise<void> {
     await new Promise<void>(async (resolve) => {
         const allHermidata_v6 = await getAllHermidata();
         const entries: Hermidata[] = [];
+        let allNotMigrated: number = 0;
 
         for (const [key, value] of Object.entries(allHermidata_v6)) {
-            if (!isHermidataV7(value)) { entries.push( HermidataMigration.migrateAllHermidataToLatest(value) ); }
+            if (!isHermidataV8(value)) { 
+                const [hermidata, isMigrated] = HermidataMigration.migrateAllHermidataToLatest(value);
+                if (isMigrated) entries.push(hermidata);
+                else allNotMigrated++;
+            }
         }
 
         if (entries.length) await putAllHermidata(entries);
@@ -434,6 +439,7 @@ export async function migrateHermidataToLatest(): Promise<void> {
         // Mark as done
         await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v8');
         console.log(`[DB] Migrated ${entries.length} Hermidata entries to V8`);
+        console.log(`[DB] ${allNotMigrated} Hermidata entries could not be migrated`);
         resolve();
     });
 }
@@ -444,27 +450,36 @@ export async function migrateHermidataToLatest(): Promise<void> {
  */
 export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
     return (
-        !("bookmarks" in data.chapter) &&
-        !("bookmarkInUse" in data.meta) &&
+        "current" in data.chapter &&
         "type" in data &&
         "status" in data &&
-        !("originalRelease" in data) &&
+        !("originalRelease" in data) ||
         (typeof data.meta.tags === 'string')
     );
 }
 export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+    const hasCurrentChapter = "current" in data.chapter;
+    const hasType = "type" in data;
+    const hasStatus = "status" in data;
+    const hasOriginalRelease = "originalRelease" in data || ("originalRelease" in data.meta && data.meta.originalRelease == null);
+
     return (
-        !("bookmarks" in data.chapter) &&
-        !("bookmarkInUse" in data.meta) &&
+        hasCurrentChapter &&
+        hasType &&
+        hasStatus &&
+        hasOriginalRelease
+    )
+    /*
+        "current" in data.chapter &&
         "type" in data &&
         "status" in data &&
-        "originalRelease" in data || "originalRelease" in data.meta == null
+        ("originalRelease" in data || "originalRelease" in data.meta == null)
     );
+    */
 }
 export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
     return (
         "bookmarks" in data.chapter &&
-        Array.isArray(data.chapter.bookmarks) &&
         "revisitingCount" in data.chapter &&
         "type" in data &&
         "status" in data &&

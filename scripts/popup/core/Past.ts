@@ -1,5 +1,5 @@
 import { getAllHermidata, getHermidataViaKey, getSettings } from "../../shared/db/Storage";
-import { TrimTitle, findByTitleOrAltV2, returnHashedTitle } from "../../shared/utils/StringOutput";
+import { TrimTitle, findByTitleOrAlt, returnHashedTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
@@ -122,7 +122,7 @@ export class PastHermidata {
 
         const posibleTitleV2 = this.hermidata.meta.notes.replace('Chapter Title: ', '');
 
-        const TrueTitle = findByTitleOrAltV2(this.hermidata.title, allHermidata)?.title ?? findByTitleOrAltV2(posibleTitleV2, allHermidata)?.title;
+        const TrueTitle = findByTitleOrAlt(this.hermidata.title, allHermidata)?.title ?? findByTitleOrAlt(posibleTitleV2, allHermidata)?.title;
         if  (!TrueTitle) this.hermidata.meta.notes = '';
         return TrueTitle
     }
@@ -188,7 +188,7 @@ export async function detectAltTitleNeeded(title: string, type: AnyNovelType, so
     if (!data) return { needAltTitle: false, reason: "No data loaded" };
 
     const normalizedTitle = TrimTitle.trimTitle(title, url).title;
-    const titleOrAltMatch = findByTitleOrAltV2(normalizedTitle, data);
+    const titleOrAltMatch = findByTitleOrAlt(normalizedTitle, data);
 
     // 1. Already exists by title or alt title → no alt title needed
     if (titleOrAltMatch) {

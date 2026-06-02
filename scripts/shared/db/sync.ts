@@ -63,7 +63,7 @@ export function initSync(): void {
 
             const newValue = change.newValue as SyncEntry | undefined
             const oldValue = change.oldValue as SyncEntry | undefined
-
+            let isMigrated: boolean = false;
             // Skip changes we made ourselves
             if (newValue?._syncedBy === await getDeviceId()) continue
 
@@ -71,9 +71,9 @@ export function initSync(): void {
                 // Strip the transit metadata before writing to IndexedDB
                 let { _syncedBy, ...entry } = newValue
                 // make sure to have the hermidata in the latest format before putting it in the db
-                if (!isHermidataV7(entry)) entry = HermidataMigration.migrateAllHermidataToLatest(entry);
+                if (!isHermidataV8(entry)) [entry, isMigrated] = HermidataMigration.migrateAllHermidataToLatest(entry);
 
-                await putHermidata(entry, false) // false to avoid re-syncing
+                if (isMigrated) await putHermidata(entry, false) // false to avoid re-syncing
                 console.log(`[Sync] Pulled entry from another device: ${entry.title}`)
             } else if (oldValue && !newValue) {
                 // Entry was deleted on another device
