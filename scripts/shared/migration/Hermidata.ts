@@ -555,31 +555,21 @@ export class HermidataMigration {
         let current = older;
 
         // early return if already latest
-        if (isHermidataV8(older)) return [older, true];
-        
-        if (isHermidataV4OrOlder(older)) current = this.migrateHermidataV3OrOlderToV5(older as HermidataV3 | HermidataV4);
-        if (isHermidataV5(older)) current = this.migrateHermidataV5ToV6(older as HermidataV5);
-        if (isHermidataV6(older)) current = this.migrateHermidataV6ToV7(older as HermidataV6);
-        if (isHermidataV7(older)) current = this.migrateHermidataV7ToV8(older as HermidataV7);
-        
-        // return current;
-        // WARN: 
-        if (!isHermidataV8(older))  {
-            console.warn(`Hermidata is not set to the latest version.`, older, current);
-            // guess version
-            if (isHermidataV4OrOlder(older)) console.warn(`Detected version: V3 or V4`);
-            else if (isHermidataV5(older)) console.warn(`Detected version: V5`);
-            else if (isHermidataV6(older)) console.warn(`Detected version: V6`);
-            else if (isHermidataV7(older)) console.warn(`Detected version: V7`);
-            else {
-                console.warn(`Detected version: Unknown`);
-                return [current as Hermidata, false];
+        if (isHermidataV8(current)) return [current, true];
 
-            }
+
+        if (isHermidataV4OrOlder(current)) current = this.migrateHermidataV3OrOlderToV5(current);
+        if (isHermidataV5(current)) current = this.migrateHermidataV5ToV6(current);
+        if (isHermidataV6(current)) current = this.migrateHermidataV6ToV7(current);
+        if (isHermidataV7(current)) current = this.migrateHermidataV7ToV8(current);
+        
+        if (!isHermidataV8(current))  {
+            console.warn(`Hermidata is not set to the latest version.`, current);
+            console.warn(`Detected version: Unknown`);
+            return [current, false];
         }
 
-        return [current as Hermidata, true];
-        
+        return [current, true];
     }
 
     private static migrateHermidataV3OrOlderToV5(older: HermidataV3 | HermidataV4): HermidataV5 {

@@ -448,7 +448,7 @@ export async function migrateHermidataToLatest(): Promise<void> {
  * @param data - Hermidata
  * @returns boolean
  */
-export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV4 {
     return (
         "current" in data.chapter &&
         "type" in data &&
@@ -457,7 +457,7 @@ export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | Hermidat
         (typeof data.meta.tags === 'string')
     );
 }
-export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV5 {
     const hasCurrentChapter = "current" in data.chapter;
     const hasType = "type" in data;
     const hasStatus = "status" in data;
@@ -477,7 +477,7 @@ export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | H
     );
     */
 }
-export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV6 {
     return (
         "bookmarks" in data.chapter &&
         "revisitingCount" in data.chapter &&
@@ -486,7 +486,7 @@ export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         "bookmarkInUse" in data.meta
     );
 }
-export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV7 {
     return (
         "bookmarkInUse" in data.chapter &&
         "type" in data &&
