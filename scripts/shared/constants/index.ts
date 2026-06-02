@@ -7,7 +7,8 @@ export {
     DEFAULT_TAG_COLOURS,
 
 
-    makeDefaultHermidata
+    makeDefaultHermidata,
+    makeDefaultBookmark
 
 } from './popup';
 

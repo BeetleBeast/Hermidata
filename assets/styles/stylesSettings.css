@@ -590,3 +590,35 @@ nav {
 	align-items: center;
 	width: 100%;
 }
+
+
+.massImportFromBookmarkFolder-item {
+	padding: 5px;
+	border: 1px solid;
+	margin: 10px;
+	border-radius: 15px;
+	display: grid;
+	align-items: center;
+	justify-content: center;
+	grid-template-areas: 'title title' 'url url' 'select btn';
+	gap: 15px;
+}
+
+.massImportFromBookmarkFolder-label {
+	grid-area: title;
+	text-align: center;
+}
+
+.massImportFromBookmarkFolder-link {
+	grid-area: url;
+}
+.massImportFromBookmarkFolder-NovelTypeChanger {
+	grid-area: select;
+}
+.massImportFromBookmarkFolder-removeBtn {
+	grid-area: btn;
+}
+
+#bookmarkFolder {
+	width: -moz-available;
+}

@@ -1,5 +1,5 @@
 import { returnBookmarkHash } from "../utils/StringOutput";
-import type { AllsortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
+import type { AllsortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
 
 // Default arrays — used to seed settings on first install
 export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
@@ -81,10 +81,9 @@ export const filterName: FilterName = {
 export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
     id: '',
     title: '',
-    type:  type,
+    novelType: type,
     url: '',
     source: '',
-    status: status,
     chapter: { 
         bookmarks: {
             [returnBookmarkHash('Primary')]: {
@@ -96,7 +95,8 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 note: '',
-                isPrimary: true
+                isPrimary: true,
+                readStatus: status
             }
         },
         latest: 0,
@@ -116,4 +116,16 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         originalRelease: null,
         novelStatus: novelStatus
     }
+});
+export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', currentChapter: number = 0, history: number[] = [], notes: string = ''): Bookmark => ({
+    id: returnBookmarkHash('Primary'),
+    current: currentChapter,
+    history: history,
+    label: 'Primary',
+    color: 'blue',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    note: notes,
+    isPrimary: true,
+    readStatus: AnyReadStatus
 });

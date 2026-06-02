@@ -141,7 +141,7 @@ export async function handleGetAllPossiblePaths(sendResponse: (r: unknown) => vo
     
     const paths = new Set<string>();
     for (const node of bookmarkTreeNodes || []) {
-        if (!node.id || !node.title || node.url) continue; // skip if no id/title or if it's a bookmark (has url)
+        if (!node.id && !node.title || node.url) continue; // skip if no id/title or if it's a bookmark (has url)
         paths.add(node.title);
         findPaths(node).forEach(path => paths.add(path));
     }
@@ -152,7 +152,7 @@ export async function handleGetAllPossiblePaths(sendResponse: (r: unknown) => vo
 }
 
 function findPaths(node: chrome.bookmarks.BookmarkTreeNode, currentPath = ''): string[] {
-    if (!node.id || !node.title || node.url) return [currentPath]; // skip if no id/title or if it's a bookmark (has url)
+    if (!node.id && !node.title || node.url) return [currentPath]; // skip if no id/title or if it's a bookmark (has url)
     const newPath = currentPath ? `${currentPath}/${node.title}` : node.title;
     if (!node.children) return [newPath];
     return node.children.flatMap(child => findPaths(child, newPath));

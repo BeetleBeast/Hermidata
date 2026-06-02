@@ -1,11 +1,11 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
-import { makeHermidataV3 } from "../../popup/core/save";
-import { confirmMigrationPrompt } from "../../popup/frontend/confirm";
-import { getAllHermidata, isHermidataV6 } from "../db/db";
+import { makeHermidata } from "../../popup/core/save";
+import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
+import { getAllHermidata, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
-import { returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
+import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
-import type { HermidataV6, PotentialSameHermidata } from "../types/popup";
+import type { BookmarkV1, HermidataV3, HermidataV4, HermidataV6, HermidataV7, PotentialSameHermidata } from "../types/popup";
 
 
 interface DuplicationResult {
@@ -138,8 +138,8 @@ export class HermidataMigration {
             `\n older hash: ${olderHashType}`
         );
         // check if Hash is the old way
-        // Use your existing migrateHermidataV5 logic
-        const merged = await HermidataMigration.migrateHermidataV5(newer, older,
+        // Use your existing mergeTwoHermidata logic
+        const merged = await HermidataMigration.mergeTwoHermidata(newer, older,
             olderHashType === 'old' ? 'OLD' : 'DEFAULT',
             newerHashType === 'old' ? 'OLD' : 'DEFAULT'
         );
@@ -247,13 +247,13 @@ export class HermidataMigration {
 
         for (const [key, obj] of Object.entries(all)) {
             const oldHash = HermidataMigration.getOldIDType(obj);
-            const newHash = returnHashedTitle(obj.title, obj.type);
+            const newHash = returnHashedTitle(obj.title, obj.novelType);
 
             if (obj.id === oldHash && oldHash !== newHash) {
                 results.push({
                     key,
                     title: obj.title,
-                    type: obj.type,
+                    type: obj.novelType,
                     source: obj.source,
                     oldHash,
                     newHash
@@ -279,7 +279,7 @@ export class HermidataMigration {
             const older = all[entry.oldHash];
             const newer = { ...older, id: entry.newHash };
             try {
-                await HermidataMigration.migrateHermidataV5(newer, older, 'YES');
+                await HermidataMigration.mergeTwoHermidata(newer, older, 'YES');
             } catch (err) {
                 console.error(`Migration failed for ${entry.title}:`, err);
             }
@@ -339,7 +339,7 @@ export class HermidataMigration {
             for (let j = i + 1; j < objs.length; j++) {
                 const obj1 = objs[i];
                 const obj2 = objs[j];
-                if (this.isSameSeries(obj1, obj2) && obj1.type !== obj2.type) return await this.migrationSteps(obj1, obj2);
+                if (this.isSameSeries(obj1, obj2) && obj1.novelType !== obj2.novelType) return await this.migrationSteps(obj1, obj2);
             }
         }
         console.warn("No migratable pair found, returning most recent");
@@ -363,7 +363,7 @@ export class HermidataMigration {
         const confirmMerge = await confirmMigrationPrompt(newer, older, options );
 
         if (confirmMerge) {
-            const migrated = await this.migrateHermidataV5(newer, older);
+            const migrated = await this.mergeTwoHermidata(newer, older);
             return migrated; // Stop after successful merge
         } else {
             console.log("User canceled migration; switching it up");
@@ -373,7 +373,7 @@ export class HermidataMigration {
             const confirm_NewMerge = await confirmMigrationPrompt(New_newer, New_older, options );
 
             if (confirm_NewMerge) {
-                const migrated = await this.migrateHermidataV5(New_newer, New_older);
+                const migrated = await this.mergeTwoHermidata(New_newer, New_older);
                 return migrated; // Stop after successful merge
             } else {
                 console.log("User canceled migration; keeping newer data.");
@@ -401,11 +401,11 @@ export class HermidataMigration {
             return sameTitleMatches[0];
         }
         // Prefer the same type if exists
-        const typeKey = returnHashedTitle(HermidataV3.title, HermidataV3.type);
+        const typeKey = returnHashedTitle(HermidataV3.title, HermidataV3.novelType);
         if (possibleObj.some(item => item.id === typeKey)) return possibleObj.some(item => item.id === typeKey);
 
         // Fallback: old V1 hash (title only)
-        const fallbackKey = returnHashedTitle(HermidataV3.title, HermidataV3.type, HermidataV3.url);
+        const fallbackKey = returnHashedTitle(HermidataV3.title, HermidataV3.novelType, HermidataV3.url);
         const fallbackObj = await getHermidataViaKey(fallbackKey);
         if (fallbackObj) return fallbackObj;
 
@@ -416,11 +416,11 @@ export class HermidataMigration {
 
 
 
-    public  static async migrateHermidataV5(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | null> {
+    public static async mergeTwoHermidata(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | null> {
         // step 1. new key
         // re-make keys
-        const [ newTitle, newType ] = [newer.title, newer.type]
-        const [ oldTitle, oldType ] = [older.title, older.type]
+        const [ newTitle, newType ] = [newer.title, newer.novelType]
+        const [ oldTitle, oldType ] = [older.title, older.novelType]
         const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : this.getOldIDType(newer);
         const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : this.getOldIDType(older);
         // check keys validity
@@ -433,15 +433,14 @@ export class HermidataMigration {
                     altLists.flat().filter(t => TrimTitle.trimTitle(t, '').title && TrimTitle.trimTitle(t, '').title !== TrimTitle.trimTitle(mainTitle, '').title) ) )
             ];
         }
-        const base = makeHermidataV3(newTitle, newer.url || older.url, newType);
+        const base = makeHermidata(newTitle, newer.url || older.url, newType);
         const merged: Hermidata = {
             ...base,
             id: newKey,
             title: newTitle || oldTitle,
-            type: newType || oldType,
+            novelType: newType || oldType,
             url: newer.url || older.url,
             source: newer.source || older.source,
-            status: newer.status || older.status || "Planned",
             chapter: {
                 bookmarks: {
                     ...older.chapter?.bookmarks,
@@ -486,14 +485,28 @@ export class HermidataMigration {
 
         return merged;
     }
+    public static async mergeTwoHermidataWithConfirmation(newer: Hermidata, older: Hermidata): Promise<boolean> { 
+        const msg = `
+            Are you sure you want to merge "${older.title}" with "${newer.title}".
+
+            here is the new one: ${JSON.stringify(newer, null, 4)}
+            here is the old one: ${JSON.stringify(older, null, 4)}
+        `;
+        const confirmed = await customConfirm(msg, { accept: "Merge", reject: "Cancel"});
+        if (!confirmed) return false;
+        const merged = await this.mergeTwoHermidata(newer, older);
+        if (!merged) return false;
+        console.log(`Merged "${older.title}" with "${newer.title}"`);
+        return true;
+    }
 
     public static detectHashType(obj: Hermidata) {
-        if (!obj?.title || !obj?.type || !obj?.id) return "unknown";
+        if (!obj?.title || !obj?.novelType || !obj?.id) return "unknown";
 
         const normalizedTitle = TrimTitle.trimTitle(obj.title, obj.url).title.toLowerCase();
 
-        if (obj.id === this.OLD_simpleHash(`${obj.type}:${normalizedTitle}`)) return "old";
-        if (obj.id === this.NEW_simpleHash(`${obj.type}:${normalizedTitle}`)) return "new";
+        if (obj.id === this.OLD_simpleHash(`${obj.novelType}:${normalizedTitle}`)) return "old";
+        if (obj.id === this.NEW_simpleHash(`${obj.novelType}:${normalizedTitle}`)) return "new";
         return "unknown";
     }
 
@@ -518,103 +531,195 @@ export class HermidataMigration {
     }
 
 
-    public static getOldIDType(Obj: Hermidata) {
-        return this.OLD_simpleHash(`${Obj.type}:${TrimTitle.trimTitle(Obj.title, Obj.url).title.toLowerCase()}`);
+    private static getOldIDType(Obj: Hermidata) {
+        return this.OLD_simpleHash(`${Obj.novelType}:${TrimTitle.trimTitle(Obj.title, Obj.url).title.toLowerCase()}`);
+    }
+    /** - force a array of strings or a string to be an array */
+    private static setTagsFromstringToList(list: string[]): string[];
+    private static setTagsFromstringToList(str: string): string[];
+    private static setTagsFromstringToList(input: string | string[]): string[] {
+        const list = typeof input === 'string' ? input.split(',') : input;
+        const trim = list.map(t => t.trim())
+        // remove duplicates
+        return Array.from(new Set(trim));
+        
+    }
+    /** force a list of strings to be a list of numbers */
+    private static setNumbersFromstringToList(input: string[] | number[] | (number | string)[]): number[] {
+        const list = input.map(t => Number(t));
+        // remove duplicates
+        return Array.from(new Set(list));
     }
 
-    /**
-     * @summary
-     * upgrade Hermidata V5 to V6
-     */
-    public static migrateHermidataV7(older: HermidataV6): Hermidata {
-        const result: Hermidata = {
-            id: older.id,
+    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata): [Hermidata, boolean] {
+        let current = older;
+
+        // early return if already latest
+        if (isHermidataV8(current)) return [current, true];
+
+
+        if (isHermidataV4OrOlder(current)) current = this.migrateHermidataV3OrOlderToV5(current);
+        if (isHermidataV5(current)) current = this.migrateHermidataV5ToV6(current);
+        if (isHermidataV6(current)) current = this.migrateHermidataV6ToV7(current);
+        if (isHermidataV7(current)) current = this.migrateHermidataV7ToV8(current);
+        
+        if (!isHermidataV8(current))  {
+            console.warn(`Hermidata is not set to the latest version.`, current);
+            console.warn(`Detected version: Unknown`);
+            return [current, false];
+        }
+
+        return [current, true];
+    }
+
+    private static migrateHermidataV3OrOlderToV5(older: HermidataV3 | HermidataV4): HermidataV5 {
+        return {
+            id: returnHashedTitle(older.title, older.type, older.url),
             title: older.title,
             type: older.type,
             url: older.url,
             source: older.source,
             status: older.status,
-            chapter: {
-                bookmarks: older.chapter?.bookmarks,
-                latest: older.chapter?.latest,
-                lastChecked: older.chapter?.lastChecked,
-                revisitingCount: older.chapter?.revisitingCount,
-                bookmarkInUse: older.meta.bookmarkInUse
-            },
             rss: older.rss,
             import: older.import,
+            chapter: {
+                current: Number(older?.chapter?.current) ?? 0,
+                history: this.setNumbersFromstringToList(older.chapter?.history) ?? [],
+                latest: Number(older.chapter?.latest) ?? 0,
+                lastChecked: older.chapter?.lastChecked ?? new Date().toISOString()
+            },
             meta: {
-                tags: older.meta?.tags,
-                notes: older.meta?.notes,
-                altSources: older.meta?.altSources,
-                altTitles: older.meta?.altTitles,
-                added: older.meta?.added,
-                updated: older.meta?.updated,
-                originalRelease: older.meta?.originalRelease,
-                novelStatus: older.meta?.novelStatus
+                tags: this.setTagsFromstringToList(older.meta?.tags) ?? [],
+                notes: older.meta?.notes ?? "",
+                altTitles: older.meta?.altTitles ?? [older.title],
+                added: older.meta?.added ?? new Date().toISOString(),
+                updated: older.meta?.updated ?? new Date().toISOString(),
+                originalRelease: null, // TODO: do something with it
+                novelStatus: 'Ongoing'
             }
-        };
-        return result;
+        }
     }
-
     /**
      * @summary
      * upgrade Hermidata V5 to V6
      */
-    public static migrateHermidataV6(older: HermidataV5): Hermidata {
-        const label = 'Primary';
-
-        const newBoomark: Bookmark = {
-            id: this.NEW_simpleHash(label),
-            current: Number(older.chapter?.current),
-            history: this.forceHistoryIntoNumbers(older.chapter?.history),
-            label: label,
+    private static migrateHermidataV5ToV6(data: HermidataV5): HermidataV6 {
+        const defaultBookmarkLabel = 'Primary';
+        const bookmark: BookmarkV1 = {
+            id: returnBookmarkHash(defaultBookmarkLabel),
+            current: Number(data?.chapter?.current) ?? 0,
+            history: this.setNumbersFromstringToList(data.chapter.history) ?? [],
+            label: defaultBookmarkLabel,
             color: 'blue',
-            createdAt: older.meta?.added,
+            createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            note: older.meta?.notes,
+            note: data.meta?.notes ?? "",
             isPrimary: true
         }
-        const result: Hermidata = {
-            id: older.id,
-            title: older.title,
-            type: older.type,
-            url: older.url,
-            source: older.source,
-            status: older.status,
+        return {
+            id: data.id,
+            status: data.status,
+            title: data.title,
+            type: data.type,
+            url: data.url,
+            source: data.source,
+            rss: data.rss ?? null,
+            import: data.import ?? null,
             chapter: {
                 bookmarks: {
-                    [newBoomark.id]: newBoomark
+                    [bookmark.id]: bookmark
                 },
-                latest: older.chapter?.latest,
-                lastChecked: older.chapter?.lastChecked,
                 revisitingCount: 0,
-                bookmarkInUse: newBoomark.id
+                latest: Number(data.chapter?.latest) ?? 0,
+                lastChecked: data.chapter?.lastChecked ?? new Date().toISOString()
             },
-            rss: older.rss,
-            import: older.import,
             meta: {
-                tags: older.meta?.tags,
-                notes: older.meta?.notes,
-                altSources: [older.source], // new
-                altTitles: older.meta?.altTitles,
-                added: older.meta?.added,
-                updated: older.meta?.updated,
-                originalRelease: older.meta?.originalRelease,
-                novelStatus: older.meta?.novelStatus
+                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                notes: data.meta?.notes ?? "",
+                altTitles:  data.meta?.altTitles ?? [data.title],
+                altSources: [data.source],
+                added: data.meta?.added ?? new Date().toISOString(),
+                updated: data.meta?.updated ?? new Date().toISOString(),
+                originalRelease: data.meta?.originalRelease ?? null, // TODO: do something with it
+                novelStatus: data.meta?.novelStatus ?? 'Ongoing',
+                bookmarkInUse: bookmark.id
             }
-        };
-        return result;
-    }
-    private static forceHistoryIntoNumbers(history: number[] | (string | number)[]): number[] {
-        // history had once a bug where it was a string[]
-        // not all history entries are int/float values, so we have to convert them
-        let result: number[] = [];
-        for (const item of history) {
-            if (typeof item === "string") result.push(Number(item));
-            else result.push(item);
         }
-        return result;
     }
-
+    private static migrateHermidataV6ToV7(data: HermidataV6): HermidataV7 {
+        const allBookmarks: Record<string, BookmarkV1> = {};
+        for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
+            allBookmarks[id] = bookmark;
+        }
+        return {
+            id: data.id,
+            status: data.status,
+            title: data.title,
+            type: data.type,
+            url: data.url,
+            source: data.source,
+            rss: data.rss ?? null,
+            import: data.import ?? null,
+            chapter: {
+                bookmarks: allBookmarks,
+                revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
+                latest: Number(data.chapter?.latest) ?? 0,
+                lastChecked: data.chapter?.lastChecked ?? new Date().toISOString(),
+                bookmarkInUse: data.meta?.bookmarkInUse
+            },
+            meta: {
+                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                notes: data.meta?.notes ?? "",
+                altTitles:  data.meta?.altTitles ?? [data.title],
+                altSources: data.meta?.altSources ?? [data.source],
+                added: data.meta?.added ?? new Date().toISOString(),
+                updated: data.meta?.updated ?? new Date().toISOString(),
+                originalRelease: data.meta?.originalRelease ?? null, // TODO: do something with it
+                novelStatus: data.meta?.novelStatus ?? 'Ongoing'
+            }
+        }
+    }
+    private static migrateHermidataV7ToV8(data: HermidataV7): Hermidata {
+        const allBookmarks: Record<string, Bookmark> = {};
+        for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
+            allBookmarks[id] = {
+                id: bookmark.id,
+                current: bookmark.current,
+                history: bookmark.history,
+                label: bookmark.label,
+                color: bookmark.color,
+                createdAt: bookmark.createdAt,
+                updatedAt: bookmark.updatedAt,
+                note: bookmark.note,
+                isPrimary: bookmark.isPrimary,
+                readStatus: data.status
+            }
+        }
+        return {
+            id: data.id,
+            title: data.title,
+            novelType: data.type,
+            url: data.url,
+            source: data.source,
+            rss: data.rss ?? null,
+            import: data.import ?? null,
+            chapter: {
+                bookmarks: allBookmarks,
+                revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
+                latest: Number(data.chapter?.latest) ?? 0,
+                lastChecked: data.chapter?.lastChecked ?? new Date().toISOString(),
+                bookmarkInUse: data.chapter?.bookmarkInUse
+            },
+            meta: {
+                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                notes: data.meta?.notes ?? "",
+                altTitles:  data.meta?.altTitles ?? [data.title],
+                altSources: data.meta?.altSources ?? [data.source],
+                added: data.meta?.added ?? new Date().toISOString(),
+                updated: data.meta?.updated ?? new Date().toISOString(),
+                originalRelease: data.meta?.originalRelease ?? null, // TODO: do something with it
+                novelStatus: data.meta?.novelStatus ?? 'Ongoing'
+            }
+        }
+    }
 }

@@ -353,7 +353,8 @@ export class BookmarkController {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             history: [],
-            isPrimary: false
+            isPrimary: false,
+            readStatus: 'Viewing'
         }
 
         // if re-reading, update revisiting count
@@ -383,6 +384,7 @@ export class BookmarkController {
         setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].history.at(-1) || 0));
         setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current));
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
+        setElement<HTMLSelectElement>('#status', el => el.value = this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].readStatus);
         // update bookmark menu UI
         this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].color;
     }

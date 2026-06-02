@@ -4,6 +4,7 @@ import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../sc
 
 describe('trimTitle', () => {
     it.each([
+        ["Read Mobulus strantum andum Chapter 26 Online - Poznan", "Mobulus strantum andum"],
         ["Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
         [`Destiny Unchain Online chapter 99 - Read Manga Online`, `Destiny Unchain Online`],
         [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, 'The Wandering Fairy [LitRPG World-Hopping]'],

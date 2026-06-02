@@ -423,6 +423,23 @@
             <input type="file" accept=".json" placeholder="select Hermidata json" id="importSyncDataBtn" data-active="false"></input>
             <!-- <button type="button" id="deleteSyncDataBtn" style="background-color: red;" data-active="false">Delete browser sync data</button> -->
             <br>
+            <br>
+            <h3 id="massImportFromBookmarkFolder">mass import new Hermidata from bookmark folder</h3>
+            <form class="formIndented">
+                <label for="bookmarkFolder">Write the bookmark path to the folder: </label>
+                <div id="bookmarkFolderInputContainer">
+                    <input type="text" id="bookmarkFolder" name="bookmarkFolder">
+                    <span id="massImportFromBookmarkFolderGhostText"></span>
+                </div>
+                <button type="button" id="massImportFromBookmarkFolderBtn">Import</button>
+            </form>
+            <br>
+            <div id="massImportFromBookmarkFolderStatus"></div>
+            <br>
+            <div id="massImportFromBookmarkFolderCheckContainer"><!-- dynamic items here --></div>
+            <br>
+            <button class="massImportFromBookmarkFolder-saveAllBtn">Save All</button>
+            <br>
         </section>
         <footer class="bottomFooter">
             <button id="resetSettingsBtn" class="footerBtn" type="button">Reset</button>

@@ -58,7 +58,7 @@ class RssPage {
         return this.DATA;
     }
     private async saveData(entry: Hermidata): Promise<void> {
-        const key = entry.id || returnHashedTitle(entry.title, entry.type);
+        const key = entry.id || returnHashedTitle(entry.title, entry.novelType);
         await saveHermidataV3(key, entry);
     }
     private async removeData(id: string): Promise<void> {
@@ -96,7 +96,7 @@ class RssPage {
 
             const meta = document.createElement('div'); meta.className='entry-meta';
             const title = document.createElement('div'); title.className='entry-title'; title.textContent = item.title;
-            const sub = document.createElement('div'); sub.className='entry-sub'; sub.textContent = `${item.type} • ${item.status} • ch ${item.chapter.bookmarks[item.chapter.bookmarkInUse].current}`;
+            const sub = document.createElement('div'); sub.className='entry-sub'; sub.textContent = `${item.novelType} • ${item.chapter.bookmarks[item.chapter.bookmarkInUse].readStatus} • ch ${item.chapter.bookmarks[item.chapter.bookmarkInUse].current}`;
             meta.append(title, sub);
 
             const actions = document.createElement('div'); actions.className='entry-actions';
@@ -122,8 +122,8 @@ class RssPage {
         setElement<HTMLInputElement>('#detailCurrent', el => el.value = String(item.chapter.bookmarks[item.chapter.bookmarkInUse].current));
         setElement<HTMLInputElement>('#detailNotes', el => el.value = item.meta?.notes || '');
         if (!this.detailType || !this.detailStatus) return;
-        this.detailType.value = item.type;
-        this.detailStatus.value = item.status;
+        this.detailType.value = item.novelType;
+        this.detailStatus.value = item.chapter.bookmarks[item.chapter.bookmarkInUse].readStatus;
 
         // history
         const hist = getElement('#chapterHistory');
@@ -157,8 +157,8 @@ class RssPage {
         if (url) item.url = url;
     
         if (!this.detailType || !this.detailStatus) return;
-        item.type = this.detailType.value as AnyNovelType;
-        item.status = this.detailStatus.value as AnyReadStatus;
+        item.novelType = this.detailType.value as AnyNovelType;
+        item.chapter.bookmarks[item.chapter.bookmarkInUse].readStatus = this.detailStatus.value as AnyReadStatus;
         item.chapter.bookmarks[item.chapter.bookmarkInUse].current = newCurrent;
         item.meta = item.meta || {};
         const notes = getElement<HTMLInputElement>('#detailNotes')?.value;
@@ -190,7 +190,7 @@ class RssPage {
             const item = this.DATA.get(id);
             if(!item) return;
 
-            item.status = 'Finished';
+            item.chapter.bookmarks[item.chapter.bookmarkInUse].readStatus = 'Finished';
             if(!item.chapter.bookmarks[item.chapter.bookmarkInUse].history) item.chapter.bookmarks[item.chapter.bookmarkInUse].history = [];
             item.chapter.bookmarks[item.chapter.bookmarkInUse].history.push(item.chapter.bookmarks[item.chapter.bookmarkInUse].current);
             item.chapter.bookmarks[item.chapter.bookmarkInUse].current = item.chapter.latest || item.chapter.bookmarks[item.chapter.bookmarkInUse].current; // simple heuristic
@@ -220,8 +220,8 @@ class RssPage {
         if (!firstItemOfList) return;
         const firstItem = this.DATA.get(firstItemOfList);
         if (!firstItem) return;
-        setElement<HTMLSelectElement>('#bulkEditType', el => el.value = firstItem.type);
-        setElement<HTMLSelectElement>('#bulkEditStatus', el => el.value = firstItem.status);
+        setElement<HTMLSelectElement>('#bulkEditType', el => el.value = firstItem.novelType);
+        setElement<HTMLSelectElement>('#bulkEditStatus', el => el.value = firstItem.chapter.bookmarks[firstItem.chapter.bookmarkInUse].readStatus);
         setElement<HTMLInputElement>('#bulkEditTags', el => el.value = firstItem.meta?.tags.join(', ') || '');
         setElement('#bulkEditPanel', el => el.style.display = 'block');
     }
@@ -240,8 +240,10 @@ class RssPage {
             if (!id) continue;
             const item = this.DATA.get(id);
             if (item) {
-                item.type = this.isdifferent(newType, item.type) ? newType : item.type;
-                item.status = this.isdifferent(newStatus, item.status) ? newStatus : item.status;
+                item.novelType = this.isdifferent(newType, item.novelType) ? newType : item.novelType;
+                item.chapter.bookmarks[item.chapter.bookmarkInUse].readStatus = 
+                    this.isdifferent(newStatus, item.chapter.bookmarks[item.chapter.bookmarkInUse].readStatus) 
+                    ? newStatus : item.chapter.bookmarks[item.chapter.bookmarkInUse].readStatus;
                 item.meta.tags = this.isdifferent(newTags, item.meta.tags) ? newTags : item.meta.tags;
                 await this.saveData(item);
             }

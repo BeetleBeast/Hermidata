@@ -162,6 +162,7 @@ function isSameChapterCount(a: (FuzzyBookmarkMatches | FuzzyHermidataMatches),b:
 
     const fuzzychapter = (a as FuzzyHermidataMatches).chapter ?? getChapterFromTitle(a.bookmarkTitle, a.fuzzySearchUrl)
     if (!b.title || !b.url) return isSameNummber
+    // default title: <title> - chapter <chapter number>
     const curentTabChapter = getChapterFromTitle(b.title, b.url)
 
 

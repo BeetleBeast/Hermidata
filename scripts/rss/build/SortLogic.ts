@@ -126,8 +126,8 @@ export class SortLogic extends Sort {
     private applyInividualFilterToEntries(entry: HTMLDivElement, filters: Filters): void {
         const hashItem = this.GetHashItem(entry);
         const entryData = this.AllHermidata[hashItem];
-        const Type = entryData.type;
-        const ReadStatus = entryData.status;
+        const Type = entryData.novelType;
+        const ReadStatus = entryData.chapter.bookmarks[entryData.chapter.bookmarkInUse].readStatus;
         const NovelStatus = entryData.meta?.novelStatus
         const Source = entryData.source;
         const Tag = entryData.meta.tags || "";

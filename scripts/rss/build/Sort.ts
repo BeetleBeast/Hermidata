@@ -35,8 +35,8 @@ export abstract class Sort extends RssBuild {
         const compareTypeAndTitle = (a: HTMLDivElement, b: HTMLDivElement, reverse: boolean = false) => {
             // Sort by type
             // and then alphabeticly
-            const typeA = getData(a).type;
-            const typeB = getData(b).type;
+            const typeA = getData(a).novelType;
+            const typeB = getData(b).novelType;
             const titleA = getData(a).title?.toLowerCase() || '';
             const titleB = getData(b).title?.toLowerCase() || '';
             const positionSoterByType = reverse ? typeB.localeCompare(typeA) : typeA.localeCompare(typeB);

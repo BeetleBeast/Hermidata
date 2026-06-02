@@ -13,8 +13,8 @@ export async function confirmMigrationPrompt(newer: Hermidata, older: Hermidata,
     
             Title: ${newer.title}
     
-            • Old type: ${older.type}
-            • New type: ${newer.type}
+            • Old type: ${older.novelType}
+            • New type: ${newer.novelType}
     
             Chapters:
             • Old: ${getBookmarkInUse(older).current || "?"}
@@ -24,7 +24,7 @@ export async function confirmMigrationPrompt(newer: Hermidata, older: Hermidata,
             • Old: ${older.meta?.notes || "(none)"}
             • New: ${newer.meta?.notes || "(none)"}
     
-            → Keep the newer type (“${newer.type}”) and merge?
+            → Keep the newer type (“${newer.novelType}”) and merge?
         `;
         return await customConfirm(msg);
     } catch (error: any) {

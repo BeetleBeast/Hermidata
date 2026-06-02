@@ -1,8 +1,8 @@
 import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
-import { appendAltTitle, makeHermidataV3 } from "../popup/core/save";
+import { appendAltTitle, makeHermidata } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
-import { findByTitleOrAltV2, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidataV3 } from "../shared/db/Storage";
 import { getAllHermidataWithRss } from "../shared/db/db";
@@ -76,7 +76,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
             continue;
         }
         
-        const type = matched?.type ?? TYPE_OPTIONS[0];
+        const type = matched?.novelType ?? TYPE_OPTIONS[0];
         const id = returnHashedTitle(feedTitle, type, feed.url);
 
         filteredRawFeeds[id] = Object.freeze({ ...feed, items: [...(feed.items ?? [])] });
@@ -129,10 +129,10 @@ export async function getHermidataWithRssFromBackground(): Promise<Record<string
 export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFeed>, AllHermidata: Record<string, Hermidata>): Promise<Hermidata> {
     const rssInfo = feed.rss;
     if (!rssInfo?.url) return feed;
-    const currentFeedTitle = findByTitleOrAltV2(TrimTitle.trimTitle(rssInfo?.latestItem.title || feed.title, rssInfo.url || feed.url).title, AllHermidata);
+    const currentFeedTitle = findByTitleOrAlt(TrimTitle.trimTitle(rssInfo?.latestItem.title || feed.title, rssInfo.url || feed.url).title, AllHermidata);
     const matchFeed = Object.values(allFeeds).find(f => {
         const sameDomain = f.domain === rssInfo.domain;
-        const sameTitle = findByTitleOrAltV2(TrimTitle.trimTitle(f?.items?.[0]?.title || f.title, f.url).title, AllHermidata) === currentFeedTitle;
+        const sameTitle = findByTitleOrAlt(TrimTitle.trimTitle(f?.items?.[0]?.title || f.title, f.url).title, AllHermidata) === currentFeedTitle;
         return sameDomain && sameTitle;
     });
     if (!matchFeed) return feed; // no match
@@ -183,9 +183,9 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     const altCheck = await detectAltTitleNeeded(title, type, rssData.domain, url);
     const AllHermidata = await PastHermidata.getAllHermidata();
 
-    const existingEntry = findByTitleOrAltV2(title, AllHermidata)
+    const existingEntry = findByTitleOrAlt(title, AllHermidata)
     const resolvedTitle = existingEntry ? existingEntry.title : title;
-    const resolvedType = existingEntry ? existingEntry.type : type;
+    const resolvedType = existingEntry ? existingEntry.novelType : type;
     const key = returnHashedTitle( resolvedTitle, resolvedType);
 
     const KeysToFetch = [key];
@@ -232,7 +232,7 @@ async function getEntry(title: string, stored: Record<string, Hermidata>, altChe
         }
     }
     // fallback: if no entry found at all, create new one
-    if (!entry) entry = makeHermidataV3(title, url, type);
+    if (!entry) entry = makeHermidata(title, url, type);
 
     return entry;
 }
