@@ -110,10 +110,12 @@ body {
     justify-content: center;
     position: absolute;
     top: 50px;
-    width: 98vw;
+    width: 100%;
     overflow: scroll;
-    height: 500px;
+    height: 100%;
     z-index: 1000;
+    padding: 10px;
+    gap: 10px;
 }
 
 .genericInput {
@@ -127,8 +129,7 @@ body {
     text-emphasis-color: var(--Btn);
     accent-color: var(--Text-color);
     border: 1px solid var(--Btn);
-    border-right: none;
-    border-radius: 0;
+    border-radius: 3px;
 }
 .genericInput:focus {
     outline: 1px invert var(--Btn);
@@ -137,6 +138,10 @@ body {
     display: none;
     background-color: var(--bg-color);
     color: var(--Text-color);
+	display: block;
+	width: fit-content;
+	word-wrap: unset;
+	white-space: nowrap;
 }
 .genericButton1 {
     display: none;
