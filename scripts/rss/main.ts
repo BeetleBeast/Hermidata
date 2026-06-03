@@ -40,32 +40,36 @@ export class RSS {
     }
 
     public async openRSS(e: PointerEvent) {
-        this.changePageToRSS(e);
-        const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
-        const notification = getElement<HTMLDivElement>("#RSS-Notification");
-        const allSec = getElement("#All-RSS-entries");
+        try {
+            this.changePageToRSS(e);
+            const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
+            const notification = getElement<HTMLDivElement>("#RSS-Notification");
+            const allSec = getElement("#All-RSS-entries");
 
-        if (!sortSection || !notification || !allSec) throw new Error('Element not found');
+            if (!sortSection || !notification || !allSec) throw new Error('Element not found');
 
-        // If preloaded, use it instantly
-        const dom = await (rssPreloadPromise ?? this.preloadRSS());
+            // If preloaded, use it instantly
+            const dom = await (rssPreloadPromise ?? this.preloadRSS());
 
-        notification.innerHTML = "";
-        allSec.innerHTML = "";
-        
-        await this.BuildRSS.makeSubscibeBtn();
-        
-        await this.BuildRSS.makeFeedHeader(notification);
-        
-        this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
-        
-        await this.BuildRSS.makeSortSection(sortSection);
+            notification.innerHTML = "";
+            allSec.innerHTML = "";
+            
+            await this.BuildRSS.makeSubscibeBtn();
+            
+            await this.BuildRSS.makeFeedHeader(notification);
+            
+            this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
+            
+            await this.BuildRSS.makeSortSection(sortSection);
 
-        await this.BuildRSS.attachEventListeners()
+            await this.BuildRSS.attachEventListeners()
 
-        await this.BuildRSS.makeFooterSection();
+            await this.BuildRSS.makeFooterSection();
 
-        await this.BuildRSS.activateAutoSubscribe();
+            await this.BuildRSS.activateAutoSubscribe();
+        } catch (error) {
+            console.error(error);
+        }
     }
     public changePageToClassic() {
         setElement("#HDRSSBtn", el => el.classList = "Btn");
@@ -109,15 +113,21 @@ export class RSS {
         return rssDomPackage;
     }
     public async preloadRSS(): Promise<RSSDOM> {
-        if (rssPreloadPromise) return rssPreloadPromise;
+        try {
+            if (rssPreloadPromise) return rssPreloadPromise;
 
-        rssPreloadPromise = (async () => {
+
             const data = await this.loadRSSData();
             rssDOMCache = await this.buildRSSDom(data);
-            return rssDOMCache;
-        })();
 
-        return rssPreloadPromise;
+            rssPreloadPromise = Promise.resolve(rssDOMCache);
+
+            return rssPreloadPromise;
+        }
+        catch (error) {
+            console.error(error);
+            throw error;
+        }
     }
     // --- Private ---
 
