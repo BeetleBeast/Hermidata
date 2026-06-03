@@ -26,8 +26,6 @@ export class FeedItem {
     }
 
     public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false): Promise<DocumentFragment> {
-        console.group('[RSS Build Feed] makefeedItem');
-        console.time('makefeedItem');
         const fragment = document.createDocumentFragment();
         for (const [key, item] of Object.entries(hermidataList)) {
             this.isFirstItem = Object.keys(hermidataList)[0] === key
@@ -44,8 +42,6 @@ export class FeedItem {
             li.append(lines, ItemInfoContainer);
             fragment.appendChild(li);
         }
-        console.timeEnd('makefeedItem');
-        console.groupEnd();
         return fragment
     }
     public makeFeedHeader(parent_section: HTMLElement) {

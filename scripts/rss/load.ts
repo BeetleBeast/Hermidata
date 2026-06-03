@@ -2,8 +2,8 @@ import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
 import { appendAltTitle, makeHermidata } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
-import { findByTitleOrAlt, getChapterFromTitle, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
-import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType } from "../shared/types/index";
+import { findByTitleOrAlt, getChapterFromTitle, getChapterFromTitleReturn, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
+import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidataV3 } from "../shared/db/Storage";
 import { getAllHermidataWithRss } from "../shared/db/db";
 
@@ -90,7 +90,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
 }
 // only called in background after invalidation or on initial load
 export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> {
-    console.group('[RSS Load] getHermidataWithRss');
+    console.groupCollapsed('[RSS Load] getHermidataWithRss');
     console.time('getAllHermidata');
     const AllHermidata = await PastHermidata.getAllHermidata();
     console.timeEnd('getAllHermidata');
@@ -139,36 +139,46 @@ export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFe
 
     const latestFetchedItem = matchFeed.items?.[0];
     const currentLatestItem = rssInfo.latestItem;
-    const isNew = latestFetchedItem && (latestFetchedItem.link !== currentLatestItem?.link);
-    if (isNew) console.log("Latest item changed?", latestFetchedItem, currentLatestItem);
 
-    const latestChapter = getChapterFromTitle(latestFetchedItem.title, matchFeed.url);
+    // always update it with latest info NOT latest fetched item
+    const latestFetchedIsNewer = new Date(latestFetchedItem.pubDate).getTime() > new Date(currentLatestItem.pubDate).getTime();
 
-    if (latestChapter) {
-        feed.chapter.latest = latestChapter;
-    }
+    const isNew = latestFetchedItem && (latestFetchedItem.link !== currentLatestItem?.link) && latestFetchedIsNewer;
+
+    const latestFetchedChapter = getChapterFromTitleReturn(TrimTitle.trimTitle(latestFetchedItem.title, latestFetchedItem.link).title, latestFetchedItem.title, undefined,latestFetchedItem.link);
+    const currentLatestChapter = getChapterFromTitleReturn(TrimTitle.trimTitle(currentLatestItem.title, currentLatestItem.link).title, currentLatestItem.title, undefined,currentLatestItem.link);
+    const latestChapter = latestFetchedIsNewer ? latestFetchedChapter : currentLatestChapter;
+
+    if (isNew) console.log(`
+        New Release\n
+        title: ${TrimTitle.trimTitle(latestFetchedItem.title, latestFetchedItem.link).title}\n
+        New Chapter: ${latestFetchedChapter}\n
+        Old Chapter: ${currentLatestChapter}\n
+        new Date: ${new Date(latestFetchedItem.pubDate)}\n
+        old Date: ${new Date(currentLatestItem.pubDate)}\n
+        `);
+
+    // only update feed if we have a newer chapter, otherwise we might overwrite with stale data
+    const newFeed: Feed = {
+        title: latestFetchedIsNewer ? matchFeed.title : rssInfo.title,
+        url: latestFetchedIsNewer ? matchFeed.url : rssInfo.url,
+        image: latestFetchedIsNewer ? matchFeed.image : rssInfo.image,
+        domain: latestFetchedIsNewer ? matchFeed.domain : rssInfo.domain,
+        lastFetched: new Date().toISOString(),
+        latestItem: latestFetchedIsNewer ? latestFetchedItem : rssInfo.latestItem,
+        lastBuildDate: feed.rss?.lastBuildDate
+    };
 
     // Update feed info
-    const newFeed = {
+    const updatedHermidata: Hermidata = {
         ...feed,
-        rss: {
-            ...rssInfo,
-            title: matchFeed.title || rssInfo.title,
-            url: matchFeed.url || rssInfo.url,
-            image: matchFeed.image || rssInfo.image,
-            domain: matchFeed.domain || rssInfo.domain,
-            lastFetched: new Date().toISOString(),
-            latestItem: latestFetchedItem
-        },
+        rss: newFeed,
         chapter: {
             ...feed.chapter,
-            latest: latestChapter ?? feed.chapter.latest
+            latest: latestChapter
         },
-        meta: {
-            ...feed.meta
-        }
     };
-    return newFeed;
+    return updatedHermidata;
 }
 
 

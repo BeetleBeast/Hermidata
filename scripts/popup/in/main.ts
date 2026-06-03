@@ -46,9 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // FIXME: this is a hack
     // After popup init — start quietly in the background
-    setTimeout(() => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
+    setTimeout( async () => await controller.RSS?.preloadRSS(), 1)  // slight delay so popup renders first
 
-    setTimeout( () => checkSyncQuota(), 500);
+    setTimeout( async () => await checkSyncQuota(), 500);
 });
 
 class HermidataController {

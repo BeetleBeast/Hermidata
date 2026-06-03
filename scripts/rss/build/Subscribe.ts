@@ -144,7 +144,7 @@ export class Subscribe extends RssBuild {
 
         console.groupCollapsed('Scanning for matching feeds...');
         console.log('Raw Feeds:', Object.keys(allRawFeeds).length);
-        console.log('Hermidata:', Object.keys(allHermidata).length);
+        console.log('All Hermidata Without RSS:', Object.keys(allHermidata).length);
 
         for (const RawFeed of Object.values(allRawFeeds)) {
             // find matching entry
@@ -153,6 +153,7 @@ export class Subscribe extends RssBuild {
                 await removeRawFeedByUrl(RawFeed.url);
                 // remove from local
                 await removeRawFeedFromLocal(RawFeed.url);
+                console.info(`Raw feed with url ${RawFeed.url} has no items and has been removed from storage.`);
                 continue;
             }
             const rawFeedTitle = RawFeed.items[0].title ?? RawFeed.title; // use first item title if available otherwise use raw feed title ( some feeds have no items )
