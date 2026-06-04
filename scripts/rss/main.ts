@@ -40,32 +40,40 @@ export class RSS {
     }
 
     public async openRSS(e: PointerEvent) {
-        this.changePageToRSS(e);
-        const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
-        const notification = getElement<HTMLDivElement>("#RSS-Notification");
-        const allSec = getElement("#All-RSS-entries");
+        try {
+            this.changePageToRSS(e);
+            const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
+            const notification = getElement<HTMLDivElement>("#RSS-Notification");
+            const allSec = getElement("#All-RSS-entries");
 
-        if (!sortSection || !notification || !allSec) throw new Error('Element not found');
+            if (!sortSection || !notification || !allSec) throw new Error('Element not found');
 
-        // If preloaded, use it instantly
-        const dom = await (rssPreloadPromise ?? this.preloadRSS());
+            this.showLoadingAnimation();
 
-        notification.innerHTML = "";
-        allSec.innerHTML = "";
-        
-        await this.BuildRSS.makeSubscibeBtn();
-        
-        await this.BuildRSS.makeFeedHeader(notification);
-        
-        this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
-        
-        await this.BuildRSS.makeSortSection(sortSection);
+            // If preloaded, use it instantly
+            const dom = await (rssPreloadPromise ?? this.preloadRSS());
 
-        await this.BuildRSS.attachEventListeners()
+            notification.innerHTML = "";
+            allSec.innerHTML = "";
+            
+            await this.BuildRSS.makeSubscibeBtn();
+            
+            await this.BuildRSS.makeFeedHeader(notification);
+            
+            this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
+            
+            await this.BuildRSS.makeSortSection(sortSection);
 
-        await this.BuildRSS.makeFooterSection();
+            await this.BuildRSS.attachEventListeners()
 
-        await this.BuildRSS.activateAutoSubscribe();
+            await this.BuildRSS.makeFooterSection();
+
+            await this.BuildRSS.activateAutoSubscribe();
+
+            setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
+        } catch (error) {
+            console.error(error);
+        }
     }
     public changePageToClassic() {
         setElement("#HDRSSBtn", el => el.classList = "Btn");
@@ -109,15 +117,21 @@ export class RSS {
         return rssDomPackage;
     }
     public async preloadRSS(): Promise<RSSDOM> {
-        if (rssPreloadPromise) return rssPreloadPromise;
+        try {
+            if (rssPreloadPromise) return rssPreloadPromise;
 
-        rssPreloadPromise = (async () => {
+
             const data = await this.loadRSSData();
             rssDOMCache = await this.buildRSSDom(data);
-            return rssDOMCache;
-        })();
 
-        return rssPreloadPromise;
+            rssPreloadPromise = Promise.resolve(rssDOMCache);
+
+            return rssPreloadPromise;
+        }
+        catch (error) {
+            console.error(error);
+            throw error;
+        }
     }
     // --- Private ---
 
@@ -159,6 +173,38 @@ export class RSS {
         
         document.body.style.height = '650px';
         if (document.body.offsetWidth <= 300) document.body.style.width = '664px';
+    }
+    private showLoadingAnimation() {
+        setElement(".HDClassic", el => {
+            el.style.opacity = '0';
+            el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+            el.style.cursor = 'wait'; // make the cursor a wait cursor
+            el.style.pointerEvents = 'none'; // make it not clickable
+        });
+        setElement(".HDRSS", el => {
+            el.style.opacity = '0';
+            el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+            el.style.cursor = 'wait'; // make the cursor a wait cursor
+            el.style.pointerEvents = 'none'; // make it not clickable
+
+        });
+        setElement('.material-symbols-outlinedContainer', el => el.style.display = 'flex');
+    }
+    private hideLoadingAnimation() {
+        setElement(".HDClassic", el => {
+            el.style.opacity = '0';
+            el.style.overflow = 'hidden';
+            el.style.cursor = 'default';
+            el.style.pointerEvents = 'auto';
+        });
+        setElement(".HDRSS", el => {
+            el.style.opacity = '1';
+            el.style.overflowY = 'scroll';
+            el.style.overflowX = 'hidden';
+            el.style.cursor = 'default';
+            el.style.pointerEvents = 'auto';
+        });
+        setElement('.material-symbols-outlinedContainer', el => el.style.display = 'none');
     }
 
 }

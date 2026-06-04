@@ -436,9 +436,18 @@
             <br>
             <div id="massImportFromBookmarkFolderStatus"></div>
             <br>
-            <div id="massImportFromBookmarkFolderCheckContainer"><!-- dynamic items here --></div>
+            <table id="massImportFromBookmarkFolderContainer">
+                <thead>
+                    <th id="massImportFromBookmarkFolder-title">Title</th>
+                    <th id="massImportFromBookmarkFolder-url">URL</th>
+                    <th id="massImportFromBookmarkFolder-typeSelect">Change Type</th>
+                    <th id="massImportFromBookmarkFolder-removeBtn">remove from list</th>
+                    <th id="massImportFromBookmarkFolder-addBtn">add separately</th>
+                </thead>
+                <tbody id="massImportFromBookmarkFolderCheckContainer"><!-- dynamic items here --></tbody>
+            </table>
             <br>
-            <button class="massImportFromBookmarkFolder-saveAllBtn">Save All</button>
+            <button id="massImportFromBookmarkFolder-saveAllBtn">Save All</button>
             <br>
         </section>
         <footer class="bottomFooter">

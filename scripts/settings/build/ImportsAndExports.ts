@@ -511,50 +511,82 @@ export class ImportsAndExports extends Build {
         this.finalAllHermidatas = {...hermidatas};
 
         for (const hermidata of Object.values(hermidatas)) {
-            // create item for each hermidata
-            const item = document.createElement('div');
-            item.className = 'massImportFromBookmarkFolder-item';
-            item.id = hermidata.id;
-
-            // create label
-            const label = document.createElement('p');
-            label.classList.add('massImportFromBookmarkFolder-label');
-            label.textContent = hermidata.title;
-            // create link to page
-            const link = document.createElement('a');
-            link.className = 'massImportFromBookmarkFolder-link';
-            link.href = hermidata.url;
-            link.textContent = hermidata.url;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            // create Novel Type changer input
-            const NovelTypeChanger = document.createElement('select');
-            NovelTypeChanger.className = 'massImportFromBookmarkFolder-NovelTypeChanger';
-
-            for (const novelType of Object.values(allNovelTypes)) {
-                const option = document.createElement('option');
-                option.value = novelType;
-                option.textContent = novelType;
-                NovelTypeChanger.appendChild(option);
-            }
-
-            NovelTypeChanger.value = hermidata.novelType ?? allNovelTypes[0]; // default
-            NovelTypeChanger.addEventListener('change', () => {
-                this.finalAllHermidatas[hermidata.id].novelType = NovelTypeChanger.value as AnyNovelType;
-            });
-            // create buttons
-            // create remove button
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'massImportFromBookmarkFolder-removeBtn';
-            removeBtn.textContent = 'Remove';
-            removeBtn.addEventListener('click', () => {
-                this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);
-                delete this.finalAllHermidatas[hermidata.id];
-            });
-
-            item.append(label, link, NovelTypeChanger, removeBtn);
+            const item = this.createHermidataReviewItem(hermidata, allNovelTypes);
+            
             this.massImportFromBookmarkFolderCheckContainer.appendChild(item);
         }
+    }
+    private createHermidataReviewItem(hermidata: Hermidata, allNovelTypes: AnyNovelType[]): HTMLTableRowElement {
+        const item = document.createElement('tr');
+        item.className = 'massImportFromBookmarkFolder-item';
+        item.id = hermidata.id;
+
+        // create label
+        const label = document.createElement('td');
+        label.classList.add('massImportFromBookmarkFolder-label', 'tableCell-MIfBF');
+        label.textContent = hermidata.title;
+        // create link to page
+        const linkCell = document.createElement('td');
+        linkCell.classList.add('tableCell-MIfBF');
+        const link = document.createElement('a');
+        link.className = 'massImportFromBookmarkFolder-link';
+        link.href = hermidata.url;
+        link.textContent = hermidata.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        linkCell.appendChild(link);
+        // create Novel Type changer input
+        const NovelTypeCell = document.createElement('td');
+        NovelTypeCell.classList.add('tableCell-MIfBF');
+        const NovelTypeChanger = document.createElement('select');
+        NovelTypeChanger.className = 'massImportFromBookmarkFolder-NovelTypeChanger';
+
+        for (const novelType of Object.values(allNovelTypes)) {
+            const option = document.createElement('option');
+            option.value = novelType;
+            option.textContent = novelType;
+            NovelTypeChanger.appendChild(option);
+        }
+        NovelTypeChanger.value = hermidata.novelType ?? allNovelTypes[0]; // default
+        NovelTypeChanger.addEventListener('change', () => {
+            this.finalAllHermidatas[hermidata.id].novelType = NovelTypeChanger.value as AnyNovelType;
+        });
+        NovelTypeCell.appendChild(NovelTypeChanger);
+        // create buttons
+        // create remove button
+        const removeBtnCell = document.createElement('td');
+        removeBtnCell.classList.add('tableCell-MIfBF');
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'massImportFromBookmarkFolder-removeBtn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => {
+            this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);
+            delete this.finalAllHermidatas[hermidata.id];
+        });
+        removeBtnCell.appendChild(removeBtn);
+        // create add button
+        const addBtnCell = document.createElement('td');
+        addBtnCell.classList.add('tableCell-MIfBF');
+        const addBtn = document.createElement('button');
+        addBtn.className = 'massImportFromBookmarkFolder-addBtn';
+        addBtn.textContent = 'Save';
+        addBtn.addEventListener('click', async () => {
+            this.finalAllHermidatas[hermidata.id].novelType = NovelTypeChanger.value as AnyNovelType;
+            const value: [AnyNovelType, Hermidata] = [(NovelTypeChanger.value as AnyNovelType), this.finalAllHermidatas[hermidata.id]];
+            // save immediately and remove from list to review
+            const newHermidataList = await AutoSetAllHermidata.setHermidataType(value);
+            await this.setHermidata(newHermidataList);
+
+            // remove from list to review
+            this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);
+            delete this.finalAllHermidatas[hermidata.id];
+        });
+        addBtnCell.appendChild(addBtn);
+
+
+        item.append(label, linkCell, NovelTypeCell, removeBtnCell, addBtnCell);
+
+        return item;
     }
     private async massImportFromBookmarkFolderSaveAllBtnClick() {
 

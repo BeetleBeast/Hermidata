@@ -4,6 +4,9 @@ import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../sc
 
 describe('trimTitle', () => {
     it.each([
+        ["66.666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", "66.666 Years: Advent of the Dark Mage"],
+        ["86 - Eighty Six - Chapter 12", "Eighty Six"],
+        ["66,666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", "66,666 Years: Advent of the Dark Mage"],
         ["Read Mobulus strantum andum Chapter 26 Online - Poznan", "Mobulus strantum andum"],
         ["Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
         [`Destiny Unchain Online chapter 99 - Read Manga Online`, `Destiny Unchain Online`],
@@ -27,7 +30,6 @@ describe('trimTitle', () => {
         ["Attack on Titan - 139a", "Attack on Titan"],
         ["Vol.3 Chapter 12 - The Fight", "The Fight"],
         ["Volume 2, Chapter 5: Revenge", "Revenge"],
-        ["86 - Eighty Six - Chapter 12", "Eighty Six"],
         ["Re:Zero - Chapter 3: Truth of Zero - Part 7", "Re:Zero"],
         ["Mushoku Tensei - 001", "Mushoku Tensei"],
         ["The 100 Girlfriends - Chapter 4", "The 100 Girlfriends"],

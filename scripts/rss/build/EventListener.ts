@@ -170,7 +170,7 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const newTitle = await customPrompt("Add alternate title for this entry:", '');
+        const newTitle = await customPrompt("Add alternate:", '');
         if (!newTitle) return;
     
         // Normalize and deduplicate

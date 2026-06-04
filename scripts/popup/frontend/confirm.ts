@@ -42,6 +42,9 @@ export function deactivateother(execptionElement: HTMLElement | null = null) {
     document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
         a.style.pointerEvents = 'none';
     });
+    // deactivate links in classic & HDRSS
+    document.querySelector<HTMLDivElement>(".HDClassic")!.style.pointerEvents = 'none';
+    document.querySelector<HTMLDivElement>(".HDRSS")!.style.pointerEvents = 'none';
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
     setElement(".HDRSS", el => el.style.opacity = String(classicCurrentActive ? 0 : 0.2));
     setElement(".HDClassic", el => el.style.opacity = String(classicCurrentActive ? 0.2 : 0));

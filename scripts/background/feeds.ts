@@ -13,7 +13,7 @@ type Meta = {
 
 
 export function initFeeds() {
-    setInterval(checkFeedsForUpdates, 30 * 60 * 1000)
+    setInterval(checkFeedsForUpdates, 60 * 60 * 1000) // 60min
 }
 
 export async function checkFeedsForUpdates() {
@@ -36,7 +36,7 @@ export async function checkFeedsForUpdates() {
                 // And try to get HEAD metadata (ETag, Last-Modified)
                 const savedMeta: Meta = {
                     etag: feed.lastToken,
-                    lastModified: feed.lastBuildDate ? feed.lastBuildDate.toUTCString() : null
+                    lastModified: feed.lastBuildDate ? new Date(feed.lastBuildDate).toUTCString() : null
                 }
                 const {text, meta} = await fetchFeedText(feed, savedMeta);
                 if (!text) continue;

@@ -1,6 +1,6 @@
 import { findNestedFolder, getBookmarkChildren } from "../../background/bookmarks";
 import type { AnyNovelType, Bookmark, Hermidata } from "../types";
-import { getChapterFromTitle, returnBookmarkHash, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, returnBookmarkHash, returnHashedTitle, TrimTitle } from "./StringOutput";
 
 
 export class AutoSetAllHermidata {
@@ -27,16 +27,25 @@ export class AutoSetAllHermidata {
         return newPorentialHermidatas;
     }
     /**
-     * @param newPorentialHermidatas - a array of the new Type and the hermidata that hasn't been stored yet
+     * @param newPorentialHermidatas - a array or a single tuple of the new Type and the hermidata that hasn't been stored yet
      * @returns an array of the new hermidata
      */
-    public static async setHermidataType(newPorentialHermidatas: Array<[AnyNovelType, Hermidata]>): Promise<Hermidata[]> {
-        const newHermidatas: Hermidata[] = [];
-        for (const [type, hermidata] of newPorentialHermidatas) {
+    public static async setHermidataType(Hermidata: [AnyNovelType, Hermidata]): Promise<Hermidata>;
+    public static async setHermidataType(ListOfHermidata: Array<[AnyNovelType, Hermidata]>): Promise<Hermidata[]>;
+    public static async setHermidataType(value: Array<[AnyNovelType, Hermidata]> | [AnyNovelType, Hermidata]): Promise<Hermidata[] | Hermidata> {
+        if (Array.isArray(value[0])) {
+            const list = value as Array<[AnyNovelType, Hermidata]>;
+            const newHermidatas: Hermidata[] = [];
+            for (const [type, hermidata] of list) {
+                const newHermidata = this.createNewHermidata(hermidata.title, hermidata.url, new Date(hermidata.meta.added).getTime(), type);
+                newHermidatas.push(newHermidata);
+            }
+            return newHermidatas;
+        } else {
+            const [type, hermidata] = value as [AnyNovelType, Hermidata];
             const newHermidata = this.createNewHermidata(hermidata.title, hermidata.url, new Date(hermidata.meta.added).getTime(), type);
-            newHermidatas.push(newHermidata);
+            return newHermidata;
         }
-        return newHermidatas;
     }
     /** get all bookmarks in folder */
     private async getBookmarkChildren(folderId: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
@@ -54,6 +63,7 @@ export class AutoSetAllHermidata {
             const rawUrl = bookmark.url ?? '';
 
             const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
+            
             // create all posible id with all posible types
             const allPosibleIDs = this.allNovelTypes.map(type => returnHashedTitle(rawTitle, type, rawUrl));
             const allPosibleIDsIncludes = Object.keys(this.allHermidata).find(novelId => allPosibleIDs.includes(novelId));
@@ -61,6 +71,9 @@ export class AutoSetAllHermidata {
             // also check if there is a novel with the same title.
             const novelFoundByID = Object.values(this.allHermidata).find(novel => novel.title === trimmedTitle);
             if (novelFoundByID) continue;
+
+            const existingHermidata = findByTitleOrAlt(trimmedTitle, this.allHermidata);
+            if (existingHermidata) continue;
 
             const hermidata = AutoSetAllHermidata.createNewHermidata(bookmark.title, bookmark.url, bookmark.dateAdded);
 

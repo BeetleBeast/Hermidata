@@ -59,7 +59,9 @@ export class TagManagement extends Build {
     private populateUpdateRemoveTagForm() {
         if (!this.tagEditContainer) return;
         this.tagEditContainer.innerHTML = "";
-        const allTagsUsed = Array.from(this.allTagsUsed.values());
+        const allTagsUsed = this.allTagsUsed.size < 5 
+        ? Array.from( [...Object.keys(this.tagColoring).values(), ...this.allTagsUsed.values()])
+        : Array.from(this.allTagsUsed.values());
         for ( const tag of allTagsUsed ) this.CreateEditAndRemoveDiv(this.tagEditContainer, tag);
 
     }

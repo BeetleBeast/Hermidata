@@ -26,8 +26,6 @@ export class FeedItem {
     }
 
     public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false): Promise<DocumentFragment> {
-        console.group('[RSS Build Feed] makefeedItem');
-        console.time('makefeedItem');
         const fragment = document.createDocumentFragment();
         for (const [key, item] of Object.entries(hermidataList)) {
             this.isFirstItem = Object.keys(hermidataList)[0] === key
@@ -44,26 +42,24 @@ export class FeedItem {
             li.append(lines, ItemInfoContainer);
             fragment.appendChild(li);
         }
-        console.timeEnd('makefeedItem');
-        console.groupEnd();
         return fragment
     }
     public makeFeedHeader(parent_section: HTMLElement) {
         if (getElement('.containerHeader-feed')) return
-        const lastDirection = JSON.parse(localStorage.getItem('notificationLastDirection') ?? '"down"');
         const container = document.createElement('div');
         container.className = 'containerHeader-feed'
         const title = document.createElement('div');
         title.className = "titleHeader";
+
         title.textContent = 'Notifications'
         container.appendChild(title);
         const feedHeadersymbol = document.createElement('div');
-            feedHeadersymbol.className = 'feed-header-symbol';
-            feedHeadersymbol.dataset.feedState = lastDirection;
+        feedHeadersymbol.className = 'feed-header-symbol';
+        feedHeadersymbol.dataset.feedState = 'down'; // temporarely set to down to avoid bug
         container.addEventListener('click', () => {
-                feedHeadersymbol.dataset.feedState = feedHeadersymbol.dataset.feedState === 'down' ? 'up' : 'down';
-                localStorage.setItem('notificationLastDirection', JSON.stringify(feedHeadersymbol.dataset.feedState));
-            });
+            feedHeadersymbol.dataset.feedState = feedHeadersymbol.dataset.feedState === 'down' ? 'up' : 'down';
+            localStorage.setItem('notificationLastDirection', JSON.stringify(feedHeadersymbol.dataset.feedState));
+        });
         title.appendChild(feedHeadersymbol);
 
         parent_section.appendChild(container)

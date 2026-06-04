@@ -34,6 +34,9 @@ export class BuildRSSController {
         const allElements = await document.querySelectorAll<HTMLElement>('.hermidata-item');
         allElements.forEach(item => positionDiamond(item));
 
+        // set tag elypsis
+        allElements.forEach(item => this.trimTagOverflow(item));
+
         await new SortLogic(this.hermidata,  await RssBuild.init()).sortOptionLogic(sortSection);
     }
 
@@ -55,5 +58,31 @@ export class BuildRSSController {
 
     public async attachEventListeners(): Promise<void> {
         new EventListener(this.hermidata,  await RssBuild.init()).attachEventListeners();
+    }
+    private trimTagOverflow(item: HTMLElement): void {
+        const container = item.querySelector<HTMLElement>('.hermidata-item-tag-container');
+        if (!container) return;
+        const tags = container.querySelectorAll<HTMLElement>('.tag-div');
+        const containerRight = container.getBoundingClientRect().right;
+
+        for (let i = 0; i < tags.length; i++) {
+            const tagRight = tags[i].getBoundingClientRect().right;
+            if (tagRight > containerRight) {
+                if (i > 0) {
+                    const prev = tags[i];
+                    const prevLeft = tags[i].getBoundingClientRect().left;
+                    const containerLeft = container.getBoundingClientRect().left;
+                    prev.style.textOverflow = 'ellipsis';
+                    prev.style.flexShrink = '1';
+                    prev.style.minWidth = '0';
+                    prev.style.maxWidth = (containerRight - containerLeft - (prevLeft - containerLeft)) + 'px';
+                }
+                for (let j = i; j < tags.length; j++) {
+                    if (j === i) continue;
+                    tags[j].style.display = 'none';
+                }
+                break;
+            }
+        }
     }
 }

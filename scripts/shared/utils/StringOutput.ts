@@ -142,7 +142,7 @@ export class TrimTitle {
 
         // Split only on strong separators first (em-dash, pipe, colon, hash, comma)
         // Leave plain ' - ' for a second pass with smarter logic
-        const strongSplit = cleanstring.split(/ (?:–|—|:|#|,|\|) /g).map(p => p.trim()).filter(Boolean);
+        const strongSplit = cleanstring.split(/ (?:–|—|:|#|\|) /g).map(p => p.trim()).filter(Boolean);
 
         // Now handle ' - ' within each strong-split part
         const result: string[] = [];
@@ -290,10 +290,12 @@ export class TrimTitle {
             filter.push(filter[0]);
             filter.shift();
         }
+        // early strip first string if its a leading number
+        if (/^\d{1,4}(?:\.\d+)?$/.test(filter[0])) return TrimTitle.makeTitle(filter.slice(1), regexUsed, HermidataUrl);
 
         mainTitle = filter[0]
         .replace(regexUsed.chapterRemoveRegexV3, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
-        .replace(/^\d{1,4}(?:\.\d+)?\s*/, '') // strip stray leading chapter number
+        .replace(/^\d{1,4}(?:\.\d+)?\s+(?=[A-Za-z\u3040-\u9FFF])/, '') // remove leading numbers if followed by text (to catch cases like "12 Monkeys" where "12" is not a chapter number)
         .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();
@@ -306,8 +308,8 @@ export class TrimTitle {
         let Chapter_Title = filter[1]
         .replace(regexUsed.chapterRegex, '').trim() // remove 'chapter' and any variation
         .replaceAll(/\b\d+(\.\d+)?\b/g, "") // remove numbers
-        .replace(/^[\s:;,.\-–—|]+/, "").trim() // remove leading punctuation + spaces
-        .replace(/[:;,.\-–—|]+$/,"") // remove trailing punctuation
+        .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
+        .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();
         if (Chapter_Title === '' && filter.length == 2) {
             finalTrimmedTitle = { title: mainTitle };
