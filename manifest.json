@@ -1,8 +1,8 @@
 {
     "name": "Hermidata",
     "author": "BeetleB",
-    "description": "Organize your bookmarks more effectively using your google sheets & smart bookmarks.",
-    "version": "0.22.1",
+    "description": "**Hermidata** is a browser extension designed to help you efficiently track your progress across novels, manga, anime, or any serialized content by saving entries directly into a linked Google Spreadsheet.",
+    "version": "0.22.2",
     "manifest_version": 3,
     "permissions": [
         "contextMenus",
