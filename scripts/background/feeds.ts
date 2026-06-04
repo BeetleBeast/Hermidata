@@ -13,7 +13,7 @@ type Meta = {
 
 
 export function initFeeds() {
-    setInterval(checkFeedsForUpdates, 30 * 60 * 1000)
+    setInterval(checkFeedsForUpdates, 60 * 60 * 1000) // 60min
 }
 
 export async function checkFeedsForUpdates() {

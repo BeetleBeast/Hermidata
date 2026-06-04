@@ -48,6 +48,8 @@ export class RSS {
 
             if (!sortSection || !notification || !allSec) throw new Error('Element not found');
 
+            this.showLoadingAnimation();
+
             // If preloaded, use it instantly
             const dom = await (rssPreloadPromise ?? this.preloadRSS());
 
@@ -67,6 +69,8 @@ export class RSS {
             await this.BuildRSS.makeFooterSection();
 
             await this.BuildRSS.activateAutoSubscribe();
+
+            setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
         } catch (error) {
             console.error(error);
         }
@@ -169,6 +173,38 @@ export class RSS {
         
         document.body.style.height = '650px';
         if (document.body.offsetWidth <= 300) document.body.style.width = '664px';
+    }
+    private showLoadingAnimation() {
+        setElement(".HDClassic", el => {
+            el.style.opacity = '0';
+            el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+            el.style.cursor = 'wait'; // make the cursor a wait cursor
+            el.style.pointerEvents = 'none'; // make it not clickable
+        });
+        setElement(".HDRSS", el => {
+            el.style.opacity = '0';
+            el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+            el.style.cursor = 'wait'; // make the cursor a wait cursor
+            el.style.pointerEvents = 'none'; // make it not clickable
+
+        });
+        setElement('.material-symbols-outlinedContainer', el => el.style.display = 'flex');
+    }
+    private hideLoadingAnimation() {
+        setElement(".HDClassic", el => {
+            el.style.opacity = '0';
+            el.style.overflow = 'hidden';
+            el.style.cursor = 'default';
+            el.style.pointerEvents = 'auto';
+        });
+        setElement(".HDRSS", el => {
+            el.style.opacity = '1';
+            el.style.overflowY = 'scroll';
+            el.style.overflowX = 'hidden';
+            el.style.cursor = 'default';
+            el.style.pointerEvents = 'auto';
+        });
+        setElement('.material-symbols-outlinedContainer', el => el.style.display = 'none');
     }
 
 }

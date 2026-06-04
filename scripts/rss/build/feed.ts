@@ -46,20 +46,20 @@ export class FeedItem {
     }
     public makeFeedHeader(parent_section: HTMLElement) {
         if (getElement('.containerHeader-feed')) return
-        const lastDirection = JSON.parse(localStorage.getItem('notificationLastDirection') ?? '"down"');
         const container = document.createElement('div');
         container.className = 'containerHeader-feed'
         const title = document.createElement('div');
         title.className = "titleHeader";
+
         title.textContent = 'Notifications'
         container.appendChild(title);
         const feedHeadersymbol = document.createElement('div');
-            feedHeadersymbol.className = 'feed-header-symbol';
-            feedHeadersymbol.dataset.feedState = lastDirection;
+        feedHeadersymbol.className = 'feed-header-symbol';
+        feedHeadersymbol.dataset.feedState = 'down'; // temporarely set to down to avoid bug
         container.addEventListener('click', () => {
-                feedHeadersymbol.dataset.feedState = feedHeadersymbol.dataset.feedState === 'down' ? 'up' : 'down';
-                localStorage.setItem('notificationLastDirection', JSON.stringify(feedHeadersymbol.dataset.feedState));
-            });
+            feedHeadersymbol.dataset.feedState = feedHeadersymbol.dataset.feedState === 'down' ? 'up' : 'down';
+            localStorage.setItem('notificationLastDirection', JSON.stringify(feedHeadersymbol.dataset.feedState));
+        });
         title.appendChild(feedHeadersymbol);
 
         parent_section.appendChild(container)

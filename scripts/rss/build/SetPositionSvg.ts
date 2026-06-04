@@ -81,6 +81,16 @@ export function updatePolygons(): void {
 
     loopTroughItems(NotificationItems);
     loopTroughItems(AllItems);
+
+    // make notification hidden if needed
+    // Fixes bug when opening RSS page and notification svg's are not set
+    setTimeout(() => {
+        const feedHeaderSymbol = document.querySelector<HTMLElement>('.feed-header-symbol');
+        if (!feedHeaderSymbol) return
+        const lastDirection = JSON.parse(localStorage.getItem('notificationLastDirection') ?? '"down"');
+        feedHeaderSymbol.dataset.feedState = lastDirection;
+        
+    }, 10);
 }
 function getExlamationPosition(item: HTMLElement): number {
     const itemRect = item.getBoundingClientRect();

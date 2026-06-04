@@ -14,7 +14,9 @@
     opacity: 1;
 
     position: relative; /* required so SVG can be absolute inside */
-
+    --line-h2-y: 0px;
+    --line-h1-y: 0px;
+    --line-v1-x: 0px;
 }
 
 .hermidata-item:hover{
@@ -167,6 +169,7 @@
 
 .line-bottom-left-bend {
     animation-delay: 0.2s;
+    
     transform: translateY(var(--line-h2-y, 80px));
 }
 .line-bottom-right-bend {
