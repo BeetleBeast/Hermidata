@@ -2,7 +2,7 @@
 /* new CSS ------------------------------------------*/
 body {
 	overflow: hidden;
-	width: 664px;
+	width: 784px;
 }
 body::after {
     content: "";
