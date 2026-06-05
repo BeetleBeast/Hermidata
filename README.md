@@ -1,8 +1,8 @@
 # Hermidata
 
-> Track your reading and watching progress across novels, manga, and anime — synced to Google Sheets and your browser bookmarks.
+>Track your reading and watching progress across novels, manga, and anime - stored locally in your browser and optionally synced to Google Sheets.
 
-Hermidata is a cross-browser extension (Chrome + Firefox) that captures your current tab, extracts the title and chapter, and saves the entry to a linked Google Spreadsheet and a structured bookmark folder — automatically.
+Hermidata is a cross-browser extension (Chrome + Firefox) that captures your current tab, extracts the title and chapter, and saves the entry to an internal IndexedDB store. Each entry supports multiple bookmarks that are named progress snapshots that let you track separate read-throughs of the same title. Google Sheets sync is available as an optional feature.
 
 ---
 
@@ -10,18 +10,32 @@ Hermidata is a cross-browser extension (Chrome + Firefox) that captures your cur
 
 ### Core
 
-- One-click save from any tab — title, chapter, URL, and date are auto-detected
-- Writes directly to Google Sheets via the Sheets API (append or replace)
+- One-click save from any tab with the exeption of Novel Type, everything is auto-detected
+- Reduced, streamlined form - only the fields that matter, auto-filled from tab metadata
 - Creates a matching browser bookmark in a configurable folder structure
+- All data stored locally in the browser via IndexedDB - no account required
 - Duplicate detection: warns on same title + chapter with a newer date, auto-replaces older entries when Replace is enabled
 - Context menu entry: right-click any link to save it without opening the tab
+
+### Bookmark System
+
+Each entry has at least one bookmark. A bookmark stores:
+
+- The current chapter and URL
+- A label (e.g. "First read", "Re-read 2024")
+- Reading status for that read-through
+- Extra notes for yourself
+- A colour to easily notice your prefered bookmark
+- Full chapter history
+
+You can create multiple bookmarks per entry, making it easy to track separate read-throughs of the same novel and remember exactly where you left off each time.
 
 ### RSS Feed Tracking
 
 - Subscribe to RSS feeds and link them to tracked entries
-- Background feed polling every 30 minutes — notifies you of new chapters
-- Feed viewer with sort, filter, and search across all subscribed titles
-- Filters by type, status, novel status, source, tags, and date range
+- Background feed polling every 30 minutes notifying you of new chapters
+- Feed viewer with sort, filter, and search across all titles not only subscribed ones!
+- Filters by type, status, novel status, source, tags, date range and more
 - Smart title matching using fuzzy search and alternate title support
 
 ### Smart Detection
@@ -30,6 +44,18 @@ Hermidata is a cross-browser extension (Chrome + Firefox) that captures your cur
 - Title trimming: strips site names, junk keywords, and separator noise automatically
 - Fuzzy bookmark and Hermidata matching to detect when you revisit a tracked page
 - Icon changes to indicate whether the current page is already bookmarked
+
+## Tags
+
+- Tag autocomplete - start typing to match existing tags instantly
+- Add tags that fit your unique taste
+- Tags are stored per-entry and searchable in the feed viewer
+
+## Google Sheets Sync (optional)
+
+- Write entries to a linked Google Spreadsheet via the Sheets API
+- Append or replace rows based on duplicate detection rules
+- Requires Google OAuth setup and a spreadsheet URL in Settings (see setup below)
 
 ### Settings
 
@@ -46,12 +72,14 @@ Hermidata is a cross-browser extension (Chrome + Firefox) that captures your cur
 ## How It Works
 
 1. Open a tab with content you want to track
-2. Click the extension icon — the form auto-fills from the tab metadata
-3. Adjust fields if needed (title, chapter, type, status, tags, notes)
-4. Click **Save**
-5. The entry is written to your Google Sheet and a browser bookmark is created
+2. Click the extension icon - the form auto-fills title and chapter from the tab
+3. Adjust fields if needed (type, status, tags, notes)
+4. Click **Save** - the entry is stored locally in IndexedDB, and synced to Google Sheets if enabled
+5. A bookmark is created for this entry, recording the chapter, URL, and label unless disabled
 
-For RSS: navigate to the RSS page for a title, click **Subscribe**, and Hermidata links the feed to the tracked entry. New chapters trigger a browser notification.
+To track a new read-through of an existing entry, open the entry and add a new bookmark with a distinct label. Each bookmark maintains its own chapter history independently.
+
+For RSS: navigate to the RSS page for a title, click Subscribe, and Hermidata links the feed to the tracked entry. New chapters trigger a browser notification.
 
 ---
 
@@ -60,7 +88,7 @@ For RSS: navigate to the RSS page for a title, click **Subscribe**, and Hermidat
 ### 1. Clone and build
 
 ```bash
-git clone https://github.com/your-repo/hermidata
+git clone https://github.com/BeetleBeast/Hermidata.git
 cd hermidata
 npm install
 npm run build
@@ -107,26 +135,18 @@ The build outputs to `dist/`.
 
 ```MD
 scripts/
-  background/
-    background.ts       ← entry point, wires all modules
-    messaging.ts        ← onMessage + onInstalled handlers
-    tabs.ts             ← tab listeners + icon logic
-    bookmarks.ts        ← all bookmark operations
-    sheets.ts           ← Google Sheets API calls
-    auth.ts             ← OAuth flow
-    feeds.ts            ← RSS feed polling + parsing
-    rssCache.ts         ← background RSS cache
-    fuzzy.ts            ← fuzzy title matching
-    contextMenus.ts     ← context menu setup
-    state.ts            ← shared mutable state
-  popup/                ← popup UI
-  rss/                  ← RSS page + feed builder
-  settings/             ← settings page
-  content/              ← content script
+  background/ <- background scripts
+  popup/ <- core popup
+  rss/ <- RSS mode of popup
+  rssPage/ <- Seperate RSS page
+  settings/ <- settings page
+  content/ <- content script
   shared/
-    types/              ← all TypeScript types
-    StringOutput.ts     ← title trimming + chapter parsing
-    BrowserCompat.ts    ← chrome/browser shim
+    constants/ <- All major TypeScript constants
+    db/ <- storage functions
+    migration/ <- migration plans
+    types/ <- All TypeScript types
+    utils/ <- All functions that touch all major places
 ```
 
 ---
@@ -139,7 +159,7 @@ scripts/
 | `tabs` | Read current tab URL and title |
 | `activeTab` | Access the active tab on click |
 | `storage` | Persist settings and cache |
-| `identity` | Google OAuth authentication |
+| `identity` | Google OAuth authentication (Sheets sync only) |
 | `contextMenus` | Right-click save option |
 | `notifications` | New chapter alerts |
 | `scripting` | Content script injection |
@@ -150,7 +170,7 @@ scripts/
 ## Development
 
 ```bash
-npm run dev        # watch mode — rebuilds on save
+npm run dev        # watch mode - rebuilds on save
 npm run build      # production build
 npm run typecheck  # type-check without building
 npm test           # run unit tests (Vitest)
@@ -162,20 +182,19 @@ Source maps are included in dev builds. Each background module registers its own
 
 ## Known Issues
 
-### **RSS**
+### RSS
 
-- Alternate titles need to be set manually — if a feed uses a different title than your saved entry, it may appear as a duplicate
-
-- notification RSS item's polygon ( to indicate that it is linked ) `sometimes` don't get set at the correct position
+- Alternate titles need to be set manually - if a feed uses a different title than your saved entry, it may appear as a duplicate
 
 ---
 
 ## Data & Privacy
 
-- Hermidata only accesses Google Sheets — no other Google services
-- Your data is stored in your own spreadsheet and your own browser
-- No data is sent to any external server other than Google's API
-- Authentication uses the official Google OAuth flow — Hermidata never sees your password
+- All tracking data is stored locally in your browser via IndexedDB
+- Google Sheets sync is optional - if disabled, no data leaves your browser
+- When Sheets sync is enabled, Hermidata only accesses the configured spreadsheet - no other Google services
+- Authentication uses the official Google OAuth flow - Hermidata never sees your password
+
 
 ---
 

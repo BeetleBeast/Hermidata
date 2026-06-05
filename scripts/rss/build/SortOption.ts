@@ -32,6 +32,10 @@ export class SortOption extends Sort {
         }
     }
     private CreateSearchBar(): HTMLDivElement {
+        const searchContainerWrapper = document.createElement('div');
+        searchContainerWrapper.className = 'search-container-wrapper';
+        searchContainerWrapper.style.position = 'relative';
+
         const searchContainer = document.createElement('div');
         searchContainer.className = 'search-container';
         const searchInput = document.createElement('input');
@@ -49,7 +53,8 @@ export class SortOption extends Sort {
 
         searchContainer.append(searchInput, autocompleteContainer, filterSectionTitle);
 
-        return searchContainer
+        searchContainerWrapper.append(searchContainer);
+        return searchContainerWrapper;
     }
     private CreateFilter(settings: Settings): HTMLDivElement {
         const filterSection = document.createElement('div');
@@ -162,14 +167,20 @@ export class SortOption extends Sort {
         // First pass — read all widths (browser calculates layout once)
         const measurements = Object.keys(filterName).map(index => {
             const elFilter = mainContainer.querySelector<HTMLDivElement>(`.${filterClassName[index]}`)
-            return { elFilter, width: elFilter?.clientWidth || 0 }
+            return { elFilter, width: elFilter?.scrollWidth || 0 }
         })
         // Second pass — write all widths (browser paints once)
         measurements.forEach(({ elFilter, width }) => {
             if (elFilter && width) elFilter.style.minWidth = `${width}px`;
         })
         const searchInput = getElement<HTMLInputElement>('.search-input');
-        setElement('.autocompleteContainer', el => el.style.width = `${searchInput?.offsetWidth}px`);
+        const boundingBox = searchInput?.getBoundingClientRect();
+        if (!boundingBox) return
+
+        setElement('.autocompleteContainer', el => {
+            el.style.top = `calc(100% - 0rem)`; // position at the bottom
+            el.style.width = `${boundingBox?.width}px`;
+        })
     }
 
     private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {

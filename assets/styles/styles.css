@@ -166,6 +166,10 @@ body {
 	display: none;
 	z-index: 5200000;
 	animation: loading 2s cubic-bezier(.18,.89,.32,1.28) infinite;
+
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .material-symbols-outlined {
