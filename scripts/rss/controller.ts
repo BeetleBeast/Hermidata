@@ -37,6 +37,15 @@ export class BuildRSSController {
         // set tag elypsis
         allElements.forEach(item => this.trimTagOverflow(item));
 
+        // set title header if no saved items
+        if (allElements.length === 0) {
+            const AllItems = document.querySelector('#All-RSS-entries');
+            if (!AllItems) return;
+            const Header = AllItems.querySelector('.titleHeader');
+            if (!Header)  return;
+            Header.textContent = 'No saved items';
+        }
+
         await new SortLogic(this.hermidata,  await RssBuild.init()).sortOptionLogic(sortSection);
     }
 

@@ -19,10 +19,25 @@ body::after {
     position: absolute;
     top: 50px;
     width: 98vw;
-    overflow-y: scroll;
+    overflow-y: auto;
     overflow-x: hidden;
+	/*scrollbar-width: none;*/
     height: 500px;
 }
+
+.HDRSS::-webkit-scrollbar {
+    width: 4px;
+}
+
+.HDRSS::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.HDRSS::-webkit-scrollbar-thumb {
+    background-color: var(--Btn);
+    border-radius: 999px;
+}
+
 #HDRSSBtn {
     display: flex;
     width: 100%;

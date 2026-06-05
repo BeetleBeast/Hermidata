@@ -170,9 +170,8 @@ export class RSS {
         document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
             a.style.pointerEvents = 'auto';
         });
-        
-        document.body.style.height = '650px';
-        if (document.body.offsetWidth <= 300) document.body.style.width = '664px';
+        document.body.style.height = '580px'; // chromium limit is 600px
+        if (document.body.offsetWidth <= 300) document.body.style.width = '664px'; // chromium & firefox limit is 800px
     }
     private showLoadingAnimation() {
         setElement(".HDClassic", el => {
@@ -199,7 +198,7 @@ export class RSS {
         });
         setElement(".HDRSS", el => {
             el.style.opacity = '1';
-            el.style.overflowY = 'scroll';
+            el.style.overflowY = 'auto';
             el.style.overflowX = 'hidden';
             el.style.cursor = 'default';
             el.style.pointerEvents = 'auto';
