@@ -31,7 +31,7 @@ export class EventListener extends RssBuild {
     }
     private clickOnItem(value: Hermidata, isRSSItem: boolean) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
-        ext.tabs.create({ url: value?.rss?.latestItem?.link || value.url });
+        this.openNewTab(value?.rss?.latestItem?.link || value.url, value.chapter.bookmarks[value.chapter.bookmarkInUse].scrollPosition);
     }
     private async rightmouseclickonItem(e: MouseEvent, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
@@ -126,7 +126,7 @@ export class EventListener extends RssBuild {
         if (!url) return;
         // Get the current active tab and update its URL
         const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) await ext.tabs.update(tab.id, { url });
+        if (tab?.id) this.updateTab(tab, url, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
     }
     
     private async openInNewWindow(target: HTMLDivElement | null) {
@@ -140,7 +140,7 @@ export class EventListener extends RssBuild {
             return;
         }
         const url = entry.url;
-        if (url) await chrome.tabs.create({ url });
+        if (url) this.openNewTab(url, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
     }
     
     private clearNotification(target: HTMLDivElement | null) {

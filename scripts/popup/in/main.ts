@@ -4,7 +4,7 @@ import { TrimTitle, getChapterFromTitle } from '../../shared/utils/StringOutput'
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type InputArrayType, type LatestValue, type NovelStatus, type ReadStatus, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
-import { updateChapterProgress } from '../core/save';
+import { getPagePosition, updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
 import { getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
@@ -294,6 +294,9 @@ class HermidataController {
         // update settings ( add new tags if new added in UI )
         await this.updateSettings(settings);
 
+        // get page position
+        await this.setScrollPosition();
+
         // save to Browser in JSON format
         const savedInStorage = await updateChapterProgress(latestValue.title, latestValue.Type, this.hermidata);
         // save to google sheet
@@ -417,6 +420,12 @@ class HermidataController {
             date,
             tagsArray
         }
+    }
+    private async setScrollPosition() {
+        const scrollPositionObject = await getPagePosition();
+        const scrollPosition = scrollPositionObject?.[0]?.result ?? 0;
+
+        this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].scrollPosition = scrollPosition;
     }
 }
 

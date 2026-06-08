@@ -86,18 +86,7 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
     source: '',
     chapter: { 
         bookmarks: {
-            [returnBookmarkHash('Primary')]: {
-                id: returnBookmarkHash('Primary'),
-                current: 0,
-                history: [],
-                label: 'Primary',
-                color: 'blue',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                note: '',
-                isPrimary: true,
-                readStatus: status
-            }
+            [returnBookmarkHash('Primary')]: makeDefaultBookmark()
         },
         latest: 0,
         lastChecked: new Date().toISOString(),
@@ -127,5 +116,6 @@ export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', cu
     updatedAt: new Date().toISOString(),
     note: notes,
     isPrimary: true,
-    readStatus: AnyReadStatus
+    readStatus: AnyReadStatus,
+    scrollPosition: 0
 });

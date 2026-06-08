@@ -3,6 +3,7 @@ import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
 
 import { FeedItem } from "./build/feed";
+import { ext } from "../shared/utils/BrowserCompat";
 
 export abstract class RssBuild {
     protected readonly hermidata: Hermidata;
@@ -42,4 +43,40 @@ export abstract class RssBuild {
 
         return newVersion;
     }
+    protected updateTab(tab: chrome.tabs.Tab, url: URL | string, scrollPositionY: number): void {
+        chrome.tabs.update(tab.id!, { url: url.toString() }, (updatedTab) => {
+            if (!updatedTab?.id) return;
+
+            const tabId = updatedTab.id;
+
+            chrome.tabs.onUpdated.addListener(function listener(changedTabId, info) {
+                if (changedTabId === tabId && info.status === "complete") {
+                    chrome.tabs.onUpdated.removeListener(listener);
+
+                    chrome.scripting.executeScript({
+                        target: { tabId },
+                        func: (y) => window.scrollTo(0, y),
+                        args: [scrollPositionY],
+                    });
+                }
+            });
+        });
+    }
+    protected openNewTab(url: URL | string, scrollPositionY: number): void {
+        
+        chrome.tabs.create({ url: url.toString() }, (tab) => {
+            chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+                if (tabId === tab.id && info.status === "complete") {
+                chrome.tabs.onUpdated.removeListener(listener);
+
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: (y) => window.scrollTo(0, y),
+                    args: [scrollPositionY],
+                });
+                }
+            });
+            });
+    }
+
 }

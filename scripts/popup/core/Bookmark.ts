@@ -354,7 +354,8 @@ export class BookmarkController {
             updatedAt: new Date().toISOString(),
             history: [],
             isPrimary: false,
-            readStatus: 'Viewing'
+            readStatus: 'Viewing',
+            scrollPosition: 0
         }
 
         // if re-reading, update revisiting count
