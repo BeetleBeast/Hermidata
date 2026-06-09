@@ -516,8 +516,10 @@ export function isHermidataV9( data: HermidataV4 | HermidataV5 | HermidataV6 | H
     const hasType = "novelType" in data;
     const hasNotStatus = !("status" in data);
     const bookmark = data.chapter?.bookmarks?.[data.chapter?.bookmarkInUse];
-    const hasScrollPosition = bookmark != undefined && "scrollPosition" in bookmark && bookmark.scrollPosition != undefined 
-    && typeof  bookmark.scrollPosition === "number" && !isNaN(bookmark.scrollPosition) && bookmark.scrollPosition >= 0;
+    const hasScrollPosition = bookmark != undefined 
+        && "scrollPosition" in bookmark && bookmark.scrollPosition != undefined 
+        && typeof  bookmark.scrollPosition === "number" 
+        && !isNaN(bookmark.scrollPosition) && bookmark.scrollPosition >= 0;
     return (
         hasBookmarks &&
         hasType &&

@@ -423,9 +423,8 @@ class HermidataController {
     }
     private async setScrollPosition() {
         const scrollPositionObject = await getPagePosition();
-        const scrollPosition = scrollPositionObject?.[0]?.result ?? 0;
-
-        this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].scrollPosition = scrollPosition;
+        const scrollPosition = scrollPositionObject?.[0]?.result;
+        this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].scrollPosition = scrollPosition ?? 0;
     }
 }
 

@@ -317,7 +317,7 @@ export class BookmarkController {
     }
 
     private async removeBookmark(key: string): Promise<boolean> {
-        const confirmation = await customConfirm('are you sure you want to remove this bookmark?');
+        const confirmation = await customConfirm('are you sure you want to remove this bookmark?', {accept: 'Remove', reject: 'Cancel'});
         if (!confirmation) return false;
 
         // set used bookmark to primary if selected

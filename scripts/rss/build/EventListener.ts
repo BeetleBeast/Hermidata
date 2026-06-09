@@ -237,7 +237,7 @@ export class EventListener extends RssBuild {
         }
         const hashItem = this.GetHashItem(item);
         const toBeRemovedItem = this.AllHermidata[hashItem]
-        const confirmation = await customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`)
+        const confirmation = await customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`, {accept: 'Remove', reject: 'Cancel'});
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
             deleteHermidata(hashItem)
