@@ -1,11 +1,11 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8 } from "../db/db";
+import { getAllHermidata, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
 import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
-import type { BookmarkV1, HermidataV3, HermidataV4, HermidataV6, HermidataV7, PotentialSameHermidata } from "../types/popup";
+import type { BookmarkV1, BookmarkV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, PotentialSameHermidata } from "../types/popup";
 
 
 interface DuplicationResult {
@@ -433,7 +433,7 @@ export class HermidataMigration {
                     altLists.flat().filter(t => TrimTitle.trimTitle(t, '').title && TrimTitle.trimTitle(t, '').title !== TrimTitle.trimTitle(mainTitle, '').title) ) )
             ];
         }
-        const base = makeHermidata(newTitle, newer.url || older.url, newType);
+        const base = await makeHermidata(newTitle, newer.url || older.url, newType);
         const merged: Hermidata = {
             ...base,
             id: newKey,
@@ -551,22 +551,23 @@ export class HermidataMigration {
         return Array.from(new Set(list));
     }
 
-    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata): [Hermidata, boolean] {
+    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata): [Hermidata, boolean] {
         let current = older;
 
         // early return if already latest
-        if (isHermidataV8(current)) return [current, true];
+        if (isHermidataV9(current)) return [current, true];
 
 
         if (isHermidataV4OrOlder(current)) current = this.migrateHermidataV3OrOlderToV5(current);
         if (isHermidataV5(current)) current = this.migrateHermidataV5ToV6(current);
         if (isHermidataV6(current)) current = this.migrateHermidataV6ToV7(current);
         if (isHermidataV7(current)) current = this.migrateHermidataV7ToV8(current);
-        
-        if (!isHermidataV8(current))  {
+        if (isHermidataV8(current)) current = this.migrateHermidataV8ToV9(current);
+
+        if (!isHermidataV9(current))  {
             console.warn(`Hermidata is not set to the latest version.`, current);
             console.warn(`Detected version: Unknown`);
-            return [current, false];
+            return [current as Hermidata, false];
         }
 
         return [current, true];
@@ -679,8 +680,8 @@ export class HermidataMigration {
             }
         }
     }
-    private static migrateHermidataV7ToV8(data: HermidataV7): Hermidata {
-        const allBookmarks: Record<string, Bookmark> = {};
+    private static migrateHermidataV7ToV8(data: HermidataV7): HermidataV8 {
+        const allBookmarks: Record<string, BookmarkV2> = {};
         for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
             allBookmarks[id] = {
                 id: bookmark.id,
@@ -721,5 +722,33 @@ export class HermidataMigration {
                 novelStatus: data.meta?.novelStatus ?? 'Ongoing'
             }
         }
+    }
+    private static migrateHermidataV8ToV9(data: HermidataV8): Hermidata {
+        const newBookmarks: Record<string, Bookmark> = {};
+
+        for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
+            newBookmarks[id] = {
+                id: bookmark.id,
+                current: bookmark.current,
+                history: bookmark.history,
+                label: bookmark.label,
+                color: bookmark.color,
+                createdAt: bookmark.createdAt,
+                updatedAt: bookmark.updatedAt,
+                note: bookmark.note,
+                isPrimary: bookmark.isPrimary,
+                readStatus: bookmark.readStatus,
+                scrollPosition: 0
+            }
+        }
+
+        //const hermidata
+        return {
+            ...data,
+            chapter: {
+                ...data.chapter,
+                bookmarks: newBookmarks
+            }
+        };
     }
 }

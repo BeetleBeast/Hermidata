@@ -25,7 +25,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
             // id entry is new/can't be found in storage
             const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
             if (Hermidata) entry = Hermidata
-            else entry = makeHermidata(title, hermidata.url, hermidata.novelType);
+            else entry = await makeHermidata(title, hermidata.url, hermidata.novelType);
         }
     
         if (!entry) {
@@ -73,12 +73,34 @@ export async function updateChapterProgress(title: string, type: string, hermida
         return false;
     }
 }
+export async function getPagePosition(): Promise<chrome.scripting.InjectionResult<number>[] | undefined> {
+    try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tabs.length) return;
+        const tab = tabs[0];
+        const tabId = tab.id;
+        if (!tabId) return;
+        // get scroll position
+        const result = chrome.scripting.executeScript({
+            target: { tabId },
+            func: () => window.scrollY
+        });
+        return result;
+    }
+    catch (error) {
+        console.error(error);
+    }
+}
 
-
-export function makeHermidata(title: string, url: string, novelType: AnyNovelType = "Manga", isPrimary: boolean = true): Hermidata {
+export async function makeHermidata(title: string, url: string, novelType: AnyNovelType = "Manga", isPrimary: boolean = true): Promise<Hermidata> {
     const Title = TrimTitle.trimTitle(title, url);
     const hash = returnHashedTitle(title, novelType, url);
     const source = new URL(url).hostname.replace(/^www\./, "");
+
+    const pagePositionObject = await getPagePosition();
+    const scrollPosition = pagePositionObject?.[0]?.result ?? 0;
+    
+
     const label = 'Primary';
     const newBoomark: Bookmark = {
         id: returnBookmarkHash(label),
@@ -90,7 +112,8 @@ export function makeHermidata(title: string, url: string, novelType: AnyNovelTyp
         updatedAt: new Date().toISOString(),
         note: '',
         isPrimary,
-        readStatus: 'Viewing'
+        readStatus: 'Viewing',
+        scrollPosition: scrollPosition
     }
 
     return {

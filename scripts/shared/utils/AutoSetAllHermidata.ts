@@ -107,7 +107,8 @@ export class AutoSetAllHermidata {
             updatedAt: date.toISOString(),
             note: '',
             isPrimary: true,
-            readStatus: 'Viewing'
+            readStatus: 'Viewing',
+            scrollPosition: 0
         }
 
         const hermidataGuess: Hermidata = {
