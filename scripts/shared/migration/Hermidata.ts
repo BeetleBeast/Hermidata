@@ -545,6 +545,9 @@ export class HermidataMigration {
         
     }
     /** force a list of strings to be a list of numbers */
+    private static setNumbersFromstringToList(combination: (string | number)[]): number[];
+    private static setNumbersFromstringToList(list: string[]): number[];
+    private static setNumbersFromstringToList(list: number[]): number[];
     private static setNumbersFromstringToList(input: string[] | number[] | (number | string)[]): number[] {
         const list = input.map(t => Number(t));
         // remove duplicates
@@ -684,8 +687,8 @@ export class HermidataMigration {
         for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
             allBookmarks[id] = {
                 id: bookmark.id,
-                current: bookmark.current,
-                history: bookmark.history,
+                current: Number(bookmark.current),
+                history: this.setNumbersFromstringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
                 createdAt: bookmark.createdAt,
@@ -721,5 +724,33 @@ export class HermidataMigration {
                 novelStatus: data.meta?.novelStatus ?? 'Ongoing'
             }
         }
+    }
+    private static migrateHermidataV8ToV9(data: HermidataV8): Hermidata {
+        const newBookmarks: Record<string, Bookmark> = {};
+
+        for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
+            newBookmarks[id] = {
+                id: bookmark.id,
+                current: Number(bookmark.current),
+                history: this.setNumbersFromstringToList(bookmark.history),
+                label: bookmark.label,
+                color: bookmark.color,
+                createdAt: bookmark.createdAt,
+                updatedAt: bookmark.updatedAt,
+                note: bookmark.note,
+                isPrimary: bookmark.isPrimary,
+                readStatus: bookmark.readStatus,
+                scrollPosition: 0
+            }
+        }
+
+        //const hermidata
+        return {
+            ...data,
+            chapter: {
+                ...data.chapter,
+                bookmarks: newBookmarks
+            }
+        };
     }
 }
