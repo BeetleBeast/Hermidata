@@ -1,4 +1,4 @@
-import { saveHermidataV3 } from "../../shared/db/Storage";
+import { saveHermidata } from "../../shared/db/Storage";
 import { returnBookmarkHash } from "../../shared/utils/StringOutput";
 import type { Bookmark, Hermidata } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
@@ -306,7 +306,7 @@ export class BookmarkController {
                     if (this.hermidata.chapter.bookmarkInUse === key) this.imgBookmark!.style.fill = newColor;
                     this.hermidata.chapter.bookmarks[key].color = newColor;
                     try {
-                        if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
+                        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata);
                     } catch (error) {
                         console.error('Failed to save bookmark color:', error);
                     }
@@ -330,7 +330,7 @@ export class BookmarkController {
         // remove bookmark
         delete this.hermidata.chapter.bookmarks[key];
 
-        if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
+        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata);
         this.openBookmarkMenuManager(); // refresh
         return true;
     }
@@ -361,7 +361,7 @@ export class BookmarkController {
         // if re-reading, update revisiting count
         if (this.hermidata.chapter.latest === this.hermidata.chapter.bookmarks[hash].current) this.hermidata.chapter.revisitingCount++;
 
-        if (!this.isNewHermidata) await saveHermidataV3(this.hermidata.id, this.hermidata);
+        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata);
         this.switchBookmarkMenu(hash);
         this.closeAddBookmark();
     }
@@ -372,7 +372,7 @@ export class BookmarkController {
         this.hermidata.chapter.bookmarks[key].label = label;
         this.hermidata.chapter.bookmarks[key].updatedAt = new Date().toISOString();
 
-        if (!this.isNewHermidata) saveHermidataV3(this.hermidata.id, this.hermidata);
+        if (!this.isNewHermidata) saveHermidata(this.hermidata.id, this.hermidata);
     }
 
     private switchBookmarkMenu(key: string): void {

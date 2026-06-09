@@ -14,7 +14,7 @@
 */
 
 import { returnHashedTitle } from "../shared/utils/StringOutput";
-import { getAllHermidata, getSettings, removeHermidataV3, saveHermidataV3 } from "../shared/db/Storage";
+import { getAllHermidata, getSettings, removeHermidata, saveHermidata } from "../shared/db/Storage";
 import { type AnyNovelType, type Hermidata, type AnyReadStatus, type Settings } from "../shared/types/index";
 import { getElement, setElement } from "../shared/utils/Selection";
 
@@ -59,10 +59,10 @@ class RssPage {
     }
     private async saveData(entry: Hermidata): Promise<void> {
         const key = entry.id || returnHashedTitle(entry.title, entry.novelType);
-        await saveHermidataV3(key, entry);
+        await saveHermidata(key, entry);
     }
     private async removeData(id: string): Promise<void> {
-        await removeHermidataV3(id);
+        await removeHermidata(id);
     }
     // rendering
     private renderFilters(settings: Settings): void {

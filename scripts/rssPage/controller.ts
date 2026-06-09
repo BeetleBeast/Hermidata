@@ -1,9 +1,7 @@
 import { RSSPageBuilder } from "./build";
+import { Detail } from "./build/detail";
 
 export class RSSPageController {
-
-    // private readonly build = 
-
 
     constructor() {}
 

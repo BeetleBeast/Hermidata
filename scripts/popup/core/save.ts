@@ -1,7 +1,7 @@
 
 import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/utils/StringOutput";
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
-import { getHermidataViaKey, saveHermidataV3 } from "../../shared/db/Storage";
+import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
 
 
@@ -59,7 +59,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
     
             if (hermidata.chapter.latest > entry.chapter.latest) entry.chapter.latest = hermidata.chapter.latest;
     
-            await saveHermidataV3(key, entry);
+            await saveHermidata(key, entry);
             console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
         }
         if (needsToMigrate) {
@@ -156,7 +156,7 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
 
     const entryKey = entry.id || returnHashedTitle(entry.title, entry.novelType);
 
-    await saveHermidataV3(entryKey, entry);
+    await saveHermidata(entryKey, entry);
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
 }
 
