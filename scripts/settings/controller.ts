@@ -174,7 +174,7 @@ export class BuildController {
     }
     private async resetPage(sectionId: string) {
         // confirm reset
-        const Confirmation = await customConfirm("Are you sure you want to reset all settings?");
+        const Confirmation = await customConfirm("Are you sure you want to reset all settings?", {accept: "Reset", reject: "Cancel"});
         if (!Confirmation) return;
         // reset page values to current settings
         switch (sectionId) {

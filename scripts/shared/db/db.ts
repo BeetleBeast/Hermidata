@@ -4,7 +4,7 @@ import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
-import type { HermidataV4, HermidataV6, HermidataV7 } from '../types/popup';
+import type { HermidataV4, HermidataV6, HermidataV7, HermidataV8 } from '../types/popup';
 
 
 // ============================================================
@@ -416,18 +416,18 @@ export async function migrateFromChromeStorage(): Promise<void> {
  */
 export async function migrateHermidataToLatest(): Promise<void> {
     const db = await getDb();
-    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v8');
+    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v9');
     if (alreadyMigrated) return;
 
-    console.log('[DB] Starting migration of Hermidata to latest (V8)...');
+    console.log('[DB] Starting migration of Hermidata to latest (V9)...');
 
     await new Promise<void>(async (resolve) => {
-        const allHermidata_v6 = await getAllHermidata();
+        const allHermidata_old = await getAllHermidata();
         const entries: Hermidata[] = [];
         let allNotMigrated: number = 0;
 
-        for (const [key, value] of Object.entries(allHermidata_v6)) {
-            if (!isHermidataV8(value)) { 
+        for (const [key, value] of Object.entries(allHermidata_old)) {
+            if (!isHermidataV9(value)) { 
                 const [hermidata, isMigrated] = HermidataMigration.migrateAllHermidataToLatest(value);
                 if (isMigrated) entries.push(hermidata);
                 else allNotMigrated++;
@@ -437,10 +437,11 @@ export async function migrateHermidataToLatest(): Promise<void> {
         if (entries.length) await putAllHermidata(entries);
 
         // Mark as done
-        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v8');
-        console.log(`[DB] Migrated ${entries.length} Hermidata entries to V8`);
+        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v9');
+        console.log(`[DB] Migrated ${entries.length} Hermidata entries to V9`);
         console.log(`[DB] ${allNotMigrated} Hermidata entries could not be migrated`);
         resolve();
+        console.log('[DB] Migration complete');
     });
 }
 /**
@@ -448,7 +449,7 @@ export async function migrateHermidataToLatest(): Promise<void> {
  * @param data - Hermidata
  * @returns boolean
  */
-export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV4 {
+export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV4 {
     return (
         "current" in data.chapter &&
         "type" in data &&
@@ -457,7 +458,7 @@ export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | Hermidat
         (typeof data.meta.tags === 'string')
     );
 }
-export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV5 {
+export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV5 {
     const hasCurrentChapter = "current" in data.chapter;
     const hasType = "type" in data;
     const hasStatus = "status" in data;
@@ -477,7 +478,7 @@ export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | H
     );
     */
 }
-export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV6 {
+export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV6 {
     return (
         "bookmarks" in data.chapter &&
         "revisitingCount" in data.chapter &&
@@ -486,18 +487,44 @@ export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         "bookmarkInUse" in data.meta
     );
 }
-export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is HermidataV7 {
+export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV7 {
     return (
         "bookmarkInUse" in data.chapter &&
         "type" in data &&
-        "status" in data
+        "status" in data &&
+        !("scrollPosition" in data.chapter.bookmarks[data.chapter?.bookmarkInUse])
     );
 }
-export function isHermidataV8( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | Hermidata ): data is Hermidata {
+export function isHermidataV8( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV8 {
+    if (!("bookmarkInUse" in data.chapter)) return false;
+    
+    const hasBookmarks = "bookmarks" in data.chapter;
+    const hasType = "novelType" in data;
+    const hasNotStatus = !("status" in data);
+    const hasNotScrollPosition = !("scrollPosition" in data.chapter.bookmarks[data.chapter?.bookmarkInUse]);
     return (
-        "bookmarkInUse" in data.chapter &&
-        "novelType" in data &&
-        !("status" in data)
+        hasBookmarks &&
+        hasType &&
+        hasNotStatus &&
+        hasNotScrollPosition
+    )
+}
+export function isHermidataV9( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is Hermidata {
+    if (!("bookmarkInUse" in data.chapter)) return false;
+    
+    const hasBookmarks = "bookmarks" in data.chapter;
+    const hasType = "novelType" in data;
+    const hasNotStatus = !("status" in data);
+    const bookmark = data.chapter?.bookmarks?.[data.chapter?.bookmarkInUse];
+    const hasScrollPosition = bookmark != undefined 
+        && "scrollPosition" in bookmark && bookmark.scrollPosition != undefined 
+        && typeof  bookmark.scrollPosition === "number" 
+        && !isNaN(bookmark.scrollPosition) && bookmark.scrollPosition >= 0;
+    return (
+        hasBookmarks &&
+        hasType &&
+        hasNotStatus &&
+        hasScrollPosition
     )
 }
 

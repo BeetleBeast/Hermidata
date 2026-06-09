@@ -242,7 +242,7 @@ async function getEntry(title: string, stored: Record<string, Hermidata>, altChe
         }
     }
     // fallback: if no entry found at all, create new one
-    if (!entry) entry = makeHermidata(title, url, type);
+    if (!entry) entry = await makeHermidata(title, url, type);
 
     return entry;
 }
