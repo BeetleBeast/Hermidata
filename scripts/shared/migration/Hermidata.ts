@@ -2,7 +2,7 @@ import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import { getHermidataViaKey, updateHermidataV3 } from "../db/Storage";
+import { getHermidataViaKey, updateHermidata } from "../db/Storage";
 import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
 import type { BookmarkV1, BookmarkV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, PotentialSameHermidata } from "../types/popup";
@@ -146,7 +146,7 @@ export class HermidataMigration {
     
         // Save and remove the old entry key
         if (merged) {
-            await updateHermidataV3(older.id, merged.id, merged);
+            await updateHermidata(older.id, merged.id, merged);
             console.log(`Merged "${older.title}" into "${newer.title}"`);
         } else {
             console.error(`Merge failed for:`, older.title, newer.title);
@@ -481,7 +481,7 @@ export class HermidataMigration {
             }
         }
         // step 3. save & remove key
-        updateHermidataV3(oldKey, newKey, merged);
+        updateHermidata(oldKey, newKey, merged);
 
         return merged;
     }
@@ -545,6 +545,9 @@ export class HermidataMigration {
         
     }
     /** force a list of strings to be a list of numbers */
+    private static setNumbersFromstringToList(combination: (string | number)[]): number[];
+    private static setNumbersFromstringToList(list: string[]): number[];
+    private static setNumbersFromstringToList(list: number[]): number[];
     private static setNumbersFromstringToList(input: string[] | number[] | (number | string)[]): number[] {
         const list = input.map(t => Number(t));
         // remove duplicates
@@ -685,8 +688,8 @@ export class HermidataMigration {
         for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
             allBookmarks[id] = {
                 id: bookmark.id,
-                current: bookmark.current,
-                history: bookmark.history,
+                current: Number(bookmark.current),
+                history: this.setNumbersFromstringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
                 createdAt: bookmark.createdAt,
@@ -729,8 +732,8 @@ export class HermidataMigration {
         for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
             newBookmarks[id] = {
                 id: bookmark.id,
-                current: bookmark.current,
-                history: bookmark.history,
+                current: Number(bookmark.current),
+                history: this.setNumbersFromstringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
                 createdAt: bookmark.createdAt,

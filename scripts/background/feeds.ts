@@ -1,6 +1,6 @@
 import { ext } from "../shared/utils/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
-import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidataV3, setAllRawFeeds } from "../shared/db/Storage";
+import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidata, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
 import { TrimTitle } from "../shared/utils/StringOutput";
 
@@ -171,7 +171,7 @@ async function webSearch() {
             HermidataToUpdate[related.id] = related;
         }
     }
-    for (const [key, value] of Object.entries(HermidataToUpdate)) await saveHermidataV3(key, value);
+    for (const [key, value] of Object.entries(HermidataToUpdate)) await saveHermidata(key, value);
 
     console.groupEnd();
 }
