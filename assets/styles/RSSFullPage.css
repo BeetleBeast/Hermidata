@@ -218,3 +218,27 @@
 	border-radius: 10px;
 	padding: 10px;
 }
+
+.filtered {
+	display: none;
+}
+
+input[type=number],
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    -moz-appearance: textfield;
+}
+input,
+select  {
+    background-color: var(--Input-colorV2);
+    color: var(--Text-color);
+    outline-color: var(--Btn);
+    text-emphasis-color: var(--Btn);
+    accent-color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 0;
+}
+.genericInput:focus {
+    outline: 1px invert var(--Btn);
+}
