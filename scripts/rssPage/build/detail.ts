@@ -4,7 +4,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { returnBookmarkHash } from "../../shared/utils/StringOutput";
 import { RSSPageBuilder } from "../build";
 
-export class Detail extends RSSPageBuilder {
+export class Detail {
 
 
     private readonly parentContainer: HTMLElement | null = getElement('.entry-details-container');
@@ -13,7 +13,7 @@ export class Detail extends RSSPageBuilder {
 
     private readonly title: HTMLInputElement | null = getElement('#detail-title');
     private readonly novelType: HTMLSelectElement | null = getElement('#detail-novelType');
-    private readonly novelStatus: HTMLSelectElement | null = getElement('#etail-novelStatus');
+    private readonly novelStatus: HTMLSelectElement | null = getElement('#detail-novelStatus');
     private readonly url: HTMLInputElement | null = getElement('#detail-url');
     private readonly notes: HTMLTextAreaElement | null = getElement('#detail-notes');
     
@@ -22,19 +22,24 @@ export class Detail extends RSSPageBuilder {
     private readonly altTitlesContainer: HTMLDivElement | null = getElement('#detail-altTitles-container');
     
     private readonly saveDetail: HTMLButtonElement | null = getElement('#saveDetail');
+    private readonly closeDetail: HTMLButtonElement | null = getElement('#closeDetail');
 
-
+    private settings: Settings | null = null;
     private editEntry: Hermidata | null = null;
 
+    private latestExtraInput: Record<string, number> = {};
+
     constructor(editEntry: Hermidata) {
-        super();
+        
         this.editEntry = editEntry;
     }
 
 
 
 
-    protected async build(): Promise<void> {
+    private async build(): Promise<void> {
+
+        this.settings = await getSettings();
         // populate
         this.populateDetails(this.settings);
         
@@ -45,22 +50,47 @@ export class Detail extends RSSPageBuilder {
         this.AddEventListener();
     }
     public open() {
-        this.parentContainer!.style.display = 'block';
-        this.mainContentContainer!.style.display = 'block';
-        this.bookmarksContainer!.style.display = 'block';
+        this.parentContainer!.style.display = 'flex';
+        this.mainContentContainer!.style.display = 'flex';
+        this.bookmarksContainer!.style.display = 'flex';
+        this.parentContainer!.style.right = '-50%';
+        this.build();
+        setTimeout(() => this.parentContainer!.style.right = '25px', 100);
     }
     public close() {
         this.parentContainer!.style.display = 'none';
         this.mainContentContainer!.style.display = 'none';
         this.bookmarksContainer!.style.display = 'none';
+        this.parentContainer!.style.right = '-50%';
     }
     protected reload(): void {
         this.saveDetail!.removeEventListener('click', () => this.saveDetails());
         this.build();
     }
     private AddEventListener() {
+        // remove event listeners
         this.saveDetail!.removeEventListener('click', () => this.saveDetails());
+        this.closeDetail!.removeEventListener('click', () => this.close());
+        //  add event listeners
         this.saveDetail!.addEventListener('click', () => this.saveDetails());
+        this.closeDetail!.addEventListener('click', () => this.close());
+
+        // add new latest empty input if needed
+        this.tagsContainer!.addEventListener('input', () => {
+            if ((this.tagsContainer!.children[this.tagsContainer!.children.length - 1] as HTMLInputElement).value?.length > 0) this.buildExtraCase('tags', this.tagsContainer);
+        })
+        this.altSourcesContainer!.addEventListener('input', () => {
+            if ((this.altSourcesContainer!.children[this.altSourcesContainer!.children.length - 1] as HTMLInputElement).value?.length > 0) this.buildExtraCase('altSources', this.altSourcesContainer);
+        })
+        this.altTitlesContainer!.addEventListener('input', () => {
+            if ((this.altTitlesContainer!.children[this.altTitlesContainer!.children.length - 1] as HTMLInputElement).value?.length > 0) this.buildExtraCase('altTitles', this.altTitlesContainer);
+        })
+    }
+    private async buildExtraCase(name: string, container: HTMLDivElement | null) {
+        const extraInput = document.createElement('input');
+        extraInput.classList.add('detail-option', name);
+        this.latestExtraInput[name]++;
+        container!.appendChild(extraInput);
     }
     private async saveDetails() {
         if (!this.editEntry) return;
@@ -87,7 +117,8 @@ export class Detail extends RSSPageBuilder {
     /** Get names from container */
     private getNamesFromContainer(container: HTMLDivElement | null): string[] {
         if (!container) return [];
-        return Array.from(container.children).map((child) => child.textContent);
+        const arrayOfElemets = Array.from(container.children) as HTMLInputElement[];
+        return arrayOfElemets.map((child) => child.value);
     }
     private getBookmarks(): Record<string, Bookmark> {
         const bookmarks: Map<string, Bookmark> = new Map();
@@ -122,6 +153,7 @@ export class Detail extends RSSPageBuilder {
 
     private async buildBookmarks() {
         if (!this.editEntry) return;
+        this.bookmarksContainer!.innerHTML = '';
         for (const bookmark of Object.values(this.editEntry.chapter.bookmarks)) {
             const bookmarkEl = this.buildBookmark(bookmark, this.editEntry);
             this.bookmarksContainer?.appendChild(bookmarkEl);
@@ -286,10 +318,9 @@ export class Detail extends RSSPageBuilder {
         bookmarkChapterLabel.setAttribute('for', `bookmark-note-${bookmark.id}`);
         return bookmarkChapterLabel;
     }
-    private createBookmarkNote(bookmark: Bookmark): HTMLInputElement {
-        const bookmarkChapter = document.createElement('input');
+    private createBookmarkNote(bookmark: Bookmark): HTMLTextAreaElement {
+        const bookmarkChapter = document.createElement('textarea');
         bookmarkChapter.value = bookmark.note ?? '';
-        bookmarkChapter.type = 'text';
         bookmarkChapter.id = `bookmark-note-${bookmark.id}`;
         bookmarkChapter.classList.add('bookmark-note');
         return bookmarkChapter;
@@ -314,17 +345,26 @@ export class Detail extends RSSPageBuilder {
         this.popuplateSelects(settings);
 
 
-        this.buildMultipleCases('tag', this.tagsContainer, this.editEntry.meta.tags);
-        this.buildMultipleCases('title', this.altTitlesContainer, this.editEntry.meta.altTitles);
-        this.buildMultipleCases('source', this.altSourcesContainer, this.editEntry.meta.altSources);
+        this.buildMultipleCases('tags', this.tagsContainer, this.editEntry.meta.tags, true);
+        this.buildMultipleCases('titles', this.altTitlesContainer, this.editEntry.meta.altTitles, true);
+        this.buildMultipleCases('sources', this.altSourcesContainer, this.editEntry.meta.altSources, true);
     }
 
-    private buildMultipleCases(name: string, container: HTMLDivElement | null, options: string[]) {
+    private buildMultipleCases(name: string, container: HTMLDivElement | null, options: string[], makeExtraInput: boolean) {
+        if (!container) return;
+        container.innerHTML = '';
         for ( const option of options) {
-            const optionEl = document.createElement('div');
+            const optionEl = document.createElement('input');
             optionEl.classList.add('detail-option', name);
             optionEl.textContent = option;
-            container!.appendChild(optionEl);
+            optionEl.value = option;
+            container.appendChild(optionEl);
+        }
+        if (makeExtraInput) {
+            const extraInput = document.createElement('input');
+            extraInput.classList.add('detail-option', name);
+            this.latestExtraInput[name]++;
+            container.appendChild(extraInput);
         }
     }
 

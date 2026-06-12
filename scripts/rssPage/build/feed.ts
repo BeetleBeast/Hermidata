@@ -1,14 +1,17 @@
 import { removeHermidata } from "../../shared/db/Storage";
-import type { Hermidata } from "../../shared/types";
+import type { Hermidata, Settings } from "../../shared/types";
 import { RSSPageBuilder } from "../build";
 
-export abstract class feed extends RSSPageBuilder {
+export class feed extends RSSPageBuilder {
 
-    protected readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('.entries');
+    private readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('.all-entries-container');
 
+    constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
+        super(allHermidata, settings);
+    }
 
-    protected build(): void {
-        this.init();
+    public async build(): Promise<void> {
+        await this.init();
         const allHermidata = this.AllHermidata;
         if (!allHermidata) return;
         for (const feed of Object.values(allHermidata)) {
@@ -17,9 +20,9 @@ export abstract class feed extends RSSPageBuilder {
     }
 
 
-    protected reload(): void {
+    public async reload(): Promise<void> {
         this.AllHermidataContainer!.innerHTML = '';
-        this.build();
+        await this.build();
     }
 
 
@@ -29,19 +32,19 @@ export abstract class feed extends RSSPageBuilder {
         const feed = document.createElement('div');
         feed.className = 'feed';
         feed.dataset.id = hermidataFeed.id;
-        feed.onclick = () => window.open(hermidataFeed.url, '_blank');
-
-
+        
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'checkbox';
         checkbox.dataset.id = hermidataFeed.id;
         feed.append(checkbox);
-
-
+        
+        
         const title = document.createElement('div');
         title.className = 'title';
         title.textContent = hermidataFeed.title;
+        title.onclick = () => window.open(hermidataFeed.url, '_blank');
         
 
         const ViewBtn = document.createElement('button');
@@ -56,7 +59,8 @@ export abstract class feed extends RSSPageBuilder {
         removeBtn.className = 'Btn';
         removeBtn.textContent = 'Remove';
         removeBtn.addEventListener('click', async () => {
-            await removeHermidata(hermidataFeed.id);
+            const confirm = window.confirm('Are you sure you want to remove this feed?');
+            if (confirm) await removeHermidata(hermidataFeed.id);
         });
         
         feed.append(title, ViewBtn, removeBtn);

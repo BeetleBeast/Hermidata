@@ -4,9 +4,15 @@ import { Detail } from "./build/detail";
 
 export abstract class RSSPageBuilder {
 
-    protected AllHermidata: Record<string, Hermidata> | null = null;
+    protected AllHermidata: Record<string, Hermidata>;
 
-    protected settings: Settings | null = null;
+    protected settings: Settings;
+
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
+        this.settings = settings;
+        this.AllHermidata = AllHermidata;
+    }
+
 
     protected async init(): Promise<void> {
         this.AllHermidata = await PastHermidata.getAllHermidata();
@@ -18,18 +24,7 @@ export abstract class RSSPageBuilder {
         new Detail(editEntry).open();
     }
 
-    protected abstract reload(): void;
+    public abstract build(): Promise<void>;
 
-    protected editHermidata(): void {
-        throw new Error("Method not implemented.");
-    }
-    protected deleteHermidata(): void {
-        throw new Error("Method not implemented.");
-    }
-    protected addHermidata(): void {
-        throw new Error("Method not implemented.");
-    }
-    protected openSettings(): void {
-        throw new Error("Method not implemented.");
-    }
+    protected abstract reload(): void;
 }

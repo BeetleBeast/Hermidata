@@ -193,9 +193,6 @@ select  {
     padding-top: 8px;
     margin-top: 8px
 }
-#bulkEditPanel {
-    display: none;
-}
 .toast {
     position: fixed;
     right: 16px;

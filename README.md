@@ -195,7 +195,6 @@ Source maps are included in dev builds. Each background module registers its own
 - When Sheets sync is enabled, Hermidata only accesses the configured spreadsheet - no other Google services
 - Authentication uses the official Google OAuth flow - Hermidata never sees your password
 
-
 ---
 
 ## License
