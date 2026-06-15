@@ -83,6 +83,71 @@ For RSS: navigate to the RSS page for a title, click Subscribe, and Hermidata li
 
 ---
 
+## Installation
+
+You can install the extension manually without any build tools.
+
+### Chromium-based browsers (Chrome, Edge, Brave)
+
+1. Go to the [Releases](https://github.com/BeetleBeast/Hermidata/releases) page of this repository.
+2. Download the latest `.zip` package from the assets — it contains:
+   - `manifest.json`
+   - `dist/` folder
+   - `assets/` folder
+   - `README.md`
+3. Extract the `.zip` to a folder on your computer.
+4. Open your browser and navigate to the extensions page:
+   - **Chrome**: `chrome://extensions`
+   - **Edge**: `edge://extensions`
+   - **Brave**: `brave://extensions`
+5. Enable **Developer mode** (toggle in the top-right corner).
+6. Click **Load unpacked** and select the folder you just extracted.
+
+The extension is now installed and ready to use.
+
+### Firefox-based browsers
+
+Firefox requires a different approach depending on how long you need the extension installed.
+
+**Temporary install** (lost on restart):
+
+1. Download and extract the `.zip` package as described above.
+2. Navigate to `about:debugging` in Firefox.
+3. Click **This Firefox** in the left sidebar.
+4. Click **Load Temporary Add-on…** and select the `manifest.json` file inside the extracted folder.
+
+> The extension will be active until you close or restart Firefox.
+
+**Permanent install via policies** (no signing or store required):
+
+1. Download and extract the `.zip` package to a permanent location on your computer (don't move it afterwards).
+2. Find your browser's installation folder:
+   - **Windows**: `C:\Program Files\YourBrowserName\`
+   - **Linux**: `/opt/your-browser/`
+   - **macOS**: `/Applications/YourBrowser.app/Contents/Resources/`
+3. Inside that folder, create a `distribution/` folder if it doesn't exist yet.
+4. Inside `distribution/`, create a file named `policies.json` with the following content — replacing the path with the actual location of your extracted extension:
+
+```json
+   {
+     "policies": {
+       "Extensions": {
+         "Install": [
+           "file:///C:/Users/your-permanent/location/Hermidata.zip"
+         ]
+       }
+     }
+   }
+```
+
+    > Use forward slashes `/` even on Windows, and make sure the path starts with `file:///`.
+
+5. Restart your browser — the extension will now load automatically on every start-up.
+
+> This method works with any Firefox-based browser that supports the Enterprise Policy Engine. No signing or publishing is required.
+
+The extension is now installed and ready to use.
+
 ## Installation (Developer)
 
 ### 1. Clone and build

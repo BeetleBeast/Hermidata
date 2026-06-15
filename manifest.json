@@ -2,7 +2,7 @@
     "name": "Hermidata",
     "author": "BeetleB",
     "description": "Track your reading and watching progress across novels, manga, and anime. Save entries with one click, manage multiple read-throughs per title with independent bookmarks, get notified of new chapters via RSS, and optionally sync to Google Sheets.",
-    "version": "0.23.1",
+    "version": "0.23.2",
     "manifest_version": 3,
     "permissions": [
         "contextMenus",
