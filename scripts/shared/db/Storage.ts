@@ -20,7 +20,7 @@ import { DEFAULT_TAGS, defaultSettings } from '../constants';
 // ============================================================
 export function getHermidataViaKey(key: string): Promise<Hermidata | null> { return getHermidataByKey(key); }
 
-export async function saveHermidataV3(key: string, entry: Hermidata): Promise<void> {
+export async function saveHermidata(key: string, entry: Hermidata): Promise<void> {
     try {
         const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.url);
         entry.id = Key;
@@ -32,12 +32,12 @@ export async function saveHermidataV3(key: string, entry: Hermidata): Promise<vo
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Saved ${entry.title}`);
     } catch (err) {
-        console.error('[Storage] saveHermidataV3:', err);
+        console.error('[Storage] saveHermidata:', err);
         throw err;
     }
 }
 
-export async function updateHermidataV3(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+export async function updateHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
     try {
         entry.id = newKey;
         entry.meta.updated = new Date().toISOString();
@@ -52,11 +52,11 @@ export async function updateHermidataV3(oldKey: string, newKey: string, entry: H
         console.log(`Migrated from ${oldKey} → ${newKey}`);
         console.log(`[HermidataV3] Updated ${entry.title}`);
     } catch (err) {
-        console.error('[Storage] updateHermidataV3:', err);
+        console.error('[Storage] updateHermidata:', err);
     }
 }
 
-export async function removeHermidataV3(id: string): Promise<void> {
+export async function removeHermidata(id: string): Promise<void> {
     try {
         await deleteHermidata(id, false)  // remove from IndexedDB
         await removeFromSync(id)          // remove from sync
@@ -64,7 +64,7 @@ export async function removeHermidataV3(id: string): Promise<void> {
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Removed ${id}`);
     } catch (err) {
-        console.error('[Storage] removeHermidataV3:', err);
+        console.error('[Storage] removeHermidata:', err);
     }
 }
 

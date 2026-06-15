@@ -4,7 +4,7 @@ import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
 import { findByTitleOrAlt, getChapterFromTitle, getChapterFromTitleReturn, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
-import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidataV3 } from "../shared/db/Storage";
+import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidata } from "../shared/db/Storage";
 import { getAllHermidataWithRss } from "../shared/db/db";
 
 /*
@@ -224,7 +224,7 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     if (latestChapter) entry.chapter.latest = latestChapter;
 
     const saveKey = stored[key] ? key : altCheck.relatedKey ?? key;
-    await saveHermidataV3(saveKey, entry);
+    await saveHermidata(saveKey, entry);
 }
 
 async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: AnyNovelType, url: string, key: string): Promise<Hermidata> {

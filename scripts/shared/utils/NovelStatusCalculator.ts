@@ -1,4 +1,4 @@
-import { getAllHermidata, getHermidataViaKey, getSettings, saveHermidataV3, setAllHermidata } from "../db/Storage"
+import { getAllHermidata, getHermidataViaKey, getSettings, saveHermidata, setAllHermidata } from "../db/Storage"
 import type { AnyNovelStatus, AnyNovelType, Hermidata } from "../types"
 
 
@@ -158,7 +158,7 @@ export async function calculateNovelSatus(hermidataValue: string | Hermidata): P
         hermidata.meta.novelStatus = result.value.Status;
         console.table(result.value);
         // update hermidata
-        await saveHermidataV3(hermidata.id, hermidata);
+        await saveHermidata(hermidata.id, hermidata);
         return true
     }
     return false

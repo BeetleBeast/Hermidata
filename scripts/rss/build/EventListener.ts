@@ -2,7 +2,7 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
 import type { MenuOption, Hermidata } from "../../shared/types/index";
-import { getHermidataViaKey, saveHermidataV3, setNotificationList, updateHermidataV3 } from "../../shared/db/Storage";
+import { getHermidataViaKey, saveHermidata, setNotificationList, updateHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
@@ -181,7 +181,7 @@ export class EventListener extends RssBuild {
         );
     
         // Save to storage
-        await saveHermidataV3(hashItem, entry);
+        await saveHermidata(hashItem, entry);
     
         console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
     }
@@ -213,7 +213,7 @@ export class EventListener extends RssBuild {
         else newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), oldData.title, TrimmedTitle]) );
     
         // Save and clean up
-        await updateHermidataV3(oldKey, newKey, newData);
+        await updateHermidata(oldKey, newKey, newData);
     
         //  update your in-memory list
         delete this.AllHermidata[oldKey];
@@ -274,7 +274,7 @@ export class EventListener extends RssBuild {
 
         entry.rss = null;
 
-        await saveHermidataV3(key, entry);
+        await saveHermidata(key, entry);
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined
