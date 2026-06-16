@@ -174,6 +174,20 @@ export type CurrentTab = {
     url: string;
 }
 
+export type ShouldBlockReturn = {
+    action: "skip" | "append" | "alert";
+}
+export type ShouldReplaceReturn = {
+    action: "replace";
+    rowIndex: number;
+    replacedURL: string | undefined;
+    replaceID: string | undefined;
+}
+export type  ShouldReplaceOrBlockReturn = ShouldBlockReturn | ShouldReplaceReturn;
+
+
+
+
 /* old versions */
 
 /* old Bookmarks */

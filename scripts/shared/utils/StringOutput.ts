@@ -78,10 +78,18 @@ export function simpleHash(str: string) {
 export function getTitleAndChapterFromUrl(url: string): { title: string | null, chapter: number } {
     if (!url) return { title: null, chapter: Number.NaN };
     if (!url.trim()) return { title: null, chapter: Number.NaN };
+
     const parts = new URL(url).pathname.split('/').filter(Boolean);
-    const titleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
-    if (!titleSlug) return { title: null, chapter: Number.NaN };
+    const possibleTitleSlug = parts.includes('read') ? parts[parts.indexOf('read') + 1] : parts[2] || parts[1];
+
+    if (!possibleTitleSlug) return { title: null, chapter: Number.NaN };
+    
+    const titleSlug = possibleTitleSlug.includes('chapter') ? parts[1] : possibleTitleSlug;
+
     const chapter = parts.at(-1)?.includes('chapter') ? Number.parseFloat(parts.at(-1)?.replace('chapter-', '') || '0') : Number.NaN;
+    
+    if (!titleSlug) return { title: null, chapter };
+    
     const potentialTitle = titleSlug
         .split('.')[0]             // remove Site's ID code (.yvov1)
         .replace(/(.)\1$/, '$1')   // Remove last char if second to last is the same
@@ -295,7 +303,7 @@ export class TrimTitle {
 
         mainTitle = filter[0]
         .replace(regexUsed.chapterRemoveRegexV3, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
-        .replace(/^\d{1,4}(?:\.\d+)?\s+(?=[A-Za-z\u3040-\u9FFF])/, '') // remove leading numbers if followed by text (to catch cases like "12 Monkeys" where "12" is not a chapter number)
+        .replace(/^\d{1,4}(?:\d+)?\s+(?=[A-Za-z\u3040-\u9FFF])/, '') // remove leading numbers if followed by text (to catch cases like "12 Monkeys" where "12" is not a chapter number)
         .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
         .trim();
