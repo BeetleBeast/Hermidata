@@ -17,8 +17,8 @@ function makeSureTagsISNotAnArray(dataArray: InputArrayType | InputArraySheetTyp
 }
 
 export async function writeToSheet(token: number, dataArray: InputArrayType | InputArraySheetType) {
-    await readSheet(token, (rows: string[][]) => {
-        const decision = shouldReplaceOrBlock(dataArray as InputArrayType, rows, true);
+    await readSheet(token, (rows: InputArraySheetType[]) => {
+        const decision = shouldReplaceOrBlock(dataArray, rows, true);
 
         // make sure tags is NOT an list and is instead a string
 

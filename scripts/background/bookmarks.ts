@@ -1,10 +1,10 @@
 import { ext } from "../shared/utils/BrowserCompat";
-import type { InputArrayType } from "../shared/types/index";
+import type { InputArraySheetType, InputArrayType, ShouldReplaceOrBlockReturn, ShouldReplaceReturn } from "../shared/types/index";
 import { getSettings } from "../shared/db/Storage";
 import { hasRelatedBookmarkCached } from "./fuzzy";
 import { currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";
-import { getTitleAndChapterFromUrl } from "../shared/utils/StringOutput";
+import { getTitleAndChapterFromUrl, TrimTitle } from "../shared/utils/StringOutput";
 import { FolderMapping } from "../settings/build/FolderMapping";
 
 declare const browser: typeof chrome | undefined;
@@ -12,13 +12,9 @@ declare const browser: typeof chrome | undefined;
 
 export async function writeToBookmarks(dataArray: InputArrayType) {
     const bookmarks = await searchValidBookmarks();
-    const rows: Partial<chrome.bookmarks.BookmarkTreeNode>[] = bookmarks
-        .filter(b => b.url)
-        .map(b => ({
-            title: extractTitleFromBookmark(b.title),
-            url: b.url,
-            id: b.id
-        }));
+    const rows: chrome.bookmarks.BookmarkTreeNode[] = bookmarks.filter(b => b.url);
+    rows.forEach(b => b.title = extractTitleFromBookmark(b.title));
+
     const decision = shouldReplaceOrBlock(dataArray, rows, false);
     if (decision.action === "append") {
         addBookmark(dataArray);
@@ -53,7 +49,7 @@ async function addBookmark([title, type, chapter, url, status,,]: InputArrayType
     updateCurrentBookmarkAndIcon();
     console.log('Change Icon');
 }
-async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<typeof shouldReplaceOrBlock>) {
+async function replaceBookmark(dataArray: InputArrayType, decision: ShouldReplaceReturn) {
     const { replacedURL: OldURL, replaceID: OldID } = decision;
     const [title, type, chapter, url, status] = dataArray;
     const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
@@ -92,39 +88,47 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ReturnType<t
     console.log('Change Icon');
 }
 
-export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: Partial<chrome.bookmarks.BookmarkTreeNode>[] | string[][], isSheet = true) {
-    const [title,, chapter, url,, date,] = newEntry;
-    let oldTitle, oldUrl: string | undefined,  oldDate, id;
+
+
+export function shouldReplaceOrBlock(newEntry: InputArrayType | InputArraySheetType, existingSheetRows: InputArraySheetType[], isSheet: true): ShouldReplaceOrBlockReturn
+export function shouldReplaceOrBlock(newEntry: InputArrayType, existingBookmarksRows: chrome.bookmarks.BookmarkTreeNode[], isSheet: false): ShouldReplaceOrBlockReturn
+export function shouldReplaceOrBlock(newEntry: InputArrayType | InputArraySheetType, existingRows: chrome.bookmarks.BookmarkTreeNode[] | InputArraySheetType[], isSheet: boolean = true): ShouldReplaceOrBlockReturn {
+    const [ title, chapter, url, date ] = [newEntry[0], newEntry[2], newEntry[3], newEntry[5]];
+
+    const isSheetArray = (isSheet: boolean, value: InputArraySheetType | chrome.bookmarks.BookmarkTreeNode): value is InputArraySheetType => isSheet
+
+    const returnExistingRowInfo = (existingRow: chrome.bookmarks.BookmarkTreeNode | InputArraySheetType, isSheet: boolean): { title: string, url: string | undefined, dateAdded: number | string | undefined, id: string | undefined } => {
+        const { title, url, dateAdded, id: id } = isSheetArray(isSheet, existingRow) 
+            ? {title: existingRow[0], url: existingRow[3], dateAdded: existingRow[5]} 
+            : existingRow
+
+        return { title, url, dateAdded, id: id }
+
+    }
+
 
     for (let i = 0; i < existingRows.length; i++) {
-        if (isSheet) {
-            [oldTitle,,, oldUrl,, oldDate] = existingRows[i] as InputArrayType;
-        } else {
-            const row: { title: string, url: string, id: string} = existingRows[i] as { title: string, url: string, id: string };
-            ({ title: oldTitle, url: oldUrl, id } = row);
-        }
-            
-        const SameTrimedTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();
 
-        const { title: OldTitleParsed, chapter: oldChapterParsed } = getTitleAndChapterFromUrl(oldUrl ?? '');
-        const  TitleParsed = getTitleAndChapterFromUrl(url).title;
+        const { title: oldTitle, url: oldUrl, dateAdded: oldDate, id: id } = returnExistingRowInfo(existingRows[i], isSheet)
         
-        const SameTitle = OldTitleParsed === TitleParsed;
-        const isSame = isSheet ? SameTrimedTitle : SameTitle;
+        const ExactSameTitle = title.trim().toLowerCase() === oldTitle?.trim().toLowerCase();
+        
+        const SameTrimmedTitle = TrimTitle.trimTitle(title, url).title === TrimTitle.trimTitle(oldTitle, oldUrl ?? '').title;
+        
+        const oldChapterParsed = getTitleAndChapterFromUrl(oldUrl ?? '').chapter;
+        
+        
+        const isSame = isSheet ? ExactSameTitle : SameTrimmedTitle;
 
-        if (isSame) {
-            const chapterChanged = chapter !== oldChapterParsed;
+        if (!isSame) continue;
 
-            const oldDateStr = oldDate?.toString()
+        const chapterChanged = chapter !== oldChapterParsed;
 
-            if (chapterChanged) {
-                return { action: "replace", rowIndex: i + 2, replacedURL: oldUrl, replaceID: id };
-            } else if (oldDateStr !== undefined && date > oldDateStr) {
-                return { action: "alert" };
-            } else {
-                return { action: "skip" };
-            }
-        }
+        if (chapterChanged) return { action: "replace", rowIndex: i + 2, replacedURL: oldUrl, replaceID: id };
+        
+        else if (oldDate !== undefined && new Date(date).getTime() > new Date(oldDate).getTime()) return { action: "alert" };
+        
+        else return { action: "skip" };
     }
 
     return { action: "append" };

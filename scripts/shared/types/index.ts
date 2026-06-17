@@ -32,6 +32,11 @@ export type {
     LatestValue,
     CurrentTab,
 
+    ShouldReplaceOrBlockReturn,
+    ShouldBlockReturn,
+    ShouldReplaceReturn,
+    
+
 } from "./popup";
 
 export type {
