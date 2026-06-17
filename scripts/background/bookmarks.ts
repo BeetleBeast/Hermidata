@@ -90,9 +90,9 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ShouldReplac
 
 
 
-export function shouldReplaceOrBlock(newEntry: InputArrayType, existingSheetRows: InputArraySheetType[], isSheet: true): ShouldReplaceOrBlockReturn
+export function shouldReplaceOrBlock(newEntry: InputArrayType | InputArraySheetType, existingSheetRows: InputArraySheetType[], isSheet: true): ShouldReplaceOrBlockReturn
 export function shouldReplaceOrBlock(newEntry: InputArrayType, existingBookmarksRows: chrome.bookmarks.BookmarkTreeNode[], isSheet: false): ShouldReplaceOrBlockReturn
-export function shouldReplaceOrBlock(newEntry: InputArrayType, existingRows: chrome.bookmarks.BookmarkTreeNode[] | InputArraySheetType[], isSheet: boolean = true): ShouldReplaceOrBlockReturn {
+export function shouldReplaceOrBlock(newEntry: InputArrayType | InputArraySheetType, existingRows: chrome.bookmarks.BookmarkTreeNode[] | InputArraySheetType[], isSheet: boolean = true): ShouldReplaceOrBlockReturn {
     const [ title, chapter, url, date ] = [newEntry[0], newEntry[2], newEntry[3], newEntry[5]];
 
     const isSheetArray = (isSheet: boolean, value: InputArraySheetType | chrome.bookmarks.BookmarkTreeNode): value is InputArraySheetType => isSheet
