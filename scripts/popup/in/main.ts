@@ -32,17 +32,6 @@ const stateConfig = {
     }
 };
 
-const startupPromise = new Promise<{ Hermidata: Hermidata, past: PastHermidata }>(async (resolve) => {
-    // create a Hermidata baseplate
-    const NewHermidata = await HermidataController.CreateBaseplateHermidata();
-    // initialise the  PastHermidata class
-    const past = new PastHermidata(NewHermidata);
-    // create the Hermidata with all values set from a past if it exists
-    const Hermidata = await HermidataController.AddPastToHermidata(NewHermidata, past);
-    
-    resolve({ Hermidata, past });
-});
-
 document.addEventListener('DOMContentLoaded', async () => {
     const { Hermidata, past } = await startupPromise;
     // initialise the controller class
@@ -437,6 +426,17 @@ class HermidataController {
         this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].scrollPosition = scrollPosition ?? 0;
     }
 }
+
+const startupPromise = (async () => {
+    // create a Hermidata baseplate
+    const NewHermidata = await HermidataController.CreateBaseplateHermidata();
+    // initialise the  PastHermidata class
+    const past = new PastHermidata(NewHermidata);
+    // create the Hermidata with all values set from a past if it exists
+    const Hermidata = await HermidataController.AddPastToHermidata(NewHermidata, past);
+    
+    return { Hermidata, past };
+})();
 
 function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): T {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str as T;
