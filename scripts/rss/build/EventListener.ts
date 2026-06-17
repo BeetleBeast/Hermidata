@@ -240,6 +240,7 @@ export class EventListener extends RssBuild {
         const confirmation = await customConfirm(`are you sure you want to remove ${toBeRemovedItem.title}`, {accept: 'Remove', reject: 'Cancel'});
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
+            delete this.AllHermidata[hashItem]
             deleteHermidata(hashItem)
         }
         await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
