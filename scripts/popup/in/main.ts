@@ -32,13 +32,19 @@ const stateConfig = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
+const startupPromise = new Promise<{ Hermidata: Hermidata, past: PastHermidata }>(async (resolve) => {
     // create a Hermidata baseplate
     const NewHermidata = await HermidataController.CreateBaseplateHermidata();
     // initialise the  PastHermidata class
     const past = new PastHermidata(NewHermidata);
     // create the Hermidata with all values set from a past if it exists
     const Hermidata = await HermidataController.AddPastToHermidata(NewHermidata, past);
+    
+    resolve({ Hermidata, past });
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const { Hermidata, past } = await startupPromise;
     // initialise the controller class
     const controller = new HermidataController(Hermidata, past);
     // initialise the controller
@@ -84,15 +90,19 @@ class HermidataController {
     }
 
     public async init(): Promise<void> {
+        console.time('[POPUP] init: get-settings');
         const settings = await getSettings();
-        // log a table of all potential duplicates
-        await this.checkForDuplicates();
+        console.timeEnd('[POPUP] init: get-settings');
 
         this.populateUI(settings);
         
         this.bindEvents();
         // initialise tags system
         await this.tagsSystem.init();
+
+        // log a table of all potential duplicates
+        // set it up in the background
+        setTimeout(() => this.checkForDuplicates(), 0);
     }
     public static async CreateBaseplateHermidata(): Promise<Hermidata> {
 
