@@ -92,7 +92,7 @@ async function webSearch() {
         console.groupCollapsed(`[Hermidata] Web search for ${novel.latestItem?.title} in ${novel.domain}`);
 
         // get the rss feed text
-        const {text: feedText, meta} = await fetchFeedText(novel);
+        const feedText = (await fetchFeedText(novel)).text;
         if (!feedText) {
             console.warn("No feed text found:", novel.url);
             console.groupEnd();
@@ -366,7 +366,7 @@ export function getCurrentDate() {
     return `${day}/${month}/${year}`;
 }
 
-function createBadgeNotification(rawFeed: RawFeed, feed: FeedItem) {
+function createBadgeNotification(rawFeed: RawFeed, _feed: FeedItem) {
     ext.notifications.create({
         type: "image",
         iconUrl: rawFeed.image || "assets/icon48.png",
@@ -374,7 +374,7 @@ function createBadgeNotification(rawFeed: RawFeed, feed: FeedItem) {
         message: ""
     });
 }
-function createMessageMinimumNotification(rawFeed: RawFeed, feed: FeedItem) {
+function createMessageMinimumNotification(rawFeed: RawFeed, _feed: FeedItem) {
     const title = `${rawFeed.items[0].title}: new chapters`;
     const message = rawFeed.items[0].title.concat("\n");
     ext.notifications.create({

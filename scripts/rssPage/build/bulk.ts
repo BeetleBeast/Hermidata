@@ -1,4 +1,3 @@
-import { customPrompt } from "../../popup/frontend/confirm";
 import { getSettings, setAllHermidata } from "../../shared/db/Storage";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import type { Settings } from "../../shared/types";
@@ -10,9 +9,6 @@ export class Bulk extends RSSPageBuilder {
 
     private readonly bulkEditButton = getElement<HTMLButtonElement>("#bulkEditButton");
     private readonly bulkOpenBtn = getElement<HTMLButtonElement>("#bulkOpen");
-
-
-    private readonly bulkDelete = getElement<HTMLButtonElement>("#bulkDelete");
 
     private readonly allEntriesContainer = getElement<HTMLDivElement>('.all-entries-container');
 

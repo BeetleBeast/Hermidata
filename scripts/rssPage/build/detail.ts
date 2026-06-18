@@ -2,7 +2,6 @@ import { getSettings, saveHermidata } from "../../shared/db/Storage";
 import type { Bookmark, Hermidata, Settings } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
 import { returnBookmarkHash } from "../../shared/utils/StringOutput";
-import { RSSPageBuilder } from "../build";
 
 export class Detail {
 
@@ -372,7 +371,7 @@ export class Detail {
     private popuplateSelects(settings: Settings) {
         try {
             
-            const { TYPE_OPTIONS: novelTypes, STATUS_OPTIONS: readStatuses, NOVEL_STATUS_OPTIONS: novelStatuses } = settings.ContentTypesAndStatuses;
+            const { TYPE_OPTIONS: novelTypes, NOVEL_STATUS_OPTIONS: novelStatuses } = settings.ContentTypesAndStatuses;
 
             this.populateSelect(this.novelType, novelTypes, 'select-novelType');
             this.populateSelect(this.novelStatus, novelStatuses, 'select-novelStatus');

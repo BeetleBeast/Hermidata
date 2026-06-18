@@ -426,9 +426,9 @@ export async function migrateHermidataToLatest(): Promise<void> {
         const entries: Hermidata[] = [];
         let allNotMigrated: number = 0;
 
-        for (const [key, value] of Object.entries(allHermidata_old)) {
-            if (!isHermidataV9(value)) { 
-                const [hermidata, isMigrated] = HermidataMigration.migrateAllHermidataToLatest(value);
+        for (const oldHermidata of Object.values(allHermidata_old)) {
+            if (!isHermidataV9(oldHermidata)) { 
+                const [hermidata, isMigrated] = HermidataMigration.migrateAllHermidataToLatest(oldHermidata);
                 if (isMigrated) entries.push(hermidata);
                 else allNotMigrated++;
             }

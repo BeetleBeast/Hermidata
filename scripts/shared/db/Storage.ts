@@ -123,16 +123,6 @@ export function getSuggestedTags( input: string, allTags: Map<string, number>, s
         .slice(0, 8)                  // max 8 suggestions
         .map(([tag, count]) => ({ tag, count }));
 }
-function filterByTags( allHermidata: Record<string, Hermidata>, selectedTags: string[] ): Record<string, Hermidata> {
-    if (!selectedTags.length) return allHermidata;
-
-    return Object.fromEntries(
-        Object.entries(allHermidata).filter(([_, entry]) =>
-            // AND — entry must have ALL selected tags
-            selectedTags.every(tag => entry.meta.tags.includes(tag))
-        )
-    );
-}
 
 
 // ============================================================

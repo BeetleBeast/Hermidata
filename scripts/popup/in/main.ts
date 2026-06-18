@@ -1,7 +1,7 @@
 
 import { ext } from '../../shared/utils/BrowserCompat';
 import { TrimTitle, getChapterFromTitle } from '../../shared/utils/StringOutput';
-import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type InputArrayType, type LatestValue, type NovelStatus, type ReadStatus, type Settings } from '../../shared/types/index';
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type InputArrayType, type LatestValue, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
 import { getPagePosition, updateChapterProgress } from '../core/save';
@@ -286,6 +286,7 @@ class HermidataController {
         // TODO: sheck if it works
         // migrate if duplicate
         const hasMigrated = await this.migrateIfDuplicate();
+        if (hasMigrated) console.info('magration plan activated');
         
         const settings = await getSettings();
         const allowedSendSHeet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;

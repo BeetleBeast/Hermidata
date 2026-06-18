@@ -1,6 +1,6 @@
 // shared/sync.ts
 import { ext } from '../utils/BrowserCompat'
-import { putHermidata, deleteHermidata, isHermidataV7, isHermidataV8, isHermidataV9 } from './db'
+import { putHermidata, isHermidataV9 } from './db'
 import type { Hermidata } from '../types/index'
 import { HermidataMigration } from '../migration/Hermidata';
 

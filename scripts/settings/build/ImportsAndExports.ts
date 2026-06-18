@@ -276,7 +276,6 @@ export class ImportsAndExports extends Build {
 
                 // Merge
                 const mergedDataRecord = { ...existingData, ...importedData };
-                const mergedData = Object.values(mergedDataRecord);
 
                 // Save merged result
                 await this.dbRequest<void>('hermidata', 'putAll', { id: 'hermidata', data: mergedDataRecord });
@@ -596,7 +595,7 @@ export class ImportsAndExports extends Build {
     }
     private async finalizeAllHermidatas(data: Record<string, Hermidata>) {
         const newArray = new Array<[AnyNovelType, Hermidata]>();
-        for (const [id, hermidata] of Object.entries(data)) {
+        for (const hermidata of Object.values(data)) {
             newArray.push([hermidata.novelType, hermidata]);
         }
 

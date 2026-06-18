@@ -1,8 +1,6 @@
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
-import { RSSPageBuilder } from "./build";
 import { Bulk } from "./build/bulk";
-import { Detail } from "./build/detail";
 import { feed } from "./build/feed";
 
 export class RSSPageController {
