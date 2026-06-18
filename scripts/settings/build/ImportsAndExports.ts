@@ -529,8 +529,8 @@ export class ImportsAndExports extends Build {
         linkCell.classList.add('tableCell-MIfBF');
         const link = document.createElement('a');
         link.className = 'massImportFromBookmarkFolder-link';
-        link.href = hermidata.url;
-        link.textContent = hermidata.url;
+        link.href = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url;
+        link.textContent = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         linkCell.appendChild(link);

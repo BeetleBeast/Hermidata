@@ -34,7 +34,7 @@ function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, He
         const domainToHermidata = new Map<string, Hermidata[]>();
         
         for (const novel of hermidataValues) {
-            const domain = novel.url?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+            const domain = novel.chapter.bookmarks[novel.chapter.bookmarkInUse].url?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
             if (!domainToHermidata.has(domain)) domainToHermidata.set(domain, []);
             domainToHermidata.get(domain)!.push(novel);
         }
@@ -54,7 +54,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
     // trim once here so we compare like-for-like
     const titleMap = new Map<string, Hermidata>();
     for (const novel of hermidataValues) {
-        const trimmed = TrimTitle.trimTitle(novel.title, novel.url).title;
+        const trimmed = TrimTitle.trimTitle(novel.title, novel.chapter.bookmarks[novel.chapter.bookmarkInUse].url).title;
         titleMap.set(trimmed, novel);
     }
 
@@ -70,7 +70,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
         const feedTitle = TrimTitle.trimTitle(rawFeedTitle, feed.url).title;
 
         // Find the matching Hermidata entry by trimmed title among domain candidates only
-        const matched = domainCandidates.find( n => TrimTitle.trimTitle(n.title, n.url).title === feedTitle );
+        const matched = domainCandidates.find( n => TrimTitle.trimTitle(n.title, n.chapter.bookmarks[n.chapter.bookmarkInUse].url).title === feedTitle );
         if (!matched) {
             allNONmaches.push(feed);
             continue;
@@ -129,7 +129,7 @@ export async function getHermidataWithRssFromBackground(): Promise<Record<string
 export async function updateFeed(feed: Hermidata, allFeeds: Record<string, RawFeed>, AllHermidata: Record<string, Hermidata>): Promise<Hermidata> {
     const rssInfo = feed.rss;
     if (!rssInfo?.url) return feed;
-    const currentFeedTitle = findByTitleOrAlt(TrimTitle.trimTitle(rssInfo?.latestItem.title || feed.title, rssInfo.url || feed.url).title, AllHermidata);
+    const currentFeedTitle = findByTitleOrAlt(TrimTitle.trimTitle(rssInfo?.latestItem.title || feed.title, rssInfo.url || feed.chapter.bookmarks[feed.chapter.bookmarkInUse].url).title, AllHermidata);
     const matchFeed = Object.values(allFeeds).find(f => {
         const sameDomain = f.domain === rssInfo.domain;
         const sameTitle = findByTitleOrAlt(TrimTitle.trimTitle(f?.items?.[0]?.title || f.title, f.url).title, AllHermidata) === currentFeedTitle;

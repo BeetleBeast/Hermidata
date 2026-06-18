@@ -82,7 +82,6 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
     id: '',
     title: '',
     novelType: type,
-    url: '',
     source: '',
     chapter: { 
         bookmarks: {
@@ -117,5 +116,6 @@ export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', cu
     note: notes,
     isPrimary: true,
     readStatus: AnyReadStatus,
-    scrollPosition: 0
+    scrollPosition: 0,
+    url: ''
 });

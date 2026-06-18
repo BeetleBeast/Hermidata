@@ -1,11 +1,10 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
+import { getAllHermidata, isHermidataV10, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import { getHermidataViaKey, updateHermidata } from "../db/Storage";
 import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, Bookmark, Hermidata, HermidataV5 } from "../types";
-import type { BookmarkV1, BookmarkV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, PotentialSameHermidata } from "../types/popup";
+import type { AllHermidata, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Hermidata, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata } from "../types";
 
 
 interface DuplicationResult {
@@ -317,8 +316,8 @@ export class HermidataMigration {
     */
     private static isSameSeries(a: Hermidata, b: Hermidata): boolean {
         if (!a || !b) return false;
-        const titleA = TrimTitle.trimTitle(a.title || '', a.url ?? '').title.toLowerCase();
-        const titleB = TrimTitle.trimTitle(b.title || '', b.url ?? '').title.toLowerCase();
+        const titleA = TrimTitle.trimTitle(a.title || '', a.chapter.bookmarks[a.chapter.bookmarkInUse].url ?? '').title.toLowerCase();
+        const titleB = TrimTitle.trimTitle(b.title || '', b.chapter.bookmarks[b.chapter.bookmarkInUse].url ?? '').title.toLowerCase();
         if (!titleA || !titleB) return false;
 
         // Exact match or fuzzy match (ignoring punctuation)
@@ -383,10 +382,10 @@ export class HermidataMigration {
     }
     public async tryToFindByOtherMeans(possibleObj: Hermidata[], HermidataV3: Hermidata) {
         // Try to find by URL domain or substring
-        const urlDomain = HermidataV3.url ? new URL(HermidataV3.url).hostname.replace(/^www\./, '') : "";
+        const urlDomain = HermidataV3.chapter.bookmarks[HermidataV3.chapter.bookmarkInUse].url ? new URL(HermidataV3.chapter.bookmarks[HermidataV3.chapter.bookmarkInUse].url).hostname.replace(/^www\./, '') : "";
         const byUrl = Object.values(possibleObj).find(item => {
             try {
-                const storedDomain = new URL(item.url || "").hostname.replace(/^www\./, '');
+                const storedDomain = new URL(item.chapter.bookmarks[item.chapter.bookmarkInUse].url || "").hostname.replace(/^www\./, '');
                 return storedDomain === urlDomain;
             } catch { return false; }
         });
@@ -394,7 +393,7 @@ export class HermidataMigration {
 
         // Try to find same title + newest date
         const sameTitleMatches = Object.values(possibleObj).filter(item => {
-            return TrimTitle.trimTitle(item.title, item.url).title.toLowerCase() === TrimTitle.trimTitle(HermidataV3.title, HermidataV3.url).title.toLowerCase();
+            return TrimTitle.trimTitle(item.title, item.chapter.bookmarks[item.chapter.bookmarkInUse].url).title.toLowerCase() === TrimTitle.trimTitle(HermidataV3.title, HermidataV3.chapter.bookmarks[HermidataV3.chapter.bookmarkInUse].url).title.toLowerCase();
         });
         if (sameTitleMatches.length) {
             sameTitleMatches.sort((a, b) => new Date(b.meta.updated || 0).getTime() - new Date(a.meta.updated || 0).getTime());
@@ -405,7 +404,7 @@ export class HermidataMigration {
         if (possibleObj.some(item => item.id === typeKey)) return possibleObj.some(item => item.id === typeKey);
 
         // Fallback: old V1 hash (title only)
-        const fallbackKey = returnHashedTitle(HermidataV3.title, HermidataV3.novelType, HermidataV3.url);
+        const fallbackKey = returnHashedTitle(HermidataV3.title, HermidataV3.novelType, HermidataV3.chapter.bookmarks[HermidataV3.chapter.bookmarkInUse].url);
         const fallbackObj = await getHermidataViaKey(fallbackKey);
         if (fallbackObj) return fallbackObj;
 
@@ -433,13 +432,12 @@ export class HermidataMigration {
                     altLists.flat().filter(t => TrimTitle.trimTitle(t, '').title && TrimTitle.trimTitle(t, '').title !== TrimTitle.trimTitle(mainTitle, '').title) ) )
             ];
         }
-        const base = await makeHermidata(newTitle, newer.url || older.url, newType);
+        const base = await makeHermidata(newTitle, newer.chapter.bookmarks[newer.chapter.bookmarkInUse].url || older.chapter.bookmarks[older.chapter.bookmarkInUse].url, newType);
         const merged: Hermidata = {
             ...base,
             id: newKey,
             title: newTitle || oldTitle,
             novelType: newType || oldType,
-            url: newer.url || older.url,
             source: newer.source || older.source,
             chapter: {
                 bookmarks: {
@@ -503,7 +501,7 @@ export class HermidataMigration {
     public static detectHashType(obj: Hermidata) {
         if (!obj?.title || !obj?.novelType || !obj?.id) return "unknown";
 
-        const normalizedTitle = TrimTitle.trimTitle(obj.title, obj.url).title.toLowerCase();
+        const normalizedTitle = TrimTitle.trimTitle(obj.title, obj.chapter.bookmarks[obj.chapter.bookmarkInUse].url).title.toLowerCase();
 
         if (obj.id === this.OLD_simpleHash(`${obj.novelType}:${normalizedTitle}`)) return "old";
         if (obj.id === this.NEW_simpleHash(`${obj.novelType}:${normalizedTitle}`)) return "new";
@@ -532,7 +530,7 @@ export class HermidataMigration {
 
 
     private static getOldIDType(Obj: Hermidata) {
-        return this.OLD_simpleHash(`${Obj.novelType}:${TrimTitle.trimTitle(Obj.title, Obj.url).title.toLowerCase()}`);
+        return this.OLD_simpleHash(`${Obj.novelType}:${TrimTitle.trimTitle(Obj.title, Obj.chapter.bookmarks[Obj.chapter.bookmarkInUse].url).title.toLowerCase()}`);
     }
     /** - force a array of strings or a string to be an array */
     private static setTagsFromstringToList(list: string[]): string[];
@@ -554,11 +552,11 @@ export class HermidataMigration {
         return Array.from(new Set(list));
     }
 
-    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata): [Hermidata, boolean] {
+    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata): migrationReturn {
         let current = older;
 
         // early return if already latest
-        if (isHermidataV9(current)) return [current, true];
+        if (isHermidataV10(current)) return {result: current, isMigratedSuccessfully: true};
 
 
         if (isHermidataV4OrOlder(current)) current = this.migrateHermidataV3OrOlderToV5(current);
@@ -566,14 +564,15 @@ export class HermidataMigration {
         if (isHermidataV6(current)) current = this.migrateHermidataV6ToV7(current);
         if (isHermidataV7(current)) current = this.migrateHermidataV7ToV8(current);
         if (isHermidataV8(current)) current = this.migrateHermidataV8ToV9(current);
+        if (isHermidataV9(current)) current = this.migrateHermidataV9ToV10(current);
 
-        if (!isHermidataV9(current))  {
+        if (!isHermidataV10(current))  {
             console.warn(`Hermidata is not set to the latest version.`, current);
             console.warn(`Detected version: Unknown`);
-            return [current as Hermidata, false];
+            return  { result: current, isMigratedSuccessfully: false};
         }
 
-        return [current, true];
+        return { result: current, isMigratedSuccessfully: true};
     }
 
     private static migrateHermidataV3OrOlderToV5(older: HermidataV3 | HermidataV4): HermidataV5 {
@@ -726,8 +725,8 @@ export class HermidataMigration {
             }
         }
     }
-    private static migrateHermidataV8ToV9(data: HermidataV8): Hermidata {
-        const newBookmarks: Record<string, Bookmark> = {};
+    private static migrateHermidataV8ToV9(data: HermidataV8): HermidataV9 {
+        const newBookmarks: Record<string, BookmarkV3> = {};
 
         for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
             newBookmarks[id] = {
@@ -753,5 +752,50 @@ export class HermidataMigration {
                 bookmarks: newBookmarks
             }
         };
+    }
+    private static migrateHermidataV9ToV10(data: HermidataV9): Hermidata {
+        const newBookmarks: Record<string, Bookmark> = {};
+
+        for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
+            newBookmarks[id] = {
+                id: bookmark.id,
+                current: Number(bookmark.current),
+                history: this.setNumbersFromstringToList(bookmark.history),
+                label: bookmark.label,
+                color: bookmark.color,
+                createdAt: new Date(bookmark.createdAt).toISOString(),
+                updatedAt: new Date(bookmark.updatedAt).toISOString(),
+                note: bookmark.note,
+                isPrimary: bookmark.isPrimary,
+                readStatus: bookmark.readStatus,
+                scrollPosition: bookmark.scrollPosition ?? 0,
+                url: data.url
+            }
+        }
+        return {
+            id: data.id,
+            title: data.title,
+            novelType: data.novelType,
+            source: data.source,
+            rss: data.rss ?? null,
+            import: data.import ?? null,
+            chapter: {
+                bookmarks: newBookmarks,
+                revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
+                latest: Number(data.chapter?.latest) ?? 0,
+                lastChecked: new Date(data.chapter?.lastChecked).toISOString() ?? new Date().toISOString(),
+                bookmarkInUse: data.chapter?.bookmarkInUse
+            },
+            meta: {
+                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                notes: data.meta?.notes ?? "",
+                altTitles: data.meta?.altTitles ?? [data.title],
+                altSources: data.meta?.altSources ?? [data.source],
+                added: new Date(data.meta?.added).toISOString() ?? new Date().toISOString(),
+                updated: new Date(data.meta?.updated).toISOString() ?? new Date().toISOString(),
+                originalRelease: data.meta?.originalRelease ?? null,
+                novelStatus: data.meta?.novelStatus
+            }
+        }
     }
 }

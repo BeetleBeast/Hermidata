@@ -22,7 +22,7 @@ export function getHermidataViaKey(key: string): Promise<Hermidata | null> { ret
 
 export async function saveHermidata(key: string, entry: Hermidata): Promise<void> {
     try {
-        const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.url);
+        const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
         entry.id = Key;
         entry.meta.updated = new Date().toISOString();
 

@@ -4,7 +4,7 @@ import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
-import type { HermidataV4, HermidataV6, HermidataV7, HermidataV8 } from '../types/popup';
+import type { HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/popup';
 
 
 // ============================================================
@@ -428,7 +428,7 @@ export async function migrateHermidataToLatest(): Promise<void> {
 
         for (const oldHermidata of Object.values(allHermidata_old)) {
             if (!isHermidataV9(oldHermidata)) { 
-                const [hermidata, isMigrated] = HermidataMigration.migrateAllHermidataToLatest(oldHermidata);
+                const { result: hermidata, isMigratedSuccessfully: isMigrated} = HermidataMigration.migrateAllHermidataToLatest(oldHermidata);
                 if (isMigrated) entries.push(hermidata);
                 else allNotMigrated++;
             }
@@ -449,7 +449,7 @@ export async function migrateHermidataToLatest(): Promise<void> {
  * @param data - Hermidata
  * @returns boolean
  */
-export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV4 {
+export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV4 {
     return (
         "current" in data.chapter &&
         "type" in data &&
@@ -458,7 +458,7 @@ export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | Hermidat
         (typeof data.meta.tags === 'string')
     );
 }
-export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV5 {
+export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV5 {
     const hasCurrentChapter = "current" in data.chapter;
     const hasType = "type" in data;
     const hasStatus = "status" in data;
@@ -478,7 +478,7 @@ export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | H
     );
     */
 }
-export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV6 {
+export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV6 {
     return (
         "bookmarks" in data.chapter &&
         "revisitingCount" in data.chapter &&
@@ -487,29 +487,40 @@ export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         "bookmarkInUse" in data.meta
     );
 }
-export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV7 {
+export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV7 {
+    if (!("bookmarkInUse" in data.chapter)) return false;
+
+    const hasBookmarks = "bookmarks" in data.chapter;
+    const hasType = "type" in data;
+    const hasStatus = ("status" in data);
+    const hasNotScrollPosition = !("scrollPosition" in data.chapter.bookmarks[data.chapter?.bookmarkInUse]);
+
     return (
-        "bookmarkInUse" in data.chapter &&
-        "type" in data &&
-        "status" in data &&
-        !("scrollPosition" in data.chapter.bookmarks[data.chapter?.bookmarkInUse])
+        hasBookmarks &&
+        hasType &&
+        hasStatus &&
+        hasNotScrollPosition
     );
 }
-export function isHermidataV8( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is HermidataV8 {
+export function isHermidataV8( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV8 {
     if (!("bookmarkInUse" in data.chapter)) return false;
     
     const hasBookmarks = "bookmarks" in data.chapter;
     const hasType = "novelType" in data;
     const hasNotStatus = !("status" in data);
     const hasNotScrollPosition = !("scrollPosition" in data.chapter.bookmarks[data.chapter?.bookmarkInUse]);
+    const hasUrlInRoot = "url" in data && data.url != undefined
+        && typeof  data.url === "string" 
+        && data.url.length > 0;
     return (
         hasBookmarks &&
         hasType &&
         hasNotStatus &&
-        hasNotScrollPosition
+        hasNotScrollPosition &&
+        hasUrlInRoot
     )
 }
-export function isHermidataV9( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | Hermidata ): data is Hermidata {
+export function isHermidataV9( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV9 {
     if (!("bookmarkInUse" in data.chapter)) return false;
     
     const hasBookmarks = "bookmarks" in data.chapter;
@@ -520,11 +531,38 @@ export function isHermidataV9( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         && "scrollPosition" in bookmark && bookmark.scrollPosition != undefined 
         && typeof  bookmark.scrollPosition === "number" 
         && !isNaN(bookmark.scrollPosition) && bookmark.scrollPosition >= 0;
+    const hasUrlInRoot = "url" in data && data.url != undefined
+        && typeof  data.url === "string" 
+        && data.url.length > 0;
     return (
         hasBookmarks &&
         hasType &&
         hasNotStatus &&
-        hasScrollPosition
+        hasScrollPosition &&
+        hasUrlInRoot
+    )
+}
+export function isHermidataV10( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is Hermidata {
+    if (!("bookmarkInUse" in data.chapter)) return false;
+    
+    const hasBookmarks = "bookmarks" in data.chapter;
+    const hasType = "novelType" in data;
+    const hasNotStatus = !("status" in data);
+    const bookmark = data.chapter?.bookmarks?.[data.chapter?.bookmarkInUse];
+    const hasScrollPosition = bookmark != undefined 
+        && "scrollPosition" in bookmark && bookmark.scrollPosition != undefined 
+        && typeof  bookmark.scrollPosition === "number" 
+        && !isNaN(bookmark.scrollPosition) && bookmark.scrollPosition >= 0;
+    const hasUrlInBookmark = bookmark != undefined 
+        && "url" in bookmark && bookmark.url != undefined
+        && typeof  bookmark.url === "string" 
+        && bookmark.url.length > 0;
+    return (
+        hasBookmarks &&
+        hasType &&
+        hasNotStatus &&
+        hasScrollPosition &&
+        hasUrlInBookmark
     )
 }
 

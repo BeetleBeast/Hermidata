@@ -47,6 +47,7 @@ export interface Bookmark { // new
 	updatedAt: string;
 	isPrimary: boolean; // only one can be primary
     scrollPosition: number;
+    url: string;
 }
 
 
@@ -54,7 +55,6 @@ export interface Hermidata {
     id: string;
     title: string;
     novelType: AnyNovelType;
-    url: string;
     source: string;
     chapter: {
         latest: number;
@@ -192,6 +192,19 @@ export type  ShouldReplaceOrBlockReturn = ShouldBlockReturn | ShouldReplaceRetur
 
 /* old Bookmarks */
 
+export interface BookmarkV3 { // new
+    id: string;
+    current: number;
+    history: number[];
+    readStatus: AnyReadStatus;
+    label: string; // "favorite scene", "reread from here", "primary"
+    note?: string; // Optional note about why you bookmarked createdAt: string;
+    color: string; // hex rgb for visual distinction
+    createdAt: string;
+    updatedAt: string;
+    isPrimary: boolean; // only one can be primary
+    scrollPosition: number;
+}
 export interface BookmarkV2 { // new
 	id: string;
 	current: number;
@@ -218,6 +231,45 @@ export interface BookmarkV1 { // new
 }
 
 /* old Hermidata */
+
+
+export type migrationReturn = {
+    result: allolderHermidata,
+    isMigratedSuccessfully: false
+} | {
+    result: Hermidata,
+    isMigratedSuccessfully: true
+}
+
+
+export type allolderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9
+
+export interface HermidataV9 {
+    id: string;
+    title: string;
+    novelType: AnyNovelType;
+    url: string;
+    source: string;
+    chapter: {
+        latest: number;
+        lastChecked: string;
+        bookmarks: Record<string, BookmarkV3>; // Multiple saved positions
+        revisitingCount: number; // How many times you've re-read
+        bookmarkInUse: string;
+    };
+    rss: Feed | null;
+    import: string | null;
+    meta: {
+        tags: string[]; // old versions might have string, but we will convert them to array
+        notes: string;
+        added: string;
+        updated: string;
+        altSources: string[]; // for multiple souces ( with the first one the same as above )
+        altTitles: string[];
+        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
+        novelStatus: AnyNovelStatus;
+    };
+}
 
 export interface HermidataV8 {
     id: string;
