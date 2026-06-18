@@ -12,6 +12,7 @@ import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
 import { makeDefaultHermidata } from '../../shared/constants';
+import { getUrlFromCurrentBookmark } from '../../shared/utils/HermidataSelector';
 
 
 const stateConfig = {
@@ -106,7 +107,7 @@ class HermidataController {
             settings.ContentTypesAndStatuses.STATUS_OPTIONS[0], 
             settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]
         );
-        Hermidata.url = CurrentTabInfo.url;
+        Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].url = CurrentTabInfo.url;
         Hermidata.title = trimmedTitle.title;
         Hermidata.meta.notes = trimmedTitle.note ?? '';
         Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].current = CurrentTabInfo.currentChapter;
@@ -125,7 +126,7 @@ class HermidataController {
         const currentChapterFromCopy = hermidataCopy.chapter.bookmarks[hermidataCopy.chapter.bookmarkInUse].current;
         const currentChapterFromPast = Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].current;
         // add changes with the past as a template 
-        Hermidata.url = hermidataCopy.url;
+        Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].url = hermidataCopy.chapter.bookmarks[hermidataCopy.chapter.bookmarkInUse].url;
         Hermidata.chapter.bookmarks[Hermidata.chapter.bookmarkInUse].current = currentChapterFromCopy;
         Hermidata.source = hermidataCopy.source;
         Hermidata.chapter.latest = currentChapterFromPast > Hermidata.chapter.latest ? currentChapterFromPast : Hermidata.chapter.latest;
@@ -351,10 +352,10 @@ class HermidataController {
         this.updateHermidataSources();
     }
     private updateHermidataSources() {
-        const url = this.hermidata.url;
+        const url = getUrlFromCurrentBookmark(this.hermidata);
         if (!url) return
         const currentUrlSource = new URL(url).hostname.replace(/^www\./, "");
-        const savedUrlSource = new URL(this.hermidata.url).hostname.replace(/^www\./, "");
+        const savedUrlSource = new URL(getUrlFromCurrentBookmark(this.hermidata)).hostname.replace(/^www\./, "");
         const possibleRSSSource = this.hermidata.rss?.domain;
         const altSources = this.hermidata.meta.altSources;
 
@@ -410,7 +411,7 @@ class HermidataController {
         }
     }
     private getLatestValueFromBackEnd() {
-        const url = this.hermidata.url;
+        const url = getUrlFromCurrentBookmark(this.hermidata);
         const date = new Intl.DateTimeFormat('en-GB').format(new Date());
 
         const tagsArray = this.tagsSystem.tags;

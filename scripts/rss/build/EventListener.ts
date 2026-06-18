@@ -7,6 +7,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
 import { deleteHermidata } from "../../shared/db/db";
+import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
 
 export class EventListener extends RssBuild {
     
@@ -31,7 +32,7 @@ export class EventListener extends RssBuild {
     }
     private clickOnItem(value: Hermidata, isRSSItem: boolean) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
-        this.openNewTab(value?.rss?.latestItem?.link || value.url, value.chapter.bookmarks[value.chapter.bookmarkInUse].scrollPosition);
+        this.openNewTab(value?.rss?.latestItem?.link || getUrlFromCurrentBookmark(value), value.chapter.bookmarks[value.chapter.bookmarkInUse].scrollPosition);
     }
     private async rightmouseclickonItem(e: MouseEvent, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
@@ -122,7 +123,7 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const url = entry.url;
+        const url = getUrlFromCurrentBookmark(entry);
         if (!url) return;
         // Get the current active tab and update its URL
         const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
@@ -139,7 +140,7 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const url = entry.url;
+        const url = getUrlFromCurrentBookmark(entry);
         if (url) this.openNewTab(url, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
     }
     
@@ -174,7 +175,7 @@ export class EventListener extends RssBuild {
         if (!newTitle) return;
     
         // Normalize and deduplicate
-        const trimmed = TrimTitle.trimTitle(newTitle, entry.url).title;
+        const trimmed = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(entry)).title;
         entry.meta = entry.meta || {};
         entry.meta.altTitles = Array.from(
             new Set([...(entry.meta.altTitles || []), trimmed])
@@ -204,8 +205,8 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.url, false);
-        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.url).title
+        const newKey = returnHashedTitle(newTitle, oldData.novelType, getUrlFromCurrentBookmark(oldData), false);
+        const TrimmedTitle = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(oldData)).title
         const newData = { ...oldData, title: newTitle, id: newKey };
     
         // Add the old title as an altTitle

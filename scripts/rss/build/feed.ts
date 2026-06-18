@@ -2,6 +2,7 @@ import { findByTitleOrAlt, getChapterFromTitleReturn } from "../../shared/utils/
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
 import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
+import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
 
 
 interface ItemInfo {
@@ -205,7 +206,7 @@ export class FeedItem {
     }
     private async getItemInfo(key: string, item: Hermidata, isRSSItem: boolean = false): Promise<ItemInfo> {
         const title = findByTitleOrAlt(item.title, this.AllHermidata)?.title || item.title;
-        const url = item.rss?.latestItem.link || item.url;
+        const url = item.rss?.latestItem.link || getUrlFromCurrentBookmark(item);
         
         const useAutoDetectedChapter = getChapterFromTitleReturn(title, item?.title, undefined, url);
         const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.chapter?.bookmarks[item.chapter.bookmarkInUse].current;
@@ -230,7 +231,7 @@ export class FeedItem {
         const Elfooter = document.createElement("div");
 
         Elfooter.className = "hermidata-item-footer"
-        const domain = item.source || item.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+        const domain = item.source || getUrlFromCurrentBookmark(item).replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
         const altDomains = item.meta.altSources.length >= 2 ? item.meta.altSources.join(', ') : '';
         Elfooter.textContent = altDomains ? String(altDomains) : String(domain);
         Elfooter.title = String(domain);

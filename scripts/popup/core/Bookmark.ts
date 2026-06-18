@@ -4,6 +4,7 @@ import type { Bookmark, Hermidata } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { activateother, customConfirm, deactivateother } from "../frontend/confirm";
+import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
 
 export class BookmarkController {
 
@@ -355,7 +356,9 @@ export class BookmarkController {
             history: [],
             isPrimary: false,
             readStatus: 'Viewing',
-            scrollPosition: 0
+            scrollPosition: 0,
+            url: getUrlFromCurrentBookmark(this.hermidata) ?? ''
+            // TODO: test this;
         }
 
         // if re-reading, update revisiting count
