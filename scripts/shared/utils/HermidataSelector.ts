@@ -37,6 +37,10 @@ export class HermidataModel implements Hermidata {
     GetReadStatusFromCurrentBookmark(): Bookmark["readStatus"] {
         return this.getActiveBookmark()?.readStatus;
     }
+
+    GetScrollPositionFromCurrentBookmark(): number {
+        return this.getActiveBookmark()?.scrollPosition;
+    }
     
     toJSON(): Hermidata {
         const { id, title, novelType, source, chapter, rss, import: imp, meta } = this;

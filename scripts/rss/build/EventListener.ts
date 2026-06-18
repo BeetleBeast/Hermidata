@@ -1,7 +1,7 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
-import type { MenuOption, Hermidata } from "../../shared/types/index";
+import type { MenuOption, Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata, setNotificationList, updateHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -52,19 +52,25 @@ export class EventListener extends RssBuild {
         menu.style.left = `${e.clientX}px`;
 
         // Define your menu options
-        const optionsNotification: (MenuOption | "separator")[] = [
+        const optionsNotification: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open in page", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open Latest in page", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open Latest in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            "separator",
+            { label: "Open Bookmark in page", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
+            { label: "Open Bookmark in new window", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "Clear notification", action: () => this.clearNotification(e.target as HTMLDivElement) },
             "separator",
             { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement) },
         ];
-        const optionsAllItems: (MenuOption | "separator")[] = [
+        const optionsAllItems: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open in page", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open Latest in page", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open Latest in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            "separator",
+            { label: "Open Bookmark in page", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
+            { label: "Open Bookmark in new window", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "add alt title", action: async () => await this.addAltTitle(e.target as HTMLDivElement) },
             { label: "Rename", action: async () => await this.RenameItem(e.target as HTMLDivElement) },
@@ -77,10 +83,27 @@ export class EventListener extends RssBuild {
         // Build the menu content
         for (const opt of options) {
             if (opt === "separator") {
-            const hr = document.createElement("hr");
-            hr.className = "menu-separator";
-            menu.appendChild(hr);
-            continue;
+                const hr = document.createElement("hr");
+                hr.className = "menu-separator";
+                menu.appendChild(hr);
+                continue;
+            }
+            if ( "options" in opt ) {
+                const subMenuContainer = document.createElement("div");
+                subMenuContainer.className = "context-sub-menu-label";
+                subMenuContainer.textContent = opt.label;
+
+                const subMenu = document.createElement("div");
+                subMenu.className = "context-sub-menu";
+                menu.appendChild(subMenu);
+
+                subMenuContainer.addEventListener('hover', (e) => {
+                    // TODO: make sure this works well
+                    this.createSubMenu(subMenu, opt.options)
+                })
+                
+                menu.appendChild(subMenuContainer);
+                continue;
             }
             const itemContainer = document.createElement('div');
             itemContainer.className = "context-menu-item-container";
@@ -101,6 +124,41 @@ export class EventListener extends RssBuild {
         // Remove when clicking elsewhere
         document.addEventListener("click", () => { menu.remove(); }, { once: true });
     }
+    private createSubMenu(menu: HTMLDivElement, options: subMenu["options"]) {
+        for (const opt of options) {
+            const item = document.createElement("div");
+            item.classList.add("menu-item", "sub-menu-item");
+            item.textContent = opt.label;
+            item.addEventListener("click", () => {
+                opt.action();
+                menu.remove();
+            });
+            menu.appendChild(item);
+        }
+    }
+    private getEntrieFromTarget(target: HTMLDivElement | null): Hermidata | undefined {
+        const item = this.getEntriesItem(target) || this.getNotificationItem(target);
+        if (!item || !target) return;
+
+        const hashItem = this.GetHashItem(item);
+        const entry = this.AllHermidata[hashItem];
+        if (!entry) {
+            console.warn("Entry not found for hash:", hashItem);
+            return;
+        }
+        return entry
+    }
+    private setAllBookmarksMenuOptions(target: HTMLDivElement | null, pageTypeOpener: "InPage" | "InNewWindow"): subMenu["options"] {
+        const entry = this.getEntrieFromTarget(target);
+        if (!entry || !target) return [];
+
+        const bookmarkMenu: subMenu["options"] = [];
+
+        for (const value of Object.values(entry.chapter.bookmarks)) {
+            bookmarkMenu.push({ label: value.label, action: () => pageTypeOpener == 'InPage' ?  this.openInPage(target, value.url) : this.openInNewWindow(target, value.url) });
+        }
+        return bookmarkMenu
+    }
     private copyTitle(target: HTMLDivElement | null) {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
@@ -113,7 +171,7 @@ export class EventListener extends RssBuild {
         }
     }
     
-    private async openInPage(target: HTMLDivElement | null) {
+    private async openInPage(target: HTMLDivElement | null, url: string | null = null) {
         if (!target) return;
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
@@ -123,14 +181,14 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const url = getUrlFromCurrentBookmark(entry);
-        if (!url) return;
+        const currentUrl = url ?? getUrlFromCurrentBookmark(entry);
+        if (!currentUrl) return;
         // Get the current active tab and update its URL
         const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) this.updateTab(tab, url, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
+        if (tab?.id) this.updateTab(tab, currentUrl, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
     }
     
-    private async openInNewWindow(target: HTMLDivElement | null) {
+    private async openInNewWindow(target: HTMLDivElement | null, url: string | null = null) {
         if (!target) return;
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
@@ -140,8 +198,8 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const url = getUrlFromCurrentBookmark(entry);
-        if (url) this.openNewTab(url, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
+        const currentUrl = url ?? getUrlFromCurrentBookmark(entry);
+        if (currentUrl) this.openNewTab(currentUrl, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
     }
     
     private clearNotification(target: HTMLDivElement | null) {

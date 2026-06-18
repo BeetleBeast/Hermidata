@@ -65,9 +65,10 @@ export type {
 
     AllsortsType,
     
-
+    MenuOptions,
     MenuOption,
     separator,
+    subMenu,
 
     Filters,
 
