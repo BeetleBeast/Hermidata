@@ -11,6 +11,7 @@ import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector"
 
 export class EventListener extends RssBuild {
     
+    private activeSubMenu: HTMLDivElement | null = null;
 
     public async attachEventListeners(): Promise<void> {
         // parents
@@ -42,23 +43,18 @@ export class EventListener extends RssBuild {
         document.querySelectorAll(".custom-context-menu").forEach(el => el.remove());
 
         // Create the menu container
+        // Create the menu container
         const menu = document.createElement("div");
         menu.className = "custom-context-menu";
-        menu.style.top = `${e.clientY}px`;
-        if (e.clientY > 400) {
-            menu.style.bottom = `${15}px`;
-            menu.style.top = `${e.clientY - 150}px`;
-        }
-        menu.style.left = `${e.clientX}px`;
 
         // Define your menu options
         const optionsNotification: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open Latest in page", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open Latest in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in page", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
             "separator",
-            { label: "Open Bookmark in page", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
-            { label: "Open Bookmark in new window", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
+            { label: "Open bookmark in page", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
+            { label: "Open bookmark in new window", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "Clear notification", action: () => this.clearNotification(e.target as HTMLDivElement) },
             "separator",
@@ -66,8 +62,8 @@ export class EventListener extends RssBuild {
         ];
         const optionsAllItems: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open Latest in page", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open Latest in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in page", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
             "separator",
             { label: "Open Bookmark in page", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
             { label: "Open Bookmark in new window", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
@@ -80,6 +76,9 @@ export class EventListener extends RssBuild {
         const itemLocation = this.getNotificationItem(e.target as HTMLDivElement) ? 'notification' :  'entries'
         
         const options = itemLocation == 'notification' ? optionsNotification : optionsAllItems;
+
+        this.activeSubMenu = null;
+
         // Build the menu content
         for (const opt of options) {
             if (opt === "separator") {
@@ -90,22 +89,62 @@ export class EventListener extends RssBuild {
             }
             if ( "options" in opt ) {
                 const subMenuContainer = document.createElement("div");
-                subMenuContainer.className = "context-sub-menu-label";
-                subMenuContainer.textContent = opt.label;
+                subMenuContainer.className = "context-menu-item-container";
 
                 const subMenu = document.createElement("div");
-                subMenu.className = "context-sub-menu";
-                menu.appendChild(subMenu);
-
-                subMenuContainer.addEventListener('hover', (e) => {
-                    // TODO: make sure this works well
-                    this.createSubMenu(subMenu, opt.options)
-                })
+                subMenu.className = "menu-item";
+                subMenu.textContent = opt.label;
                 
+                const subMenuContainerContextMenu = this.createSubMenu(menu, opt.options);
+                let isAllowedToExit = true;
+
+                const closeSubMenu = () => {
+                    subMenuContainerContextMenu.style.display = "none";
+                    if (this.activeSubMenu === subMenuContainerContextMenu) this.activeSubMenu = null;
+                };
+
+                const openSubMenu = () => {
+                    // Close whatever sibling submenu is currently open, if it's a different one
+                    if (this.activeSubMenu && this.activeSubMenu !== subMenuContainerContextMenu) this.activeSubMenu.style.display = "none";
+
+                    this.activeSubMenu = subMenuContainerContextMenu;
+                    isAllowedToExit = false;
+                    this.setSubMenuPosition(subMenu, subMenuContainerContextMenu, menu);
+                    subMenuContainerContextMenu.style.display = "block";
+                };
+
+                
+                subMenu.addEventListener("mouseover", () => {
+                    openSubMenu();
+                });
+
+                subMenu.addEventListener("mouseout", () => {
+                    isAllowedToExit = true;
+                    setTimeout(() => {
+                        if (isAllowedToExit) closeSubMenu();
+                    }, 150);
+                });
+
+                subMenuContainerContextMenu.addEventListener("mouseover", () => {
+                    isAllowedToExit = false;
+                });
+
+                subMenuContainerContextMenu.addEventListener("mouseleave", () => {
+                    isAllowedToExit = true;
+                    setTimeout(() => {
+                        if (isAllowedToExit) closeSubMenu();
+                    }, 150);
+                });
+
+                this.setSubMenuDirection(subMenu, menu, subMenuContainerContextMenu);
+                
+                subMenuContainer.appendChild(subMenu);
                 menu.appendChild(subMenuContainer);
+
+                
                 continue;
             }
-            const itemContainer = document.createElement('div');
+            const itemContainer = document.createElement('span');
             itemContainer.className = "context-menu-item-container";
 
             const item = document.createElement("div");
@@ -121,10 +160,91 @@ export class EventListener extends RssBuild {
 
         document.body.appendChild(menu);
 
+        this.calculateMenuPosition(menu, e);
+
         // Remove when clicking elsewhere
         document.addEventListener("click", () => { menu.remove(); }, { once: true });
     }
+    private setSubMenuDirection(subMenu: HTMLDivElement, menu: HTMLDivElement, subMenuContainer: HTMLDivElement) {
+
+        const { rightSpace } = this.getSubMenuPostion(menu, subMenuContainer);
+
+        const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
+
+        const isRight = enoughSpaceRight ? "right" : "left";
+
+        const subMenuDirectionDiv = document.createElement("span");
+        subMenuDirectionDiv.className = "sub-menu-direction";
+
+        subMenuDirectionDiv.textContent = isRight ? ">" : "<";
+        subMenuDirectionDiv.style.right = isRight ? "0%" : "90%";
+
+        subMenuDirectionDiv.style.paddingRight = '10px';
+        subMenuDirectionDiv.style.paddingLeft = '10px';
+        subMenuDirectionDiv.style.cursor = "pointer";
+        subMenuDirectionDiv.style.position = "absolute";
+
+        subMenu.appendChild(subMenuDirectionDiv);
+    }
+    private calculateMenuPosition(menu: HTMLDivElement, e: MouseEvent) {
+        const menuRect = menu.getBoundingClientRect();
+        const menuWidth = menuRect.width;
+        const menuHeight = menuRect.height;
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Vertical positioning
+        let top = e.clientY;
+        if (e.clientY + menuHeight > viewportHeight) {
+            top = e.clientY- (menuHeight / 2);
+            
+            if (top < 0) top = e.clientY - menuHeight;
+            if (top < 0) top = 0 + menuHeight;
+            if (top < 0) top = viewportHeight - menuHeight - 10; // clamp if menu is taller than viewport
+        }
+
+        // Horizontal positioning (same idea, for completeness)
+        let left = e.clientX;
+        if (e.clientX + menuWidth > viewportWidth) {
+            left = e.clientX - menuWidth;
+            if (left < 0) left = viewportWidth - menuWidth - 10;
+        }
+
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+    }
+    private setSubMenuPosition(subMenuContainer: HTMLDivElement, subMenu: HTMLDivElement, menu: HTMLDivElement) {
+        // calcualte if enaught space right
+        // if not place it to the left
+        subMenu.style.display = "block";
+
+        const { rightSpace, topSpace } = this.getSubMenuPostion(menu, subMenuContainer);
+
+        const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
+        
+        subMenu.style.top = `${topSpace}px`;
+
+        const isRight = enoughSpaceRight ? "right" : "left";
+
+        subMenu.style[isRight] = "-50%";
+
+        // subMenu.style.top = `${topSpace}px`;
+    }
+    private getSubMenuPostion(menu: HTMLDivElement, subMenuContainer: HTMLDivElement) {
+        const rectMenu = menu.getBoundingClientRect();
+
+        const rect = subMenuContainer.getBoundingClientRect();
+        const rightSpace = window.innerWidth - rect.right;
+        const leftSpace = rect.left;
+        const topSpace = rect.top - rectMenu.top;
+        const bottomSpace = window.innerHeight - rect.bottom;
+
+        return { rightSpace, leftSpace, topSpace, bottomSpace };
+    }
     private createSubMenu(menu: HTMLDivElement, options: subMenu["options"]) {
+        const subMenuContainer = document.createElement("div");
+        subMenuContainer.classList.add(`sub-menu-container`, `sub-menu-${menu.id}`);
         for (const opt of options) {
             const item = document.createElement("div");
             item.classList.add("menu-item", "sub-menu-item");
@@ -133,8 +253,10 @@ export class EventListener extends RssBuild {
                 opt.action();
                 menu.remove();
             });
-            menu.appendChild(item);
+            subMenuContainer.appendChild(item);
         }
+        menu.appendChild(subMenuContainer);
+        return subMenuContainer;
     }
     private getEntrieFromTarget(target: HTMLDivElement | null): Hermidata | undefined {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);

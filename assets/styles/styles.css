@@ -62,7 +62,7 @@ body {
 /* --- custom context-menu --- */
 
 .custom-context-menu {
-    position: sticky;
+    position: absolute;
     background: #222;
     color: white;
     border-radius: 8px;
