@@ -1,3 +1,5 @@
+import { makeDefaultHermidata } from "../constants";
+import { getSettings } from "../db/db";
 import type { AnyNovelType, Bookmark, Feed, Hermidata } from "../types";
 
 export class HermidataModel implements Hermidata {
@@ -20,6 +22,18 @@ export class HermidataModel implements Hermidata {
         this.import = data.import;
         this.chapter = data.chapter;
         this.meta = data.meta;
+    }
+
+    static async from(novelType: AnyNovelType | null, readStatus: string | null, novelStatus: string | null): Promise<HermidataModel | null> {
+        const settings = await getSettings();
+        
+        if (!settings && (novelType && readStatus && novelStatus)) return new HermidataModel(makeDefaultHermidata(novelType, readStatus, novelStatus));
+        if (!settings) return null;
+
+        const {  TYPE_OPTIONS: defaultNovelType, NOVEL_STATUS_OPTIONS: defaultNovelStatus, STATUS_OPTIONS: defaultReadStatus }  = settings.ContentTypesAndStatuses;
+
+        
+        return new HermidataModel(makeDefaultHermidata(novelType ?? defaultNovelType[0], readStatus ?? defaultReadStatus[0], novelStatus ?? defaultNovelStatus[0]));
     }
 
     private getActiveBookmark(): Bookmark {
