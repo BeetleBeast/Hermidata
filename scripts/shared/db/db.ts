@@ -416,10 +416,10 @@ export async function migrateFromChromeStorage(): Promise<void> {
  */
 export async function migrateHermidataToLatest(): Promise<void> {
     const db = await getDb();
-    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v9');
+    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v10');
     if (alreadyMigrated) return;
 
-    console.log('[DB] Starting migration of Hermidata to latest (V9)...');
+    console.log('[DB] Starting migration of Hermidata to latest (V10)...');
 
     await new Promise<void>(async (resolve) => {
         const allHermidata_old = await getAllHermidata();
@@ -427,7 +427,7 @@ export async function migrateHermidataToLatest(): Promise<void> {
         let allNotMigrated: number = 0;
 
         for (const oldHermidata of Object.values(allHermidata_old)) {
-            if (!isHermidataV9(oldHermidata)) { 
+            if (!isHermidataV10(oldHermidata)) { 
                 const { result: hermidata, isMigratedSuccessfully: isMigrated} = HermidataMigration.migrateAllHermidataToLatest(oldHermidata);
                 if (isMigrated) entries.push(hermidata);
                 else allNotMigrated++;
@@ -437,8 +437,8 @@ export async function migrateHermidataToLatest(): Promise<void> {
         if (entries.length) await putAllHermidata(entries);
 
         // Mark as done
-        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v9');
-        console.log(`[DB] Migrated ${entries.length} Hermidata entries to V9`);
+        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v10');
+        console.log(`[DB] Migrated ${entries.length} Hermidata entries to V10`);
         console.log(`[DB] ${allNotMigrated} Hermidata entries could not be migrated`);
         resolve();
         console.log('[DB] Migration complete');

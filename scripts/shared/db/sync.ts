@@ -70,10 +70,8 @@ export function initSync(): void {
                 // Strip the transit metadata before writing to IndexedDB
                 let { _syncedBy, ...entry } = newValue
 
-                let returnObj: migrationReturn = { result: entry, isMigratedSuccessfully: true };
-
                 // make sure to have the hermidata in the latest format before putting it in the db
-                if (!isHermidataV10(entry)) returnObj = HermidataMigration.migrateAllHermidataToLatest(entry);
+                const returnObj: migrationReturn = isHermidataV10(entry) ? { result: entry, isMigratedSuccessfully: true }: HermidataMigration.migrateAllHermidataToLatest(entry);
 
                 if (returnObj?.isMigratedSuccessfully) await putHermidata(entry, false) // false to avoid re-syncing
                 console.log(`[Sync] Pulled entry from another device: ${entry.title}`)

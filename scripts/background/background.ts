@@ -29,10 +29,10 @@ import { calculateNovelStatusForAll } from '../shared/utils/NovelStatusCalculato
 */
 
 // setTimeout(() => resetSettings(), 100) // dev-only
-setTimeout(() => migrateSettings(), 100)
-setTimeout(() => migrateFromChromeStorage(), 100)
-setTimeout(() => migrateHermidataToLatest(), 100)
-setTimeout(() => calculateNovelStatusForAll(), 100)
+setTimeout(() => migrateSettings(), 0)
+setTimeout(() => migrateFromChromeStorage(), 1)
+setTimeout(() => migrateHermidataToLatest(), 2)
+setTimeout(() => calculateNovelStatusForAll(), 3)
 initRssCache()
 initTabs()
 initMessaging()
