@@ -22,7 +22,7 @@ export function getHermidataViaKey(key: string): Promise<Hermidata | null> { ret
 
 export async function saveHermidata(key: string, entry: Hermidata): Promise<void> {
     try {
-        const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.url);
+        const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
         entry.id = Key;
         entry.meta.updated = new Date().toISOString();
 
@@ -122,16 +122,6 @@ export function getSuggestedTags( input: string, allTags: Map<string, number>, s
         .sort((a, b) => b[1] - a[1]) // sort by usage count descending
         .slice(0, 8)                  // max 8 suggestions
         .map(([tag, count]) => ({ tag, count }));
-}
-function filterByTags( allHermidata: Record<string, Hermidata>, selectedTags: string[] ): Record<string, Hermidata> {
-    if (!selectedTags.length) return allHermidata;
-
-    return Object.fromEntries(
-        Object.entries(allHermidata).filter(([_, entry]) =>
-            // AND — entry must have ALL selected tags
-            selectedTags.every(tag => entry.meta.tags.includes(tag))
-        )
-    );
 }
 
 

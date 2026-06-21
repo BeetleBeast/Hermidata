@@ -276,7 +276,6 @@ export class ImportsAndExports extends Build {
 
                 // Merge
                 const mergedDataRecord = { ...existingData, ...importedData };
-                const mergedData = Object.values(mergedDataRecord);
 
                 // Save merged result
                 await this.dbRequest<void>('hermidata', 'putAll', { id: 'hermidata', data: mergedDataRecord });
@@ -530,8 +529,8 @@ export class ImportsAndExports extends Build {
         linkCell.classList.add('tableCell-MIfBF');
         const link = document.createElement('a');
         link.className = 'massImportFromBookmarkFolder-link';
-        link.href = hermidata.url;
-        link.textContent = hermidata.url;
+        link.href = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url;
+        link.textContent = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         linkCell.appendChild(link);
@@ -596,7 +595,7 @@ export class ImportsAndExports extends Build {
     }
     private async finalizeAllHermidatas(data: Record<string, Hermidata>) {
         const newArray = new Array<[AnyNovelType, Hermidata]>();
-        for (const [id, hermidata] of Object.entries(data)) {
+        for (const hermidata of Object.values(data)) {
             newArray.push([hermidata.novelType, hermidata]);
         }
 

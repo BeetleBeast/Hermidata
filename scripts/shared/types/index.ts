@@ -7,8 +7,25 @@ export type {
     ReadStatus,
 
     Hermidata,
+
+    HermidataV1,
+    HermidataV2,
+    HermidataV3,
+    HermidataV4,
     HermidataV5,
+    HermidataV6,
+    HermidataV7,
+    HermidataV8,
+    HermidataV9,
+
+    allolderHermidata,
+    migrationReturn,
+
     Bookmark,
+
+    BookmarkV1,
+    BookmarkV2,
+    BookmarkV3,
 
     HermidataDateType,
     HermidataSortType,
@@ -35,6 +52,8 @@ export type {
     ShouldReplaceOrBlockReturn,
     ShouldBlockReturn,
     ShouldReplaceReturn,
+
+    PotentialSameHermidata,
     
 
 } from "./popup";
@@ -46,9 +65,10 @@ export type {
 
     AllsortsType,
     
-
+    MenuOptions,
     MenuOption,
     separator,
+    subMenu,
 
     Filters,
 

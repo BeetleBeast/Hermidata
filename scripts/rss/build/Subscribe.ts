@@ -8,6 +8,7 @@ import { linkRSSFeed } from "../load";
 import { customConfirm } from "../../popup/frontend/confirm";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { ext } from "../../shared/utils/BrowserCompat";
+import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
 
 type match = {
     Hermidata: Hermidata,
@@ -71,7 +72,7 @@ export class Subscribe extends RssBuild {
         const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as AnyNovelType || this.hermidata.novelType;
         const currentTitle = getElement<HTMLInputElement>('#title_HDRSS')?.value || this.hermidata.title;
 
-        linkRSSFeed(currentTitle, currentType, this.hermidata.url, this.matchedFeed);
+        linkRSSFeed(currentTitle, currentType, getUrlFromCurrentBookmark(this.hermidata), this.matchedFeed);
         await this.reloadContent(notificationSection, allItemSection);
         console.log('Linked RSS to extension');
     }
@@ -131,7 +132,7 @@ export class Subscribe extends RssBuild {
                 continue;
             }
             // 5. link matching feed
-            linkRSSFeed(Hermidata.title, Hermidata.novelType, Hermidata.url, RawFeed);
+            linkRSSFeed(Hermidata.title, Hermidata.novelType, getUrlFromCurrentBookmark(Hermidata), RawFeed);
         }
         return true;
     }

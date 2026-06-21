@@ -44,7 +44,7 @@ export class feed extends RSSPageBuilder {
         const title = document.createElement('div');
         title.className = 'title';
         title.textContent = hermidataFeed.title;
-        title.onclick = () => window.open(hermidataFeed.url, '_blank');
+        title.onclick = () => window.open(hermidataFeed.chapter.bookmarks[hermidataFeed.chapter.bookmarkInUse].url, '_blank');
         
 
         const ViewBtn = document.createElement('button');

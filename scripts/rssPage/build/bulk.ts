@@ -1,4 +1,3 @@
-import { customPrompt } from "../../popup/frontend/confirm";
 import { getSettings, setAllHermidata } from "../../shared/db/Storage";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import type { Settings } from "../../shared/types";
@@ -10,9 +9,6 @@ export class Bulk extends RSSPageBuilder {
 
     private readonly bulkEditButton = getElement<HTMLButtonElement>("#bulkEditButton");
     private readonly bulkOpenBtn = getElement<HTMLButtonElement>("#bulkOpen");
-
-
-    private readonly bulkDelete = getElement<HTMLButtonElement>("#bulkDelete");
 
     private readonly allEntriesContainer = getElement<HTMLDivElement>('.all-entries-container');
 
@@ -195,7 +191,7 @@ export class Bulk extends RSSPageBuilder {
         const selectedIds = Array.from(selected).map(el => (el as HTMLInputElement).dataset.id!);
         const allHermidata = Array.from(selectedIds).map(id => this.AllHermidata[id]);
 
-        for (const hermidata of allHermidata) window.open(hermidata.url, '_blank');
+        for (const hermidata of allHermidata) window.open(hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url, '_blank');
     }
 
 
@@ -307,9 +303,9 @@ export class Bulk extends RSSPageBuilder {
         mergeDetail.appendChild(urlLabel);
 
         const url = document.createElement('a');
-        url.href = hermidata.url;
+        url.href = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url;
         url.id = `url-${selectedId}`;
-        url.textContent = hermidata.url;
+        url.textContent = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url;
         mergeDetail.appendChild(url);
 
         const currentChapterLabel = document.createElement('label');

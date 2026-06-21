@@ -1,15 +1,17 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
-import type { MenuOption, Hermidata } from "../../shared/types/index";
+import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata, setNotificationList, updateHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
 import { deleteHermidata } from "../../shared/db/db";
+import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
 
 export class EventListener extends RssBuild {
     
+    private activeSubMenu: HTMLDivElement | null = null;
 
     public async attachEventListeners(): Promise<void> {
         // parents
@@ -31,7 +33,7 @@ export class EventListener extends RssBuild {
     }
     private clickOnItem(value: Hermidata, isRSSItem: boolean) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
-        this.openNewTab(value?.rss?.latestItem?.link || value.url, value.chapter.bookmarks[value.chapter.bookmarkInUse].scrollPosition);
+        this.openNewTab(value?.rss?.latestItem?.link || getUrlFromCurrentBookmark(value), value.chapter.bookmarks[value.chapter.bookmarkInUse].scrollPosition);
     }
     private async rightmouseclickonItem(e: MouseEvent, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
@@ -41,29 +43,30 @@ export class EventListener extends RssBuild {
         document.querySelectorAll(".custom-context-menu").forEach(el => el.remove());
 
         // Create the menu container
+        // Create the menu container
         const menu = document.createElement("div");
         menu.className = "custom-context-menu";
-        menu.style.top = `${e.clientY}px`;
-        if (e.clientY > 400) {
-            menu.style.bottom = `${15}px`;
-            menu.style.top = `${e.clientY - 150}px`;
-        }
-        menu.style.left = `${e.clientX}px`;
 
         // Define your menu options
-        const optionsNotification: (MenuOption | "separator")[] = [
+        const optionsNotification: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open in page", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            "separator",
+            { label: "Open bookmark in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
+            { label: "Open bookmark in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "Clear notification", action: () => this.clearNotification(e.target as HTMLDivElement) },
             "separator",
             { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement) },
         ];
-        const optionsAllItems: (MenuOption | "separator")[] = [
+        const optionsAllItems: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open in page", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open latest bookmark in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            "separator",
+            { label: "Open Bookmark in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
+            { label: "Open Bookmark in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "add alt title", action: async () => await this.addAltTitle(e.target as HTMLDivElement) },
             { label: "Rename", action: async () => await this.RenameItem(e.target as HTMLDivElement) },
@@ -73,15 +76,75 @@ export class EventListener extends RssBuild {
         const itemLocation = this.getNotificationItem(e.target as HTMLDivElement) ? 'notification' :  'entries'
         
         const options = itemLocation == 'notification' ? optionsNotification : optionsAllItems;
+
+        this.activeSubMenu = null;
+
         // Build the menu content
         for (const opt of options) {
             if (opt === "separator") {
-            const hr = document.createElement("hr");
-            hr.className = "menu-separator";
-            menu.appendChild(hr);
-            continue;
+                const hr = document.createElement("hr");
+                hr.className = "menu-separator";
+                menu.appendChild(hr);
+                continue;
             }
-            const itemContainer = document.createElement('div');
+            if ( "options" in opt ) {
+                const subMenuContainer = document.createElement("div");
+                subMenuContainer.className = "context-menu-item-container";
+
+                const subMenu = document.createElement("div");
+                subMenu.className = "menu-item";
+                subMenu.textContent = opt.label;
+                
+                const subMenuContainerContextMenu = this.createSubMenu(menu, opt.options);
+                let isAllowedToExit = true;
+
+                const closeSubMenu = () => {
+                    subMenuContainerContextMenu.style.display = "none";
+                    if (this.activeSubMenu === subMenuContainerContextMenu) this.activeSubMenu = null;
+                };
+
+                const openSubMenu = () => {
+                    // Close whatever sibling submenu is currently open, if it's a different one
+                    if (this.activeSubMenu && this.activeSubMenu !== subMenuContainerContextMenu) this.activeSubMenu.style.display = "none";
+
+                    this.activeSubMenu = subMenuContainerContextMenu;
+                    isAllowedToExit = false;
+                    this.setSubMenuPosition(subMenu, subMenuContainerContextMenu, menu);
+                    subMenuContainerContextMenu.style.display = "block";
+                };
+
+                
+                subMenu.addEventListener("mouseover", () => {
+                    openSubMenu();
+                });
+
+                subMenu.addEventListener("mouseout", () => {
+                    isAllowedToExit = true;
+                    setTimeout(() => {
+                        if (isAllowedToExit) closeSubMenu();
+                    }, 150);
+                });
+
+                subMenuContainerContextMenu.addEventListener("mouseover", () => {
+                    isAllowedToExit = false;
+                });
+
+                subMenuContainerContextMenu.addEventListener("mouseleave", () => {
+                    isAllowedToExit = true;
+                    setTimeout(() => {
+                        if (isAllowedToExit) closeSubMenu();
+                    }, 150);
+                });
+
+                this.setSubMenuDirection(subMenu, menu, subMenuContainerContextMenu);
+                
+                subMenuContainer.appendChild(subMenu);
+                menu.appendChild(subMenuContainer);
+
+                
+                continue;
+            }
+            const itemContainer = document.createElement('span');
             itemContainer.className = "context-menu-item-container";
 
             const item = document.createElement("div");
@@ -97,8 +160,126 @@ export class EventListener extends RssBuild {
 
         document.body.appendChild(menu);
 
+        this.calculateMenuPosition(menu, e);
+
         // Remove when clicking elsewhere
         document.addEventListener("click", () => { menu.remove(); }, { once: true });
+    }
+    private setSubMenuDirection(subMenu: HTMLDivElement, menu: HTMLDivElement, subMenuContainer: HTMLDivElement) {
+
+        const { rightSpace } = this.getSubMenuPostion(menu, subMenuContainer);
+
+        const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
+
+        const isRight = enoughSpaceRight ? "right" : "left";
+
+        const subMenuDirectionDiv = document.createElement("span");
+        subMenuDirectionDiv.className = "sub-menu-direction";
+
+        subMenuDirectionDiv.textContent = isRight ? ">" : "<";
+        subMenuDirectionDiv.style.right = isRight ? "0%" : "90%";
+
+        subMenuDirectionDiv.style.paddingRight = '10px';
+        subMenuDirectionDiv.style.paddingLeft = '10px';
+        subMenuDirectionDiv.style.cursor = "pointer";
+        subMenuDirectionDiv.style.position = "absolute";
+
+        subMenu.appendChild(subMenuDirectionDiv);
+    }
+    private calculateMenuPosition(menu: HTMLDivElement, e: MouseEvent) {
+        const menuRect = menu.getBoundingClientRect();
+        const menuWidth = menuRect.width;
+        const menuHeight = menuRect.height;
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Vertical positioning
+        let top = e.clientY;
+        if (e.clientY + menuHeight > viewportHeight) {
+            top = e.clientY- (menuHeight / 2);
+            
+            if (top < 0) top = e.clientY - menuHeight;
+            if (top < 0) top = 0 + menuHeight;
+            if (top < 0) top = viewportHeight - menuHeight - 10; // clamp if menu is taller than viewport
+        }
+
+        // Horizontal positioning (same idea, for completeness)
+        let left = e.clientX;
+        if (e.clientX + menuWidth > viewportWidth) {
+            left = e.clientX - menuWidth;
+            if (left < 0) left = viewportWidth - menuWidth - 10;
+        }
+
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+    }
+    private setSubMenuPosition(subMenuContainer: HTMLDivElement, subMenu: HTMLDivElement, menu: HTMLDivElement) {
+        // calcualte if enaught space right
+        // if not place it to the left
+        subMenu.style.display = "block";
+
+        const { rightSpace, topSpace } = this.getSubMenuPostion(menu, subMenuContainer);
+
+        const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
+        
+        subMenu.style.top = `${topSpace}px`;
+
+        const isRight = enoughSpaceRight ? "right" : "left";
+
+        subMenu.style[isRight] = "-50%";
+
+        // subMenu.style.top = `${topSpace}px`;
+    }
+    private getSubMenuPostion(menu: HTMLDivElement, subMenuContainer: HTMLDivElement) {
+        const rectMenu = menu.getBoundingClientRect();
+
+        const rect = subMenuContainer.getBoundingClientRect();
+        const rightSpace = window.innerWidth - rect.right;
+        const leftSpace = rect.left;
+        const topSpace = rect.top - rectMenu.top;
+        const bottomSpace = window.innerHeight - rect.bottom;
+
+        return { rightSpace, leftSpace, topSpace, bottomSpace };
+    }
+    private createSubMenu(menu: HTMLDivElement, options: subMenu["options"]) {
+        const subMenuContainer = document.createElement("div");
+        subMenuContainer.classList.add(`sub-menu-container`, `sub-menu-${menu.id}`);
+        for (const opt of options) {
+            const item = document.createElement("div");
+            item.classList.add("menu-item", "sub-menu-item");
+            item.textContent = opt.label;
+            item.addEventListener("click", () => {
+                opt.action();
+                menu.remove();
+            });
+            subMenuContainer.appendChild(item);
+        }
+        menu.appendChild(subMenuContainer);
+        return subMenuContainer;
+    }
+    private getEntrieFromTarget(target: HTMLDivElement | null): Hermidata | undefined {
+        const item = this.getEntriesItem(target) || this.getNotificationItem(target);
+        if (!item || !target) return;
+
+        const hashItem = this.GetHashItem(item);
+        const entry = this.AllHermidata[hashItem];
+        if (!entry) {
+            console.warn("Entry not found for hash:", hashItem);
+            return;
+        }
+        return entry
+    }
+    private setAllBookmarksMenuOptions(target: HTMLDivElement | null, pageTypeOpener: "InPage" | "InNewWindow"): subMenu["options"] {
+        const entry = this.getEntrieFromTarget(target);
+        if (!entry || !target) return [];
+
+        const bookmarkMenu: subMenu["options"] = [];
+
+        for (const value of Object.values(entry.chapter.bookmarks)) {
+            bookmarkMenu.push({ label: value.label, action: () => pageTypeOpener == 'InPage' ?  this.openInPage(target, value.url) : this.openInNewWindow(target, value.url) });
+        }
+        return bookmarkMenu
     }
     private copyTitle(target: HTMLDivElement | null) {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
@@ -112,7 +293,7 @@ export class EventListener extends RssBuild {
         }
     }
     
-    private async openInPage(target: HTMLDivElement | null) {
+    private async openInPage(target: HTMLDivElement | null, url: string | null = null) {
         if (!target) return;
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
@@ -122,14 +303,14 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const url = entry.url;
-        if (!url) return;
+        const currentUrl = url ?? getUrlFromCurrentBookmark(entry);
+        if (!currentUrl) return;
         // Get the current active tab and update its URL
         const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) this.updateTab(tab, url, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
+        if (tab?.id) this.updateTab(tab, currentUrl, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
     }
     
-    private async openInNewWindow(target: HTMLDivElement | null) {
+    private async openInNewWindow(target: HTMLDivElement | null, url: string | null = null) {
         if (!target) return;
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
@@ -139,8 +320,8 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const url = entry.url;
-        if (url) this.openNewTab(url, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
+        const currentUrl = url ?? getUrlFromCurrentBookmark(entry);
+        if (currentUrl) this.openNewTab(currentUrl, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
     }
     
     private clearNotification(target: HTMLDivElement | null) {
@@ -174,7 +355,7 @@ export class EventListener extends RssBuild {
         if (!newTitle) return;
     
         // Normalize and deduplicate
-        const trimmed = TrimTitle.trimTitle(newTitle, entry.url).title;
+        const trimmed = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(entry)).title;
         entry.meta = entry.meta || {};
         entry.meta.altTitles = Array.from(
             new Set([...(entry.meta.altTitles || []), trimmed])
@@ -204,8 +385,8 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.url, false);
-        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.url).title
+        const newKey = returnHashedTitle(newTitle, oldData.novelType, getUrlFromCurrentBookmark(oldData), false);
+        const TrimmedTitle = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(oldData)).title
         const newData = { ...oldData, title: newTitle, id: newKey };
     
         // Add the old title as an altTitle

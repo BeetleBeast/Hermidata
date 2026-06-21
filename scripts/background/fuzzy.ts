@@ -6,6 +6,7 @@ import { getSettings } from "../shared/db/Storage";
 import type { Settings } from "../shared/types";
 import { findNestedFolder, getBookmarkChildren } from "./bookmarks";
 import { setState, settingsCashed } from "./state";
+import { getUrlFromCurrentBookmark } from "../shared/utils/HermidataSelector";
 
 
 interface FuzzyBookmarkMatches {
@@ -105,7 +106,7 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
                 if (score >= threshold) {
                     fuzzyMatches.push({
                         bookmarkTitle: hermidata.title,
-                        fuzzySearchUrl: hermidata.url,
+                        fuzzySearchUrl: getUrlFromCurrentBookmark(hermidata),
                         currentUrl: currentTab.url,
                         chapter: getChapterFromBookmarkInUse(hermidata) || Number.NaN,
                         similarity: score

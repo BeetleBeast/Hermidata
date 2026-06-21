@@ -3,6 +3,7 @@ import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/u
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
+import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
 
 
 
@@ -13,7 +14,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
     
         const newChapterNumber = getChapterFromBookmarkInUse(hermidata);
         
-        const key = returnHashedTitle(title, type, hermidata.url, false);
+        const key = returnHashedTitle(title, type, getUrlFromCurrentBookmark(hermidata), false);
         const data = await getHermidataViaKey(key);
     
         
@@ -25,7 +26,7 @@ export async function updateChapterProgress(title: string, type: string, hermida
             // id entry is new/can't be found in storage
             const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
             if (Hermidata) entry = Hermidata
-            else entry = await makeHermidata(title, hermidata.url, hermidata.novelType);
+            else entry = await makeHermidata(title, getUrlFromCurrentBookmark(hermidata), hermidata.novelType);
         }
     
         if (!entry) {
@@ -113,14 +114,14 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
         note: '',
         isPrimary,
         readStatus: 'Viewing',
-        scrollPosition: scrollPosition
+        scrollPosition: scrollPosition,
+        url
     }
 
     return {
         id: hash,
         title: Title.title,
         novelType,
-        url,
         source,
         chapter: {
             latest: 0,
@@ -148,7 +149,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
 
 export async function appendAltTitle(newTitle: string, entry: Hermidata): Promise<void> {
     // Normalize and deduplicate
-    const trimmed = TrimTitle.trimTitle(newTitle, entry.url).title;
+    const trimmed = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(entry)).title;
     entry.meta = entry.meta || {};
     entry.meta.altTitles = Array.from(
         new Set([...(entry.meta.altTitles || []), trimmed])

@@ -37,13 +37,13 @@ export class AutoSetAllHermidata {
             const list = value as Array<[AnyNovelType, Hermidata]>;
             const newHermidatas: Hermidata[] = [];
             for (const [type, hermidata] of list) {
-                const newHermidata = this.createNewHermidata(hermidata.title, hermidata.url, new Date(hermidata.meta.added).getTime(), type);
+                const newHermidata = this.createNewHermidata(hermidata.title, hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url, new Date(hermidata.meta.added).getTime(), type);
                 newHermidatas.push(newHermidata);
             }
             return newHermidatas;
         } else {
             const [type, hermidata] = value as [AnyNovelType, Hermidata];
-            const newHermidata = this.createNewHermidata(hermidata.title, hermidata.url, new Date(hermidata.meta.added).getTime(), type);
+            const newHermidata = this.createNewHermidata(hermidata.title, hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].url, new Date(hermidata.meta.added).getTime(), type);
             return newHermidata;
         }
     }
@@ -108,14 +108,14 @@ export class AutoSetAllHermidata {
             note: '',
             isPrimary: true,
             readStatus: 'Viewing',
-            scrollPosition: 0
+            scrollPosition: 0,
+            url: rawUrl
         }
 
         const hermidataGuess: Hermidata = {
             id: HermidataID,
             title: trimmedTitle,
             novelType: novelType,
-            url: rawUrl,
             source: source,
             chapter: {
                 bookmarks: {

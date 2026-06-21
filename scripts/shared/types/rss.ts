@@ -6,12 +6,16 @@ export type ReverseAllsortsType = `Reverse-${NormalSortsType}`;
 
 export type AllsortsType = (NormalSortsType | ReverseAllsortsType) | ExeptionSortsType;
 
-
-
 export type MenuOption = {
     label: string;
     action: () => void | Promise<void>;
 }
+export type subMenu = {
+    label: string;
+    options: MenuOption[];
+}
+
+export type MenuOptions = MenuOption | separator | subMenu;
 export type separator = "separator";
 
 export type Filters = {

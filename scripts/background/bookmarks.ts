@@ -95,7 +95,7 @@ export function shouldReplaceOrBlock(newEntry: InputArrayType, existingBookmarks
 export function shouldReplaceOrBlock(newEntry: InputArrayType | InputArraySheetType, existingRows: chrome.bookmarks.BookmarkTreeNode[] | InputArraySheetType[], isSheet: boolean = true): ShouldReplaceOrBlockReturn {
     const [ title, chapter, url, date ] = [newEntry[0], newEntry[2], newEntry[3], newEntry[5]];
 
-    const isSheetArray = (isSheet: boolean, value: InputArraySheetType | chrome.bookmarks.BookmarkTreeNode): value is InputArraySheetType => isSheet
+    const isSheetArray = (isSheet: boolean, _value: InputArraySheetType | chrome.bookmarks.BookmarkTreeNode): _value is InputArraySheetType => isSheet
 
     const returnExistingRowInfo = (existingRow: chrome.bookmarks.BookmarkTreeNode | InputArraySheetType, isSheet: boolean): { title: string, url: string | undefined, dateAdded: number | string | undefined, id: string | undefined } => {
         const { title, url, dateAdded, id: id } = isSheetArray(isSheet, existingRow) 

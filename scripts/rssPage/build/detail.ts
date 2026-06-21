@@ -2,7 +2,6 @@ import { getSettings, saveHermidata } from "../../shared/db/Storage";
 import type { Bookmark, Hermidata, Settings } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
 import { returnBookmarkHash } from "../../shared/utils/StringOutput";
-import { RSSPageBuilder } from "../build";
 
 export class Detail {
 
@@ -97,7 +96,7 @@ export class Detail {
         this.editEntry.title = this.title!.value;
         this.editEntry.novelType = this.novelType!.value;
         this.editEntry.meta.novelStatus = this.novelStatus!.value;
-        this.editEntry.url = this.url!.value;
+        this.editEntry.chapter.bookmarks[this.editEntry.chapter.bookmarkInUse].url = this.url!.value;
         this.editEntry.meta.notes = this.notes!.value;
 
         this.editEntry.meta.tags = this.getNamesFromContainer(this.tagsContainer);
@@ -145,6 +144,7 @@ export class Detail {
                 createdAt: this.editEntry.chapter.bookmarks[oldID].createdAt,
                 updatedAt: new Date().toISOString(),
                 scrollPosition: this.editEntry.chapter.bookmarks[oldID].scrollPosition,
+                url: this.editEntry.chapter.bookmarks[oldID].url
             }
             bookmarks.set(bookmark.id, bookmark);
         }
@@ -339,7 +339,7 @@ export class Detail {
         this.title!.value = this.editEntry.title;
         this.novelType!.value = this.editEntry.novelType;
         this.novelStatus!.value = this.editEntry.meta.novelStatus;
-        this.url!.value = this.editEntry.url;
+        this.url!.value = this.editEntry.chapter.bookmarks[this.editEntry.chapter.bookmarkInUse].url;
         this.notes!.value = this.editEntry.meta.notes;
 
         this.popuplateSelects(settings);
@@ -372,7 +372,7 @@ export class Detail {
     private popuplateSelects(settings: Settings) {
         try {
             
-            const { TYPE_OPTIONS: novelTypes, STATUS_OPTIONS: readStatuses, NOVEL_STATUS_OPTIONS: novelStatuses } = settings.ContentTypesAndStatuses;
+            const { TYPE_OPTIONS: novelTypes, NOVEL_STATUS_OPTIONS: novelStatuses } = settings.ContentTypesAndStatuses;
 
             this.populateSelect(this.novelType, novelTypes, 'select-novelType');
             this.populateSelect(this.novelStatus, novelStatuses, 'select-novelStatus');
