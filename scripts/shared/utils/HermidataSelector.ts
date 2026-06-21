@@ -1,6 +1,6 @@
 import { makeDefaultHermidata } from "../constants";
 import { getSettings } from "../db/db";
-import type { AnyNovelType, Bookmark, Feed, Hermidata } from "../types";
+import type { AnyNovelType, Bookmark, Feed, Hermidata, InputArraySheetType, InputArrayType } from "../types";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -32,7 +32,7 @@ export class HermidataModel implements Hermidata {
 
         const {  TYPE_OPTIONS: defaultNovelType, NOVEL_STATUS_OPTIONS: defaultNovelStatus, STATUS_OPTIONS: defaultReadStatus }  = settings.ContentTypesAndStatuses;
 
-        
+
         return new HermidataModel(makeDefaultHermidata(novelType ?? defaultNovelType[0], readStatus ?? defaultReadStatus[0], novelStatus ?? defaultNovelStatus[0]));
     }
 
@@ -59,6 +59,18 @@ export class HermidataModel implements Hermidata {
     toJSON(): Hermidata {
         const { id, title, novelType, source, chapter, rss, import: imp, meta } = this;
         return { id, title, novelType, source, chapter, rss, import: imp, meta };
+    }
+
+    private makeSureTagsISNotAnArray(dataArray: InputArrayType | InputArraySheetType): InputArraySheetType {
+        const tags = (Array.isArray(dataArray[6]) ? dataArray[6].join(", ") : dataArray[6])
+        return [dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], dataArray[5], tags, dataArray[7]]
+    }
+    
+    toInputArrayRow(): InputArrayType {
+        return [this.title, this.novelType, this.chapter.bookmarks[this.chapter.bookmarkInUse].current, this.chapter.bookmarks[this.chapter.bookmarkInUse].url, this.chapter.bookmarks[this.chapter.bookmarkInUse].readStatus, this.meta.updated, this.meta.tags, this.meta.notes]
+    }
+    toInputArraySheetRow(): InputArraySheetType {
+        return this.makeSureTagsISNotAnArray(this.toInputArrayRow())
     }
 }
 // hermidata-selectors.ts
