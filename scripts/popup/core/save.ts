@@ -3,65 +3,64 @@ import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/u
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
-import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
+import { HermidataModel, getUrl } from "../../shared/utils/HermidataSelector";
 
 
 
 
-export async function updateChapterProgress(title: string, type: string, hermidata: Hermidata): Promise<boolean> {
+export async function updateChapterProgress(hermidata: HermidataModel): Promise<boolean> {
     try {
         let needsToMigrate = false
     
-        const newChapterNumber = getChapterFromBookmarkInUse(hermidata);
+        const newChapterNumber = hermidata.GetChapter();
         
-        const key = returnHashedTitle(title, type, getUrlFromCurrentBookmark(hermidata), false);
+        const key = returnHashedTitle(hermidata.title, hermidata.novelType, hermidata.GetUrl(), false);
         const data = await getHermidataViaKey(key);
     
         
-        let entry: Hermidata | null = null;
+        let entry: HermidataModel | null = null;
     
-        if (data) {
-            entry = data;
-        } else {
+        if (data) entry = new HermidataModel(data);
+        else {
             // id entry is new/can't be found in storage
             const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
-            if (Hermidata) entry = Hermidata
-            else entry = await makeHermidata(title, getUrlFromCurrentBookmark(hermidata), hermidata.novelType);
+            if (Hermidata) entry = new HermidataModel(Hermidata);
+            else entry = new HermidataModel(await makeHermidata(hermidata.title, hermidata.GetUrl(), hermidata.novelType));
         }
     
         if (!entry) {
-            console.warn(`[HermidataV3] No entry found for ${title}`);
+            console.warn(`[HermidataV3] No entry found for ${hermidata.title}`);
             return false;
         }
     
-        if ( entry.title !== title || entry.novelType !== type || key !== entry.id) needsToMigrate = true
+        if ( entry.title !== hermidata.title || entry.novelType !== hermidata.novelType || key !== entry.id) needsToMigrate = true
         
-        const oldChapterNumber = entry.chapter.bookmarks[hermidata.chapter.bookmarkInUse]?.current || getChapterFromBookmarkInUse(entry);
+        const oldChapterNumber = entry.GetChapter(hermidata.chapter.bookmarkInUse) || entry.GetChapter();
         if (newChapterNumber >= oldChapterNumber) {
             entry.id = key;
 
-            const bookmarkInUse = getBookmarkInUse(hermidata);
-            bookmarkInUse.current = newChapterNumber;
-            bookmarkInUse.updatedAt = new Date().toISOString();
-            if (!bookmarkInUse?.history.some(chapter => chapter === newChapterNumber)) bookmarkInUse?.history.push(bookmarkInUse.current);
-            entry.chapter.bookmarks[bookmarkInUse.id] = bookmarkInUse;
+            entry.SetChapter(newChapterNumber, hermidata.chapter.bookmarkInUse);
+            entry.SetUpdatedAt(new Date().toISOString(), hermidata.chapter.bookmarkInUse);
+            entry.PushUniqueHistory(newChapterNumber, hermidata.chapter.bookmarkInUse);
             
-            entry.chapter.bookmarkInUse = bookmarkInUse.id;
+            entry.SetUrl(hermidata.GetUrl(), hermidata.chapter.bookmarkInUse);
+
+            entry.SetReadStatus(hermidata.GetReadStatus(), hermidata.chapter.bookmarkInUse);
+            
+            entry.chapter.bookmarkInUse = hermidata.chapter.bookmarkInUse;
             entry.chapter.lastChecked = new Date().toISOString();
             
             entry.novelType = hermidata.novelType;
-            entry.chapter.bookmarks[hermidata.chapter.bookmarkInUse].readStatus = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse].readStatus;
             entry.meta.novelStatus = hermidata.meta.novelStatus;
-    
-            const rawTags = hermidata.meta.tags as string[] | string;
-            entry.meta.tags = (Array.isArray(rawTags)) ? rawTags : rawTags.split(',').map(tag => tag.trim()).filter(Boolean);
+
+            entry.SetTagsAndForceIntoList(hermidata.meta.tags);
             
             entry.meta.updated = new Date().toISOString();
     
             if (hermidata.chapter.latest > entry.chapter.latest) entry.chapter.latest = hermidata.chapter.latest;
     
             await saveHermidata(key, entry);
-            console.log(`[HermidataV3] Updated ${title} to chapter ${newChapterNumber}`);
+            console.log(`[HermidataV3] Updated ${hermidata.title} to chapter ${newChapterNumber}`);
         }
         if (needsToMigrate) {
             const past = new PastHermidata(hermidata);
@@ -149,7 +148,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
 
 export async function appendAltTitle(newTitle: string, entry: Hermidata): Promise<void> {
     // Normalize and deduplicate
-    const trimmed = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(entry)).title;
+    const trimmed = TrimTitle.trimTitle(newTitle, getUrl(entry)).title;
     entry.meta = entry.meta || {};
     entry.meta.altTitles = Array.from(
         new Set([...(entry.meta.altTitles || []), trimmed])
