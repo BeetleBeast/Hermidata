@@ -4,7 +4,7 @@ import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shar
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
-import { getUrl, HermidataModel } from "../../shared/utils/HermidataSelector";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 
 // --- cashe ---

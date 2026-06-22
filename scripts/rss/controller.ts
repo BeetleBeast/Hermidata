@@ -9,12 +9,13 @@ import { EventListener } from "./build/EventListener";
 import { SortOption } from "./build/SortOption";
 import { SortLogic } from "./build/SortLogic";
 import { updatePolygons, positionDiamond } from "./build/SetPositionSvg";
+import type { HermidataModel } from "../shared/utils/HermidataSelector";
 
 
 export class BuildRSSController {
-    private readonly hermidata: Hermidata;
+    private readonly hermidata: HermidataModel;
 
-    constructor(hermidata: Hermidata) {
+    constructor(hermidata: HermidataModel) {
         this.hermidata = hermidata;
     }
     public async makeSubscibeBtn(): Promise<void> {

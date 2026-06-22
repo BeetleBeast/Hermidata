@@ -1,11 +1,10 @@
-import type { Hermidata } from "../../shared/types/index";
+import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../../shared/utils/Selection";
-import { getBookmarkInUse } from "../core/save";
 
 /**
  *  Create a clear confirmation message for user
  */
-export async function confirmMigrationPrompt(newer: Hermidata, older: Hermidata, options: { message?: string; } = {}) {
+export async function confirmMigrationPrompt(newer: HermidataModel, older: HermidataModel, options: { message?: string; } = {}) {
     try {
         const msg = options.message || 
             `
@@ -17,8 +16,8 @@ export async function confirmMigrationPrompt(newer: Hermidata, older: Hermidata,
             • New type: ${newer.novelType}
     
             Chapters:
-            • Old: ${getBookmarkInUse(older).current || "?"}
-            • New: ${getBookmarkInUse(newer).current || "?"}
+            • Old: ${older.GetChapter() || "?"}
+            • New: ${newer.GetChapter() || "?"}
     
             Notes:
             • Old: ${older.meta?.notes || "(none)"}

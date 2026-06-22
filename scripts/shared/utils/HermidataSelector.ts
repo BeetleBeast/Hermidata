@@ -1,6 +1,6 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
-import { getSettings } from "../db/db";
+import { getSettings, isHermidataV10, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType } from "../types";
 import { TrimTitle } from "./StringOutput";
 
@@ -15,6 +15,8 @@ export class HermidataModel implements Hermidata {
     chapter: Hermidata["chapter"];
     meta: Hermidata["meta"];
 
+    private version: number;
+
     constructor(data: Hermidata) {
         this.id = data.id;
         this.title = data.title;
@@ -24,6 +26,8 @@ export class HermidataModel implements Hermidata {
         this.import = data.import;
         this.chapter = data.chapter;
         this.meta = data.meta;
+
+        this.version = this.CalculateHermidataVersion();
     }
     // -- static methods --
     public static from(novelType: AnyNovelType, readStatus: string, novelStatus: string): HermidataModel {
@@ -51,6 +55,19 @@ export class HermidataModel implements Hermidata {
         this.import = hermidata.import;
         this.chapter = hermidata.chapter;
         this.meta = hermidata.meta;
+    }
+    private CalculateHermidataVersion(): number {
+        const Hermidata = this.toJSON();
+
+        if (isHermidataV4OrOlder(Hermidata)) return 4;
+        if (isHermidataV5(Hermidata)) return 5;
+        if (isHermidataV6(Hermidata)) return 6;
+        if (isHermidataV7(Hermidata)) return 7;
+        if (isHermidataV8(Hermidata)) return 8;
+        if (isHermidataV9(Hermidata)) return 9;
+        if (isHermidataV10(Hermidata)) return 10;
+        console.warn(`Unknown hermidata version detected.`, Hermidata);
+        return 0;
     }
     // -- getters --
     getBookmark(): Bookmark;
@@ -90,6 +107,7 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) return this.getBookmark(bookmarkInUseId)?.history;
         return this.getBookmark()?.history;
     }
+    GetVersion(): number { return this.version; }
     // -- setters --
     SetUrl(url: string): void;
     SetUrl(url: string, bookmarkInUseId: string): void;
@@ -121,9 +139,6 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].scrollPosition = scrollPosition;
         this.chapter.bookmarks[this.chapter.bookmarkInUse].scrollPosition = scrollPosition;
     }
-    /**
-     * 
-     */
     SetUpdatedAt(date?: string | Date | number): void;
     SetUpdatedAt(bookmarkInUseId: string, date?: string | Date | number): void;
     SetUpdatedAt(date: string | Date | number = new Date().toISOString(), bookmarkInUseId?: string): void {
@@ -156,6 +171,47 @@ export class HermidataModel implements Hermidata {
         else {
             if (!this.GetHistory().some(chapter => chapter === newChapter)) this.PushHistory(newChapter)
         }
+    }
+    /**
+     * - updates:
+     *   - id
+     *   - chapter
+     *   - last updated bookmark
+     *   - push to history
+     *   - scroll position
+     *   - url
+     *   - read status
+     *   - bookmark in use
+     *   - last checked bookmark
+     *   - novel type
+     *   - novel status
+     *   - tags ( force into list )
+     *   - last updated Hermidata
+     *  - if latest chapter is less than the new chapter, set it as latest
+     */
+    Update(key: string, hermidata: HermidataModel, newChapterNumber: number): void {
+        this.id = key;
+
+        this.SetChapter(newChapterNumber, hermidata.chapter.bookmarkInUse);
+        this.SetUpdatedAt(new Date().toISOString(), hermidata.chapter.bookmarkInUse);
+        this.PushUniqueHistory(newChapterNumber, hermidata.chapter.bookmarkInUse);
+        this.SetScrollPosition(hermidata.GetScrollPosition(), hermidata.chapter.bookmarkInUse);
+        
+        this.SetUrl(hermidata.GetUrl(), hermidata.chapter.bookmarkInUse);
+
+        this.SetReadStatus(hermidata.GetReadStatus(), hermidata.chapter.bookmarkInUse);
+        
+        this.chapter.bookmarkInUse = hermidata.chapter.bookmarkInUse;
+        this.chapter.lastChecked = new Date().toISOString();
+        
+        this.novelType = hermidata.novelType;
+        this.meta.novelStatus = hermidata.meta.novelStatus;
+
+        this.SetTagsAndForceIntoList(hermidata.meta.tags);
+        
+        this.meta.updated = new Date().toISOString();
+
+        if (hermidata.chapter.latest > this.chapter.latest) this.chapter.latest = hermidata.chapter.latest;
     }
     // -- helpers --
     SetFromTab(currentTab: CurrentTab): void;
@@ -221,21 +277,4 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) return this.makeSureTagsISNotAnArray(this.toInputArrayRow(bookmarkInUseId));
         return this.makeSureTagsISNotAnArray(this.toInputArrayRow())
     }
-}
-// hermidata-selectors.ts
-
-function getBookmark(data: Hermidata): Bookmark {
-    return data.chapter.bookmarks[data.chapter.bookmarkInUse];
-}
-
-export function getUrl(data: Hermidata): string {
-    return getBookmark(data)?.url;
-}
-
-export function getChapter(data: Hermidata): number {
-    return getBookmark(data)?.current;
-}
-
-export function getReadStatus(data: Hermidata): Bookmark["readStatus"] {
-    return getBookmark(data)?.readStatus;
 }

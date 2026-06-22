@@ -11,8 +11,7 @@ import { checkSyncQuota } from '../../shared/db/sync';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
-import { makeDefaultHermidata } from '../../shared/constants';
-import { getUrl, HermidataModel } from '../../shared/utils/HermidataSelector';
+import { HermidataModel } from '../../shared/utils/HermidataSelector';
 
 
 const stateConfig = {
@@ -313,10 +312,10 @@ class HermidataController {
         this.updateHermidataSources();
     }
     private updateHermidataSources() {
-        const url = getUrl(this.hermidata);
+        const url = this.hermidata.GetUrl();
         if (!url) return
         const currentUrlSource = new URL(url).hostname.replace(/^www\./, "");
-        const savedUrlSource = new URL(getUrl(this.hermidata)).hostname.replace(/^www\./, "");
+        const savedUrlSource = new URL(this.hermidata.GetUrl()).hostname.replace(/^www\./, "");
         const possibleRSSSource = this.hermidata.rss?.domain;
         const altSources = this.hermidata.meta.altSources;
 
@@ -371,7 +370,7 @@ class HermidataController {
         }
     }
     private getLatestValueFromBackEnd() {
-        const url = getUrl(this.hermidata);
+        const url = this.hermidata.GetUrl();
         const date = new Intl.DateTimeFormat('en-GB').format(new Date());
 
         const tagsArray = this.tagsSystem.tags;

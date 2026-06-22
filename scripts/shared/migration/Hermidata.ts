@@ -5,6 +5,7 @@ import { getAllHermidata, isHermidataV10, isHermidataV4OrOlder, isHermidataV5, i
 import { getHermidataViaKey, updateHermidata } from "../db/Storage";
 import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Hermidata, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata } from "../types";
+import { HermidataModel } from "../utils/HermidataSelector";
 
 
 interface DuplicationResult {
@@ -350,12 +351,12 @@ export class HermidataMigration {
         const date1 = new Date(obj1.meta.updated || 0);
         const date2 = new Date(obj2.meta.updated || 0);
 
-        let newer = obj1;
-        let older = obj2;
+        let newer = new HermidataModel(obj1);
+        let older = new HermidataModel(obj2);
 
         if (date1 < date2) {
-            newer = obj2;
-            older = obj1;
+            newer = new HermidataModel(obj2);
+            older = new HermidataModel(obj1);
         }
 
         // Confirm with clear indication which is which

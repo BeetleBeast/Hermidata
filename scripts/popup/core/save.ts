@@ -3,7 +3,7 @@ import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/u
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
-import { HermidataModel, getUrl } from "../../shared/utils/HermidataSelector";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 
 
@@ -37,28 +37,8 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         
         const oldChapterNumber = entry.GetChapter(hermidata.chapter.bookmarkInUse) || entry.GetChapter();
         if (newChapterNumber >= oldChapterNumber) {
-            entry.id = key;
 
-            entry.SetChapter(newChapterNumber, hermidata.chapter.bookmarkInUse);
-            entry.SetUpdatedAt(new Date().toISOString(), hermidata.chapter.bookmarkInUse);
-            entry.PushUniqueHistory(newChapterNumber, hermidata.chapter.bookmarkInUse);
-            
-            entry.SetUrl(hermidata.GetUrl(), hermidata.chapter.bookmarkInUse);
-
-            entry.SetReadStatus(hermidata.GetReadStatus(), hermidata.chapter.bookmarkInUse);
-            
-            entry.chapter.bookmarkInUse = hermidata.chapter.bookmarkInUse;
-            entry.chapter.lastChecked = new Date().toISOString();
-            
-            entry.novelType = hermidata.novelType;
-            entry.meta.novelStatus = hermidata.meta.novelStatus;
-
-            entry.SetTagsAndForceIntoList(hermidata.meta.tags);
-            
-            entry.meta.updated = new Date().toISOString();
-    
-            if (hermidata.chapter.latest > entry.chapter.latest) entry.chapter.latest = hermidata.chapter.latest;
-    
+            entry.Update(key, hermidata, newChapterNumber);
             await saveHermidata(key, entry);
             console.log(`[HermidataV3] Updated ${hermidata.title} to chapter ${newChapterNumber}`);
         }
@@ -147,36 +127,16 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
 }
 
 export async function appendAltTitle(newTitle: string, entry: Hermidata): Promise<void> {
+    const hermidata = new HermidataModel(entry);
     // Normalize and deduplicate
-    const trimmed = TrimTitle.trimTitle(newTitle, getUrl(entry)).title;
-    entry.meta = entry.meta || {};
-    entry.meta.altTitles = Array.from(
-        new Set([...(entry.meta.altTitles || []), trimmed])
+    const trimmed = TrimTitle.trimTitle(newTitle, hermidata.GetUrl()).title;
+    hermidata.meta = hermidata.meta || {};
+    hermidata.meta.altTitles = Array.from(
+        new Set([...(hermidata.meta.altTitles || []), trimmed])
     );
 
-    const entryKey = entry.id || returnHashedTitle(entry.title, entry.novelType);
+    const entryKey = hermidata.id || returnHashedTitle(hermidata.title, hermidata.novelType);
 
-    await saveHermidata(entryKey, entry);
-    console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
-}
-
-export function getchapterFromPrimaryBookmark(hermidata: Hermidata): number {
-    const primary = Object.values(hermidata.chapter.bookmarks).find(b => b.isPrimary) as Bookmark;
-    return primary.current ?? 0;
-}
-export function getchapterFromBookmark(hermidata: Hermidata, bookmarkId: string): number {
-    const primary = hermidata.chapter.bookmarks[bookmarkId]
-    return primary.current;
-}
-export function getBookmarkFromHermidata(hermidata: Hermidata, bookmarkId: string): Bookmark {
-    const bookmark = hermidata.chapter.bookmarks[bookmarkId]
-    return bookmark;
-}
-export function getChapterFromBookmarkInUse(hermidata: Hermidata): number {
-    const inUse = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse]
-    return inUse.current ?? 0;
-}
-export function getBookmarkInUse(hermidata: Hermidata): Bookmark {
-    const inUse = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse]
-    return inUse;
+    await saveHermidata(entryKey, hermidata);
+    console.log(`[Hermidata] Added alt title "${trimmed}" for ${hermidata.title}`);
 }

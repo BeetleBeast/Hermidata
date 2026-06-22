@@ -1,5 +1,6 @@
 import { PastHermidata } from "../popup/core/Past";
-import type { RSSData, RSSDOM, Hermidata } from "../shared/types/index";
+import type { RSSData, RSSDOM } from "../shared/types/index";
+import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
 import { getHermidataWithRssFromBackground } from "./load";
@@ -26,7 +27,7 @@ export class RSS {
 
     private readonly BuildRSS: BuildRSSController;
 
-    constructor(hermidata: Hermidata) {
+    constructor(hermidata: HermidataModel) {
         this.BuildRSS = new BuildRSSController(hermidata);
     }
 
