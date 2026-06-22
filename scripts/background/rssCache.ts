@@ -7,6 +7,7 @@ import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { writeToSheet } from "./sheets"
 import { lastAutoFeedCkeck, lastFeedCkeck, setState } from "./state"
+import type { HermidataModel } from "../shared/utils/HermidataSelector"
 
 let rssCache: Record<string, Hermidata> | null = null
 let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
@@ -34,13 +35,13 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export function handleSaveNovel(data: InputArrayType, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): true {
+export function handleSaveNovel(data: HermidataModel, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): true {
     try {
         getToken((token: number) => {
             if (args.allowedSendSHeet) writeToSheet(token, data);
             if (args.allowedSendBookmark) writeToBookmarks(data);
         });
-        updateCurrentBookmarkAndIcon(data[3]);
+        updateCurrentBookmarkAndIcon(data.GetUrl());
         console.log('[Background] SAVE_NOVEL complete');
         sendResponse(true);
     } catch (error) {

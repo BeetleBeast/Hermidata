@@ -1,9 +1,9 @@
 
 import { ext } from '../../shared/utils/BrowserCompat';
-import { TrimTitle, getChapterFromTitle } from '../../shared/utils/StringOutput';
-import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type InputArrayType, type LatestValue, type Settings } from '../../shared/types/index';
+import { getChapterFromTitle } from '../../shared/utils/StringOutput';
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
-import { PastHermidata, type PastHermidata as PastHermidataClass } from '../core/Past';
+import { PastHermidata } from '../core/Past';
 import { getPagePosition, updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
 import { getSettings } from '../../shared/db/Storage';
@@ -238,10 +238,8 @@ class HermidataController {
 
     private async saveSheet(): Promise<void> { 
 
-        // get latest values from UI and back-end
-        const latestValue = this.getLatestValue();
         // update this.hermidata with latest values
-        this.updateHermidata(latestValue);
+        this.updateHermidata();
 
         
         // TODO: sheck if it works
@@ -261,17 +259,16 @@ class HermidataController {
         // save to Browser in JSON format
         const savedInStorage = await updateChapterProgress(this.hermidata);
         // save to google sheet
-        const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet}, latestValue);
+        const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet});
 
         if (!this.Testing && savedInStorage && saved ) setTimeout( () => window.close(), 400);
     }
-    private async saveBookmarkOrAndSheet(allowenced: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }, latestValue: LatestValue): Promise<boolean> {
-        const data: InputArrayType = [latestValue.title, latestValue.Type, latestValue.Chapter, latestValue.url, latestValue.status, latestValue.date, latestValue.tagsArray, latestValue.notes]
+    private async saveBookmarkOrAndSheet(allowenced: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }): Promise<boolean> {
         // save to google sheet & bookmark/replace bookmark
         if (allowenced.allowedSendBookmark || allowenced.allowedSendSHeet || (allowenced.allowedSendBookmark && allowenced.allowedSendSHeet)) {
             const saved = await ext.runtime.sendMessage({
                 type: "SAVE_NOVEL",
-                data: data,
+                data: this.hermidata,
                 args: { 
                     allowedSendSHeet: allowenced.allowedSendSHeet, 
                     allowedSendBookmark: allowenced.allowedSendBookmark
@@ -298,8 +295,16 @@ class HermidataController {
         }
         return false
     }
-    private updateHermidata(latestValue: LatestValue) {
-        const { title, Type, Chapter, status, novelStatuses, tagsArray, notes } = latestValue;
+    private updateHermidata() {
+
+        
+        // from front-end
+        const { title, Type, Chapter, status, novelStatuses, notes } = this.getLatestValueFromUI();
+        
+        if (!title || !Type || !Chapter || !status || !novelStatuses) throw new Error('Missing required fields');
+        
+        
+        // get latest values from UI and back-end
         this.hermidata.chapter.bookmarkInUse = this.bookmarkSystem.bookmarkInUseID ?? this.hermidata.chapter.bookmarkInUse;
         this.hermidata.title = title;
         this.hermidata.novelType = Type;
@@ -307,7 +312,7 @@ class HermidataController {
         this.updateHermidataChapterHistory();
         this.hermidata.SetReadStatus(status);
         this.hermidata.meta.novelStatus = novelStatuses;
-        this.hermidata.meta.tags = tagsArray;
+        this.hermidata.meta.tags = this.tagsSystem.tags;
         this.hermidata.meta.notes = notes;
         this.updateHermidataSources();
     }
@@ -343,42 +348,20 @@ class HermidataController {
         
         
     }
-    private getLatestValue(): LatestValue {
-        // from front-end
-        const { title, Type, Chapter, status, novelStatuses, notes } = this.getLatestValueFromUI();
-        // from back-end
-        const { url, date, tagsArray } = this.getLatestValueFromBackEnd();
-
-        if (!title || !Type || !Chapter || !status) throw new Error('Missing required fields');
-
-        return { title, Type, Chapter: Number(Chapter), url, status, novelStatuses, date, tagsArray, notes }
-    }
     private getLatestValueFromUI() {
         const title = getElement<HTMLInputElement>("#title")?.value;
-        const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType;
+        const Type = getElement<HTMLSelectElement>('#Type')?.value as AnyNovelType || undefined;
         const Chapter = getElement<HTMLInputElement>("#chapter")?.value;
-        const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus;
-        const novelStatuses = getElement<HTMLSelectElement>('#NovelStatus')?.value as AnyNovelStatus;
+        const status = getElement<HTMLSelectElement>('#status')?.value as AnyReadStatus || undefined;
+        const novelStatuses = getElement<HTMLSelectElement>('#NovelStatus')?.value as AnyNovelStatus || undefined;
         const notes = getElement<HTMLInputElement>("#notes")?.value || "";
         return {
             title,
             Type,
-            Chapter,
+            Chapter: Number(Chapter),
             status,
             novelStatuses,
             notes
-        }
-    }
-    private getLatestValueFromBackEnd() {
-        const url = this.hermidata.GetUrl();
-        const date = new Intl.DateTimeFormat('en-GB').format(new Date());
-
-        const tagsArray = this.tagsSystem.tags;
-
-        return {
-            url,
-            date,
-            tagsArray
         }
     }
     private async setScrollPosition() {

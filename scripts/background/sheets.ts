@@ -1,5 +1,6 @@
 import { getGoogleSheetURL } from "../shared/db/Storage";
 import type { InputArraySheetType, InputArrayType } from "../shared/types/index";
+import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { shouldReplaceOrBlock } from "./bookmarks";
 
 
@@ -9,20 +10,13 @@ import { shouldReplaceOrBlock } from "./bookmarks";
 // U = Update | updateRow()
 // D = Delete | N/A
 
-function makeSureTagsISNotAnArray(dataArray: InputArrayType | InputArraySheetType): InputArraySheetType {
-    const tags = (Array.isArray(dataArray[6]) ? dataArray[6].join(", ") : dataArray[6])
-    const newArray: InputArraySheetType = [dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], dataArray[5], tags, dataArray[7]]
-    return newArray
-    
-}
-
-export async function writeToSheet(token: number, dataArray: InputArrayType | InputArraySheetType) {
+export async function writeToSheet(token: number, hermidata: HermidataModel) {
+    const dataArray = hermidata.toInputArraySheetRow();
     await readSheet(token, (rows: InputArraySheetType[]) => {
         const decision = shouldReplaceOrBlock(dataArray, rows, true);
 
         // make sure tags is NOT an list and is instead a string
 
-        dataArray = makeSureTagsISNotAnArray(dataArray)
 
         if (decision.action === "append") {
             appendRow(token, dataArray);

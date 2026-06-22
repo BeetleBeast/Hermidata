@@ -113,37 +113,37 @@ export class HermidataModel implements Hermidata {
     SetUrl(url: string, bookmarkInUseId: string): void;
     SetUrl(url: string, bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].url = url;
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].url = url;
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].url = url;
     }
     SetChapter(chapter: number): void;
     SetChapter(chapter: number, bookmarkInUseId: string): void;
     SetChapter(chapter: number, bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].current = chapter;
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].current = chapter;
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].current = chapter;
     }
     SetReadStatus(readStatus: Bookmark["readStatus"]): void
     SetReadStatus(readStatus: Bookmark["readStatus"], bookmarkInUseId: string): void;
     SetReadStatus(readStatus: Bookmark["readStatus"], bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].readStatus = readStatus;
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].readStatus = readStatus;
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].readStatus = readStatus;
     }
     SetHistory(history: Bookmark["history"]): void
     SetHistory(history: Bookmark["history"], bookmarkInUseId: string): void;
     SetHistory(history: Bookmark["history"], bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history = history;
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
     }
     SetScrollPosition(scrollPosition: number): void;
     SetScrollPosition(scrollPosition: number, bookmarkInUseId: string): void;
     SetScrollPosition(scrollPosition: number, bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].scrollPosition = scrollPosition;
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].scrollPosition = scrollPosition;
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].scrollPosition = scrollPosition;
     }
     SetUpdatedAt(date?: string | Date | number): void;
     SetUpdatedAt(bookmarkInUseId: string, date?: string | Date | number): void;
     SetUpdatedAt(date: string | Date | number = new Date().toISOString(), bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].updatedAt = new Date(date).toISOString();
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].updatedAt = new Date(date).toISOString();
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].updatedAt = new Date(date).toISOString();
     }
     SetTagsAndForceIntoList(tags: string[] | string): void {
         const value = (Array.isArray(tags)) ? tags : tags.split(',').map(tag => tag.trim()).filter(Boolean);
@@ -154,13 +154,13 @@ export class HermidataModel implements Hermidata {
     ShiftHistory(bookmarkInUseId: string): void;
     ShiftHistory(bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history?.shift();
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].history?.shift();
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].history?.shift();
     }
     PushHistory(chapter: number): void;
     PushHistory(chapter: number, bookmarkInUseId: string): void;
     PushHistory(chapter: number, bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history?.push(chapter);
-        this.chapter.bookmarks[this.chapter.bookmarkInUse].history?.push(chapter);
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].history?.push(chapter);
     }
     PushUniqueHistory(chapter: number): void;
     PushUniqueHistory(chapter: number, bookmarkInUseId: string): void;
@@ -263,9 +263,9 @@ export class HermidataModel implements Hermidata {
         const tags = (Array.isArray(dataArray[6]) ? dataArray[6].join(", ") : dataArray[6])
         return [dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], dataArray[5], tags, dataArray[7]]
     }
-    toInputArrayRow(): InputArrayType;
-    toInputArrayRow(bookmarkInUseId: string): InputArrayType;
-    toInputArrayRow(bookmarkInUseId?: string): InputArrayType {
+    private toInputArrayRow(): InputArrayType;
+    private toInputArrayRow(bookmarkInUseId: string): InputArrayType;
+    private toInputArrayRow(bookmarkInUseId?: string): InputArrayType {
         if (bookmarkInUseId) {
             return [this.title, this.novelType, this.GetChapter(bookmarkInUseId), this.GetUrl(bookmarkInUseId), this.GetReadStatus(bookmarkInUseId), this.meta.updated, this.meta.tags, this.meta.notes]
         }
