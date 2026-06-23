@@ -210,6 +210,11 @@ export class HermidataModel implements Hermidata {
         this.chapter.bookmarks[bookmarkInUseId ? bookmarkInUseId : this.chapter.bookmarkInUse].url = currentTab.url;
         this.chapter.bookmarks[bookmarkInUseId ? bookmarkInUseId : this.chapter.bookmarkInUse].current = currentTab.currentChapter;
     }
+    SetDefaultContextMenuValues(date: string, tags: string[], notes: string ): void {
+        this.meta.updated = date;
+        this.meta.tags = tags;
+        this.meta.notes = notes;
+    }
     async SetPast(past: PastHermidata): Promise<boolean>;
     async SetPast(past: PastHermidata, bookmarkInUseId: string): Promise<boolean>;
     async SetPast(past: PastHermidata, bookmarkInUseId?: string): Promise<boolean> {
