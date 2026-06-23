@@ -47,14 +47,7 @@ export class HermidataModel implements Hermidata {
     }
     // -- private methods --
     private Replace(hermidata: Hermidata) {
-        this.id = hermidata.id;
-        this.title = hermidata.title;
-        this.novelType = hermidata.novelType;
-        this.source = hermidata.source;
-        this.rss = hermidata.rss;
-        this.import = hermidata.import;
-        this.chapter = hermidata.chapter;
-        this.meta = hermidata.meta;
+        Object.assign(this, new HermidataModel(hermidata));
     }
     private CalculateHermidataVersion(): number {
         const Hermidata = this.toJSON();
@@ -70,42 +63,24 @@ export class HermidataModel implements Hermidata {
         return 0;
     }
     // -- getters --
-    getBookmark(): Bookmark;
-    getBookmark(bookmarkInUseId: string): Bookmark;
-    getBookmark(bookmarkInUseId?: string): Bookmark {
+    getBookmark(bookmarkInUseId?: string | undefined): Bookmark {
         if (bookmarkInUseId) return this.chapter.bookmarks[bookmarkInUseId];
         return this.chapter.bookmarks[this.chapter.bookmarkInUse];
     }
-    GetUrl(): string;
-    GetUrl(bookmarkInUseId: string): string;
     GetUrl(bookmarkInUseId?: string): string {
-        if (bookmarkInUseId) return this.getBookmark(bookmarkInUseId)?.url;
-        return this.getBookmark()?.url;
+        return this.getBookmark(bookmarkInUseId)?.url;
     }
-
-    GetChapter(): number;
-    GetChapter(bookmarkInUseId: string): number;
     GetChapter(bookmarkInUseId?: string): number {
-        if (bookmarkInUseId) return this.getBookmark(bookmarkInUseId)?.current;
-        return this.getBookmark()?.current;
+        return this.getBookmark(bookmarkInUseId)?.current;
     }
-    GetReadStatus(): Bookmark["readStatus"];
-    GetReadStatus(bookmarkInUseId: string): Bookmark["readStatus"];
     GetReadStatus(bookmarkInUseId?: string): Bookmark["readStatus"] {
-        if (bookmarkInUseId) return this.getBookmark(bookmarkInUseId)?.readStatus;
-        return this.getBookmark()?.readStatus;
+        return this.getBookmark(bookmarkInUseId)?.readStatus;
     }
-    GetScrollPosition(): number;
-    GetScrollPosition(bookmarkInUseId: string): number;
     GetScrollPosition(bookmarkInUseId?: string): number {
-        if (bookmarkInUseId) return this.getBookmark(bookmarkInUseId)?.scrollPosition;
-        return this.getBookmark()?.scrollPosition;
+        return this.getBookmark(bookmarkInUseId)?.scrollPosition;
     }
-    GetHistory(): Bookmark["history"];
-    GetHistory(bookmarkInUseId: string): Bookmark["history"];
     GetHistory(bookmarkInUseId?: string): Bookmark["history"] {
-        if (bookmarkInUseId) return this.getBookmark(bookmarkInUseId)?.history;
-        return this.getBookmark()?.history;
+        return this.getBookmark(bookmarkInUseId)?.history;
     }
     GetVersion(): number { return this.version; }
     // -- setters --
@@ -145,7 +120,8 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].updatedAt = new Date(date).toISOString();
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].updatedAt = new Date(date).toISOString();
     }
-    SetTagsAndForceIntoList(tags: string[] | string): void {
+    /** Normalize tags and force into list */
+    normalizeTags(tags: string[] | string): void {
         const value = (Array.isArray(tags)) ? tags : tags.split(',').map(tag => tag.trim()).filter(Boolean);
         this.meta.tags = value;
     }
@@ -173,45 +149,51 @@ export class HermidataModel implements Hermidata {
         }
     }
     /**
-     * - updates:
-     *   - id
-     *   - chapter
-     *   - last updated bookmark
-     *   - push to history
-     *   - scroll position
-     *   - url
-     *   - read status
-     *   - bookmark in use
-     *   - last checked bookmark
-     *   - novel type
-     *   - novel status
-     *   - tags ( force into list )
-     *   - last updated Hermidata
-     *  - if latest chapter is less than the new chapter, set it as latest
+     * - updates the bookmark
+     * - Normalize tags
+     * - Updates the source
+     * - Update last updated
+     * - and update meta
      */
     Update(key: string, hermidata: HermidataModel, newChapterNumber: number): void {
+        const sameKey = this.id === key;
+        if (!sameKey) console.warn(`[Hermidata Selector] New key detected.`, key, this.id, hermidata);
         this.id = key;
 
-        this.SetChapter(newChapterNumber, hermidata.chapter.bookmarkInUse);
-        this.SetUpdatedAt(new Date().toISOString(), hermidata.chapter.bookmarkInUse);
-        this.PushUniqueHistory(newChapterNumber, hermidata.chapter.bookmarkInUse);
-        this.SetScrollPosition(hermidata.GetScrollPosition(), hermidata.chapter.bookmarkInUse);
-        
-        this.SetUrl(hermidata.GetUrl(), hermidata.chapter.bookmarkInUse);
-
-        this.SetReadStatus(hermidata.GetReadStatus(), hermidata.chapter.bookmarkInUse);
-        
-        this.chapter.bookmarkInUse = hermidata.chapter.bookmarkInUse;
-        this.chapter.lastChecked = new Date().toISOString();
-        
         this.novelType = hermidata.novelType;
         this.meta.novelStatus = hermidata.meta.novelStatus;
 
-        this.SetTagsAndForceIntoList(hermidata.meta.tags);
-        
-        this.meta.updated = new Date().toISOString();
+        this.UpdateBookmark(hermidata, newChapterNumber);
 
+        this.normalizeTags(hermidata.meta.tags);
+
+        this.UpdateSource(hermidata);
+
+        this.meta.updated = new Date().toISOString();
+    }
+    UpdateBookmark(hermidata: HermidataModel, newChapterNumber: number): void {
+
+        this.SetChapter(newChapterNumber, hermidata.chapter.bookmarkInUse);
+        this.PushUniqueHistory(newChapterNumber, hermidata.chapter.bookmarkInUse);
+        this.SetUrl(hermidata.GetUrl(), hermidata.chapter.bookmarkInUse);
+        this.SetScrollPosition(hermidata.GetScrollPosition(), hermidata.chapter.bookmarkInUse);
+        this.SetReadStatus(hermidata.GetReadStatus(), hermidata.chapter.bookmarkInUse);
+        this.SetUpdatedAt(new Date().toISOString(), hermidata.chapter.bookmarkInUse);
+
+        this.chapter.bookmarkInUse = hermidata.chapter.bookmarkInUse;
+        this.chapter.lastChecked = new Date().toISOString();
+
+        // update latest if the current chapter is greater
+        if ( this.GetChapter() > this.chapter.latest) this.chapter.latest = this.GetChapter();
         if (hermidata.chapter.latest > this.chapter.latest) this.chapter.latest = hermidata.chapter.latest;
+    }
+    UpdateSource(hermidata: HermidataModel): void {
+        const isSameSource = this.source === hermidata.source;
+        const sourceInAlt = this.meta.altSources.includes(hermidata.source);
+        if (isSameSource && sourceInAlt) return;
+
+        this.source = hermidata.source; // make sure the source is always latest used source
+        if (!sourceInAlt) this.meta.altSources.push(hermidata.source);
     }
     // -- helpers --
     SetFromTab(currentTab: CurrentTab): void;
@@ -225,13 +207,13 @@ export class HermidataModel implements Hermidata {
         this.chapter.bookmarks[bookmarkInUseId ? bookmarkInUseId : this.chapter.bookmarkInUse].url = currentTab.url;
         this.chapter.bookmarks[bookmarkInUseId ? bookmarkInUseId : this.chapter.bookmarkInUse].current = currentTab.currentChapter;
     }
-    async SetPast(past: PastHermidata): Promise<void>;
-    async SetPast(past: PastHermidata, bookmarkInUseId: string): Promise<void>;
-    async SetPast(past: PastHermidata, bookmarkInUseId?: string): Promise<void> {
+    async SetPast(past: PastHermidata): Promise<boolean>;
+    async SetPast(past: PastHermidata, bookmarkInUseId: string): Promise<boolean>;
+    async SetPast(past: PastHermidata, bookmarkInUseId?: string): Promise<boolean> {
         const pastHermidata = await past.init();
         
         // early return if no past
-        if (!pastHermidata) return;
+        if (!pastHermidata) return false;
         const hermidataCopy = this.Copy();
 
         // replace hermidata
@@ -249,6 +231,7 @@ export class HermidataModel implements Hermidata {
             this.source = hermidataCopy.source;
             this.chapter.latest = this.GetChapter() > this.chapter.latest ? this.GetChapter() : this.chapter.latest;
         }
+        return true;
     }
     Copy(): HermidataModel {
         return new HermidataModel(this.toJSON());
@@ -259,7 +242,7 @@ export class HermidataModel implements Hermidata {
         return { id, title, novelType, source, chapter, rss, import: imp, meta };
     }
 
-    private makeSureTagsISNotAnArray(dataArray: InputArrayType | InputArraySheetType): InputArraySheetType {
+    private normalizeTagsForSheet(dataArray: InputArrayType | InputArraySheetType): InputArraySheetType {
         const tags = (Array.isArray(dataArray[6]) ? dataArray[6].join(", ") : dataArray[6])
         return [dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], dataArray[5], tags, dataArray[7]]
     }
@@ -274,7 +257,7 @@ export class HermidataModel implements Hermidata {
     toInputArraySheetRow(): InputArraySheetType;
     toInputArraySheetRow(bookmarkInUseId: string): InputArraySheetType;
     toInputArraySheetRow(bookmarkInUseId?: string): InputArraySheetType {
-        if (bookmarkInUseId) return this.makeSureTagsISNotAnArray(this.toInputArrayRow(bookmarkInUseId));
-        return this.makeSureTagsISNotAnArray(this.toInputArrayRow())
+        if (bookmarkInUseId) return this.normalizeTagsForSheet(this.toInputArrayRow(bookmarkInUseId));
+        return this.normalizeTagsForSheet(this.toInputArrayRow())
     }
 }
