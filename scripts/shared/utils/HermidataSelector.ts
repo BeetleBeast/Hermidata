@@ -1,6 +1,6 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
-import { getSettings, isHermidataV10, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
+import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType } from "../types";
 import { TrimTitle } from "./StringOutput";
 
@@ -52,7 +52,10 @@ export class HermidataModel implements Hermidata {
     private CalculateHermidataVersion(): number {
         const Hermidata = this.toJSON();
 
-        if (isHermidataV4OrOlder(Hermidata)) return 4;
+        if (isHermidataV1(Hermidata)) return 1;
+        if (isHermidataV2(Hermidata)) return 2;
+        if (isHermidataV3(Hermidata)) return 3;
+        if (isHermidataV4(Hermidata)) return 4;
         if (isHermidataV5(Hermidata)) return 5;
         if (isHermidataV6(Hermidata)) return 6;
         if (isHermidataV7(Hermidata)) return 7;

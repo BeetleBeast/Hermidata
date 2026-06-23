@@ -18,6 +18,8 @@ export type {
     HermidataV8,
     HermidataV9,
 
+    AnyHermidataVersion,
+
     allolderHermidata,
     migrationReturn,
 

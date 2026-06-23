@@ -4,7 +4,8 @@ import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
-import type { HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/popup';
+import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/popup';
+import { HermidataModel } from '../utils/HermidataSelector';
 
 
 // ============================================================
@@ -421,64 +422,87 @@ export async function migrateHermidataToLatest(): Promise<void> {
 
     console.log('[DB] Starting migration of Hermidata to latest (V10)...');
 
-    await new Promise<void>(async (resolve) => {
-        const allHermidata_old = await getAllHermidata();
-        const entries: Hermidata[] = [];
-        let allNotMigrated: number = 0;
+    
+    const allHermidata = await getAllHermidata();
+    const entries: Hermidata[] = [];
+    let failCount: number = 0;
 
-        for (const oldHermidata of Object.values(allHermidata_old)) {
-            if (!isHermidataV10(oldHermidata)) { 
-                const { result: hermidata, isMigratedSuccessfully: isMigrated} = HermidataMigration.migrateAllHermidataToLatest(oldHermidata);
-                if (isMigrated) entries.push(hermidata);
-                else allNotMigrated++;
-            }
-        }
+    for (const value of Object.values(allHermidata)) {
+        const model = new HermidataModel(value); // new
+        if (model.GetVersion() >= 10) continue;
+        
+        const { result: hermidata, isMigratedSuccessfully} = HermidataMigration.migrateAllHermidataToLatest(model.toJSON());
+        if (isMigratedSuccessfully) entries.push(hermidata);
+        else failCount++;
+    }
 
-        if (entries.length) await putAllHermidata(entries);
+    if (entries.length) await putAllHermidata(entries);
 
-        // Mark as done
-        await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v10');
-        console.log(`[DB] Migrated ${entries.length} Hermidata entries to V10`);
-        console.log(`[DB] ${allNotMigrated} Hermidata entries could not be migrated`);
-        resolve();
-        console.log('[DB] Migration complete');
-    });
+    // Mark as done
+    await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v10');
+    console.log(`[DB] Migrated ${entries.length} Hermidata entries to V10`);
+    console.log(`[DB] ${failCount} Hermidata entries could not be migrated`);
+    
+    console.log('[DB] Migration complete');
 }
-/**
- * 
- * @param data - Hermidata
- * @returns boolean
- */
-export function isHermidataV4OrOlder( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV4 {
+export function isHermidataV1( data: AnyHermidataVersion ): data is HermidataV1 {
     return (
-        "current" in data.chapter &&
-        "type" in data &&
-        "status" in data &&
-        !("originalRelease" in data) ||
-        (typeof data.meta.tags === 'string')
+        "Page_Title" in data &&
+        "GoogleSheetURL" in data &&
+        "Past" in data &&
+        !("Hash" in data)
     );
 }
-export function isHermidataV5( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV5 {
+export function isHermidataV2( data: AnyHermidataVersion ): data is HermidataV2 {
+    return (
+        "Page_Title" in data &&
+        "GoogleSheetURL" in data &&
+        "Past" in data &&
+        "Hash" in data
+    );
+}
+export function isHermidataV3( data: AnyHermidataVersion ): data is HermidataV3 {
+    if (!("chapter" in data)) return false;
+    return (
+        "current" in data.chapter &&
+        typeof data.chapter.current === 'string' &&
+        "type" in data &&
+        "status" in data && (
+        !("originalRelease" in data) ||
+        (typeof data.meta.tags === 'string'))
+    );
+}
+export function isHermidataV4( data: AnyHermidataVersion ): data is HermidataV4 {
+    if (!("chapter" in data)) return false;
+    return (
+        "current" in data.chapter &&
+        typeof data.chapter.current === 'number' &&
+        "type" in data &&
+        "status" in data && (
+        !("originalRelease" in data) ||
+        (typeof data.meta.tags === 'string')) &&
+        !("bookmarks" in data.chapter)
+
+    );
+}
+export function isHermidataV5( data: AnyHermidataVersion ): data is HermidataV5 {
+    if (!("chapter" in data)) return false;
     const hasCurrentChapter = "current" in data.chapter;
     const hasType = "type" in data;
     const hasStatus = "status" in data;
     const hasOriginalRelease = "originalRelease" in data || ("originalRelease" in data.meta && data.meta.originalRelease == null);
+    const hasNotBookmarks = !("bookmarks" in data.chapter)
 
     return (
         hasCurrentChapter &&
         hasType &&
         hasStatus &&
-        hasOriginalRelease
-    )
-    /*
-        "current" in data.chapter &&
-        "type" in data &&
-        "status" in data &&
-        ("originalRelease" in data || "originalRelease" in data.meta == null)
+        hasOriginalRelease &&
+        hasNotBookmarks
     );
-    */
 }
-export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV6 {
+export function isHermidataV6( data: AnyHermidataVersion ): data is HermidataV6 {
+    if (!("chapter" in data)) return false;
     return (
         "bookmarks" in data.chapter &&
         "revisitingCount" in data.chapter &&
@@ -487,7 +511,8 @@ export function isHermidataV6( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         "bookmarkInUse" in data.meta
     );
 }
-export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV7 {
+export function isHermidataV7( data: AnyHermidataVersion ): data is HermidataV7 {
+    if (!("chapter" in data)) return false;
     if (!("bookmarkInUse" in data.chapter)) return false;
 
     const hasBookmarks = "bookmarks" in data.chapter;
@@ -502,7 +527,8 @@ export function isHermidataV7( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         hasNotScrollPosition
     );
 }
-export function isHermidataV8( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV8 {
+export function isHermidataV8( data: AnyHermidataVersion ): data is HermidataV8 {
+    if (!("chapter" in data)) return false;
     if (!("bookmarkInUse" in data.chapter)) return false;
     
     const hasBookmarks = "bookmarks" in data.chapter;
@@ -520,7 +546,8 @@ export function isHermidataV8( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         hasUrlInRoot
     )
 }
-export function isHermidataV9( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is HermidataV9 {
+export function isHermidataV9( data: AnyHermidataVersion ): data is HermidataV9 {
+    if (!("chapter" in data)) return false;
     if (!("bookmarkInUse" in data.chapter)) return false;
     
     const hasBookmarks = "bookmarks" in data.chapter;
@@ -542,7 +569,8 @@ export function isHermidataV9( data: HermidataV4 | HermidataV5 | HermidataV6 | H
         hasUrlInRoot
     )
 }
-export function isHermidataV10( data: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata ): data is Hermidata {
+export function isHermidataV10( data: AnyHermidataVersion ): data is Hermidata {
+    if (!("chapter" in data)) return false;
     if (!("bookmarkInUse" in data.chapter)) return false;
     
     const hasBookmarks = "bookmarks" in data.chapter;
