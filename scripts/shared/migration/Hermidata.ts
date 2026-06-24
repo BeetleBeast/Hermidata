@@ -3,7 +3,7 @@ import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import { getHermidataViaKey, updateHermidata } from "../db/Storage";
-import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
+import { normaliseDateToIso, returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, allolderHermidata, AnyHermidataVersion, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
 
@@ -815,8 +815,8 @@ export class HermidataMigration {
                 history: this.setNumbersFromstringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
-                createdAt: new Date(bookmark.createdAt).toISOString(),
-                updatedAt: new Date(bookmark.updatedAt).toISOString(),
+                createdAt: new Date(normaliseDateToIso(bookmark.createdAt)).toISOString(),
+                updatedAt: new Date(normaliseDateToIso(bookmark.updatedAt)).toISOString(),
                 note: bookmark.note,
                 isPrimary: bookmark.isPrimary,
                 readStatus: bookmark.readStatus,
@@ -835,7 +835,7 @@ export class HermidataMigration {
                 bookmarks: newBookmarks,
                 revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
                 latest: Number(data.chapter?.latest) ?? 0,
-                lastChecked: new Date(data.chapter?.lastChecked).toISOString() ?? new Date().toISOString(),
+                lastChecked: new Date(normaliseDateToIso(data.chapter?.lastChecked)).toISOString() ?? new Date().toISOString(),
                 bookmarkInUse: data.chapter?.bookmarkInUse
             },
             meta: {
@@ -843,7 +843,7 @@ export class HermidataMigration {
                 notes: data.meta?.notes ?? "",
                 altTitles: data.meta?.altTitles ?? [data.title],
                 altSources: data.meta?.altSources ?? [data.source],
-                added: new Date(data.meta?.added).toISOString() ?? new Date().toISOString(),
+                added: new Date(normaliseDateToIso(data.meta?.added)).toISOString() ?? new Date().toISOString(),
                 updated: new Date(data.meta?.updated).toISOString() ?? new Date().toISOString(),
                 originalRelease: data.meta?.originalRelease ?? null,
                 novelStatus: data.meta?.novelStatus
