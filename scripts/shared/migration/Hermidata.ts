@@ -1,10 +1,11 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, isHermidataV10, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
+import { getAllHermidata, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import { getHermidataViaKey, updateHermidata } from "../db/Storage";
 import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Hermidata, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata } from "../types";
+import type { AllHermidata, allolderHermidata, AnyHermidataVersion, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata } from "../types";
+import { HermidataModel } from "../utils/HermidataSelector";
 
 
 interface DuplicationResult {
@@ -350,12 +351,12 @@ export class HermidataMigration {
         const date1 = new Date(obj1.meta.updated || 0);
         const date2 = new Date(obj2.meta.updated || 0);
 
-        let newer = obj1;
-        let older = obj2;
+        let newer = new HermidataModel(obj1);
+        let older = new HermidataModel(obj2);
 
         if (date1 < date2) {
-            newer = obj2;
-            older = obj1;
+            newer = new HermidataModel(obj2);
+            older = new HermidataModel(obj1);
         }
 
         // Confirm with clear indication which is which
@@ -552,30 +553,81 @@ export class HermidataMigration {
         return Array.from(new Set(list));
     }
 
-    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata): migrationReturn {
+    public static migrateAllHermidataToLatest(older: allolderHermidata | Hermidata): migrationReturn {
         let current = older;
 
         // early return if already latest
         if (isHermidataV10(current)) return {result: current, isMigratedSuccessfully: true};
 
+        const migrations: Array<[(d: AnyHermidataVersion) => boolean, (d: any) => AnyHermidataVersion]> = [
+            [isHermidataV1, this.migrateHermidataV1ToV2.bind(this)],
+            [isHermidataV2, this.migrateHermidataV2ToV3.bind(this)],
+            [isHermidataV3, this.migrateHermidataV3OrV4ToV5.bind(this)],
+            [isHermidataV4, this.migrateHermidataV3OrV4ToV5.bind(this)],
+            [isHermidataV5, this.migrateHermidataV5ToV6.bind(this)],
+            [isHermidataV6, this.migrateHermidataV6ToV7.bind(this)],
+            [isHermidataV7, this.migrateHermidataV7ToV8.bind(this)],
+            [isHermidataV8, this.migrateHermidataV8ToV9.bind(this)],
+            [isHermidataV9, this.migrateHermidataV9ToV10.bind(this)],
+        ];
 
-        if (isHermidataV4OrOlder(current)) current = this.migrateHermidataV3OrOlderToV5(current);
-        if (isHermidataV5(current)) current = this.migrateHermidataV5ToV6(current);
-        if (isHermidataV6(current)) current = this.migrateHermidataV6ToV7(current);
-        if (isHermidataV7(current)) current = this.migrateHermidataV7ToV8(current);
-        if (isHermidataV8(current)) current = this.migrateHermidataV8ToV9(current);
-        if (isHermidataV9(current)) current = this.migrateHermidataV9ToV10(current);
-
-        if (!isHermidataV10(current))  {
-            console.warn(`Hermidata is not set to the latest version.`, current);
-            console.warn(`Detected version: Unknown`);
-            return  { result: current, isMigratedSuccessfully: false};
+        for (const [check, migrate] of migrations) {
+            if (check(current)) current = migrate(current);
         }
 
-        return { result: current, isMigratedSuccessfully: true};
+        if (!isHermidataV10(current)) {
+            console.warn('[Migration] Failed to reach V10:', current);
+            return { result: current, isMigratedSuccessfully: false };
+        }
+
+        return { result: current, isMigratedSuccessfully: true };
+    }
+    private static migrateHermidataV1ToV2(older: HermidataV1): HermidataV2 {
+        return {
+            Hash: returnHashedTitle(older.Title, older.Type, older.Url),
+            Title: older.Title,
+            Type: older.Type,
+            Url: older.Url,
+            Status: older.Status,
+            Tag: older.Tag ?? '',
+            Notes: older.Notes ?? "",
+            Chapter: older.Chapter,
+            Date: older.Date ?? new Date().toISOString(),
+            GoogleSheetURL: older.GoogleSheetURL ?? '',
+            Past: older.Past ?? {},
+            Page_Title: older.Title ?? '',
+        }
     }
 
-    private static migrateHermidataV3OrOlderToV5(older: HermidataV3 | HermidataV4): HermidataV5 {
+    private static migrateHermidataV2ToV3(older: HermidataV2): HermidataV3 {
+        const possibleSource = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(older.Url)
+        const source = possibleSource ? possibleSource[1] : 'DummySite';
+        return {
+            id: returnHashedTitle(older.Title, older.Type, older.Url),
+            title: older.Title,
+            type: older.Type,
+            url: older.Url,
+            source,
+            status: older.Status,
+            rss: null,
+            import: null,
+            chapter: {
+                current: older?.Chapter ?? 0,
+                history: this.setNumbersFromstringToList([older.Chapter]) ?? [],
+                latest: null,
+                lastChecked: older.Date ?? new Date().toISOString()
+            },
+            meta: {
+                tags: older.Tag ?? '',
+                notes: older.Notes ?? "",
+                altTitles: [older.Title],
+                added: older.Date ?? new Date().toISOString(),
+                updated: older.Date ?? new Date().toISOString()
+            }
+        }
+    }
+
+    private static migrateHermidataV3OrV4ToV5(older: HermidataV3 | HermidataV4): HermidataV5 {
         return {
             id: returnHashedTitle(older.title, older.type, older.url),
             title: older.title,

@@ -6,32 +6,33 @@ import { currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";
 import { getTitleAndChapterFromUrl, TrimTitle } from "../shared/utils/StringOutput";
 import { FolderMapping } from "../settings/build/FolderMapping";
+import type { HermidataModel } from "../shared/utils/HermidataSelector";
 
 declare const browser: typeof chrome | undefined;
 
 
-export async function writeToBookmarks(dataArray: InputArrayType) {
+export async function writeToBookmarks(hermidata: HermidataModel) {
     const bookmarks = await searchValidBookmarks();
     const rows: chrome.bookmarks.BookmarkTreeNode[] = bookmarks.filter(b => b.url);
     rows.forEach(b => b.title = extractTitleFromBookmark(b.title));
 
-    const decision = shouldReplaceOrBlock(dataArray, rows, false);
+    const decision = shouldReplaceOrBlock(hermidata.toInputArraySheetRow(), rows, false);
     if (decision.action === "append") {
-        addBookmark(dataArray);
+        addBookmark(hermidata);
         console.log("Added bookmark entry.");
     } else if (decision.action === "replace") {
-        replaceBookmark(dataArray, decision);
+        replaceBookmark(hermidata, decision);
         console.log("Replaced bookmark entry.");
     } else {
         console.log("Skipping bookmark entry.");
     }
 }
 
-async function addBookmark([title, type, chapter, url, status,,]: InputArrayType) {
+async function addBookmark(hermidata: HermidataModel) {
     const settings = await getSettings();
-    const folderMapPath = FolderMapping.resolveFolder(type, status, settings.FolderMapping);
+    const folderMapPath = FolderMapping.resolveFolder(hermidata.novelType, hermidata.GetReadStatus(), settings.FolderMapping);
     if (!folderMapPath) {
-        console.warn("Folder mapping not found for", type, status);
+        console.warn("Folder mapping not found for", hermidata.novelType, hermidata.GetReadStatus());
         return;
     }
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
@@ -39,26 +40,26 @@ async function addBookmark([title, type, chapter, url, status,,]: InputArrayType
     : "Bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
-    const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
+    const bookmarkTitle = `${hermidata.title} - Chapter ${hermidata.GetChapter() || '0'}`;
     const bookmark = await createBookmark({
         parentId: finalFolderId,
         title: bookmarkTitle,
-        url
+        url: hermidata.GetUrl()
     });
     console.log("Created bookmark", bookmark);
     updateCurrentBookmarkAndIcon();
     console.log('Change Icon');
 }
-async function replaceBookmark(dataArray: InputArrayType, decision: ShouldReplaceReturn) {
+async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplaceReturn) {
     const { replacedURL: OldURL, replaceID: OldID } = decision;
-    const [title, type, chapter, url, status] = dataArray;
-    const bookmarkTitle = `${title} - Chapter ${chapter || '0'}`;
+    
+    const bookmarkTitle = `${hermidata.title} - Chapter ${hermidata.GetChapter() || '0'}`;
     
     
     const settings = await getSettings();
-    const folderMapPath = FolderMapping.resolveFolder(type, status, settings.FolderMapping);
+    const folderMapPath = FolderMapping.resolveFolder(hermidata.novelType, hermidata.GetReadStatus(), settings.FolderMapping);
     if (!folderMapPath) {
-        console.warn("Folder mapping not found for", type, status);
+        console.warn("Folder mapping not found for", hermidata.novelType, hermidata.GetReadStatus());
         return;
     }
 
@@ -77,12 +78,12 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ShouldReplac
             await moveBookmark(bookmarkToUpdate.id, finalFolderId);
             console.log("Moved bookmark to new folder");
         }
-        const updated = await updateBookmark(bookmarkToUpdate.id, {title:bookmarkTitle, url: url});
+        const updated = await updateBookmark(bookmarkToUpdate.id, {title:bookmarkTitle, url: hermidata.GetUrl()});
 
         console.log("Updated bookmark", updated);
     } else {
         console.warn("Old bookmark not found, adding new one.");
-        addBookmark(dataArray);
+        addBookmark(hermidata);
     }
     updateCurrentBookmarkAndIcon();
     console.log('Change Icon');
@@ -90,9 +91,9 @@ async function replaceBookmark(dataArray: InputArrayType, decision: ShouldReplac
 
 
 
-export function shouldReplaceOrBlock(newEntry: InputArrayType | InputArraySheetType, existingSheetRows: InputArraySheetType[], isSheet: true): ShouldReplaceOrBlockReturn
-export function shouldReplaceOrBlock(newEntry: InputArrayType, existingBookmarksRows: chrome.bookmarks.BookmarkTreeNode[], isSheet: false): ShouldReplaceOrBlockReturn
-export function shouldReplaceOrBlock(newEntry: InputArrayType | InputArraySheetType, existingRows: chrome.bookmarks.BookmarkTreeNode[] | InputArraySheetType[], isSheet: boolean = true): ShouldReplaceOrBlockReturn {
+export function shouldReplaceOrBlock(newEntry: InputArraySheetType, existingSheetRows: InputArraySheetType[], isSheet: true): ShouldReplaceOrBlockReturn
+export function shouldReplaceOrBlock(newEntry: InputArraySheetType, existingBookmarksRows: chrome.bookmarks.BookmarkTreeNode[], isSheet: false): ShouldReplaceOrBlockReturn
+export function shouldReplaceOrBlock(newEntry: InputArraySheetType, existingRows: chrome.bookmarks.BookmarkTreeNode[] | InputArraySheetType[], isSheet: boolean = true): ShouldReplaceOrBlockReturn {
     const [ title, chapter, url, date ] = [newEntry[0], newEntry[2], newEntry[3], newEntry[5]];
 
     const isSheetArray = (isSheet: boolean, _value: InputArraySheetType | chrome.bookmarks.BookmarkTreeNode): _value is InputArraySheetType => isSheet

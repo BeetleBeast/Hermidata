@@ -4,7 +4,7 @@ import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shar
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
-import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 
 // --- cashe ---
@@ -29,9 +29,9 @@ export class PastHermidata {
 
     public pastHermidata: Hermidata | null = null;
 
-    private readonly hermidata: Hermidata;
+    private readonly hermidata: HermidataModel;
 
-    constructor(hermidata: Hermidata) {
+    constructor(hermidata: HermidataModel) {
         this.hermidata = hermidata;
     }
 
@@ -111,7 +111,7 @@ export class PastHermidata {
             return await HermidataMigration.migrateCopy(objs);
         }
 
-        const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, getUrlFromCurrentBookmark(this.hermidata));
+        const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
 
         return getHermidataViaKey(key).catch(error => {
             console.error('Extention error: Failed Premise getHermidata: ',error);
@@ -128,12 +128,12 @@ export class PastHermidata {
         return TrueTitle
     }
     private async getTitleFromFuzzy(trueTitle: string): Promise<{ possibleObj: AllHermidata, AltKeyNeeded: { needAltTitle: boolean, reason: string }, fuzzyKey: string | null | undefined  }> {
-        const AltKeyNeeded = await detectAltTitleNeeded(this.hermidata.title, this.hermidata.novelType, this.hermidata.source, getUrlFromCurrentBookmark(this.hermidata));
+        const AltKeyNeeded = await detectAltTitleNeeded(this.hermidata.title, this.hermidata.novelType, this.hermidata.source, this.hermidata.GetUrl());
         const settings = await getSettings();
         
         const fuzzyKey = AltKeyNeeded?.relatedKey;
         // Generate all possible keys
-        const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type, getUrlFromCurrentBookmark(this.hermidata), false));
+        const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type, this.hermidata.GetUrl(), false));
         // add fuzzy key if not inside possible keys
         if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey);
         // get all posible hermidata Obj
@@ -153,10 +153,10 @@ export class PastHermidata {
     }
     private async tryToFindByOtherMeans(possibleObj: AllHermidata): Promise<Hermidata | null> {
         // Try to find by URL domain or substring
-        const urlDomain = getUrlFromCurrentBookmark(this.hermidata) ? new URL(getUrlFromCurrentBookmark(this.hermidata)).hostname.replace(/^www\./, '') : "";
+        const urlDomain = this.hermidata.GetUrl() ? new URL(this.hermidata.GetUrl()).hostname.replace(/^www\./, '') : "";
         const byUrl = Object.values(possibleObj).find(item => {
             try {
-                const storedDomain = new URL(getUrlFromCurrentBookmark(item) || "").hostname.replace(/^www\./, '');
+                const storedDomain = new URL(item.chapter.bookmarks[item.chapter.bookmarkInUse].url || "").hostname.replace(/^www\./, '');
                 return storedDomain === urlDomain;
             } catch { return false; }
         });
@@ -164,7 +164,7 @@ export class PastHermidata {
     
         // Try to find same title + newest date
         const sameTitleMatches = Object.values(possibleObj).filter(item => {
-            return TrimTitle.trimTitle(item.title, getUrlFromCurrentBookmark(item)).title.toLowerCase() === TrimTitle.trimTitle(this.hermidata.title, getUrlFromCurrentBookmark(this.hermidata)).title.toLowerCase();
+            return TrimTitle.trimTitle(item.title, item.chapter.bookmarks[item.chapter.bookmarkInUse].url).title.toLowerCase() === TrimTitle.trimTitle(this.hermidata.title, this.hermidata.GetUrl()).title.toLowerCase();
         });
         if (sameTitleMatches.length) {
             sameTitleMatches.sort((a, b) => new Date(b.meta.updated).getTime() - new Date(a.meta.updated).getTime());
@@ -175,7 +175,7 @@ export class PastHermidata {
         if (possibleObj[typeKey]) return possibleObj[typeKey];
     
         // Fallback: old V1 hash (title only)
-        const fallbackKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, getUrlFromCurrentBookmark(this.hermidata));
+        const fallbackKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
         const fallbackObj = await getHermidataViaKey(fallbackKey);
         if (fallbackObj) return fallbackObj;
     

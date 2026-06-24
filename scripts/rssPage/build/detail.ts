@@ -13,7 +13,7 @@ export class Detail {
     private readonly title: HTMLInputElement | null = getElement('#detail-title');
     private readonly novelType: HTMLSelectElement | null = getElement('#detail-novelType');
     private readonly novelStatus: HTMLSelectElement | null = getElement('#detail-novelStatus');
-    private readonly url: HTMLInputElement | null = getElement('#detail-url');
+    private readonly latestChapter: HTMLInputElement | null = getElement('#detail-latestChapter');
     private readonly notes: HTMLTextAreaElement | null = getElement('#detail-notes');
     
     private readonly tagsContainer: HTMLDivElement | null = getElement('#detail-tags-container');
@@ -96,7 +96,6 @@ export class Detail {
         this.editEntry.title = this.title!.value;
         this.editEntry.novelType = this.novelType!.value;
         this.editEntry.meta.novelStatus = this.novelStatus!.value;
-        this.editEntry.chapter.bookmarks[this.editEntry.chapter.bookmarkInUse].url = this.url!.value;
         this.editEntry.meta.notes = this.notes!.value;
 
         this.editEntry.meta.tags = this.getNamesFromContainer(this.tagsContainer);
@@ -173,9 +172,9 @@ export class Detail {
         const ChapterLabel = this.createBookmarkChapterLabel(bookmark);
         const chapter = this.createBookmarkChapter(bookmark);
 
-        // create bookmark latest chapter
-        const latestChapterLabel = this.createBookmarkLatestChapterLabel(entry);
-        const latestChapter = this.createBookmarkLatestChapter(entry);
+        // create bookmark current chapter url
+        const urlLabel = this.createBookmarkUrlLabel(bookmark);
+        const url = this.createBookmarkUrl(bookmark);
 
         // create bookmark history chapter
         const historyChapterLabel = this.createBookmarkChapterHistoryLabel(bookmark);
@@ -196,7 +195,7 @@ export class Detail {
         bookmarkEl.append(
             nameLabel, name,
             ChapterLabel, chapter,
-            latestChapterLabel, latestChapter,
+            urlLabel, url,
             historyChapterLabel, historyChapter,
             readStatusLabel, readStatus,
             colourLabel, colour,
@@ -207,7 +206,7 @@ export class Detail {
     }
     private createBookmarkNameLabel(bookmark: Bookmark): HTMLLabelElement {
         const bookmarkLabel = document.createElement('label');
-        bookmarkLabel.textContent = bookmark.label;
+        bookmarkLabel.textContent = 'Label name';
         bookmarkLabel.setAttribute('for', bookmark.label);
         return bookmarkLabel;
     }
@@ -235,19 +234,19 @@ export class Detail {
         bookmarkChapter.textContent = String(bookmark.current);
         return bookmarkChapter;
     }
-    private createBookmarkLatestChapterLabel(entry: Hermidata): HTMLLabelElement {
+    private createBookmarkUrlLabel(bookmark: Bookmark): HTMLLabelElement {
         const bookmarkChapterLabel = document.createElement('label');
-        bookmarkChapterLabel.textContent = 'Latest Chapter';
-        bookmarkChapterLabel.setAttribute('for', `bookmark-latest-chapter-${entry.id}`);
+        bookmarkChapterLabel.textContent = 'Url';
+        bookmarkChapterLabel.setAttribute('for', `bookmark-url-${bookmark.id}`);
         return bookmarkChapterLabel;
     }
-    private createBookmarkLatestChapter(entry: Hermidata): HTMLInputElement {
+    private createBookmarkUrl(bookmark: Bookmark): HTMLInputElement {
         const bookmarkChapter = document.createElement('input');
-        bookmarkChapter.value = String(entry.chapter.latest);
-        bookmarkChapter.type = 'number';
-        bookmarkChapter.id = `bookmark-latest-chapter-${entry.id}`;
-        bookmarkChapter.classList.add('bookmark-Latest-chapter');
-        bookmarkChapter.textContent = String(entry.chapter.latest);
+        bookmarkChapter.value = bookmark.url;
+        bookmarkChapter.type = 'url';
+        bookmarkChapter.id = `bookmark-url-${bookmark.id}`;
+        bookmarkChapter.classList.add('bookmark-url');
+        bookmarkChapter.textContent = bookmark.url;
         return bookmarkChapter;
     }
     private createBookmarkChapterHistoryLabel(bookmark: Bookmark): HTMLLabelElement {
@@ -339,7 +338,7 @@ export class Detail {
         this.title!.value = this.editEntry.title;
         this.novelType!.value = this.editEntry.novelType;
         this.novelStatus!.value = this.editEntry.meta.novelStatus;
-        this.url!.value = this.editEntry.chapter.bookmarks[this.editEntry.chapter.bookmarkInUse].url;
+        this.latestChapter!.value = String(this.editEntry.chapter.latest);
         this.notes!.value = this.editEntry.meta.notes;
 
         this.popuplateSelects(settings);

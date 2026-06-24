@@ -1,12 +1,11 @@
 import { CalcDiff, PastHermidata } from "../popup/core/Past";
-import { getChapterFromBookmarkInUse } from "../popup/core/save";
 import { FolderMapping } from "../settings/build/FolderMapping";
 import { getChapterFromTitle, TrimTitle } from "../shared/utils/StringOutput";
 import { getSettings } from "../shared/db/Storage";
 import type { Settings } from "../shared/types";
 import { findNestedFolder, getBookmarkChildren } from "./bookmarks";
 import { setState, settingsCashed } from "./state";
-import { getUrlFromCurrentBookmark } from "../shared/utils/HermidataSelector";
+import { HermidataModel } from "../shared/utils/HermidataSelector";
 
 
 interface FuzzyBookmarkMatches {
@@ -99,16 +98,16 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
     for (const element of Object.keys(allHermidata)) {
         const index = element;
 
-        const hermidata = allHermidata[index]
+        const hermidata = new HermidataModel(allHermidata[index]);
         let score = null
             for (let index = 0; index < hermidata?.meta?.altTitles.length; index++) {
                 score = CalcDiff( hermidata?.meta?.altTitles?.[index] || hermidata.title, trimmedTitle);
                 if (score >= threshold) {
                     fuzzyMatches.push({
                         bookmarkTitle: hermidata.title,
-                        fuzzySearchUrl: getUrlFromCurrentBookmark(hermidata),
+                        fuzzySearchUrl: hermidata.GetUrl(),
                         currentUrl: currentTab.url,
-                        chapter: getChapterFromBookmarkInUse(hermidata) || Number.NaN,
+                        chapter: hermidata.GetChapter() || Number.NaN,
                         similarity: score
                     });
                     console.warn(`[Fuzzy Match ${score.toFixed(2)}] "${hermidata.title}" ↔ "${trimmedTitle}"`);

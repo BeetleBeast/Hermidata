@@ -8,7 +8,7 @@ import { linkRSSFeed } from "../load";
 import { customConfirm } from "../../popup/frontend/confirm";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { ext } from "../../shared/utils/BrowserCompat";
-import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 type match = {
     Hermidata: Hermidata,
@@ -72,7 +72,7 @@ export class Subscribe extends RssBuild {
         const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as AnyNovelType || this.hermidata.novelType;
         const currentTitle = getElement<HTMLInputElement>('#title_HDRSS')?.value || this.hermidata.title;
 
-        linkRSSFeed(currentTitle, currentType, getUrlFromCurrentBookmark(this.hermidata), this.matchedFeed);
+        linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed);
         await this.reloadContent(notificationSection, allItemSection);
         console.log('Linked RSS to extension');
     }
@@ -108,7 +108,8 @@ export class Subscribe extends RssBuild {
         const mathingFeeds = await this.findMatchingFeeds(allRawFeeds, allHermidataWithNoRSSRecord, allowSimilarityScanning, autoSubscribeThreshold);
         if (!mathingFeeds || mathingFeeds.length === 0) return false;
         
-        for (const { RawFeed, Hermidata } of mathingFeeds) {
+        for (const { RawFeed, Hermidata: value } of mathingFeeds) {
+            const Hermidata = new HermidataModel(value);
             // 4. confirm with user
             const confirmationMsg = `
                 Subscribe to "${Hermidata.title}"?
@@ -132,7 +133,7 @@ export class Subscribe extends RssBuild {
                 continue;
             }
             // 5. link matching feed
-            linkRSSFeed(Hermidata.title, Hermidata.novelType, getUrlFromCurrentBookmark(Hermidata), RawFeed);
+            linkRSSFeed(Hermidata.title, Hermidata.novelType, Hermidata.GetUrl(), RawFeed);
         }
         return true;
     }

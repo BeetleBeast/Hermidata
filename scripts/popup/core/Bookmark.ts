@@ -4,11 +4,11 @@ import type { Bookmark, Hermidata } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { activateother, customConfirm, deactivateother } from "../frontend/confirm";
-import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 export class BookmarkController {
 
-    private hermidata: Hermidata;
+    private hermidata: HermidataModel;
     public bookmarkInUseID: string | null = null;
 
     private bookmarkMenuContainerVisible: boolean = false;
@@ -39,7 +39,7 @@ export class BookmarkController {
 
     private readonly isNewHermidata: boolean;
 
-    constructor(hermidata: Hermidata, isNew: boolean = false) {
+    constructor(hermidata: HermidataModel, isNew: boolean = false) {
         this.hermidata = hermidata;
         this.isNewHermidata = isNew;
     }
@@ -357,8 +357,7 @@ export class BookmarkController {
             isPrimary: false,
             readStatus: 'Viewing',
             scrollPosition: 0,
-            url: getUrlFromCurrentBookmark(this.hermidata) ?? ''
-            // TODO: test this;
+            url: this.hermidata.GetUrl(this.hermidata.chapter.bookmarkInUse)
         }
 
         // if re-reading, update revisiting count
