@@ -703,7 +703,7 @@
     top: 10%;
     background-color: #222;
     width: 50%;
-    height: 25%;
+    height: fit-content;
     border: 1px solid #555;
     border-radius: 8px;
 }

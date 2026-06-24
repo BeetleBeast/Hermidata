@@ -583,8 +583,7 @@ export function isHermidataV10( data: AnyHermidataVersion ): data is Hermidata {
         && !isNaN(bookmark.scrollPosition) && bookmark.scrollPosition >= 0;
     const hasUrlInBookmark = bookmark != undefined 
         && "url" in bookmark && bookmark.url != undefined
-        && typeof  bookmark.url === "string" 
-        && bookmark.url.length > 0;
+        && typeof  bookmark.url === "string"
     return (
         hasBookmarks &&
         hasType &&

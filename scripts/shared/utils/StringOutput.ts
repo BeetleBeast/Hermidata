@@ -42,6 +42,16 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
     return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
+export function normaliseDateToIso(rawDate: string): string {
+    
+    if (!rawDate) return '';
+
+    const split = rawDate.split('/');
+    const date = split.length === 3 ? new Date(Number(split[2]), Number(split[1]) - 1, Number(split[0])) : new Date(rawDate);
+
+    return new Date(date)?.toISOString();
+}
+
 
 export function findByTitleOrAlt(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
     title = TrimTitle.trimTitle(title, '').title;

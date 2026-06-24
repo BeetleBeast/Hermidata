@@ -28,15 +28,18 @@ import { calculateNovelStatusForAll } from '../shared/utils/NovelStatusCalculato
     migrationSettings()    ← migrate from old settings to new version
 */
 
-// setTimeout(() => resetSettings(), 100) // dev-only
-setTimeout(() => migrateSettings(), 0)
-setTimeout(() => migrateFromChromeStorage(), 1)
-setTimeout(() => migrateHermidataToLatest(), 2)
-setTimeout(() => calculateNovelStatusForAll(), 3)
-initRssCache()
-initTabs()
-initMessaging()
-initContextMenus()
-initFeeds()
-initInstalled()
-initSync()
+(async () => {
+    // setTimeout(() => resetSettings(), 100) // dev-only
+    await migrateSettings();
+    await migrateFromChromeStorage();
+    await migrateHermidataToLatest();
+    await calculateNovelStatusForAll();
+
+    initRssCache();
+    initTabs();
+    initMessaging();
+    initContextMenus();
+    initFeeds();
+    initInstalled();
+    initSync();
+})();
