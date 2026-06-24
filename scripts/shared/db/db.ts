@@ -428,10 +428,8 @@ export async function migrateHermidataToLatest(): Promise<void> {
     let failCount: number = 0;
 
     for (const value of Object.values(allHermidata)) {
-        const model = new HermidataModel(value); // new
-        if (model.GetVersion() >= 10) continue;
         
-        const { result: hermidata, isMigratedSuccessfully} = HermidataMigration.migrateAllHermidataToLatest(model.toJSON());
+        const { result: hermidata, isMigratedSuccessfully} = HermidataMigration.migrateAllHermidataToLatest(value);
         if (isMigratedSuccessfully) entries.push(hermidata);
         else failCount++;
     }
