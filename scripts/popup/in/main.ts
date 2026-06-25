@@ -333,6 +333,8 @@ class HermidataController {
         // NOTE: first used is the first item in altSources
         if (currentUrlSource !== savedUrlSource) this.hermidata.source = currentUrlSource;
 
+        if (this.hermidata.source.trim() === undefined || this.hermidata.source === '') this.hermidata.source = currentUrlSource;
+
         // remove duplicates & empty entries
         this.hermidata.meta.altSources = Array.from( new Set(this.hermidata.meta.altSources) ).filter(Boolean);
     }
