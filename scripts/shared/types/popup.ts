@@ -280,7 +280,6 @@ export type migrationReturn = {
 export type allolderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9;
 
 export type AnyHermidataVersion = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata;
-// TODO: add all versions
 
 export interface HermidataV9 {
     id: string;

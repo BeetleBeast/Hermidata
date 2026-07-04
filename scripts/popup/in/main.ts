@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // initialise the controller
     await controller.init();
 
-    // FIXME: this is a hack
     // After popup init — start quietly in the background
     setTimeout( async () => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
 

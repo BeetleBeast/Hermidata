@@ -231,7 +231,7 @@ function isFeedUnchanged(feed: RawFeed, meta: Meta) {
         meta.etag &&
         meta.lastModified &&
         feed.lastToken === meta.etag &&
-        feed.lastBuildDate.getTime() === new Date(meta.lastModified).getTime() // FIXME: check this out, bullsh*t
+        feed.lastBuildDate.getTime() === new Date(meta.lastModified).getTime()
     );
 }
 
