@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // initialise the controller
     await controller.init();
 
-    // FIXME: this is a hack
     // After popup init — start quietly in the background
     setTimeout( async () => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
 
@@ -87,7 +86,7 @@ class HermidataController {
         
         this.bindEvents();
         // initialise tags system
-        await this.tagsSystem.init();
+        await this.tagsSystem.init(settings);
 
         // log a table of all potential duplicates
         // set it up in the background
@@ -167,9 +166,8 @@ class HermidataController {
     // data-has-previous-chapter="true"
     private populateUI(settings: Settings): void {
         // All the getElementById calls live here
-        const display = this.pastHermidata ?? this.hermidata;
 
-        
+
         this.RSS?.changePageToClassic();
 
         this.populateSelect(settings.ContentTypesAndStatuses.TYPE_OPTIONS, "#Type");
@@ -184,12 +182,12 @@ class HermidataController {
         // backward compatibility for past hermidata
         this.trycapitalizingTypesAndStatus(settings.ContentTypesAndStatuses.TYPE_OPTIONS, settings.ContentTypesAndStatuses.STATUS_OPTIONS);
 
-        setElement<HTMLInputElement>('#title', el => el.value = display.title);
-        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse]?.history?.at(-1) || 0));
-        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current));
-        setElement<HTMLSelectElement>('#Type', el => el.value = display.novelType);
-        setElement<HTMLSelectElement>('#status', el => el.value = display.chapter.bookmarks[display.chapter.bookmarkInUse].readStatus);
-        setElement<HTMLSelectElement>("#NovelStatus", el => el.value = display.meta.novelStatus ?? settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]);
+        setElement<HTMLInputElement>('#title', el => el.value = this.hermidata.title);
+        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.GetLatestReadChapter()));
+        setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.GetChapter()));
+        setElement<HTMLSelectElement>('#Type', el => el.value = this.hermidata.novelType);
+        setElement<HTMLSelectElement>('#status', el => el.value = this.hermidata.GetReadStatus());
+        setElement<HTMLSelectElement>("#NovelStatus", el => el.value = this.hermidata.meta.novelStatus ?? settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS[0]);
         
         this.tagsSystem.populateTagPills(this.hermidata.meta.tags, settings.TagManagement.tagColoring);
         
@@ -203,8 +201,8 @@ class HermidataController {
         setElement<HTMLSpanElement>(".version", el => el.textContent = ext.runtime.getManifest().version);
 
         // HDR RSS
-        setElement<HTMLInputElement>("#title_HDRSS", el => el.value = display.title);
-        setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = display.novelType);
+        setElement<HTMLInputElement>("#title_HDRSS", el => el.value = this.hermidata.title);
+        setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = this.hermidata.novelType);
     }
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
@@ -216,6 +214,10 @@ class HermidataController {
             ext.runtime.openOptionsPage()
             .catch((error) => console.error('Extention error trying open extention settings: ',error)); 
         });
+
+        
+
+
     }
     private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
@@ -332,6 +334,8 @@ class HermidataController {
         // NOTE: hermidata.source is the latest source used NOT the first used
         // NOTE: first used is the first item in altSources
         if (currentUrlSource !== savedUrlSource) this.hermidata.source = currentUrlSource;
+
+        if (this.hermidata.source.trim() === undefined || this.hermidata.source === '') this.hermidata.source = currentUrlSource;
 
         // remove duplicates & empty entries
         this.hermidata.meta.altSources = Array.from( new Set(this.hermidata.meta.altSources) ).filter(Boolean);

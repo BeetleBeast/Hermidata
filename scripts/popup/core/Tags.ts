@@ -63,9 +63,12 @@ export class TagsSystem {
     private readonly DEFAULT_CUSTOM_TAG_COLOR: string = '#4191b1';
     private readonly DEFAULT_MISSING_TAG_COLOR: string = '#5541b1';
 
+    private AllTagsWithColors: Record<string, string> = {};
 
-    async init() {
+    async init(settings: Settings) {
         this.autocomplete = new TagAutocomplete(await PastHermidata.getAllHermidata());
+
+        this.AllTagsWithColors = settings.TagManagement.tagColoring;
 
         this.bindEvents();
     }
@@ -79,11 +82,12 @@ export class TagsSystem {
             if (!tagTrimmed) return;
             const pill = this.CreatePill(tagTrimmed, tagColoring[tag]);
             container.appendChild(pill);
+            this.fitToContainer(container, pill);
         });
     }
 
-    public CreatePill(tag: string, color: string): HTMLDivElement {
-        if (color === undefined) color = this.DEFAULT_MISSING_TAG_COLOR;
+    public CreatePill(tag: string, color?: string): HTMLDivElement {
+        if (color === undefined) color = this.AllTagsWithColors[tag] ?? this.DEFAULT_MISSING_TAG_COLOR;
         // pill container
         const pill = document.createElement("div");
         pill.classList.add(`tag-pill`);
@@ -120,6 +124,8 @@ export class TagsSystem {
         pill.appendChild(removeButton);
 
         this._tags.push(tag);
+
+        this.shrinkFontToFit(pill, pillText);
 
         return pill;
     }
@@ -207,15 +213,45 @@ export class TagsSystem {
         
         if (placeholder) {
             // Accept suggestion
-            const pill = this.CreatePill(placeholder, this.DEFAULT_AUTOCOMPLETE_TAG_COLOR);
+            const pill = this.CreatePill(placeholder);
             pillContainer.appendChild(pill);
         } else if (input.value.trim()) {
             // Add current value
-            const pill = this.CreatePill(this.normalizeTag(input.value), this.DEFAULT_CUSTOM_TAG_COLOR);
+            const pill = this.CreatePill(this.normalizeTag(input.value));
             pillContainer.appendChild(pill);
+            this.fitToContainer(pillContainer, pill);
         }
         ghostSpan.textContent = '';
         input.value = '';
+    }
+    private fitToContainer(container: HTMLElement, content: HTMLElement, minScale = 0.1) {
+        const fit = () => {
+            content.style.transform = 'scale(1)'; // reset to measure true size
+            const scaleX = container.clientWidth / content.scrollWidth;
+            const scaleY = container.clientHeight / content.scrollHeight;
+            const scale = Math.min(1, scaleX, scaleY, 1); // never scale up
+            content.style.transformOrigin = 'top left';
+            content.style.transform = `scale(${Math.max(scale, minScale)})`;
+        };
+
+        const observer = new ResizeObserver(fit);
+        observer.observe(container);
+        fit();
+
+        return () => observer.disconnect(); // cleanup
+    }
+    private shrinkFontToFit(container: HTMLElement, text: HTMLElement, minPx = 8) {
+        let size = parseFloat(getComputedStyle(text).fontSize);
+        text.style.fontSize = `${size}px`;
+
+        while (
+            (text.scrollWidth > container.clientWidth ||
+            text.scrollHeight > container.clientHeight) &&
+            size > minPx
+        ) {
+            size -= 1;
+            text.style.fontSize = `${size}px`;
+        }
     }
     private normalizeTag(input: string): string {
         return input

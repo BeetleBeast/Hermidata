@@ -116,7 +116,10 @@ export class Detail {
     private getNamesFromContainer(container: HTMLDivElement | null): string[] {
         if (!container) return [];
         const arrayOfElemets = Array.from(container.children) as HTMLInputElement[];
-        return arrayOfElemets.map((child) => child.value);
+        const rawValues = arrayOfElemets.map((child) => child.value);
+        // trim and filter out empty values & duplicates
+        const values = Array.from(new Set(rawValues.map((value) => value.trim()).filter((value) => value.length > 0)));
+        return values;
     }
     private getBookmarks(): Record<string, Bookmark> {
         const bookmarks: Map<string, Bookmark> = new Map();

@@ -1,10 +1,10 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import { getHermidataViaKey, updateHermidata } from "../db/Storage";
-import { normaliseDateToIso, returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, allolderHermidata, AnyHermidataVersion, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata } from "../types";
+import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
+import { getAllRawFeeds, getHermidataViaKey, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
+import { getChapterFromTitle, normaliseDateToIso, returnBookmarkHash, returnHashedTitle, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
+import type { AllHermidata, allolderHermidata, AnyHermidataVersion, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
 
 
@@ -527,6 +527,143 @@ export class HermidataMigration {
             hash = Math.trunc(hash);
         }
         return hash.toString();
+    }
+
+    public static async migrateFeedsToLatest(): Promise<void> {
+        const db = await getDb();
+        const alreadyMigrated = await db.get('settings', 'migrated_Feeds_V2');
+        if (alreadyMigrated) {
+            console.log('[DB] Already migrated to Feeds V2');
+            return;
+        }
+
+        console.log('[DB] Starting migration to Feeds V2...');
+
+        // get all feeds from storage
+        const [ feeds, hermidata ]: [Record<string, RawFeed>, Record<string, Hermidata> ] = await Promise.all([ 
+            getAllRawFeeds(),
+            getAllHermidataWithRss()
+        ]);
+        this.migrateRawFeeds(feeds, hermidata);
+
+        this.migrateFeeds(hermidata);
+
+
+        // Mark as done
+        await db.put('settings', true as unknown as Settings, 'migrated_Feeds_V2');
+    
+    }
+    private static migrateRawFeeds(feeds: Record<string, RawFeed>, hermidata: Record<string, Hermidata>): void {
+        const removingFeedsIds: string[] = []; // to be removed RawFeeds
+        const savingFeeds: RawFeed[] = []; // to be saved RawFeeds
+
+        // step 1. filter rawFeeds with domain that are not in hermidata
+        const hermidataDomains = new Set(Object.values(hermidata).map(h => {
+                const url = h.chapter.bookmarks[h.chapter.bookmarkInUse].url;
+                const domain = new URL(url).hostname.replace(/^www\./, '');
+                return domain;
+        }).filter(Boolean));
+
+        for (let [key, feed] of Object.entries(feeds)) {
+            const feedDomain = new URL(feed.url).hostname.replace(/^www\./, '');
+            if (!hermidataDomains.has(feedDomain)) {
+                removingFeedsIds.push(key);
+                continue;
+            }
+            // step 2. migrate feed to latest format if needed
+            if (this.isRawFeedV2(feed)) {
+                savingFeeds.push(feed); 
+                continue; // already latest
+            }
+            if (this.isRawFeedV1(feed)) feed = this.migrateRawFeedV1ToV2(feed);
+
+            savingFeeds.push(feed);
+        }
+
+        setAllRawFeeds(savingFeeds);
+        removeRawFeeds(removingFeedsIds);
+    }
+
+    private static migrateFeeds(hermidatas: Record<string, Hermidata>): void {
+        const allHermidata: Hermidata[] = [];
+        for (const [key, hermidata] of Object.entries(hermidatas)) {
+            if (!hermidata.rss) continue; // no rss feed to migrate
+
+            if (this.isFeedV2(hermidata.rss)) continue; // already latest
+            if (this.isFeedV1(hermidata.rss)) {
+                const migratedFeed = this.migrateFeedV1ToV2(hermidata.rss);
+                hermidata.rss = migratedFeed;
+                allHermidata.push(hermidata);
+                continue;
+            }
+        }
+
+        setAllHermidata(allHermidata);
+    }
+
+    private static isFeedV2(feed: Feed | FeedV1): feed is Feed {
+        return ('id' in feed);
+    }
+    private static isFeedV1(feed: Feed | FeedV1): feed is Feed {
+        const hasnotId = !('id' in feed);
+        return hasnotId;
+    }
+    private static migrateFeedV1ToV2(feed: FeedV1): Feed {
+        const trimmedTitle = TrimTitle.trimTitle(feed.latestItem.title, feed.latestItem.link).title;
+        const newFeedItem: FeedItem = {
+            title: trimmedTitle,
+            rawTitle: feed.latestItem.title,
+            link: feed.latestItem.link,
+            chapter: getChapterFromTitle(feed.latestItem.title, feed.latestItem.link),
+            pubDate: feed.latestItem.pubDate,
+            guid: feed.latestItem.guid ?? null,
+            id: returnRawFeedHash(trimmedTitle, feed.latestItem.link)
+        }
+        const migratedFeed: Feed = {
+            url: feed.url,
+            latestItem: newFeedItem ?? null,
+            image: feed.image ?? null,
+            title: feed.title,
+            domain: feed.domain,
+            lastFetched: feed.lastFetched,
+            lastBuildDate: feed.lastBuildDate ?? null,
+            id: returnRawFeedHash(trimmedTitle , feed.url)
+        }
+        return migratedFeed;
+    }
+
+    private static migrateRawFeedV1ToV2(feed: RawFeedV1): RawFeed {
+        const trimmedTitle = TrimTitle.trimTitle(feed.items[0].title, feed.items[0].link).title;
+        const newFeedItem: FeedItem = {
+            title: trimmedTitle,
+            link: feed.items[0].link,
+            chapter: getChapterFromTitle(feed.items[0].title, feed.items[0].link),
+            pubDate: feed.items[0].pubDate,
+            guid: feed.items[0].guid ?? null,
+            id: returnRawFeedHash(trimmedTitle, feed.items[0].link),
+            rawTitle: feed.items[0].title,
+        }
+        const migratedFeed: RawFeed = {
+            url: feed.url,
+            latestItem: newFeedItem ?? null,
+            image: feed.image ?? null,
+            title: feed.title,
+            domain: feed.domain,
+            lastFetched: feed.lastFetched,
+            lastBuildDate: feed.lastBuildDate ?? null,
+            lastToken: feed.lastToken ?? null,
+            id: returnRawFeedHash(trimmedTitle , feed.url)
+        }
+        return migratedFeed;
+    }
+
+    private static isRawFeedV1(feed: RawFeed | RawFeedV1): feed is RawFeedV1 {
+        const hasLatestItem = "latestItem" in feed;
+        return !hasLatestItem;
+    }
+    private static isRawFeedV2(feed: RawFeed | RawFeedV1): feed is RawFeed {
+        const hasLatestItem = "latestItem" in feed;
+        return hasLatestItem;
     }
 
 

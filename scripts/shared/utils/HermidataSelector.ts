@@ -1,8 +1,8 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType } from "../types";
-import { TrimTitle } from "./StringOutput";
+import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed } from "../types";
+import { returnHashedFeedId, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -28,6 +28,7 @@ export class HermidataModel implements Hermidata {
         this.meta = data.meta;
 
         this.version = this.CalculateHermidataVersion();
+        if (this.version !== 10) console.count("HermidataModel version check");
     }
     // -- static methods --
     public static from(novelType: AnyNovelType, readStatus: string, novelStatus: string): HermidataModel {
@@ -84,6 +85,17 @@ export class HermidataModel implements Hermidata {
     }
     GetHistory(bookmarkInUseId?: string): Bookmark["history"] {
         return this.getBookmark(bookmarkInUseId)?.history;
+    }
+    GetLatestReadChapter(bookmarkInUseId?: string): number {
+        const latestHistory = this.GetHistory(bookmarkInUseId)?.at(-1);
+
+        const latestChapter = this.chapter.latest;
+        const allowedTakeLatestChapter = this.rss == null;
+        const currentChapter = this.GetChapter(bookmarkInUseId);
+        
+        const latestChapterCatch = allowedTakeLatestChapter ? latestChapter : currentChapter;
+
+        return latestHistory ?? latestChapterCatch;
     }
     GetVersion(): number { return this.version; }
     // -- setters --
@@ -151,6 +163,7 @@ export class HermidataModel implements Hermidata {
             if (!this.GetHistory().some(chapter => chapter === newChapter)) this.PushHistory(newChapter)
         }
     }
+    /* updates */
     /**
      * - updates the bookmark
      * - Normalize tags
@@ -240,6 +253,39 @@ export class HermidataModel implements Hermidata {
             this.chapter.latest = this.GetChapter() > this.chapter.latest ? this.GetChapter() : this.chapter.latest;
         }
         return true;
+    }
+    UpdateFeed(rawFeed: RawFeed): void {
+        // always update it with latest info NOT latest fetched item
+        if (!this.rss) return;
+
+        const latestFetchedIsNewer = new Date(rawFeed.latestItem.pubDate).getTime() > new Date(this.rss.latestItem.pubDate).getTime();
+    
+        const isNew = (rawFeed.latestItem?.link !== this.rss.latestItem?.link) && latestFetchedIsNewer;
+    
+        const latestChapter = latestFetchedIsNewer ? rawFeed.latestItem.chapter : this.rss.latestItem.chapter;
+    
+        if (isNew) console.log(`
+            New Release\n
+            title: ${rawFeed.latestItem.title}\n
+            New Chapter: ${rawFeed.latestItem.chapter}\n
+            Old Chapter: ${this.rss.latestItem.chapter}\n
+            new Date: ${new Date(rawFeed.latestItem.pubDate)}\n
+            old Date: ${new Date(this.rss.latestItem.pubDate)}\n
+        `);
+        
+        
+        // only update feed if we have a newer chapter, otherwise we might overwrite with stale data
+        this.rss = {
+            id: returnHashedFeedId(this.title, this.rss.url),
+            title: latestFetchedIsNewer ? rawFeed.latestItem.title : this.rss.title,
+            url: latestFetchedIsNewer ? rawFeed.url : this.rss.url, // rss url
+            image: latestFetchedIsNewer ? rawFeed.image : this.rss.image,
+            domain: latestFetchedIsNewer ? rawFeed.domain : this.rss.domain,
+            lastFetched: new Date().toISOString(),
+            latestItem: latestFetchedIsNewer ? rawFeed.latestItem : this.rss.latestItem,
+            lastBuildDate: this.rss?.lastBuildDate
+        };
+        this.chapter.latest = latestChapter;
     }
     Copy(): HermidataModel {
         return new HermidataModel(this.toJSON());
