@@ -1,4 +1,5 @@
 import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
+import { HermidataModel } from './HermidataSelector';
 
 export function getChapterFromTitle(title: string | undefined, url: string): number {
     if (!title) return Number.NaN;
@@ -53,12 +54,24 @@ export function normaliseDateToIso(rawDate: string): string {
 }
 
 
-export function findByTitleOrAlt(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
-    title = TrimTitle.trimTitle(title, '').title;
-    return Object.values(allData).find(novel => 
-        TrimTitle.trimTitle(novel.title, novel.chapter.bookmarks[novel.chapter.bookmarkInUse].url).title === title ||
-        (novel.meta?.altTitles || []).some(t => TrimTitle.trimTitle(t, novel.chapter.bookmarks[novel.chapter.bookmarkInUse].url).title === title)
-    );
+export function findByTitleOrAlt(title: string, allData: Record<string, Hermidata> ): Hermidata | undefined {
+    title = TrimTitle.trimTitle(title, '').title; // force trim title to remove any chapter info or site name
+    if (!title.trim()) return undefined;
+
+    const novel = Object.values(allData).find(novel => {
+        const novelModel = new HermidataModel(novel);
+
+        const sameMainTitle = TrimTitle.trimTitle(novelModel.title, novelModel.GetUrl()).title === title;
+        const sameAltTitle = (novel.meta?.altTitles).some(altT => {
+            // make sure no "" === "" is handled
+            if (altT === "") return false;
+            return TrimTitle.trimTitle(altT, novelModel.GetUrl()).title === title
+        });
+
+        return sameMainTitle || sameAltTitle;
+    });
+
+    return novel;
 }
 
 export function returnHashedTitle(title: string, type: string, url: string = '', trimTitle: boolean = true) {

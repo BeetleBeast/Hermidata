@@ -415,7 +415,7 @@ export async function migrateFromChromeStorage(): Promise<void> {
 /**
  * One-time migration from Hermidata to latest
  */
-export async function migrateHermidataToLatest(): Promise<void> {
+export async function migrateHermidataToLatest(_allHermidata?: Record<string, Hermidata>): Promise<void> {
     const db = await getDb();
     const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v10');
     if (alreadyMigrated) return;
@@ -423,7 +423,7 @@ export async function migrateHermidataToLatest(): Promise<void> {
     console.log('[DB] Starting migration of Hermidata to latest (V10)...');
 
     
-    const allHermidata = await getAllHermidata();
+    const allHermidata = _allHermidata ?? await getAllHermidata();
     const entries: Hermidata[] = [];
     let failCount: number = 0;
 

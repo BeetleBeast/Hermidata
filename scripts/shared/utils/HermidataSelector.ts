@@ -85,6 +85,17 @@ export class HermidataModel implements Hermidata {
     GetHistory(bookmarkInUseId?: string): Bookmark["history"] {
         return this.getBookmark(bookmarkInUseId)?.history;
     }
+    GetLatestReadChapter(bookmarkInUseId?: string): number {
+        const latestHistory = this.GetHistory(bookmarkInUseId)?.at(-1);
+
+        const latestChapter = this.chapter.latest;
+        const allowedTakeLatestChapter = this.rss == null;
+        const currentChapter = this.GetChapter(bookmarkInUseId);
+        
+        const latestChapterCatch = allowedTakeLatestChapter ? latestChapter : currentChapter;
+
+        return latestHistory ?? latestChapterCatch;
+    }
     GetVersion(): number { return this.version; }
     // -- setters --
     SetUrl(url: string): void;

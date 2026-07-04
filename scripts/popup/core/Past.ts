@@ -9,7 +9,7 @@ import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 // --- cashe ---
 const CalcDiffCache = new Map();
-let AllHermidataCashe: AllHermidata;
+let AllHermidataCashe: AllHermidata | null = null;
 
 
 export class PastHermidata {
@@ -81,7 +81,7 @@ export class PastHermidata {
         // get all Hermidata
         const AllHermidata = await PastHermidata.getAllHermidata();
         // update cashe
-        if (AllHermidataCashe && Object.keys(AllHermidataCashe).length != Object.keys(AllHermidata).length) {
+        if (AllHermidataCashe && Object.keys(AllHermidataCashe).length != Object.keys(AllHermidata).length || !AllHermidataCashe) {
             AllHermidataCashe = AllHermidata
         }
 
