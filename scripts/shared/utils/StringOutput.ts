@@ -73,6 +73,15 @@ export function findByTitleOrAlt(title: string, allData: Record<string, Hermidat
 
     return novel;
 }
+/** 
+ * takes title and *domain* as input
+ * - url is only used to get the domain
+ * @return returns a hashed string that is unique to the title and domain
+ * */
+export function returnHashedFeedId(title: string, url: string): string {
+    const domain = new URL(url).hostname.replace(/^www\./, "");
+    return simpleHash(`${domain}:${title.toLowerCase()}`);
+}
 
 export function returnHashedTitle(title: string, type: string, url: string = '', trimTitle: boolean = true) {
     const finalTitle = trimTitle ? TrimTitle.trimTitle(title, url).title : title;
@@ -281,6 +290,7 @@ export class TrimTitle {
             .map(p => p.replace('#', ' ').trim()) // remove any '#' characters
             .map(p => p.replace('／', " ").trim()) // remove trailing punctuation + spaces
             .map(p => p.replace('•', " ").trim()) // remove trailing punctuation + spaces
+            .map(p => p.replace('·', " ").trim()) // remove trailing punctuation + spaces
             .filter(Boolean)
 
         // Remove duplicates

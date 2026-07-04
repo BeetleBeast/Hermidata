@@ -348,6 +348,15 @@ export async function deleteRawFeed(url: string): Promise<void> {
     }
 }
 
+export async function removeRawFeeds(urls: string[]): Promise<void> {
+    try {
+        const db = await getDb();
+        await Promise.all(urls.map(url => db.delete('feeds', url)));
+    } catch (err) {
+        console.error('[DB] removeRawFeeds:', err);
+    }
+}
+
 // ============================================================
 // Settings
 // ============================================================

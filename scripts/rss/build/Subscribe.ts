@@ -59,7 +59,7 @@ export class Subscribe extends RssBuild {
 
     private async findMatchingFeed( feedList: Record<string, RawFeed>, allHermidata: Record<string, Hermidata>, currentTitle: string ): Promise<RawFeed | null> {
         for (const feed of Object.values(feedList)) {
-            const feedTitle = TrimTitle.trimTitle( feed?.items?.[0]?.title || feed.title, feed.url ).title;
+            const feedTitle = TrimTitle.trimTitle( feed?.latestItem?.title || feed.title, feed.url ).title;
             const matchedTitle = findByTitleOrAlt(feedTitle, allHermidata)?.title;
             if (matchedTitle === currentTitle) return feed;
         }
@@ -114,18 +114,18 @@ export class Subscribe extends RssBuild {
             const confirmationMsg = `
                 Subscribe to "${Hermidata.title}"?
                 <br>
-                ${RawFeed.image ? `<img src="${RawFeed.image}" alt="${RawFeed.items[0].title}" style="width: 45px; height: auto;">` : ''}\n
+                ${RawFeed.image ? `<img src="${RawFeed.image}" alt="${RawFeed.latestItem.title}" style="width: 45px; height: auto;">` : ''}\n
                 <br>
-                title: ${RawFeed.items[0].title}\n
+                title: ${RawFeed.latestItem.title}\n
                 <br>
-                <a href="${RawFeed.url}" target="_blank">${RawFeed.items[0].title}</a>
+                <a href="${RawFeed.url}" target="_blank">${RawFeed.latestItem.title}</a>
                 <br>
                 <br>
                 <small>Tip: you can always unsubscribe at any time by clicking the "Unsubscribe" button by right clicking on the RSS feed item</small>
                 `;
             const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel' });
             if (!shouldSubscribe) {
-                const RawFeedID = returnRawFeedHash(RawFeed.items[0].title, RawFeed.url);
+                const RawFeedID = returnRawFeedHash(RawFeed.latestItem.title, RawFeed.url);
                 const newRecord: Record<string, string> = { [Hermidata.id]: RawFeedID };
                 const HermidataNotLinkedToRSS = settings.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
                 settings.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS = HermidataNotLinkedToRSS ? { ...HermidataNotLinkedToRSS, ...newRecord } : newRecord;
@@ -150,7 +150,7 @@ export class Subscribe extends RssBuild {
 
         for (const RawFeed of Object.values(allRawFeeds)) {
             // find matching entry
-            if (!RawFeed.items || RawFeed.items.length === 0) {
+            if (!RawFeed.latestItem) {
                 // remove from db
                 await removeRawFeedByUrl(RawFeed.url);
                 // remove from local
@@ -158,7 +158,7 @@ export class Subscribe extends RssBuild {
                 console.info(`Raw feed with url ${RawFeed.url} has no items and has been removed from storage.`);
                 continue;
             }
-            const rawFeedTitle = RawFeed.items[0].title ?? RawFeed.title; // use first item title if available otherwise use raw feed title ( some feeds have no items )
+            const rawFeedTitle = RawFeed.latestItem.title ?? RawFeed.title; // use latest item title if available otherwise use raw feed title ( some feeds have no items )
             const rawFeedTitleTrimmed = TrimTitle.trimTitle(rawFeedTitle, RawFeed.url).title;
             const matchedEntry = findByTitleOrAlt(rawFeedTitleTrimmed, allHermidata); // 100% match only
 

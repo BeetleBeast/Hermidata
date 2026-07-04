@@ -4,16 +4,15 @@ import { getCurrentDate } from "./feeds";
 import { handleSaveNovel } from "./rssCache";
 import { getTitleAndChapterFromUrl } from "../shared/utils/StringOutput";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
+import { getSettings } from "../shared/db/Storage";
 
 export function initContextMenus() {
     ext.contextMenus.onClicked.addListener((info) => {
         if (info.menuItemId === "Hermidata") {
-                ext.storage.sync.get<Record<string, Settings>>([ "Settings" ], (result) => {
-                    if (result.AllowContextMenu) {
-                        createContextMenu(info, result.Settings);
-                    }
-                });
-            }
+            getSettings().then(settings => {
+                if (settings.ExtensionBehaviour.AllowContextMenu) createContextMenu(info, settings);
+            })
+        }
     })
 }
 

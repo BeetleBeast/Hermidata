@@ -1,6 +1,7 @@
 import { migrateFromChromeStorage, migrateHermidataToLatest } from "../db/db";
 import { getAllHermidata, getSettings, migrateSettings, resetSettings  } from "../db/Storage";
 import { calculateNovelStatusForAll } from "../utils/NovelStatusCalculator";
+import { HermidataMigration } from "./Hermidata";
 
 
 /** Makes all migration steps */
@@ -12,6 +13,8 @@ export async function migrationSteps(): Promise<void> {
     await migrateSettings(settings);
     await migrateFromChromeStorage();
     await migrateHermidataToLatest();
+
+    await HermidataMigration.migrateFeedsToLatest();
 
     const onlyRSSStatusScore = settings.ExtensionBehaviour.AutoSetStatusScore.onlyRSS;
     const allowAllDateFields = settings.ExtensionBehaviour.AutoSetStatusScore.allowAllDateFields;

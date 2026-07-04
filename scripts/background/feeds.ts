@@ -2,7 +2,7 @@ import { ext } from "../shared/utils/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
 import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidata, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
-import { TrimTitle } from "../shared/utils/StringOutput";
+import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput";
 
 
 type Meta = {
@@ -51,8 +51,8 @@ export async function checkFeedsForUpdates() {
 
                 // Parse and handle feed contents
                 const xml = parseXmlSafely(text, feed.title);
-                const items = parseItems(xml, feed.title);
-                compareLastSeen(items, feed);
+                const item = parseItems(xml, feed.title);
+                compareLastSeen(item, feed);
 
                 // Save metadata
                 saveFeedMetaData(feed, meta);
@@ -64,7 +64,6 @@ export async function checkFeedsForUpdates() {
 
         setState.lastAutoFeedCkeck(Date.now());
         await setAllRawFeeds(Object.values(savedFeeds));
-        await ext.storage.local.set({ savedFeeds });
     } catch (err) {
         console.error(`[Hermidata] [✕] Failed to check feeds:`, err);
     }
@@ -110,21 +109,22 @@ async function webSearch() {
 
         // get the items
         const xml = parseXmlSafely(feedText, novel.latestItem?.title);
-        const items: FeedItem[] = parseItems(xml, novel.latestItem?.title);
-        if (!items.length) {
+        const item: FeedItem | null = parseItems(xml, novel.latestItem?.title);
+        if (!item) {
             console.warn("No items found in feed:", novel.url);
             console.groupEnd();
             continue;   
         }
 
         const newFeed: RawFeed = {
+            id: returnHashedFeedId(novel.latestItem?.title, novel.url),
             title: TrimTitle.trimTitle(novel.latestItem?.title, novel.url).title,
             url: novel.url,
             domain: novel.domain,
             lastFetched: new Date().toISOString(),
             lastBuildDate: novel.lastBuildDate ?? new Date(),
             image: novel.image || "",
-            items: items,
+            latestItem: item,
             lastToken: token,
         };
 
@@ -136,21 +136,21 @@ async function webSearch() {
         //     console.groupEnd();
         //     continue;
         // }
-        console.log(`[Hermidata] Adding feed title: ${items[0].title}`);
+        console.log(`[Hermidata] Adding feed title: ${item.title}`);
         
         const existingIndex = combined.findIndex(f => f.url === newFeed.url && f.url !== undefined);
         console.log(`[Hermidata] existingIndex: ${existingIndex}`);
         if (existingIndex === -1) {
             combined.push(newFeed);
-            console.log(`[Hermidata] New feed added: ${newFeed.items[0].title}`);
+            console.log(`[Hermidata] New feed added: ${newFeed.latestItem.title}`);
         } else {
             // Existing feed → update if newer
             const existing = combined[existingIndex];
-            console.log(`[Hermidata] Existing feed found: ${existing.items[0].title}`);
+            console.log(`[Hermidata] Existing feed found: ${existing.latestItem.title}`);
             console.log(`[Hermidata] Existing feed lastFetched: ${existing.lastFetched}, New feed lastFetched: ${newFeed.lastFetched}`);
             if (newFeed.lastFetched > existing.lastFetched) {
                 combined[existingIndex] = { ...existing, ...newFeed };
-                console.log(`[Hermidata] Updated feed: ${newFeed.items[0].title}`);
+                console.log(`[Hermidata] Updated feed: ${newFeed.latestItem.title}`);
             }
         }
         
@@ -158,16 +158,16 @@ async function webSearch() {
         
         console.groupEnd();
     }
-    ext.storage.local.set({ savedFeeds: combined }).then(() => {
-        console.log(`[Hermidata] ${Object.keys(savedFeeds).length} feeds saved to local storage`);
-    });
-    
+    await setAllRawFeeds(combined).then(() => {
+        console.log(`[Hermidata] ${Object.keys(combined).length} feeds saved to local storage`);
+    })
+
     const HermidataToUpdate: Record<string, Hermidata> = {};
     for (const feed of combined) {
         const related = Object.values(allHermidata).find(h => h.rss?.url === feed.url);
         if (related?.rss) {
             related.rss.lastFetched = feed.lastFetched;
-            related.rss.latestItem = feed.items[0];
+            related.rss.latestItem = feed.latestItem;
             HermidataToUpdate[related.id] = related;
         }
     }
@@ -305,27 +305,35 @@ function parseXmlSafely(text: string, title: string) {
     return xml;
 }
 
-function parseItems(xml: Document, title: string): FeedItem[] {
+function parseItems(xml: Document, title: string): FeedItem | null {
     const entries = [...xml.querySelectorAll("item, entry")];
     if (!entries.length) {
         console.warn(`[Hermidata] No <item> or <entry> elements found in ${title}.`);
-        return [];
+        return null;
     }
-    
-    return entries.slice(0, 10).map(item => ({
-        title: item.querySelector("title")?.textContent.trim() ?? "",
-        link: (
-            item.querySelector("link")?.getAttribute?.("href") ??
+    return entries.map<FeedItem>(item => {
+        const rawTitle = item.querySelector("title")?.textContent.trim() ?? 
+            title ?? 
+            "";
+        const linkUrl = item.querySelector("link")?.getAttribute?.("href") ??
             item.querySelector("link")?.textContent ??
-            ""
-        ).trim(),
-        pubDate: new Date(item.querySelector("pubDate, updated, published")?.textContent.trim() ?? new Date().toISOString()),
-        guid:
-        item.querySelector("guid")?.textContent ??
-        item.querySelector("id")?.textContent ??
-        item.querySelector("link")?.textContent ??
-        ""
-    }));
+            "";
+        const trimmedTitle = TrimTitle.trimTitle(rawTitle, linkUrl).title;
+        const pubDate = new Date(item.querySelector("pubDate, updated, published")?.textContent.trim() ?? new Date().toISOString());
+        const guid = item.querySelector("guid")?.textContent ??
+            item.querySelector("id")?.textContent ??
+            item.querySelector("link")?.textContent ??
+            "";
+        return {
+            id: returnHashedFeedId(trimmedTitle, linkUrl),
+            rawTitle,
+            chapter: getChapterFromTitle(rawTitle, linkUrl),
+            title: trimmedTitle,
+            link: linkUrl.trim(),
+            pubDate,
+            guid
+        }
+    })[0];
 }
 
 function saveFeedMetaData(feed: RawFeed, meta: Meta) {
@@ -333,29 +341,25 @@ function saveFeedMetaData(feed: RawFeed, meta: Meta) {
     feed.lastFetched = new Date().toISOString();
 }
 
-function compareLastSeen(items: FeedItem[], feed: RawFeed) {
-    if (!items.length) return feed;
-    // FIXME: this was bullsh*t redo it
+function compareLastSeen(item: FeedItem | null, feed: RawFeed) {
+    if (!item) return feed;
     
-    const latest = items[0];
-    if (latest.guid !== feed.lastToken || latest.pubDate !== feed.lastBuildDate) {
-        const newCount = items.findIndex(i => i.guid === feed.lastToken && i.pubDate === feed.lastBuildDate);
-        const newItems = newCount === -1 ? items : items.slice(0, newCount);
-        notifyUser(feed, newItems);
+    if (item.guid !== feed.lastToken || item.pubDate !== feed.lastBuildDate) {
+        notifyUser(feed, item);
     }
     return feed;
 }
 
-async function notifyUser(feed: RawFeed, newItems: FeedItem[]) {
+async function notifyUser(feed: RawFeed, newItems: FeedItem) {
     const allHermidata = allHermidataCashed || await getAllHermidata();
     if (shouldSkipFeed(feed, allHermidata)) return;
     const settings = await getSettings();
     // "Badge" | "MessageMinimum" | "MessageFull" | "None"
     const notificationType = settings.ExtensionBehaviour.EnableNotification
     if (notificationType === "None") return;
-    if (notificationType === "Badge") return createBadgeNotification(feed, newItems[0]);
-    if (notificationType === "MessageMinimum") return createMessageMinimumNotification(feed, newItems[0]);
-    if (notificationType === "MessageFull") return createMessageFullNotification(feed, newItems[0]);
+    if (notificationType === "Badge") return createBadgeNotification(feed, newItems);
+    if (notificationType === "MessageMinimum") return createMessageMinimumNotification(feed, newItems);
+    if (notificationType === "MessageFull") return createMessageFullNotification(feed, newItems);
 }
 
 export function getCurrentDate() {
@@ -370,13 +374,13 @@ function createBadgeNotification(rawFeed: RawFeed, _feed: FeedItem) {
     ext.notifications.create({
         type: "image",
         iconUrl: rawFeed.image || "assets/icon48.png",
-        title: rawFeed.items[0].title,
+        title: rawFeed.latestItem.title,
         message: ""
     });
 }
 function createMessageMinimumNotification(rawFeed: RawFeed, _feed: FeedItem) {
-    const title = `${rawFeed.items[0].title}: new chapters`;
-    const message = rawFeed.items[0].title.concat("\n");
+    const title = `${rawFeed.latestItem.title}: new chapters`;
+    const message = rawFeed.latestItem.title.concat("\n");
     ext.notifications.create({
         type: "basic",
         iconUrl: rawFeed.image || "assets/icon48.png",
@@ -385,9 +389,9 @@ function createMessageMinimumNotification(rawFeed: RawFeed, _feed: FeedItem) {
     });
 }
 function createMessageFullNotification(rawFeed: RawFeed, feed: FeedItem) {
-    const title = `${rawFeed.items[0].title}: new chapters`;
+    const title = `${rawFeed.latestItem.title}: new chapters`;
     const message = `
-        title: ${rawFeed.items[0].title.concat("\n")}
+        title: ${rawFeed.latestItem.title.concat("\n")}
         domain: ${rawFeed.domain}
         link: ${feed.link}
     `;
