@@ -1,11 +1,13 @@
 import { ext } from "../../shared/utils/BrowserCompat";
-import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types";
+import type { AnyNovelType, AnyReadStatus, Hermidata, RawFeed } from "../../shared/types";
 import type { quickBackup, Settings } from "../../shared/types/settings"
 import { getElement } from "../../shared/utils/Selection";
 
 import { Build } from "../build";
 import { AutoSetAllHermidata } from "../../shared/utils/AutoSetAllHermidata";
 import { levenshteinDistance } from "../../popup/core/Past";
+import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 declare const browser: typeof chrome | undefined;
 
@@ -55,6 +57,9 @@ export class ImportsAndExports extends Build {
         getElement("#importFolderMappingBtn")?.addEventListener("change", (e) => this.importFolderMapping(e));
 
         getElement("#quickBackup")?.addEventListener("click", () => this.quickBackup());
+
+        getElement('#exportToMALBtn')?.addEventListener('click', () => this.exportToMAL());
+        getElement('#importToMALBtn')?.addEventListener('change', (e) => this.importFromMAL(e));
 
         this.massImportFromBookmarkFolderBtn?.addEventListener("click", () => this.massImportFromBookmarkFolderBtnClick());
         this.massImportFromBookmarkFolderSaveAllBtn?.addEventListener("click", () => this.massImportFromBookmarkFolderSaveAllBtnClick());
@@ -481,6 +486,135 @@ export class ImportsAndExports extends Build {
         } catch (error) {
             console.error("Extension error: Failed quickBackup: ", error)
         }
+    }
+    private async importFromMAL(event: Event) {
+        const target = event.target as HTMLInputElement;
+        const file = target?.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const target = e.target ?? null;
+                const importedData = this.makeHermidataFromMAL(target?.result as string);
+                
+                // Get existing storage
+                const existingDataList =  await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
+                const existingData = Object.fromEntries(existingDataList.map(h => [h.id, h]));
+
+                // Merge
+                const mergedDataRecord = { ...existingData, ...importedData };
+
+                // Save merged result
+                await this.dbRequest<void>('hermidata', 'putAll', { id: 'hermidata', data: mergedDataRecord });
+
+                console.log("Hermidata import + merge complete!");
+            } catch (error) {
+                console.error("Extension error: Failed importHermidata:", error);
+            }
+        };
+        reader.readAsText(file);
+    }
+    private async exportToMAL() {
+        try {
+            // get data
+            const existingDataList =  await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
+            const existingData = Object.fromEntries(existingDataList.map(h => [h.id, h]));
+            // transform data
+            const opml = this.makeMalFromHermidata(existingData);
+            const blob = new Blob([opml], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+        
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "Hermidata_MAL.xml";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Extension error: Failed quickBackup: ", error)
+        }
+    }
+    private escapeXml(str: string): string {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&apos;");
+    }
+    // MAL uses fixed status strings for manga lists — map both directions explicitly
+    private readStatusToMal(status: AnyReadStatus): string {
+        const map: Record<string, string> = {
+            "Viewing": "Reading",
+            "Finished": "Completed",
+            "On-hold": "On-Hold",
+            "Dropped": "Dropped",
+            "Planned": "Plan to Read",
+        };
+        return map[status] ?? "Reading";
+    }
+    private malToReadStatus(malStatus: string): AnyReadStatus {
+        const map: Record<string, AnyReadStatus> = {
+            "Reading": "Viewing",
+            "Completed": "Finished",
+            "On-Hold": "On-hold",
+            "Dropped": "Dropped",
+            "Plan to Read": "Planned",
+        };
+        return map[malStatus] ?? "Planned";
+    }
+    private makeMalFromHermidata(hermidatas: Record<string, Hermidata>): string {
+        const entries = Object.values(hermidatas).map(hermidata => {
+        const bookmark = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse];
+        const title = this.escapeXml(hermidata.title);
+        const chaptersRead = bookmark?.current ?? hermidata.chapter.latest ?? 0;
+        const malStatus = this.readStatusToMal(bookmark?.readStatus ?? "Planned");
+
+        return `    <manga>
+            <manga_title>${title}</manga_title>
+            <my_read_chapters>${chaptersRead}</my_read_chapters>
+            <my_read_volumes>0</my_read_volumes>
+            <my_status>${malStatus}</my_status>
+            <my_times_read>${hermidata.chapter.revisitingCount ?? 0}</my_times_read>
+            <my_tags>${this.escapeXml((hermidata.meta.tags ?? []).join(", "))}</my_tags>
+            <my_comments>${this.escapeXml(hermidata.meta.notes ?? "")}</my_comments>
+            <update_on_import>1</update_on_import>
+        </manga>`;
+        }).join("\n");
+
+        return `<?xml version="1.0" encoding="UTF-8" ?>
+            <myanimelist>
+                <myinfo>
+                    <user_export_type>2</user_export_type>
+                </myinfo>
+            ${entries}
+            </myanimelist>`;
+    }
+
+    private makeHermidataFromMAL(xmlText: string): Record<string, Hermidata> {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlText, "text/xml");
+        const entries = [...doc.querySelectorAll("manga")];
+
+        const hermidatas = entries.map(entry => {
+            const title = entry.querySelector("manga_title")?.textContent?.trim() ?? "";
+            const chapter = Number(entry.querySelector("my_read_chapters")?.textContent ?? "0");
+            const malStatus = entry.querySelector("my_status")?.textContent?.trim() ?? "Plan to Read";
+            const readStatus = this.malToReadStatus(malStatus);
+
+            const trimmedTitle = TrimTitle.trimTitle(title, "").title;
+            const hermidata = new HermidataModel(HermidataModel.from("Manga", readStatus, "Ongoing"));
+            hermidata.SetFromTab({ pageTitle: title, url: "", currentChapter: chapter });
+            hermidata.id = returnHashedTitle(trimmedTitle, "Manga", "");
+            hermidata.source = "MyAnimeList";
+            hermidata.import = "MAL";
+
+            return { id: hermidata.id, hermidata };
+        });
+
+        return Object.fromEntries(hermidatas.map(h => [h.id, h.hermidata]));
     }
 
     private async massImportFromBookmarkFolderBtnClick() {

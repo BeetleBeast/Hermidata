@@ -4,9 +4,7 @@ import { initContextMenus } from './contextMenus'
 import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/db/sync'
-import { migrateFromChromeStorage, migrateHermidataToLatest } from '../shared/db/db'
-import { migrateSettings, resetSettings } from '../shared/db/Storage'
-import { calculateNovelStatusForAll } from '../shared/utils/NovelStatusCalculator'
+import { migrationSteps } from '../shared/migration'
 
 /*
 ./background/
@@ -28,15 +26,14 @@ import { calculateNovelStatusForAll } from '../shared/utils/NovelStatusCalculato
     migrationSettings()    ← migrate from old settings to new version
 */
 
-// setTimeout(() => resetSettings(), 100) // dev-only
-setTimeout(() => migrateSettings(), 0)
-setTimeout(() => migrateFromChromeStorage(), 1)
-setTimeout(() => migrateHermidataToLatest(), 2)
-setTimeout(() => calculateNovelStatusForAll(), 3)
-initRssCache()
-initTabs()
-initMessaging()
-initContextMenus()
-initFeeds()
-initInstalled()
-initSync()
+(async () => {
+    await migrationSteps();
+
+    initRssCache();
+    initTabs();
+    initMessaging();
+    initContextMenus();
+    initFeeds();
+    initInstalled();
+    initSync();
+})();

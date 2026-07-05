@@ -7,7 +7,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
 import { deleteHermidata } from "../../shared/db/db";
-import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 export class EventListener extends RssBuild {
     
@@ -33,7 +33,10 @@ export class EventListener extends RssBuild {
     }
     private clickOnItem(value: Hermidata, isRSSItem: boolean) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
-        this.openNewTab(value?.rss?.latestItem?.link || getUrlFromCurrentBookmark(value), value.chapter.bookmarks[value.chapter.bookmarkInUse].scrollPosition);
+
+        const hermidata = new HermidataModel(value);
+
+        this.openNewTab(value?.rss?.latestItem?.link || hermidata.GetUrl(), hermidata.GetScrollPosition());
     }
     private async rightmouseclickonItem(e: MouseEvent, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
@@ -277,7 +280,7 @@ export class EventListener extends RssBuild {
         const bookmarkMenu: subMenu["options"] = [];
 
         for (const value of Object.values(entry.chapter.bookmarks)) {
-            bookmarkMenu.push({ label: value.label, action: () => pageTypeOpener == 'InPage' ?  this.openInPage(target, value.url) : this.openInNewWindow(target, value.url) });
+            bookmarkMenu.push({ label: value.label, action: () => pageTypeOpener == 'InPage' ?  this.openInPage(target, value.id) : this.openInNewWindow(target, value.id) });
         }
         return bookmarkMenu
     }
@@ -293,35 +296,35 @@ export class EventListener extends RssBuild {
         }
     }
     
-    private async openInPage(target: HTMLDivElement | null, url: string | null = null) {
+    private async openInPage(target: HTMLDivElement | null, id: string | null = null) {
         if (!target) return;
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
         const hashItem = this.GetHashItem(item);
-        const entry = this.AllHermidata[hashItem];
+        const entry = new HermidataModel(this.AllHermidata[hashItem]);
         if (!entry) {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const currentUrl = url ?? getUrlFromCurrentBookmark(entry);
+        const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
         if (!currentUrl) return;
         // Get the current active tab and update its URL
         const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) this.updateTab(tab, currentUrl, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
+        if (tab?.id) this.updateTab(tab, currentUrl, id ? entry.GetScrollPosition(id) : entry.GetScrollPosition());
     }
     
-    private async openInNewWindow(target: HTMLDivElement | null, url: string | null = null) {
+    private async openInNewWindow(target: HTMLDivElement | null, id: string | null = null) {
         if (!target) return;
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
         const hashItem = this.GetHashItem(item);
-        const entry = this.AllHermidata[hashItem];
+        const entry = new HermidataModel(this.AllHermidata[hashItem]);
         if (!entry) {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const currentUrl = url ?? getUrlFromCurrentBookmark(entry);
-        if (currentUrl) this.openNewTab(currentUrl, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].scrollPosition);
+        const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
+        if (currentUrl) this.openNewTab(currentUrl, id ? entry.GetScrollPosition(id) : entry.GetScrollPosition());
     }
     
     private clearNotification(target: HTMLDivElement | null) {
@@ -346,7 +349,7 @@ export class EventListener extends RssBuild {
             return;
         }
         const hashItem = this.GetHashItem(item);
-        const entry = this.AllHermidata[hashItem];
+        const entry = new HermidataModel(this.AllHermidata[hashItem]);
         if (!entry) {
             console.warn("Entry not found for hash:", hashItem);
             return;
@@ -355,7 +358,7 @@ export class EventListener extends RssBuild {
         if (!newTitle) return;
     
         // Normalize and deduplicate
-        const trimmed = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(entry)).title;
+        const trimmed = TrimTitle.trimTitle(newTitle, entry.GetUrl()).title;
         entry.meta = entry.meta || {};
         entry.meta.altTitles = Array.from(
             new Set([...(entry.meta.altTitles || []), trimmed])
@@ -374,7 +377,7 @@ export class EventListener extends RssBuild {
             return;
         }
         const oldKey = this.GetHashItem(item);
-        const oldData = this.AllHermidata[oldKey]
+        const oldData = new HermidataModel(this.AllHermidata[oldKey]);
         if (!oldData) {
             console.warn("No data found for this item");
             return;
@@ -385,8 +388,8 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = returnHashedTitle(newTitle, oldData.novelType, getUrlFromCurrentBookmark(oldData), false);
-        const TrimmedTitle = TrimTitle.trimTitle(newTitle, getUrlFromCurrentBookmark(oldData)).title
+        const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.GetUrl(), false);
+        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title
         const newData = { ...oldData, title: newTitle, id: newKey };
     
         // Add the old title as an altTitle

@@ -1,15 +1,15 @@
 import { type Hermidata } from "../shared/types/index";
 import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
-
 import { FeedItem } from "./build/feed";
+import type { HermidataModel } from "../shared/utils/HermidataSelector";
 
 export abstract class RssBuild {
-    protected readonly hermidata: Hermidata;
+    protected readonly hermidata: HermidataModel;
 
     protected AllHermidata: Record<string, Hermidata>;
 
-    constructor(hermidata: Hermidata, AllHermidata: Record<string, Hermidata>) {
+    constructor(hermidata: HermidataModel, AllHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;
         this.AllHermidata = AllHermidata;
     }

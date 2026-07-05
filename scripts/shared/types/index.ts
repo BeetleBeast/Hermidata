@@ -18,6 +18,8 @@ export type {
     HermidataV8,
     HermidataV9,
 
+    AnyHermidataVersion,
+
     allolderHermidata,
     migrationReturn,
 
@@ -41,6 +43,10 @@ export type {
     Feed,
     RawFeed,
     FeedItem,
+
+    FeedV1,
+    RawFeedV1,
+    FeedItemV1,
 
     AnyNovelType,
     AnyNovelStatus,

@@ -119,6 +119,7 @@ export type AllFeeds = Record<string, Feed>;
 
 // Feed has single item
 export type Feed = {
+    id: string, // same As RawFeedId
     title: string,
     url: string,
     image: null | string,
@@ -129,19 +130,23 @@ export type Feed = {
 }
 // raw feed has multiple items
 export type RawFeed = {
+    id: string, // based on main Title
     title: string,
     url: string,
     domain: string,
     lastFetched: string,
     lastBuildDate: Date,
     image: string,
-    items: FeedItem[],
+    latestItem: FeedItem,
     lastToken: string | null
 }
 // FIXME: lastToken && guid have been added; sheck if it works
 export type FeedItem = {
+    id: string, // based on title + link
+    rawTitle: string, // the title as it appears in the feed
     title: string,
     link: string,
+    chapter: number,
     pubDate: Date,
     guid: string
 }
@@ -189,6 +194,36 @@ export type  ShouldReplaceOrBlockReturn = ShouldBlockReturn | ShouldReplaceRetur
 
 
 /* old versions */
+
+/* old Feed & RawFeed */
+
+export type FeedV1 = {
+    title: string,
+    url: string,
+    image: null | string,
+    domain: string,
+    lastFetched: null | string, // Date when last fetched
+    latestItem: FeedItemV1
+    lastBuildDate?: null | Date,
+}
+// raw feed has multiple items
+export type RawFeedV1 = {
+    title: string,
+    url: string,
+    domain: string,
+    lastFetched: string,
+    lastBuildDate: Date,
+    image: string,
+    items: FeedItemV1[],
+    lastToken: string | null
+}
+
+export type FeedItemV1 = {
+    title: string,
+    link: string,
+    pubDate: Date,
+    guid: string
+}
 
 /* old Bookmarks */
 
@@ -242,7 +277,9 @@ export type migrationReturn = {
 }
 
 
-export type allolderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9
+export type allolderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9;
+
+export type AnyHermidataVersion = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata;
 
 export interface HermidataV9 {
     id: string;
@@ -413,7 +450,7 @@ export interface HermidataV3 {
     chapter: {
         current: string,
         latest: null,
-        history: [],
+        history: (number | string)[],
         lastChecked: string
     },
     rss: null,

@@ -222,9 +222,9 @@ export async function resetSettings(): Promise<void> {
 }
 // migrate old settings to new format (called on extension update)
 /** - If settings are already up-to-date, no migration needed else migrate them to latest  */
-export async function migrateSettings(): Promise<void> {
+export async function migrateSettings(_settings: Settings | undefined = undefined): Promise<void> {
     try {
-        const settings = await getSettings();
+        const settings = _settings ?? await getSettings();
         const settingsVersion = settings.version ?? 0;
         const latestVersion = defaultSettings.version;
         // If settings are already up-to-date, no migration needed

@@ -1,4 +1,5 @@
 import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
+import { HermidataModel } from './HermidataSelector';
 
 export function getChapterFromTitle(title: string | undefined, url: string): number {
     if (!title) return Number.NaN;
@@ -42,13 +43,44 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
     return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
+export function normaliseDateToIso(rawDate: string): string {
+    
+    if (!rawDate) return '';
 
-export function findByTitleOrAlt(title: string, allData: { [key: string]: Hermidata }): Hermidata | undefined {
-    title = TrimTitle.trimTitle(title, '').title;
-    return Object.values(allData).find(novel => 
-        TrimTitle.trimTitle(novel.title, novel.chapter.bookmarks[novel.chapter.bookmarkInUse].url).title === title ||
-        (novel.meta?.altTitles || []).some(t => TrimTitle.trimTitle(t, novel.chapter.bookmarks[novel.chapter.bookmarkInUse].url).title === title)
-    );
+    const split = rawDate.split('/');
+    const date = split.length === 3 ? new Date(Number(split[2]), Number(split[1]) - 1, Number(split[0])) : new Date(rawDate);
+
+    return new Date(date)?.toISOString();
+}
+
+
+export function findByTitleOrAlt(title: string, allData: Record<string, Hermidata> ): Hermidata | undefined {
+    title = TrimTitle.trimTitle(title, '').title; // force trim title to remove any chapter info or site name
+    if (!title.trim()) return undefined;
+
+    const novel = Object.values(allData).find(novel => {
+        const novelModel = new HermidataModel(novel);
+
+        const sameMainTitle = TrimTitle.trimTitle(novelModel.title, novelModel.GetUrl()).title === title;
+        const sameAltTitle = (novel.meta?.altTitles).some(altT => {
+            // make sure no "" === "" is handled
+            if (altT === "") return false;
+            return TrimTitle.trimTitle(altT, novelModel.GetUrl()).title === title
+        });
+
+        return sameMainTitle || sameAltTitle;
+    });
+
+    return novel;
+}
+/** 
+ * takes title and *domain* as input
+ * - url is only used to get the domain
+ * @return returns a hashed string that is unique to the title and domain
+ * */
+export function returnHashedFeedId(title: string, url: string): string {
+    const domain = new URL(url).hostname.replace(/^www\./, "");
+    return simpleHash(`${domain}:${title.toLowerCase()}`);
 }
 
 export function returnHashedTitle(title: string, type: string, url: string = '', trimTitle: boolean = true) {
@@ -258,6 +290,7 @@ export class TrimTitle {
             .map(p => p.replace('#', ' ').trim()) // remove any '#' characters
             .map(p => p.replace('／', " ").trim()) // remove trailing punctuation + spaces
             .map(p => p.replace('•', " ").trim()) // remove trailing punctuation + spaces
+            .map(p => p.replace('·', " ").trim()) // remove trailing punctuation + spaces
             .filter(Boolean)
 
         // Remove duplicates

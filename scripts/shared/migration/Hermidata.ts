@@ -1,10 +1,11 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, isHermidataV10, isHermidataV4OrOlder, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import { getHermidataViaKey, updateHermidata } from "../db/Storage";
-import { returnBookmarkHash, returnHashedTitle, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Hermidata, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata } from "../types";
+import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
+import { getAllRawFeeds, getHermidataViaKey, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
+import { getChapterFromTitle, normaliseDateToIso, returnBookmarkHash, returnHashedTitle, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
+import type { AllHermidata, allolderHermidata, AnyHermidataVersion, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings } from "../types";
+import { HermidataModel } from "../utils/HermidataSelector";
 
 
 interface DuplicationResult {
@@ -350,12 +351,12 @@ export class HermidataMigration {
         const date1 = new Date(obj1.meta.updated || 0);
         const date2 = new Date(obj2.meta.updated || 0);
 
-        let newer = obj1;
-        let older = obj2;
+        let newer = new HermidataModel(obj1);
+        let older = new HermidataModel(obj2);
 
         if (date1 < date2) {
-            newer = obj2;
-            older = obj1;
+            newer = new HermidataModel(obj2);
+            older = new HermidataModel(obj1);
         }
 
         // Confirm with clear indication which is which
@@ -528,6 +529,143 @@ export class HermidataMigration {
         return hash.toString();
     }
 
+    public static async migrateFeedsToLatest(): Promise<void> {
+        const db = await getDb();
+        const alreadyMigrated = await db.get('settings', 'migrated_Feeds_V2');
+        if (alreadyMigrated) {
+            console.log('[DB] Already migrated to Feeds V2');
+            return;
+        }
+
+        console.log('[DB] Starting migration to Feeds V2...');
+
+        // get all feeds from storage
+        const [ feeds, hermidata ]: [Record<string, RawFeed>, Record<string, Hermidata> ] = await Promise.all([ 
+            getAllRawFeeds(),
+            getAllHermidataWithRss()
+        ]);
+        this.migrateRawFeeds(feeds, hermidata);
+
+        this.migrateFeeds(hermidata);
+
+
+        // Mark as done
+        await db.put('settings', true as unknown as Settings, 'migrated_Feeds_V2');
+    
+    }
+    private static migrateRawFeeds(feeds: Record<string, RawFeed>, hermidata: Record<string, Hermidata>): void {
+        const removingFeedsIds: string[] = []; // to be removed RawFeeds
+        const savingFeeds: RawFeed[] = []; // to be saved RawFeeds
+
+        // step 1. filter rawFeeds with domain that are not in hermidata
+        const hermidataDomains = new Set(Object.values(hermidata).map(h => {
+                const url = h.chapter.bookmarks[h.chapter.bookmarkInUse].url;
+                const domain = new URL(url).hostname.replace(/^www\./, '');
+                return domain;
+        }).filter(Boolean));
+
+        for (let [key, feed] of Object.entries(feeds)) {
+            const feedDomain = new URL(feed.url).hostname.replace(/^www\./, '');
+            if (!hermidataDomains.has(feedDomain)) {
+                removingFeedsIds.push(key);
+                continue;
+            }
+            // step 2. migrate feed to latest format if needed
+            if (this.isRawFeedV2(feed)) {
+                savingFeeds.push(feed); 
+                continue; // already latest
+            }
+            if (this.isRawFeedV1(feed)) feed = this.migrateRawFeedV1ToV2(feed);
+
+            savingFeeds.push(feed);
+        }
+
+        setAllRawFeeds(savingFeeds);
+        removeRawFeeds(removingFeedsIds);
+    }
+
+    private static migrateFeeds(hermidatas: Record<string, Hermidata>): void {
+        const allHermidata: Hermidata[] = [];
+        for (const [key, hermidata] of Object.entries(hermidatas)) {
+            if (!hermidata.rss) continue; // no rss feed to migrate
+
+            if (this.isFeedV2(hermidata.rss)) continue; // already latest
+            if (this.isFeedV1(hermidata.rss)) {
+                const migratedFeed = this.migrateFeedV1ToV2(hermidata.rss);
+                hermidata.rss = migratedFeed;
+                allHermidata.push(hermidata);
+                continue;
+            }
+        }
+
+        setAllHermidata(allHermidata);
+    }
+
+    private static isFeedV2(feed: Feed | FeedV1): feed is Feed {
+        return ('id' in feed);
+    }
+    private static isFeedV1(feed: Feed | FeedV1): feed is Feed {
+        const hasnotId = !('id' in feed);
+        return hasnotId;
+    }
+    private static migrateFeedV1ToV2(feed: FeedV1): Feed {
+        const trimmedTitle = TrimTitle.trimTitle(feed.latestItem.title, feed.latestItem.link).title;
+        const newFeedItem: FeedItem = {
+            title: trimmedTitle,
+            rawTitle: feed.latestItem.title,
+            link: feed.latestItem.link,
+            chapter: getChapterFromTitle(feed.latestItem.title, feed.latestItem.link),
+            pubDate: feed.latestItem.pubDate,
+            guid: feed.latestItem.guid ?? null,
+            id: returnRawFeedHash(trimmedTitle, feed.latestItem.link)
+        }
+        const migratedFeed: Feed = {
+            url: feed.url,
+            latestItem: newFeedItem ?? null,
+            image: feed.image ?? null,
+            title: feed.title,
+            domain: feed.domain,
+            lastFetched: feed.lastFetched,
+            lastBuildDate: feed.lastBuildDate ?? null,
+            id: returnRawFeedHash(trimmedTitle , feed.url)
+        }
+        return migratedFeed;
+    }
+
+    private static migrateRawFeedV1ToV2(feed: RawFeedV1): RawFeed {
+        const trimmedTitle = TrimTitle.trimTitle(feed.items[0].title, feed.items[0].link).title;
+        const newFeedItem: FeedItem = {
+            title: trimmedTitle,
+            link: feed.items[0].link,
+            chapter: getChapterFromTitle(feed.items[0].title, feed.items[0].link),
+            pubDate: feed.items[0].pubDate,
+            guid: feed.items[0].guid ?? null,
+            id: returnRawFeedHash(trimmedTitle, feed.items[0].link),
+            rawTitle: feed.items[0].title,
+        }
+        const migratedFeed: RawFeed = {
+            url: feed.url,
+            latestItem: newFeedItem ?? null,
+            image: feed.image ?? null,
+            title: feed.title,
+            domain: feed.domain,
+            lastFetched: feed.lastFetched,
+            lastBuildDate: feed.lastBuildDate ?? null,
+            lastToken: feed.lastToken ?? null,
+            id: returnRawFeedHash(trimmedTitle , feed.url)
+        }
+        return migratedFeed;
+    }
+
+    private static isRawFeedV1(feed: RawFeed | RawFeedV1): feed is RawFeedV1 {
+        const hasLatestItem = "latestItem" in feed;
+        return !hasLatestItem;
+    }
+    private static isRawFeedV2(feed: RawFeed | RawFeedV1): feed is RawFeed {
+        const hasLatestItem = "latestItem" in feed;
+        return hasLatestItem;
+    }
+
 
     private static getOldIDType(Obj: Hermidata) {
         return this.OLD_simpleHash(`${Obj.novelType}:${TrimTitle.trimTitle(Obj.title, Obj.chapter.bookmarks[Obj.chapter.bookmarkInUse].url).title.toLowerCase()}`);
@@ -552,30 +690,81 @@ export class HermidataMigration {
         return Array.from(new Set(list));
     }
 
-    public static migrateAllHermidataToLatest(older: HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata): migrationReturn {
+    public static migrateAllHermidataToLatest(older: allolderHermidata | Hermidata): migrationReturn {
         let current = older;
 
         // early return if already latest
         if (isHermidataV10(current)) return {result: current, isMigratedSuccessfully: true};
 
+        const migrations: Array<[(d: AnyHermidataVersion) => boolean, (d: any) => AnyHermidataVersion]> = [
+            [isHermidataV1, this.migrateHermidataV1ToV2.bind(this)],
+            [isHermidataV2, this.migrateHermidataV2ToV3.bind(this)],
+            [isHermidataV3, this.migrateHermidataV3OrV4ToV5.bind(this)],
+            [isHermidataV4, this.migrateHermidataV3OrV4ToV5.bind(this)],
+            [isHermidataV5, this.migrateHermidataV5ToV6.bind(this)],
+            [isHermidataV6, this.migrateHermidataV6ToV7.bind(this)],
+            [isHermidataV7, this.migrateHermidataV7ToV8.bind(this)],
+            [isHermidataV8, this.migrateHermidataV8ToV9.bind(this)],
+            [isHermidataV9, this.migrateHermidataV9ToV10.bind(this)],
+        ];
 
-        if (isHermidataV4OrOlder(current)) current = this.migrateHermidataV3OrOlderToV5(current);
-        if (isHermidataV5(current)) current = this.migrateHermidataV5ToV6(current);
-        if (isHermidataV6(current)) current = this.migrateHermidataV6ToV7(current);
-        if (isHermidataV7(current)) current = this.migrateHermidataV7ToV8(current);
-        if (isHermidataV8(current)) current = this.migrateHermidataV8ToV9(current);
-        if (isHermidataV9(current)) current = this.migrateHermidataV9ToV10(current);
-
-        if (!isHermidataV10(current))  {
-            console.warn(`Hermidata is not set to the latest version.`, current);
-            console.warn(`Detected version: Unknown`);
-            return  { result: current, isMigratedSuccessfully: false};
+        for (const [check, migrate] of migrations) {
+            if (check(current)) current = migrate(current);
         }
 
-        return { result: current, isMigratedSuccessfully: true};
+        if (!isHermidataV10(current)) {
+            console.warn('[Migration] Failed to reach V10:', current);
+            return { result: current, isMigratedSuccessfully: false };
+        }
+
+        return { result: current, isMigratedSuccessfully: true };
+    }
+    private static migrateHermidataV1ToV2(older: HermidataV1): HermidataV2 {
+        return {
+            Hash: returnHashedTitle(older.Title, older.Type, older.Url),
+            Title: older.Title,
+            Type: older.Type,
+            Url: older.Url,
+            Status: older.Status,
+            Tag: older.Tag ?? '',
+            Notes: older.Notes ?? "",
+            Chapter: older.Chapter,
+            Date: older.Date ?? new Date().toISOString(),
+            GoogleSheetURL: older.GoogleSheetURL ?? '',
+            Past: older.Past ?? {},
+            Page_Title: older.Title ?? '',
+        }
     }
 
-    private static migrateHermidataV3OrOlderToV5(older: HermidataV3 | HermidataV4): HermidataV5 {
+    private static migrateHermidataV2ToV3(older: HermidataV2): HermidataV3 {
+        const possibleSource = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(older.Url)
+        const source = possibleSource ? possibleSource[1] : 'DummySite';
+        return {
+            id: returnHashedTitle(older.Title, older.Type, older.Url),
+            title: older.Title,
+            type: older.Type,
+            url: older.Url,
+            source,
+            status: older.Status,
+            rss: null,
+            import: null,
+            chapter: {
+                current: older?.Chapter ?? 0,
+                history: this.setNumbersFromstringToList([older.Chapter]) ?? [],
+                latest: null,
+                lastChecked: older.Date ?? new Date().toISOString()
+            },
+            meta: {
+                tags: older.Tag ?? '',
+                notes: older.Notes ?? "",
+                altTitles: [older.Title],
+                added: older.Date ?? new Date().toISOString(),
+                updated: older.Date ?? new Date().toISOString()
+            }
+        }
+    }
+
+    private static migrateHermidataV3OrV4ToV5(older: HermidataV3 | HermidataV4): HermidataV5 {
         return {
             id: returnHashedTitle(older.title, older.type, older.url),
             title: older.title,
@@ -763,8 +952,8 @@ export class HermidataMigration {
                 history: this.setNumbersFromstringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
-                createdAt: new Date(bookmark.createdAt).toISOString(),
-                updatedAt: new Date(bookmark.updatedAt).toISOString(),
+                createdAt: new Date(normaliseDateToIso(bookmark.createdAt)).toISOString(),
+                updatedAt: new Date(normaliseDateToIso(bookmark.updatedAt)).toISOString(),
                 note: bookmark.note,
                 isPrimary: bookmark.isPrimary,
                 readStatus: bookmark.readStatus,
@@ -783,7 +972,7 @@ export class HermidataMigration {
                 bookmarks: newBookmarks,
                 revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
                 latest: Number(data.chapter?.latest) ?? 0,
-                lastChecked: new Date(data.chapter?.lastChecked).toISOString() ?? new Date().toISOString(),
+                lastChecked: new Date(normaliseDateToIso(data.chapter?.lastChecked)).toISOString() ?? new Date().toISOString(),
                 bookmarkInUse: data.chapter?.bookmarkInUse
             },
             meta: {
@@ -791,7 +980,7 @@ export class HermidataMigration {
                 notes: data.meta?.notes ?? "",
                 altTitles: data.meta?.altTitles ?? [data.title],
                 altSources: data.meta?.altSources ?? [data.source],
-                added: new Date(data.meta?.added).toISOString() ?? new Date().toISOString(),
+                added: new Date(normaliseDateToIso(data.meta?.added)).toISOString() ?? new Date().toISOString(),
                 updated: new Date(data.meta?.updated).toISOString() ?? new Date().toISOString(),
                 originalRelease: data.meta?.originalRelease ?? null,
                 novelStatus: data.meta?.novelStatus

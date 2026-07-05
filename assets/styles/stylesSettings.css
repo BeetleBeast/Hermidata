@@ -280,9 +280,10 @@ nav {
 }
 .tagColoringInput {
 	width: 30px;
-	/* padding: 1px; */
+	padding: 5px;
 	border-radius: unset;
 	border: none;
+	height: strech;
 }
 .EditORemoveItem-removeBtn {
 	border: none;

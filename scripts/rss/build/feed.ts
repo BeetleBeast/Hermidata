@@ -2,7 +2,7 @@ import { findByTitleOrAlt, getChapterFromTitleReturn } from "../../shared/utils/
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
 import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
-import { getUrlFromCurrentBookmark } from "../../shared/utils/HermidataSelector";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 
 interface ItemInfo {
@@ -30,15 +30,16 @@ export class FeedItem {
         const fragment = document.createDocumentFragment();
         for (const [key, item] of Object.entries(hermidataList)) {
             this.isFirstItem = Object.keys(hermidataList)[0] === key
+            const Hermidata = new HermidataModel(item);
             
-            const itemInfo = await this.getItemInfo(key, item, isRSSItem);
+            const itemInfo = await this.getItemInfo(key, Hermidata, isRSSItem);
             if ( getElement(`[data-hash-key="${key}"]`)?.dataset.hashKey && itemInfo.isRead && itemInfo.clearedNotification) continue;
 
             const li = this.createItemContainer(key, isRSSItem);
 
-            const lines = this.createItemLines(item);
+            const lines = this.createItemLines(Hermidata);
             
-            const ItemInfoContainer = await this.createItemInfoContainer(key, item, itemInfo, isRSSItem);
+            const ItemInfoContainer = await this.createItemInfoContainer(key, Hermidata, itemInfo, isRSSItem);
             
             li.append(lines, ItemInfoContainer);
             fragment.appendChild(li);
@@ -204,15 +205,15 @@ export class FeedItem {
         elTitle.innerHTML = title;
         return elTitle;
     }
-    private async getItemInfo(key: string, item: Hermidata, isRSSItem: boolean = false): Promise<ItemInfo> {
+    private async getItemInfo(key: string, item: HermidataModel, isRSSItem: boolean = false): Promise<ItemInfo> {
         const title = findByTitleOrAlt(item.title, this.AllHermidata)?.title || item.title;
-        const url = item.rss?.latestItem.link || getUrlFromCurrentBookmark(item);
+        const url = item.rss?.latestItem.link || item.GetUrl();
         
         const useAutoDetectedChapter = getChapterFromTitleReturn(title, item?.title, undefined, url);
-        const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.chapter?.bookmarks[item.chapter.bookmarkInUse].current;
+        const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.GetChapter();
         
-        const currentHermidata =this.AllHermidata?.[key]
-        const currentChapter = currentHermidata?.chapter?.bookmarks[currentHermidata.chapter.bookmarkInUse].current
+        const currentHermidata = new HermidataModel(this.AllHermidata?.[key]);
+        const currentChapter = currentHermidata?.GetChapter();
         const clearedNotification = await getLocalNotificationItem(key);
         const isRead = !isRSSItem && (currentChapter === chapter)
         
@@ -227,11 +228,11 @@ export class FeedItem {
         pubDate.title = pubDateText;
         return pubDate
     }
-    private createItemFooter(item: Hermidata): HTMLElement {
+    private createItemFooter(item: HermidataModel): HTMLElement {
         const Elfooter = document.createElement("div");
 
         Elfooter.className = "hermidata-item-footer"
-        const domain = item.source || getUrlFromCurrentBookmark(item).replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+        const domain = item.source || item.GetUrl().replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
         const altDomains = item.meta.altSources.length >= 2 ? item.meta.altSources.join(', ') : '';
         Elfooter.textContent = altDomains ? String(altDomains) : String(domain);
         Elfooter.title = String(domain);
@@ -290,7 +291,7 @@ export class FeedItem {
 
         return ElTagContainer
     }
-    private async createItemInfoContainer(key: string, item: Hermidata, itemInfo: ItemInfo, isRSSItem: boolean): Promise<HTMLElement> {
+    private async createItemInfoContainer(key: string, item: HermidataModel, itemInfo: ItemInfo, isRSSItem: boolean): Promise<HTMLElement> {
         const settings = await getSettings();
         const ElInfo = document.createElement("div");
         ElInfo.className = "hermidata-item-info"
