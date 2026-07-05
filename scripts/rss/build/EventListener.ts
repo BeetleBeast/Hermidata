@@ -382,7 +382,7 @@ export class EventListener extends RssBuild {
             console.warn("No data found for this item");
             return;
         }
-        const newTitle = await customPrompt(`Renaming "${oldData.title}" to:`, oldData.title);
+        const newTitle = await customPrompt(`Renaming to:`, oldData.title);
         if (!newTitle || newTitle.trim() === oldData.title.trim()) {
             console.log("Rename canceled or unchanged");
             return;

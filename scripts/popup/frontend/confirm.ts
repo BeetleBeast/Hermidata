@@ -95,7 +95,7 @@ export function customPrompt(msg: string, defaultInput: string): Promise<string 
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
-            container.style.height = `${document.body.offsetHeight / 2}px`;
+            container.style.height = `${document.body.offsetHeight}px`;
             label.style.display = 'block';
             input.style.display = 'block';
             btn1.style.display = 'block';
@@ -147,7 +147,7 @@ export function customConfirm(msg: string, inputText: { accept: string; reject: 
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
-            container.style.height = `${document.body.offsetHeight / 2}px`;
+            container.style.height = `${document.body.offsetHeight}px`;
             label.style.display = 'flex';
             btn1.style.display = 'block';
             btn2.style.display = 'block';

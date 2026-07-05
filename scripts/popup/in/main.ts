@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await controller.init();
 
     // After popup init — start quietly in the background
-    setTimeout( async () => controller.RSS?.preloadRSS(), 500)  // slight delay so popup renders first
+    await controller.RSS?.preloadRSS();
 
     setTimeout( async () => checkSyncQuota(), 500);
 });

@@ -112,7 +112,7 @@ body {
     top: 0;
     left: 0;
     width: 95%;
-    overflow: scroll;
+    /* overflow: scroll;*/
     height: 100%;
     z-index: 1000;
     padding: 15px;
