@@ -2,7 +2,10 @@ import { type Hermidata } from "../shared/types/index";
 import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
 import { FeedItem } from "./build/feed";
-import type { HermidataModel } from "../shared/utils/HermidataSelector";
+import { HermidataModel } from "../shared/utils/HermidataSelector";
+import { updatePolygons } from "./build/SetPositionSvg";
+import { getElement, setElement } from "../shared/utils/Selection";
+import { BuildRSSController } from "./controller";
 
 export abstract class RssBuild {
     protected readonly hermidata: HermidataModel;
@@ -20,6 +23,9 @@ export abstract class RssBuild {
         while (parent.firstChild) parent.lastChild!.remove();
     }
     protected async reloadContent(NotificationSection: HTMLElement,AllItemSection: HTMLElement) {
+
+        this.showLoadingAnimation();
+
         this.removeAllChildNodes(NotificationSection) // clear front-end
         this.removeAllChildNodes(AllItemSection) // clear front-end
 
@@ -35,7 +41,55 @@ export abstract class RssBuild {
         NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(feeds, false));
         AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());
         AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(hermidata, true));
+
+        const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
+        if (!sortSection) throw new Error('sort section not found');
+        updatePolygons();
+
+        const BuildRSS = new BuildRSSController(this.hermidata);
+
+        await BuildRSS.makeSortSection(sortSection);
+
+        await BuildRSS.attachEventListeners()
+
+        await BuildRSS.makeFooterSection();
+
+        await BuildRSS.activateAutoSubscribe();
+
+        this.hideLoadingAnimation();
     }
+    private showLoadingAnimation() {
+            setElement(".HDClassic", el => {
+                el.style.opacity = '0';
+                el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+                el.style.cursor = 'wait'; // make the cursor a wait cursor
+                el.style.pointerEvents = 'none'; // make it not clickable
+            });
+            setElement(".HDRSS", el => {
+                el.style.opacity = '0';
+                el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+                el.style.cursor = 'wait'; // make the cursor a wait cursor
+                el.style.pointerEvents = 'none'; // make it not clickable
+    
+            });
+            setElement('.material-symbols-outlinedContainer', el => el.style.display = 'flex');
+        }
+        private hideLoadingAnimation() {
+            setElement(".HDClassic", el => {
+                el.style.opacity = '0';
+                el.style.overflow = 'hidden';
+                el.style.cursor = 'default';
+                el.style.pointerEvents = 'auto';
+            });
+            setElement(".HDRSS", el => {
+                el.style.opacity = '1';
+                el.style.overflowY = 'auto';
+                el.style.overflowX = 'hidden';
+                el.style.cursor = 'default';
+                el.style.pointerEvents = 'auto';
+            });
+            setElement('.material-symbols-outlinedContainer', el => el.style.display = 'none');
+        }
     protected GetHashItem(item: HTMLElement): string {
         const newVersion = item.dataset.hashKey;
         if(!newVersion) throw new Error('hash not found');
