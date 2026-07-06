@@ -3,7 +3,6 @@ import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
 import { FeedItem } from "./build/feed";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
-import { updatePolygons } from "./build/SetPositionSvg";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
 
@@ -44,7 +43,6 @@ export abstract class RssBuild {
 
         const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
         if (!sortSection) throw new Error('sort section not found');
-        updatePolygons();
 
         const BuildRSS = new BuildRSSController(this.hermidata);
 

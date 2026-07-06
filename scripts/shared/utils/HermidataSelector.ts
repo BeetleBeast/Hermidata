@@ -314,4 +314,8 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) return this.normalizeTagsForSheet(this.toInputArrayRow(bookmarkInUseId));
         return this.normalizeTagsForSheet(this.toInputArrayRow())
     }
+    // -- boolean helpers --
+    public hasRSS(): boolean {
+        return this.rss !== null;
+    }
 }

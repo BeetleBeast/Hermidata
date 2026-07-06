@@ -140,6 +140,7 @@ export class FolderMapping extends Build {
         });
         // add ghost text on change
         this.addCustomRule?.addEventListener('input', async () => {
+            this.addCustomRule!.placeholder = "";
             const rule = this.addCustomRule?.value.trim();
             const ghostText = this.customRuleGhostText;
             if (!rule || !ghostText) return;
@@ -366,16 +367,21 @@ export class FolderMapping extends Build {
     private loadExistingAliases(settings: Settings) {
         if (!this.activeReadStatuses || !this.activeTypeAliases) return
 
-        // if no aliases, return
-        if (!settings.FolderMapping.statusFolders || !settings.FolderMapping.typeAliases) return
+        
         this.activeReadStatuses.innerHTML = ''
         this.activeTypeAliases.innerHTML = ''
         
-        const statuses = Object.entries(settings.FolderMapping.statusFolders);
-        const types =  Object.entries(settings.FolderMapping.typeAliases);
+        const statuses = Object.entries(settings.FolderMapping.statusFolders ?? {});
+        const types =  Object.entries(settings.FolderMapping.typeAliases ?? {});
 
-        if (statuses.length === 0) getElement("#activeReadStatuses")!.style.display = 'none';
-        if (types.length === 0) getElement("#activeTypeAliases")!.style.display = 'none';
+        if (statuses.length === 0) {
+            getElement('#activeAliasesHeader-ReadStatus')!.style.display = 'none';
+            getElement("#activeReadStatuses")!.style.display = 'none';
+        }
+        if (types.length === 0) {
+            getElement('#activeAliasesHeader-NovelType')!.style.display = 'none';
+            getElement("#activeTypeAliases")!.style.display = 'none';
+        }
         if (statuses.length === 0 && types.length === 0) getElement(".FolderMapping_ActiveAliases")!.style.display = 'none';
 
         for (const [key, value] of statuses) { 
@@ -394,7 +400,7 @@ export class FolderMapping extends Build {
 
         const mapping = settings.FolderMapping
         if (!mapping.overrides || mapping.overrides.length === 0) {
-            getElement("#CustomRulesContainer")!.style.display = 'none';
+            getElement("#activeCustomRulesContainer")!.style.display = 'none';
             return
         }
         for (const rule of mapping.overrides) {
@@ -413,6 +419,7 @@ export class FolderMapping extends Build {
         row.dataset.newAlias = newAlias
 
         const label = document.createElement('span')
+        label.className = 'folder-mapping-label';
         label.textContent = `${OriginalName} → `
 
         const eddit = document.createElement('input');
@@ -452,6 +459,7 @@ export class FolderMapping extends Build {
         row.dataset.status = status
 
         const label = document.createElement('span')
+        label.className = 'folder-mapping-label';
         label.textContent = `${type} + ${status} → `
         // TODO: make the text content better
 

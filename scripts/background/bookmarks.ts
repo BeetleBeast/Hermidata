@@ -37,7 +37,7 @@ async function addBookmark(hermidata: HermidataModel) {
     }
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
-    : "Bookmarks";
+    : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const bookmarkTitle = `${hermidata.title} - Chapter ${hermidata.GetChapter() || '0'}`;
@@ -65,7 +65,7 @@ async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplac
 
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
-    : "Bookmarks";
+    : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
 
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
@@ -286,7 +286,7 @@ export async function createNestedFolders(pathSegments: string[], rootTitle: str
     if (!rootId) throw new Error(`Root folder "${rootTitle}" not found`);
     const existingFolder = await findFolderPath(rootId, pathSegments);
     if (existingFolder) return existingFolder.id;
-
+    debugger;
     return createMissingFolders(rootId, pathSegments);
 
 }

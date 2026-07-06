@@ -112,18 +112,18 @@ export class Subscribe extends RssBuild {
             const Hermidata = new HermidataModel(value);
             // 4. confirm with user
             const confirmationMsg = `
-                Subscribe to "${Hermidata.title}"?
+                <p>Subscribe to "${Hermidata.title}"?</p>
                 <br>
                 ${RawFeed.image ? `<img src="${RawFeed.image}" alt="${RawFeed.latestItem.title}" style="width: 45px; height: auto;">` : ''}\n
                 <br>
-                title: ${RawFeed.latestItem.title}\n
+                <p>title: ${RawFeed.latestItem.title}</p>\n
                 <br>
-                <a href="${RawFeed.url}" target="_blank">${RawFeed.latestItem.title}</a>
+                <a href="${RawFeed.latestItem.link}" target="_blank">${RawFeed.latestItem.title}</a>
                 <br>
                 <br>
-                <small>Tip: you can always unsubscribe at any time by clicking the "Unsubscribe" button by right clicking on the RSS feed item</small>
+                <small><p>Tip: you can always unsubscribe at any time by clicking the "Unsubscribe" button by right clicking on the RSS feed item</p></small>
                 `;
-            const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel' });
+            const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel' }, "vertical");
             if (!shouldSubscribe) {
                 const RawFeedID = returnRawFeedHash(RawFeed.latestItem.title, RawFeed.url);
                 const newRecord: Record<string, string> = { [Hermidata.id]: RawFeedID };

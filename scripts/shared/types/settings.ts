@@ -73,7 +73,7 @@ export type FolderMapping = {
     root: string                          // "Manga - Anime - Novels - TV-Series"
     statusFolders: Record<string, string> // status → folder name
     overrides?: FolderRule[]              // optional type+status specific overrides
-    typeAliases?: Record<string, string>  // Map types to their folder names
+    typeAliases: Record<string, string>  // Map types to their folder names
     defaultPath: string                   // fallback for unknown types/statuses
 }
 

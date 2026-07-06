@@ -435,13 +435,15 @@ nav {
 	align-self: normal;
 	border: none;
 	width: max-content;
+	text-align: center;
 }
 .folder-mapping-edit-overide {
 	background-color: transparent;
 	color: var(--Text-color);
 	align-self: normal;
 	border: none;
-	width: max-content;
+	width: 40%;
+	text-align: left;
 }
 
 /* custom rules */
@@ -460,12 +462,14 @@ nav {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	width: 100%;
 }
 #activeCustomRules {
 	display: flex;
 	flex-direction: column;
 	align-items: end;
 	gap: 5px;
+	width: 70%;
 }
 
 .folder-mapping-row {
@@ -474,6 +478,11 @@ nav {
 	gap: 15px;
 	border: none;
 	text-align: center;
+	align-items: center;
+	justify-content: flex-end;
+	width: 100%;
+}
+.folder-mapping-label {
 	text-decoration: underline;
 }
 
