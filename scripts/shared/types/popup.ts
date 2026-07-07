@@ -191,6 +191,30 @@ export type ShouldReplaceReturn = {
 export type  ShouldReplaceOrBlockReturn = ShouldBlockReturn | ShouldReplaceReturn;
 
 
+/**
+ * Every dot-path inside T that ends at a string[].
+ * Example: for HermidataModel, this produces "meta.tags" | "meta.altSources" | "meta.altTitles" | ...
+ * (as tuples, e.g. ["meta", "tags"])
+ */
+export type StringListFieldPath<TRoot> = TRoot extends string[]
+    ? []
+    : TRoot extends object
+        ? {
+            [FieldName in Extract<keyof TRoot, string>]: [FieldName, ...StringListFieldPath<TRoot[FieldName]>]
+        }[Extract<keyof TRoot, string>]
+        : never;
+
+/**
+ * Given a root type and a path tuple into it, resolves the type found at that path.
+ * Example: ValueAtPath<HermidataModel, ["meta", "tags"]> === string[]
+ */
+export type ValueAtPath<TRoot, TPath extends readonly PropertyKey[]> = TPath extends [infer FirstKey, ...infer RestKeys]
+    ? FirstKey extends keyof TRoot
+        ? RestKeys extends PropertyKey[]
+            ? ValueAtPath<TRoot[FirstKey], RestKeys>
+            : never
+        : never
+    : TRoot;
 
 
 /* old versions */

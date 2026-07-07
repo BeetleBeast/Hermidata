@@ -3,6 +3,8 @@ import { ext } from '../utils/BrowserCompat'
 import { putHermidata, isHermidataV10, deleteHermidata } from './db'
 import type { Hermidata, HermidataV2, migrationReturn } from '../types/index'
 import { HermidataMigration } from '../migration/Hermidata';
+import { getHermidataViaKey } from './Storage';
+import { HermidataModel } from '../utils/HermidataSelector';
 
 let _deviceId: string | null = null;
 
@@ -75,7 +77,23 @@ export function initSync(): void {
 
                 console.assert(isHermidataV10(returnObj.result), '[Sync] Failed to migrate entry');
 
-                if (returnObj?.isMigratedSuccessfully) await putHermidata(entry, false) // false to avoid re-syncing
+                if (returnObj?.isMigratedSuccessfully) {
+                    // check if the entry in the database and the one in sync is out of date
+                    const existingEntry = await getHermidataViaKey(entry.id);
+
+                    // if the entry in the database is out of date or does not exist, update it
+                    if (!existingEntry || existingEntry.meta.updated < entry.meta.updated) {
+                        await putHermidata(returnObj.result, false) // false to avoid re-syncing
+                        continue;
+                    }
+                    // if the entry in the database is up to date, update it
+                    const hermidata = new HermidataModel(existingEntry);
+
+                    hermidata.UpdateOutdatedSync(new HermidataModel(returnObj.result));
+                    await putHermidata(hermidata.toJSON(), false) // false to avoid re-syncing
+                    
+
+                }
                 console.log(`[Sync] Pulled entry from another device: ${entry.title}`)
             } else if (oldValue && !newValue) {
                 // Entry was deleted on another device

@@ -60,6 +60,9 @@ export type {
     ShouldReplaceReturn,
 
     PotentialSameHermidata,
+
+    StringListFieldPath,
+    ValueAtPath,
     
 
 } from "./popup";

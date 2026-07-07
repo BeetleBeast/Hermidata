@@ -1,7 +1,7 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed } from "../types";
+import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath } from "../types";
 import { returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
@@ -348,6 +348,52 @@ export class HermidataModel implements Hermidata {
             this.chapter.latest = this.GetChapter() > this.chapter.latest ? this.GetChapter() : this.chapter.latest;
         }
         return true;
+    }
+    /** Update With Outdated Sync Data */
+    UpdateOutdatedSync(hermidata: HermidataModel): void {
+        // potential new bookmarks
+        // potential new alt sources/titles
+        // potential new tags
+        // update history
+
+        const bookmarksCount = Object.keys(hermidata.chapter.bookmarks).length;
+        const currentBookmarksCount = Object.keys(this.chapter.bookmarks).length;
+
+        if (bookmarksCount > currentBookmarksCount) {
+            // add new bookmark only
+            const newBookmarks = Object.values(hermidata.chapter.bookmarks).filter(bookmark => !this.chapter.bookmarks[bookmark.id]);
+            for (const bookmark of newBookmarks) this.AddBookmark(bookmark);
+        }
+
+        this.AddItemToList(hermidata, ["meta", "altTitles"]);
+        this.AddItemToList(hermidata, ["meta", "altSources"]);
+        this.AddItemToList(hermidata, ["meta", "tags"]);
+
+        if (hermidata.GetLatestReadChapter() > this.GetLatestReadChapter() ) {
+            this.chapter.bookmarks[this.chapter.bookmarkInUse].history.push(hermidata.GetLatestReadChapter());
+        }
+    }
+    public AddItemToList<TPath extends StringListFieldPath<Hermidata>>( hermidata: Hermidata, path: readonly [...TPath] ): void {
+        const outdatedList = this.readByPath(hermidata, path);
+        const currentList = this.readByPath(this, path);
+
+        if (outdatedList.length > currentList.length) {
+            const newItems = outdatedList.filter((item) => !currentList.includes(item));
+            const mergedList = [...currentList, ...newItems] as ValueAtPath<HermidataModel, TPath>;
+            this.writeByPath(this, path, mergedList);
+        }
+    }
+    private writeByPath<TRoot, TPath extends readonly PropertyKey[]>( root: TRoot, path: readonly [...TPath], value: ValueAtPath<TRoot, TPath> ): void {
+        const parentPath = path.slice(0, -1);
+        const lastKey = path[path.length - 1];
+        const parent = this.readByPath(root, parentPath as any) as any;
+        parent[lastKey] = value;
+    }
+    private readByPath<TRoot, TPath extends readonly PropertyKey[]>( root: TRoot, path: readonly [...TPath] ): ValueAtPath<TRoot, TPath> {
+        return path.reduce((current: any, key) => current[key], root);
+    }
+    AddBookmark(bookmark: Bookmark): void {
+        this.chapter.bookmarks[bookmark.id] = bookmark;
     }
     UpdateFeed(rawFeed: RawFeed): void {
         // always update it with latest info NOT latest fetched item
