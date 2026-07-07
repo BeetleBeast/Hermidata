@@ -77,7 +77,8 @@ export abstract class Build {
         try {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (!response.success) reject(new Error(response.error));
+                    if (!response) reject(new Error('No response from background script'));
+                    if (!response?.success) reject(new Error(response.error));
                     resolve(await response.result as T);
                 });
             });

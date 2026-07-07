@@ -34,8 +34,15 @@ export class TagManagement extends Build {
         this.populateUpdateRemoveTagForm();
         // merge tags
         this.populateTagMergeSelect();
+        this.syncTagMergeSelect();
 
         this.bindEvents();
+    }
+    syncTagMergeSelect() {
+        if (!this.tagMergeSelect1 || !this.tagMergeSelect2) return;
+        this.tagMergeSelect1.selectedIndex = 0;
+        this.tagMergeSelect2.selectedIndex = 1;
+        this.syncBoth(this.tagMergeSelect1, this.tagMergeSelect2);
     }
     private async ReloadForms() {
         await this.init();
@@ -122,6 +129,19 @@ export class TagManagement extends Build {
             this.tagMergeSelect2?.add(option);
         }
     }
+    private syncExclusion(select: HTMLSelectElement, otherSelect: HTMLSelectElement) {
+        const chosen = select.value;
+        [...otherSelect.options].forEach(opt => {
+            opt.disabled = (opt.value === chosen) && (opt.value !== otherSelect.value);
+        });
+    }
+    private syncBoth(selectA: HTMLSelectElement | null, selectB: HTMLSelectElement | null) {
+        if (!selectA || !selectB) return;
+        this.syncExclusion(selectA, selectB);
+        this.syncExclusion(selectB, selectA);
+    }
+
+
 
     private bindEvents() {
         this.addTagBtn?.addEventListener("click", async () => {
@@ -142,6 +162,8 @@ export class TagManagement extends Build {
             await this.saveAllTagColoring();
             await this.ReloadForms();
         })
+        this.tagMergeSelect1?.addEventListener('change', () => this.syncBoth(this.tagMergeSelect1, this.tagMergeSelect2));
+        this.tagMergeSelect2?.addEventListener('change', () => this.syncBoth(this.tagMergeSelect1, this.tagMergeSelect2));
     }
     private async addNewTag() {
         const settings = await this.getSettings();
