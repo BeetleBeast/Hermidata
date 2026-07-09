@@ -2,7 +2,7 @@
 
 >Track your reading and watching progress across novels, manga, and anime - stored locally in your browser and optionally synced to Google Sheets.
 
-Hermidata is a cross-browser extension (Chrome + Firefox) that captures your current tab, extracts the title and chapter, and saves the entry to an internal IndexedDB store. Each entry supports multiple bookmarks that are named progress snapshots that let you track separate read-throughs of the same title. Google Sheets sync is available as an optional feature.
+Hermidata is a cross-browser extension (Chrome + Firefox) that captures your current tab, extracts the title and chapter, and saves the entry to an internal IndexedDB store. Each entry supports multiple markers that are named progress snapshots that let you track separate read-throughs of the same title. Google Sheets sync is available as an optional feature.
 
 ---
 
@@ -17,18 +17,18 @@ Hermidata is a cross-browser extension (Chrome + Firefox) that captures your cur
 - Duplicate detection: warns on same title + chapter with a newer date, auto-replaces older entries when Replace is enabled
 - Context menu entry: right-click any link to save it without opening the tab
 
-### Bookmark System
+### Marker System
 
-Each entry has at least one bookmark. A bookmark stores:
+Each entry has at least one marker. A marker stores:
 
 - The current chapter and URL
 - A label (e.g. "First read", "Re-read 2024")
 - Reading status for that read-through
 - Extra notes for yourself
-- A colour to easily notice your prefered bookmark
+- A colour to easily notice your prefered marker
 - Full chapter history
 
-You can create multiple bookmarks per entry, making it easy to track separate read-throughs of the same novel and remember exactly where you left off each time.
+You can create multiple markers per entry, making it easy to track separate read-throughs of the same novel and remember exactly where you left off each time.
 
 ### RSS Feed Tracking
 
@@ -77,7 +77,7 @@ You can create multiple bookmarks per entry, making it easy to track separate re
 4. Click **Save** - the entry is stored locally in IndexedDB, and synced to Google Sheets if enabled
 5. A bookmark is created for this entry, recording the chapter, URL, and label unless disabled
 
-To track a new read-through of an existing entry, open the entry and add a new bookmark with a distinct label. Each bookmark maintains its own chapter history independently.
+To track a new read-through of an existing entry, open the entry and add a new marker with a distinct label. Each marker maintains its own chapter history independently.
 
 For RSS: navigate to the RSS page for a title, click Subscribe, and Hermidata links the feed to the tracked entry. New chapters trigger a browser notification.
 
