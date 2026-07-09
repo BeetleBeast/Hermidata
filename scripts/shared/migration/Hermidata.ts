@@ -475,7 +475,7 @@ export class HermidataMigration {
                 ),
                 added: older.meta?.added || base.meta.added,
                 updated: new Date().toISOString(),
-                originalRelease: null, // TODO: do something with it
+                originalRelease: older.meta?.originalRelease || newer.meta?.originalRelease || null, // TODO: do something with it
                 novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus
             }
         }

@@ -12,6 +12,7 @@ import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
+import { customConfirm } from '../frontend/confirm';
 
 
 const stateConfig = {
@@ -243,6 +244,15 @@ class HermidataController {
         // update this.hermidata with latest values
         this.updateHermidata();
 
+
+        // if new novel type, then merge the old to new
+        const newNovelType = this.pastHermidata ? this.pastHermidata?.novelType !== this.hermidata.novelType : false;
+        const newHermidata = newNovelType && this.past.pastHermidata ? await this.mergeNovelType(this.hermidata, this.past.pastHermidata) : this.hermidata;
+        if (!newHermidata) {
+            console.error('new Hermidata has different novel type and user declined to merge');
+            return;
+        }
+        this.hermidata = new HermidataModel(newHermidata);
         
         // TODO: sheck if it works
         // migrate if duplicate
@@ -264,6 +274,20 @@ class HermidataController {
         const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet});
 
         if (!this.Testing && savedInStorage && saved ) setTimeout( () => window.close(), 400);
+    }
+    private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
+        const msg = `
+            The Novel Type of "${older.title}" has changed from "${older.novelType}" to "${newer.novelType}".
+            <br>
+            <br>
+            Are you sure you want to change it?
+        `;
+        const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
+        if (!confirmed) return false;
+        const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
+        if (!merged) return false;
+        console.log(`Merged "${older.title}" with "${newer.title}"`);
+        return merged;
     }
     private async saveBookmarkOrAndSheet(allowenced: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }): Promise<boolean> {
         // save to google sheet & bookmark/replace bookmark
@@ -297,6 +321,7 @@ class HermidataController {
         }
         return false
     }
+    /** Updates the Hermidata from the UI & back-end  */
     private updateHermidata() {
 
         
