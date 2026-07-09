@@ -25,6 +25,17 @@
     --filterIncludeOptionText: #fff;
 
     --muted: #989898;
+
+    --border: rgb(70, 85, 110);
+    --border-focus: rgb(120, 150, 210);
+
+    --Btn_danger_fill: rgb(120, 40, 40);
+    --Btn_success_fill: rgb(30, 90, 60);
+    --Btn_cancel_fill: rgb(120, 100, 20);
+
+    --Text-disabled: var(--muted);
+
+    --focus-ring: rgb(120, 150, 210);
     
 }
 
@@ -89,6 +100,12 @@ body {
     user-select: none;
 }
 
+.menu-item[data-danger= "true"]:hover {
+    color: var(--Btn_hover_danger);
+    background-color: var(--Btn_danger_fill);
+
+}
+
 .menu-item:hover {
     background: #444;
 }
@@ -105,18 +122,17 @@ body {
 
 .promptSection {
     display: none;
+    flex-direction: column;
     background-color: rgba(0, 0, 0, 0.2);
     align-items: center;
     justify-content: center;
     position: absolute;
     top: 0;
     left: 0;
-    width: 95%;
-    overflow: scroll;
+    width: 100%;
     height: 100%;
     z-index: 1000;
-    padding: 15px;
-    gap: 10px;
+    gap: 30px;
 }
 
 .genericInput {
@@ -128,6 +144,7 @@ body {
     color: var(--Text-color);
     outline-color: var(--Btn);
     text-emphasis-color: var(--Btn);
+    text-align: center;
     accent-color: var(--Text-color);
     border: 1px solid var(--Btn);
     border-radius: 3px;
@@ -137,12 +154,19 @@ body {
 }
 .genericLabel {
     display: none;
-    background-color: var(--bg-color);
     color: var(--Text-color);
 	display: block;
 	width: fit-content;
 	word-wrap: unset;
 	white-space: nowrap;
+    gap: 10px;
+}
+.genericPromptBtns {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-evenly;
+	width: 100%;
 }
 .genericButton1 {
     display: none;

@@ -3,18 +3,358 @@
     --Btn_hover: rgb(34, 48, 89);
     --Btn_active: rgb(15, 34, 94);
     --Text-color: lightgray;
+    --Btn_hover_danger: rgb(255, 0, 0);
+    --Btn_hover_success: rgb(0, 255, 0);
+    --Btn_hover_Cancel: rgb(255, 217, 0);
     --bg-color: rgb(12, 17, 24);
     --Input-color: rgb(40, 53, 75);
-    --table-color: var(----Input-color);
+    --table-color: var(--Input-color);
+    --Input-colorV2: rgb(32, 39, 51);
+    --Btn_disabled: rgb(120, 120, 120);
+    --bg_disabled: rgb(24, 28, 36);
+    --hr: #555;
+    --filterExcludeOption: #04060a;
+    --filterIncludeOptionText: #fff;
+    --muted: #989898;
+
+    --border: rgb(70, 85, 110);
+    --border-focus: rgb(120, 150, 210);
+
+    --Btn_danger_fill: rgb(120, 40, 40);
+    --Btn_success_fill: rgb(30, 90, 60);
+    --Btn_cancel_fill: rgb(120, 100, 20);
+
+    --Text-disabled: var(--muted);
+
+    --focus-ring: rgb(120, 150, 210);
 }
+
 body {
     background-color: var(--bg-color);
     color: var(--Text-color);
-    
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
     margin-bottom: 15px;
     margin-right: 5px;
     overflow: auto;
 }
+/* ============ BUTTONS ============ */
+
+button,
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    padding: 0.55em 1.1em;
+    font-size: 0.95rem;
+    font-family: inherit;
+    font-weight: 500;
+    color: var(--Text-color);
+    background: var(--Btn);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+                color 0.15s ease, transform 0.05s ease;
+}
+
+button:hover,
+.btn:hover {
+    background: var(--Btn_hover);
+    border-color: var(--border-focus);
+}
+
+button:active,
+.btn:active {
+    background: var(--Btn_active);
+    transform: translateY(1px);
+}
+
+button:focus-visible,
+.btn:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+button:disabled,
+.btn:disabled,
+.btn.disabled {
+    background: var(--bg_disabled);
+    color: var(--Text-disabled);
+    border-color: var(--hr);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-danger:hover {
+    background: var(--Btn_danger_fill);
+    border-color: var(--Btn_hover_danger);
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: var(--Btn_success_fill);
+    border-color: var(--Btn_hover_success);
+    color: #fff;
+}
+
+.btn-cancel:hover {
+    background: var(--Btn_cancel_fill);
+    border-color: var(--Btn_hover_Cancel);
+    color: #fff;
+}
+
+.btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+}
+
+.btn-ghost:hover {
+    background: var(--Input-colorV2);
+    border-color: var(--border-focus);
+}
+
+/* ============ INPUTS ============ */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="date"],
+textarea,
+.input {
+    display: block;
+    width: 100%;
+    padding: 0.55em 0.75em;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--Text-color);
+    background: var(--Input-color);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--muted);
+}
+
+input:hover,
+textarea:hover,
+.input:hover {
+    background: var(--Input-colorV2);
+}
+
+input:focus,
+textarea:focus,
+.input:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    background: var(--Input-colorV2);
+    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 5em;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--Btn_hover);
+    width: 1.05em;
+    height: 1.05em;
+    cursor: pointer;
+}
+
+input:disabled,
+textarea:disabled,
+.input.disabled {
+    background: var(--bg_disabled);
+    color: var(--Text-disabled);
+    border-color: var(--hr);
+    cursor: not-allowed;
+}
+
+input:invalid:not(:placeholder-shown) {
+    border-color: var(--Btn_hover_danger);
+}
+
+/* -- file input -- */
+
+.file-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    padding: 0.55em 1.1em;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--Text-color);
+    background: var(--Btn);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.file-btn:hover {
+    background: var(--Btn_hover);
+    border-color: var(--border-focus);
+}
+
+.file-btn:active {
+    background: var(--Btn_active);
+}
+
+.file-input-hidden:focus-visible + .file-btn,
+.file-input-hidden:focus-visible ~ .file-btn {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+.file-btn.disabled {
+    background: var(--bg_disabled);
+    color: var(--Text-disabled);
+    border-color: var(--hr);
+    cursor: not-allowed;
+}
+
+.file-input-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+
+/* ============ COLOR INPUT ============ */
+
+input[type="color"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 3.5em;
+    height: 2.5em;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--Input-color);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+input[type="color"]:hover {
+    background: var(--Input-colorV2);
+}
+
+input[type="color"]:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+}
+
+input[type="color"]:disabled {
+    background: var(--bg_disabled);
+    border-color: var(--hr);
+    cursor: not-allowed;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border-radius: 4px;
+}
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+/* ============ SELECT ============ */
+
+select {
+    display: block;
+    width: 100%;
+    padding: 0.55em 2em 0.55em 0.75em;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--Text-color);
+    background: var(--Input-color);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='lightgray'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='lightgray' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.6em center;
+    background-size: 1em;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+select:hover {
+    background-color: var(--Input-colorV2);
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+}
+
+select:disabled {
+    background-color: var(--bg_disabled);
+    color: var(--Text-disabled);
+    border-color: var(--hr);
+    cursor: not-allowed;
+}
+
+option:disabled,
+.option-excluded {
+    background: var(--filterExcludeOption);
+    color: var(--muted);
+}
+
+.option-included {
+    color: var(--filterIncludeOptionText);
+}
+
+/* ============ MISC SHARED ============ */
+
+hr {
+    border: none;
+    border-top: 1px solid var(--hr);
+    margin: 1em 0;
+}
+
+label {
+    color: var(--Text-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.35em;
+    display: inline-block;
+	white-space: pre;
+}
+
+.field-hint {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-top: 0.3em;
+}
+
 
 /* Not very elegant but it works */
 
@@ -91,13 +431,13 @@ footer {
 	transition: none;
 }
 #resetSettingsBtn:hover {
-	background-color: var(--Btn_hover_danger);
+	background-color: var(--Btn_danger_fill);
 }
 #cancelSettingsBtn:hover {
-	background-color: var(--Btn_hover_Cancel);
+	background-color: var(--Btn_cancel_fill);
 }
 #saveSettingsBtn:hover {
-	background-color: var(--Btn_hover_success);
+	background-color: var(--Btn_success_fill);
 }
 .fullpage-btn {
     position: absolute;
@@ -183,6 +523,28 @@ select.autoInput {
     opacity: 1;
 }
 
+#saveSpreadsheetUrl {
+	margin-left: 1rem;
+}
+#spreadsheetUrl {
+	display: inline-block;
+	width: auto;
+	min-width: 45%;
+}
+
+#logOut:hover {
+	background: var(--Btn_danger_fill);
+	border-color: var(--Btn_hover_danger);
+}
+#testSpreadsheetUrl:hover {
+	border-color: var(--Btn_hover_Cancel);
+	background: var(--Btn_cancel_fill);
+}
+#saveSpreadsheetUrl:hover {
+	background: var(--Btn_success_fill);
+	border-color: var(--Btn_hover_success);
+}
+
 #spreadsheetPrompt {
     display:none;
 }
@@ -262,7 +624,44 @@ nav {
 	border: 1px solid;
 }
 
+/* Default Bppkmark Settings */
+#TypeTextMenu,
+#NovelStatusTextMenu,
+#ReadStatusTextMenu,
+#tagsTextMenu,
+#notesTextMenu,
+#NovelStatus,
+#ReadStatus,
+#tags,
+#notes,
+#Type {
+	border: none;
+	background-color: var(--bg-color);
+}
+
+#tagsTextMenu,
+#tags,
+#notesTextMenu,
+#notes {
+	width: -webkit-fill-available
+}
+
+
+/* Content Types & Statuses */
+
+#newNovelType,
+#newNovelStatus,
+#newReadStatus {
+	width: 15%;
+}
+
 /* AI */
+
+/* Tag Management */
+
+#addTag {
+	width: auto;
+}
 
 /* Edit Tags */
 .EditORemoveItem {
@@ -274,24 +673,50 @@ nav {
 	justify-content: left;
 	border-radius: 2px;
 }
-.EditORemoveItem-input {
-	border: none;
-	border-radius: unset;
+
+.EditORemoveItem-removeBtn:hover {
+	border-color: var(--Btn_hover_danger);
+	background: var(--Btn_danger_fill);
 }
+.EditORemoveItem-removeBtn {
+	border-radius: 0 6px 6px 0 !important;
+	height: 2.5em !important;
+}
+
+.EditORemoveItem-input {
+	border-right: none !important;
+	border-radius: 6px 0 0 6px !important;
+}
+
 .tagColoringInput {
 	width: 30px;
 	padding: 5px;
-	border-radius: unset;
-	border: none;
-	height: strech;
+	border-radius: unset !important;
+	height: 2.4rem !important;
 }
-.EditORemoveItem-removeBtn {
-	border: none;
-	border-radius: unset;
+.EditORemoveItem-updateBtn:hover {
+	background: var(--Btn_success_fill);
+	border-color: var(--Btn_hover_success);
 }
 .EditORemoveItem-updateBtn {
-    border: none;
-	border-radius: unset;
+	border-radius: unset !important;
+	height: 2.5em !important;
+}
+
+#tagMergeSelect1 {
+	width: auto;
+	display: inline-block;
+}
+
+#tagMergeSelect2 {
+	width: auto;
+	display: inline-block;
+}
+
+#mergeTags {
+	display: inline-flex;
+	width: auto;
+	margin-left: 1rem;
 }
 
 .settings-page {
@@ -350,6 +775,21 @@ nav {
 	align-items: center;
 	border-radius: 15px;
 	padding: 15px;
+}
+#AddAliasToReadStatusContainer,
+#AddAliasToNovelTypeContainer {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: center;
+    height: 2.5rem;
+    gap: 5px;
+}
+#addReadStatusAliasBtn,
+#addNovelTypeAliasBtn {
+    height: inherit;
+    white-space: nowrap;
 }
 
 .FolderMapping_RenameOrAddAlias-child {
@@ -435,13 +875,15 @@ nav {
 	align-self: normal;
 	border: none;
 	width: max-content;
+	text-align: center;
 }
 .folder-mapping-edit-overide {
 	background-color: transparent;
 	color: var(--Text-color);
 	align-self: normal;
 	border: none;
-	width: max-content;
+	width: 40%;
+	text-align: left;
 }
 
 /* custom rules */
@@ -460,12 +902,14 @@ nav {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	width: 100%;
 }
 #activeCustomRules {
 	display: flex;
 	flex-direction: column;
 	align-items: end;
 	gap: 5px;
+	width: 70%;
 }
 
 .folder-mapping-row {
@@ -474,7 +918,13 @@ nav {
 	gap: 15px;
 	border: none;
 	text-align: center;
+	align-items: center;
+	justify-content: flex-end;
+	width: 100%;
+}
+.folder-mapping-label {
 	text-decoration: underline;
+	white-space: nowrap;
 }
 
 #addCustomRule {
@@ -488,7 +938,7 @@ nav {
 }
 #customRuleGhostText {
 	position: absolute;
-	top: 20px;
+	top: 17px;
 	left: 10px;
 	pointer-events: none;
 	color: #888;
@@ -540,6 +990,35 @@ nav {
     align-items: center;
     gap: 5px;
 }
+
+#add_NovelTypes_Subfolder_To_Select {
+	width: auto;
+}
+#add_ReadStatuses_Subfolder_To_Select {
+	width: auto;
+}
+
+#add_NovelTypes_Subfolder_Prefix {
+	margin: 10px 15px 10px 10px;
+	width: auto;
+}
+#add_ReadStatuses_Subfolder_Prefix {
+	margin: 10px 15px 10px 10px;
+	width: auto;
+}
+
+#add_NovelTypes_Subfolder_Suffix {
+	margin: 10px 15px 10px 10px;
+	width: auto;
+}
+
+#add_ReadStatuses_Subfolder_Suffix {
+	margin: 10px 15px 10px 10px;
+	width: auto;
+}
+
+
+
 #addCustomRule_Options {
     display: flex;
     flex-direction: row;
@@ -571,13 +1050,13 @@ nav {
     display: flex;
     flex-direction: row;
     align-items: center;
-    border: 1px solid;
+    border-left: 1px solid grey;
 }
 #add_ReadStatuses_Subfolder_Options_Inputs {
     display: flex;
     flex-direction: row;
     align-items: center;
-    border: 1px solid;
+	border-left: 1px solid grey;
 }
 
 
@@ -590,6 +1069,14 @@ nav {
 	flex-direction: column;
 	align-items: center;
 	width: 100%;
+}
+
+#addCustomRuleToSelect_NovelType {
+	width: auto;
+}
+
+#addCustomRuleToSelect_ReadStatus {
+	width: auto;
 }
 
 
@@ -620,4 +1107,21 @@ nav {
 
 #bookmarkFolder {
 	width: -moz-available;
+}
+
+
+/* sucess btns */
+#newNovelTypeBtn:hover,
+#newNovelStatusBtn:hover,
+#newReadStatusBtn:hover,
+#saveDefaultInputTextMenu:hover,
+#saveDefaultInput:hover {
+	border-color: var(--Btn_hover_success);
+	background: var(--Btn_success_fill);
+}
+
+
+#addTagBtn:hover {
+	border-color: var(--Btn_hover_success);
+	background: var(--Btn_success_fill);
 }

@@ -6,23 +6,7 @@ import type { Settings } from "../shared/types";
 import { findNestedFolder, getBookmarkChildren } from "./bookmarks";
 import { setState, settingsCashed } from "./state";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
-
-
-interface FuzzyBookmarkMatches {
-    folderPath: string;
-    bookmarkTitle: string;
-    fuzzySearchUrl: string;
-    currentUrl: string | undefined;
-    similarity: number;
-}
-interface FuzzyHermidataMatches {
-    bookmarkTitle: string,
-    fuzzySearchUrl: string,
-    chapter: number,
-    currentUrl: string | undefined,
-    similarity: number
-}
-
+import type { FuzzyBookmarkMatches, FuzzyHermidataMatches, FuzzyMatchResult } from "../shared/types/rss";
 
 const fuzzyCache = new Map();
 
@@ -33,7 +17,7 @@ declare const browser: typeof chrome | undefined;
  * @param {*} currentTab 
  * @returns 
  */
-async function hasRelatedBookmark(currentTab: chrome.tabs.Tab) {
+async function hasRelatedBookmark(currentTab: chrome.tabs.Tab): Promise<FuzzyMatchResult>  {
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
         ? "Bookmarks Menu"
         : "Bookmarks";
@@ -41,28 +25,31 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab) {
 
     if (settingsCashed === null) setState.settingsCashed(settings);
 
-    if (!settings) return { hasValidFuzzyBookmark: false, hasValidFuzzyHermidata: false };
+    if (!settings) return { type: 'none' };
 
     let folderPaths: string[] = getFolderPathsFromMapping(settings);
     
     const resultFuzzyBookmark = await detectFuzzyBookmark(currentTab, folderPaths, Browserroot);
     const ressultFuzzyHermidata = await detectFuzzyHermidata(currentTab);
-    let sameChapter;
-    const finalObj: { bookmark?: FuzzyBookmarkMatches, bookmarkSameChapter?: boolean, hermidataSameChapter?: boolean, hermidata?: FuzzyHermidataMatches} = {};
+
     if ( resultFuzzyBookmark.hasValidFuzzyBookmark ) {
-        sameChapter = isSameChapterCount(resultFuzzyBookmark.fuzzyMatches[0], currentTab);
-        finalObj.bookmark = resultFuzzyBookmark.fuzzyMatches[0];
-        finalObj.bookmarkSameChapter = sameChapter
+        return {
+            type: 'bookmark',
+            match: resultFuzzyBookmark.fuzzyMatches[0],
+            sameChapter: isSameChapterCount(resultFuzzyBookmark.fuzzyMatches[0], currentTab)
+        }
     }
     else if ( ressultFuzzyHermidata.hasValidFuzzyHermidata ) {
-        sameChapter = isSameChapterCount(ressultFuzzyHermidata.fuzzyMatches[0], currentTab);
-        finalObj.hermidata = ressultFuzzyHermidata.fuzzyMatches[0];
-        finalObj.hermidataSameChapter = sameChapter
+        return {
+            type: 'hermidata',
+            match: ressultFuzzyHermidata.fuzzyMatches[0],
+            sameChapter: isSameChapterCount(ressultFuzzyHermidata.fuzzyMatches[0], currentTab)
+        }
     }
-    return finalObj
+    else return { type: 'none' };
 }
 
-export async function hasRelatedBookmarkCached(tab: chrome.tabs.Tab) {
+export async function hasRelatedBookmarkCached(tab: chrome.tabs.Tab): Promise<FuzzyMatchResult> {
     if (fuzzyCache.has(tab.url)) return fuzzyCache.get(tab.url);
     const result = await hasRelatedBookmark(tab);
     fuzzyCache.set(tab.url, result);

@@ -1,7 +1,7 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
-import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
+import type { AnyNovelType, Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata, setNotificationList, updateHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -21,26 +21,32 @@ export class EventListener extends RssBuild {
         const feedListLocalReload = await getHermidataWithRssFromBackground();
 
         for (let feed of notificationFeed) {
-            feed.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, false));
+            feed.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, true, true));
             const hashItem = this.GetHashItem(feed);
-            feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], false);
+            feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], true);
         }
         for (let items of allItems) {
-            items.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, true));
-            const hashItem = this.GetHashItem(items);
-            items.onclick = () => this.clickOnItem(this.AllHermidata[hashItem], true);
+            const item = this.getEntriesItem(items) || this.getNotificationItem(items);
+            if (!item) {
+                console.log('isn\'t a item');
+                return;
+            }
+            const hashItem = this.GetHashItem(item);
+            const entry = new HermidataModel(this.AllHermidata[hashItem]);
+            items.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, false, entry.hasRSS()));
+            items.onclick = () => this.clickOnItem(this.AllHermidata[hashItem], false);
         }
     }
-    private clickOnItem(value: Hermidata, isRSSItem: boolean) {
-        if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
+    private clickOnItem(value: Hermidata, isNotificationItem: boolean) {
+        if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
 
         const hermidata = new HermidataModel(value);
 
         this.openNewTab(value?.rss?.latestItem?.link || hermidata.GetUrl(), hermidata.GetScrollPosition());
     }
-    private async rightmouseclickonItem(e: MouseEvent, isRSSItem: boolean) {
+    private async rightmouseclickonItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
-        if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && !isRSSItem) return;
+        if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
 
         // Remove any existing custom menu first
         document.querySelectorAll(".custom-context-menu").forEach(el => el.remove());
@@ -61,8 +67,13 @@ export class EventListener extends RssBuild {
             "separator",
             { label: "Clear notification", action: () => this.clearNotification(e.target as HTMLDivElement) },
             "separator",
-            { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement) },
+            { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement), danger: true },
         ];
+        const optinalMenuOption: MenuOptions[] = isRSSItem ? [
+            "separator",
+            { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement), danger: true },
+        ] : [];
+
         const optionsAllItems: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
             { label: "Open latest bookmark in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
@@ -73,8 +84,9 @@ export class EventListener extends RssBuild {
             "separator",
             { label: "add alt title", action: async () => await this.addAltTitle(e.target as HTMLDivElement) },
             { label: "Rename", action: async () => await this.RenameItem(e.target as HTMLDivElement) },
+            ...optinalMenuOption,
             "separator",
-            { label: "delete", action: async () => await this.remove(e.target as HTMLDivElement) },
+            { label: "delete", action: async () => await this.remove(e.target as HTMLDivElement), danger: true },
         ];
         const itemLocation = this.getNotificationItem(e.target as HTMLDivElement) ? 'notification' :  'entries'
         
@@ -152,6 +164,7 @@ export class EventListener extends RssBuild {
 
             const item = document.createElement("div");
             item.className = "menu-item";
+            item.dataset.danger = opt.danger === true ? "true" : "false";
             item.textContent = opt.label;
             item.addEventListener("click", () => {
             opt.action();
@@ -354,7 +367,7 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        const newTitle = await customPrompt("Add alternate:", '');
+        const newTitle = await customPrompt("Add alternate:");
         if (!newTitle) return;
     
         // Normalize and deduplicate
@@ -382,7 +395,7 @@ export class EventListener extends RssBuild {
             console.warn("No data found for this item");
             return;
         }
-        const newTitle = await customPrompt(`Renaming "${oldData.title}" to:`, oldData.title);
+        const newTitle = await customPrompt(`Renaming to:`, oldData.title);
         if (!newTitle || newTitle.trim() === oldData.title.trim()) {
             console.log("Rename canceled or unchanged");
             return;
@@ -433,33 +446,30 @@ export class EventListener extends RssBuild {
     private async unsubscribe(target: HTMLDivElement | null) {
         if (!target) return;
         console.log("Unsubscribed from", target);
-        const item = this.getNotificationItem(target);
-        if (!item) {
-            console.log('isn\'t a notification item');
-            return;
-        }
+        const item = this.getEntriesItem(target) || this.getNotificationItem(target);
+        if (!item || !target) return;
         const hashItem = this.GetHashItem(item);
+        const entry = new HermidataModel(this.AllHermidata[hashItem]);
         
         const NotificationSection = getElement<HTMLDivElement>("#RSS-Notification");
         const AllItemSection = getElement<HTMLDivElement>("#All-RSS-entries");
 
         if (!NotificationSection || !AllItemSection) throw new Error('Element not found');
 
-        await this.unLinkRSSFeed({hash:hashItem });
+        const confirmation = await customConfirm(`are you sure you want to Unsubscribe to ${entry.title}`, {accept: 'Unsubscribe', reject: 'Cancel'});
+        if ( !confirmation) return;
+
         console.log('un-link RSS to extention')
-        this.reloadContent(NotificationSection, AllItemSection)
+        await this.unLinkRSSFeed(entry);
         console.log('reloading notification')
-        await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
+        await this.reloadContent(NotificationSection, AllItemSection)
     }
-    private async unLinkRSSFeed({hash, title = '', type = '', }: { hash?: string; title?: string; type?: string; }) {
-        const key = hash || returnHashedTitle(title, type);
-        const stored = await getHermidataViaKey(key);
-        const entry = stored
+    private async unLinkRSSFeed(entry: HermidataModel) {
         if (!entry) return;
 
         entry.rss = null;
 
-        await saveHermidata(key, entry);
+        await saveHermidata(entry.id, entry);
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined

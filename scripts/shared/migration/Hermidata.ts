@@ -475,7 +475,7 @@ export class HermidataMigration {
                 ),
                 added: older.meta?.added || base.meta.added,
                 updated: new Date().toISOString(),
-                originalRelease: null, // TODO: do something with it
+                originalRelease: older.meta?.originalRelease || newer.meta?.originalRelease || null, // TODO: do something with it
                 novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus
             }
         }
@@ -532,10 +532,7 @@ export class HermidataMigration {
     public static async migrateFeedsToLatest(): Promise<void> {
         const db = await getDb();
         const alreadyMigrated = await db.get('settings', 'migrated_Feeds_V2');
-        if (alreadyMigrated) {
-            console.log('[DB] Already migrated to Feeds V2');
-            return;
-        }
+        if (alreadyMigrated) return;
 
         console.log('[DB] Starting migration to Feeds V2...');
 

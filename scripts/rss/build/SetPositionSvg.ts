@@ -64,16 +64,21 @@ export function updatePolygons(): void {
     const diamond = diamondCoord(ITEM_LAYOUT.sides.defaultSize);
 
     const loopTroughItems = (items: NodeListOf<HTMLElement>) => {
-        for (const item of items) {
-            const isFirst = Array.from(items).indexOf(item) === 0;
+
+        const updates = Array.from(items, (item, index) =>({
+            item,
+            isFirst: index === 0,
+            exclamationPosition: getExlamationPosition(item),
+        }));
+
+
+        for (const {item, isFirst, exclamationPosition} of updates) {
+
             const polygonLeft = item.querySelector('.diamond-l');
             const polygonRight = item.querySelector('.diamond-r');
             const exclamation = item.querySelector('.notify-rss-link-icon-group');
-        
-            const exclamationPosition = getExlamationPosition(item);
 
             exclamation?.setAttribute('transform', `translate(${exclamationPosition}, 8) scale(0.5)`);
-
             polygonLeft?.setAttribute('points', isFirst ? triangle.positionLeft : diamond.positionLeft);
             polygonRight?.setAttribute('points', isFirst ? triangle.positionRight : diamond.positionRight);
         }
@@ -95,17 +100,16 @@ export function updatePolygons(): void {
 function getExlamationPosition(item: HTMLElement): number {
     const itemRect = item.getBoundingClientRect();
     const chapter = item.querySelector<HTMLElement>('.hermidata-item-chapter');
-    const chapterWidth = chapter?.getBoundingClientRect().width;
-
+    const chapterRect = chapter?.getBoundingClientRect();
     const chapterLeft = chapter ? window.getComputedStyle(chapter).left : null;
-    if (!chapterLeft || !chapterWidth) return itemRect.width * 0.6 + ITEM_LAYOUT.exlamation.leftPadding;
-    
+
+    if (!chapterLeft || !chapterRect) {
+        return itemRect.width * 0.6 + ITEM_LAYOUT.exlamation.leftPadding;
+    }
+
     // TEMP fix the temparary offset
-    const basicWidth = Number.parseFloat(chapterLeft?.replace('px', '')) + chapterWidth - 50; // 50 is an offset 
-
-    const exclamationPosition = basicWidth + ITEM_LAYOUT.exlamation.leftPadding;
-
-    return exclamationPosition;
+    const basicWidth = Number.parseFloat(chapterLeft) + chapterRect.width - 50; // 50 is an offset
+    return basicWidth + ITEM_LAYOUT.exlamation.leftPadding;
 }
 function setRightDiamond(li: HTMLElement, svg: SVGElement): void {
     const liRect = li.getBoundingClientRect();

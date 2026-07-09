@@ -60,6 +60,9 @@ export type {
     ShouldReplaceReturn,
 
     PotentialSameHermidata,
+
+    StringListFieldPath,
+    ValueAtPath,
     
 
 } from "./popup";
@@ -84,6 +87,11 @@ export type {
 
     RSSDOM,
     RSSData,
+
+    FuzzyHermidataMatches,
+    FuzzyBookmarkMatches,
+    FuzzyMatchResult,
+
 } from "./rss";
 
 export type {

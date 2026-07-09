@@ -599,17 +599,18 @@ hr {
 	margin: 10px;
 }
 #cancelBookmarkMenuBtn {
-	width: 10px;
-	height: 10px;
+	width: fit-content;
+	height: fit-content;
 	align-self: center;
 	cursor: pointer;
 	margin: 0;
 	padding: 0;
 	border: 0;
 	border-radius: 0;
+	background-color: transparent;
 }
 #cancelBookmarkMenuBtn:hover {
-	background-color: transparent;
+	color: red;
 }
 #bookmarkMenuManager {
 	display: flex;
@@ -639,6 +640,8 @@ hr {
 	grid-area: remove;
 	border: 1px solid;
 	padding: 5px;
+	text-align: center;
+	transition: color 0.15s ease;
 }
 .bookmarkDelete:hover {
 	color: lightcoral;
@@ -753,6 +756,7 @@ label {
 	height: 36px;
 	border-radius: 3px;
 	padding: 10px;
+	cursor: pointer;
 }
 #bookmarkColorInput-label {
 	height: 50px;

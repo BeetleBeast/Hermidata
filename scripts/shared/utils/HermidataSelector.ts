@@ -1,8 +1,8 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed } from "../types";
-import { returnHashedFeedId, TrimTitle } from "./StringOutput";
+import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath } from "../types";
+import { returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -16,6 +16,7 @@ export class HermidataModel implements Hermidata {
     meta: Hermidata["meta"];
 
     private version: number;
+    private latestVersion = 10;
 
     constructor(data: Hermidata) {
         this.id = data.id;
@@ -28,7 +29,7 @@ export class HermidataModel implements Hermidata {
         this.meta = data.meta;
 
         this.version = this.CalculateHermidataVersion();
-        if (this.version !== 10) console.count("HermidataModel version check");
+        if (this.version !== this.latestVersion) console.count("HermidataModel version check");
     }
     // -- static methods --
     public static from(novelType: AnyNovelType, readStatus: string, novelStatus: string): HermidataModel {
@@ -53,17 +54,18 @@ export class HermidataModel implements Hermidata {
     private CalculateHermidataVersion(): number {
         const Hermidata = this.toJSON();
 
-        if (isHermidataV1(Hermidata)) return 1;
-        if (isHermidataV2(Hermidata)) return 2;
-        if (isHermidataV3(Hermidata)) return 3;
-        if (isHermidataV4(Hermidata)) return 4;
-        if (isHermidataV5(Hermidata)) return 5;
-        if (isHermidataV6(Hermidata)) return 6;
-        if (isHermidataV7(Hermidata)) return 7;
-        if (isHermidataV8(Hermidata)) return 8;
-        if (isHermidataV9(Hermidata)) return 9;
         if (isHermidataV10(Hermidata)) return 10;
+        if (isHermidataV9(Hermidata)) return 9;
+        if (isHermidataV8(Hermidata)) return 8;
+        if (isHermidataV7(Hermidata)) return 7;
+        if (isHermidataV6(Hermidata)) return 6;
+        if (isHermidataV5(Hermidata)) return 5;
+        if (isHermidataV4(Hermidata)) return 4;
+        if (isHermidataV3(Hermidata)) return 3;
+        if (isHermidataV2(Hermidata)) return 2;
+        if (isHermidataV1(Hermidata)) return 1;
         console.warn(`Unknown hermidata version detected.`, Hermidata);
+        this.ForceCreateNewHermidata();
         return 0;
     }
     // -- getters --
@@ -212,6 +214,99 @@ export class HermidataModel implements Hermidata {
         if (!sourceInAlt) this.meta.altSources.push(hermidata.source);
     }
     // -- helpers --
+    private ForceCreateNewHermidata(): void {
+        console.error(`[Hermidata Selector] Missing required data.`, this);
+        console.error(`[Hermidata Selector] forcing to creating new hermidata.`);
+        const brokenHermidata: Partial<Hermidata> = this.toJSON();
+        // minimum required
+        // title, novelType, url
+        // if missing
+        const alternativeRequired = {
+            title: brokenHermidata.title ?? brokenHermidata.rss?.latestItem.title ?? brokenHermidata.rss?.latestItem.rawTitle ?? brokenHermidata.rss?.title ?? null,
+            novelType: brokenHermidata.novelType ?? null,
+            url: brokenHermidata.chapter?.bookmarks?.[brokenHermidata.chapter.bookmarkInUse]?.url ?? brokenHermidata.rss?.latestItem.link ?? null,
+        }
+        if (!alternativeRequired.title || !alternativeRequired.novelType || !alternativeRequired.url) {
+            console.error(`[Hermidata Selector] Missing required data.`, alternativeRequired, brokenHermidata);
+            return;
+        }
+        const trimmedTitle = TrimTitle.trimTitle(alternativeRequired.title, alternativeRequired.url);
+        const newId = returnHashedTitle(trimmedTitle.title, alternativeRequired.novelType, alternativeRequired.url);
+        this.id = newId;
+        this.novelType = alternativeRequired.novelType;
+        this.title = trimmedTitle.title;
+        this.meta.notes = trimmedTitle.note ?? '';
+
+        this.SetSource(alternativeRequired.url);
+
+        if (!brokenHermidata?.chapter?.bookmarks) {
+            const newBookmark: Bookmark = {
+                id: returnBookmarkHash('Primary'),
+                current: 0,
+                history: [],
+                label: 'Primary',
+                color: '#5979d6',
+                readStatus: 'Viewing',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isPrimary: true,
+                url: alternativeRequired.url,
+                scrollPosition: 0,
+                note: '',
+            }
+            this.chapter.bookmarks = {
+                [returnBookmarkHash('Primary')]: newBookmark
+            }
+        }else {
+            this.chapter = {
+                bookmarkInUse: brokenHermidata?.chapter?.bookmarkInUse ?? 'Primary',
+                lastChecked: brokenHermidata?.chapter?.lastChecked ?? new Date().toISOString(),
+                revisitingCount: brokenHermidata?.chapter?.revisitingCount ?? 0,
+                latest: brokenHermidata?.chapter?.latest ?? 0,
+                bookmarks: {}
+            }
+            const bookmarks: Bookmark[] = [];
+            const hasPrimary = false;
+            for (const markerBookmark of Object.values(brokenHermidata?.chapter?.bookmarks)) {
+                const marker: Partial<Bookmark> = markerBookmark;
+                if (hasPrimary && marker.label == undefined) continue;
+                const newBookmark: Bookmark = {
+                    id: returnBookmarkHash(marker?.label ?? 'Primary'),
+                    current: marker.current ?? 0,
+                    history: marker.history ?? [],
+                    label: marker.label ?? 'Primary',
+                    color: marker.color ?? '#5979d6',
+                    createdAt: marker.createdAt ?? new Date().toISOString(),
+                    updatedAt: marker.updatedAt ?? new Date().toISOString(),
+                    note: marker.note ?? '',
+                    isPrimary: marker.isPrimary ?? true,
+                    readStatus: marker.readStatus ?? 'Viewing',
+                    scrollPosition: marker.scrollPosition ?? 0,
+                    url: marker.url ?? alternativeRequired.url ?? '',
+                }
+                bookmarks.push(newBookmark);
+            }
+            this.chapter.bookmarks = Object.fromEntries(bookmarks.map(b => [b.id, b]));
+        }
+
+
+        this.rss = brokenHermidata?.rss ?? null;
+        this.meta = {
+            added: brokenHermidata?.meta?.added ?? new Date().toISOString(),
+            updated: brokenHermidata?.meta?.updated ?? new Date().toISOString(),
+            tags: brokenHermidata?.meta?.tags ?? [],
+            notes: brokenHermidata?.meta?.notes ?? '',
+            altSources: brokenHermidata?.meta?.altSources ?? [this.source],
+            altTitles: brokenHermidata?.meta?.altTitles ?? [alternativeRequired.title],
+            originalRelease: brokenHermidata?.meta?.originalRelease ?? null,
+            novelStatus: brokenHermidata?.meta?.novelStatus ?? 'Ongoing',
+        };
+
+        this.version = this.CalculateHermidataVersion();
+    }
+    SetSource(url: string): void {
+        this.source = new URL(url).hostname.replace(/^www\./, "");
+    }
     SetFromTab(currentTab: CurrentTab): void;
     SetFromTab(currentTab: CurrentTab, bookmarkInUseId: string): void;
     SetFromTab(currentTab: CurrentTab, bookmarkInUseId?: string): void {
@@ -253,6 +348,52 @@ export class HermidataModel implements Hermidata {
             this.chapter.latest = this.GetChapter() > this.chapter.latest ? this.GetChapter() : this.chapter.latest;
         }
         return true;
+    }
+    /** Update With Outdated Sync Data */
+    UpdateOutdatedSync(hermidata: HermidataModel): void {
+        // potential new bookmarks
+        // potential new alt sources/titles
+        // potential new tags
+        // update history
+
+        const bookmarksCount = Object.keys(hermidata.chapter.bookmarks).length;
+        const currentBookmarksCount = Object.keys(this.chapter.bookmarks).length;
+
+        if (bookmarksCount > currentBookmarksCount) {
+            // add new bookmark only
+            const newBookmarks = Object.values(hermidata.chapter.bookmarks).filter(bookmark => !this.chapter.bookmarks[bookmark.id]);
+            for (const bookmark of newBookmarks) this.AddBookmark(bookmark);
+        }
+
+        this.AddItemToList(hermidata, ["meta", "altTitles"]);
+        this.AddItemToList(hermidata, ["meta", "altSources"]);
+        this.AddItemToList(hermidata, ["meta", "tags"]);
+
+        if (hermidata.GetLatestReadChapter() > this.GetLatestReadChapter() ) {
+            this.chapter.bookmarks[this.chapter.bookmarkInUse].history.push(hermidata.GetLatestReadChapter());
+        }
+    }
+    public AddItemToList<TPath extends StringListFieldPath<Hermidata>>( hermidata: Hermidata, path: readonly [...TPath] ): void {
+        const outdatedList = this.readByPath(hermidata, path);
+        const currentList = this.readByPath(this, path);
+
+        if (outdatedList.length > currentList.length) {
+            const newItems = outdatedList.filter((item) => !currentList.includes(item));
+            const mergedList = [...currentList, ...newItems] as ValueAtPath<HermidataModel, TPath>;
+            this.writeByPath(this, path, mergedList);
+        }
+    }
+    private writeByPath<TRoot, TPath extends readonly PropertyKey[]>( root: TRoot, path: readonly [...TPath], value: ValueAtPath<TRoot, TPath> ): void {
+        const parentPath = path.slice(0, -1);
+        const lastKey = path[path.length - 1];
+        const parent = this.readByPath(root, parentPath as any) as any;
+        parent[lastKey] = value;
+    }
+    private readByPath<TRoot, TPath extends readonly PropertyKey[]>( root: TRoot, path: readonly [...TPath] ): ValueAtPath<TRoot, TPath> {
+        return path.reduce((current: any, key) => current[key], root);
+    }
+    AddBookmark(bookmark: Bookmark): void {
+        this.chapter.bookmarks[bookmark.id] = bookmark;
     }
     UpdateFeed(rawFeed: RawFeed): void {
         // always update it with latest info NOT latest fetched item
@@ -313,5 +454,12 @@ export class HermidataModel implements Hermidata {
     toInputArraySheetRow(bookmarkInUseId?: string): InputArraySheetType {
         if (bookmarkInUseId) return this.normalizeTagsForSheet(this.toInputArrayRow(bookmarkInUseId));
         return this.normalizeTagsForSheet(this.toInputArrayRow())
+    }
+    // -- boolean helpers --
+    public hasRSS(): boolean {
+        return this.rss !== null;
+    }
+    public IsLatestVersion(): boolean {
+        return this.GetVersion() === this.latestVersion;
     }
 }

@@ -83,7 +83,7 @@ export function activateother(execptionElement: HTMLElement | null = null) {
 }
 
 
-export function customPrompt(msg: string, defaultInput: string): Promise<string | false> {
+export function customPrompt(msg: string, defaultInput: string = '', inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }): Promise<string | false> {
     return new Promise<string | false>((resolve) => {
         const container = getElement('.promptSection');
         const input = getElement<HTMLInputElement>('.genericInput');
@@ -92,10 +92,14 @@ export function customPrompt(msg: string, defaultInput: string): Promise<string 
         const btn2 = getElement('.genericButton2');
 
         if (!container || !input || !label || !btn1 || !btn2) return resolve(false);
+
+        btn1.innerHTML = inputText.accept;
+        btn2.innerHTML = inputText.reject;
+
+
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
-            container.style.height = `${document.body.offsetHeight / 2}px`;
             label.style.display = 'block';
             input.style.display = 'block';
             btn1.style.display = 'block';
@@ -132,7 +136,7 @@ export function customPrompt(msg: string, defaultInput: string): Promise<string 
         btn2.addEventListener('click', onNo);
     });
 }
-export function customConfirm(msg: string, inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }): Promise<boolean> {
+export function customConfirm(msg: string, inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }, contentDirection: 'vertical' | 'horizontal' = 'vertical'): Promise<boolean> {
     return new Promise((resolve) => {
         const container = getElement('.promptSection');
         const label = getElement('.genericLabel');
@@ -147,7 +151,8 @@ export function customConfirm(msg: string, inputText: { accept: string; reject: 
         const activateConfirmSetup = () => {
             deactivateother();
             container.style.display = 'flex';
-            container.style.height = `${document.body.offsetHeight / 2}px`;
+            container.style.flexDirection = contentDirection == 'vertical' ? 'column' : 'row';
+            container.style.gap = contentDirection == 'vertical' ? '30px' : '10px';
             label.style.display = 'flex';
             btn1.style.display = 'block';
             btn2.style.display = 'block';

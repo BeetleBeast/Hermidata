@@ -62,7 +62,7 @@ export class BookmarkController {
         this.bookmarkMenuBtn?.addEventListener('click', () => this.openBookmarkMenuManager() );
 
         // Close bookmark menu when clicking outside (on HDClassic)
-        getElement('.HDClassic')?.addEventListener('click', () => this.closeBookmarkMenu() );
+        getElement('.HDClassic')?.addEventListener('click', this.closeBookmarkMenu );
         // save new bookmark
         this.saveBookmarkBtn?.addEventListener('click', () => this.saveNewBookmark() );
 
@@ -139,12 +139,13 @@ export class BookmarkController {
         if (newSize >= maxSize + 10) (document.body as HTMLBodyElement).style.overflowY = 'scroll';
     }
     /** close bookmark menu */
-    private closeBookmarkMenu(): void {
+    private closeBookmarkMenu = (): void => {
         if (!this.bookmarkMenuContainer) return;
         this.bookmarkMenuContainer.style.display = 'none';
         this.bookmarkMenuContainerVisible = false;
         activateother();
         // Remove the listener when menu closes
+        getElement('.HDClassic')?.removeEventListener('click', this.closeBookmarkMenu );
         document.removeEventListener('click', this.handleOutsideClick);
     }
     /** close add bookmark */

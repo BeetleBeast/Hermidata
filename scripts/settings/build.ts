@@ -18,7 +18,7 @@ export abstract class Build {
         return this.dbRequest<void>('hermidata', 'update', { id: data.id, data });
     }
 
-    protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000) {
+    protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000, color: string = 'green'): void {
         if (!elementTag) {
             console.error(`Error in temporaryStatus: status element not found`);
             return;
@@ -29,6 +29,7 @@ export abstract class Build {
             console.error(`Error in temporaryStatus: status element not found`);
             return;
         }
+        statusElement.style.color = color;
         statusElement.textContent = status;
         setTimeout(() => elementTag instanceof HTMLElement ? elementTag.textContent = "" : setElement(`${elementTag}`, el => el.textContent = ""), timeout);
     }
@@ -76,7 +77,8 @@ export abstract class Build {
         try {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (!response.success) reject(new Error(response.error));
+                    if (!response) reject(new Error('No response from background script'));
+                    if (!response?.success) reject(new Error(response.error));
                     resolve(await response.result as T);
                 });
             });

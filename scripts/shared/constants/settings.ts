@@ -10,6 +10,7 @@ export const DEFAULT_FOLDER_MAPPING: FolderMapping = {
         'Planned':  'Planned',
         'On-hold':  'On-hold',
     },
+    typeAliases: {},
     defaultPath: 'Unsorted'
 }
 

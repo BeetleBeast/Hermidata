@@ -57,12 +57,41 @@ export class Account_Connection extends Build {
         this.temporaryStatus("Saved!", "#statusSheetURL");
     }
     private async TestSpreadsheetUrl() {
-        if (!this.input || !this.status) return;
-        this.status.textContent = "Testing...";
-        const value = this.input.value.trim() || this.spreadsheetUrl;
-        const response = await fetch(value, { method: "HEAD" });
-        if (!response.ok) this.temporaryStatus("Failed to connect", "#statusSheetURL");
-        else this.temporaryStatus("connected!", "#statusSheetURL", 500);
+        try {
+            if (!this.input || !this.status) return;
+            this.status.textContent = "Testing...";
+            const value = this.input.value.trim() || this.spreadsheetUrl;
+            if (!value) {
+                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 500, "red");
+                return;
+            }
+
+            const url = this.constructUrl(value);
+            if (!url) { 
+                this.temporaryStatus("Invalid URL", "#statusSheetURL", 500, "red"); 
+                throw new Error("Invalid URL");
+            }
+            const response = await fetch(url, { method: "HEAD" });
+            if (response.ok) this.temporaryStatus("connected!", "#statusSheetURL", 500);
+            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 500, "red");
+            
+        } catch (error) {
+            this.temporaryStatus("Failed to connect", "#statusSheetURL", 500, "red");
+        }
+    }
+    private constructUrl(url: string): string | null {
+        let newUrl = "";
+        // 1. Check if url has http:// or https://
+        if (!url.startsWith("http://") && !url.startsWith("https://")) newUrl = "https://" + url;
+        else newUrl = url;
+        // 2. Check if url has a dot and a web type
+        if (!newUrl.includes(".")) return null;
+        // 3. Check if url has trailing slash
+        if (!newUrl.endsWith("/")) newUrl += "/";
+        
+        
+        return newUrl;
+
     }
     private async ResetLoginAuth() {
         ext.storage.local.remove(["googleAccessToken", "googleTokenExpiry", "userEmail"], () => {

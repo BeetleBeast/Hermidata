@@ -90,7 +90,7 @@
                 <br>
                 <form class="formIndented" id="autoSubscribeThresholdForm">
                     <label for="autoSubscribeThreshold">Change the Auto-subscribe similarity threshold</label>
-                    <input type="range" min="0.9" max="1" step="0.01" id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold" value="1.0" disabled>
+                    <input type="range" min="0.9" max="1" step="0.01" id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold" value="1" disabled>
                     <span id="autoSubscribeThresholdValue">1.0</span>
                 </form>
             </form>
@@ -102,11 +102,11 @@
                 <label for="InternalCollection">save to an Internal Collection</label>
                 <input type="checkbox" id="InternalCollection" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
                 <br>
-                <label for="SaveToGoogleSpreadsheet">save to a Google Spreadsheet</label>
-                <input type="checkbox" id="SaveToGoogleSpreadsheet" name="SaveCollection" title="save to a Google Spreadsheet" checked value="Spreadsheet">
-                <br>
                 <label for="SaveToBrowserBookmark">Save as a browser Bookmark</label>
                 <input type="checkbox" id="SaveToBrowserBookmark" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
+                <br>
+                <label for="SaveToGoogleSpreadsheet">save to a Google Spreadsheet</label>
+                <input type="checkbox" id="SaveToGoogleSpreadsheet" name="SaveCollection" title="save to a Google Spreadsheet" checked value="Spreadsheet">
             </form>
             <br>
             <hr>
@@ -252,7 +252,6 @@
                 <select id="tagMergeSelect2" title="Tag 2">
                     <!-- dynamic items here -->
                 </select>
-                <br>
                 <button type="button" id="mergeTags">merge</button>
                 <br>
             </section>
@@ -322,8 +321,8 @@
             <section class="FolderMapping_ActiveAliases">
                 <h3><strong> Active Aliases </strong></h3>
                 <div id="AliasesHeader">
-                    <p>Active Type Aliases</p>
-                    <p>Active Read Statuses</p>
+                    <p id="activeAliasesHeader-NovelType">Active Type Aliases</p>
+                    <p id="activeAliasesHeader-ReadStatus">Active Read Statuses</p>
                 </div>
                 <div id="activeAliasesContainer">
                     <div id="activeTypeAliases"> <!-- dynamic items here --> </div>
@@ -402,34 +401,57 @@
             <br>
             <button type="button" id="quickBackup">Quick Backup ( everything )</button>
             <br>
+            <h3 id="importExportSettingsFormat">import/export Settings</h3>
             <br>
-            <button type="button" id="exportBtn">Export Settings as JSON</button>
-            <input type="file" accept=".json" placeholder="select Settings json" id="importBtn"></input>
+            <button type="button" id="exportBtn">Export Settings</button>
+            <label class="file-btn" for="importBtn">
+                <span class="file-btn-text" id="importBtnText">Import Settings</span>
+            </label>
+            <input type="file" accept=".json" id="importBtn" class="file-input-hidden"></input>
+            <br>
+            <h3 id="importExportHermidataFormat">import/export Hermidata</h3>
+            <br>
+            <button type="button" id="exportDataBtn">Export Hermidata</button>
+            <label class="file-btn" for="importDataBtn">
+                <span class="file-btn-text" id="importDataBtnText">Import Hermidata</span>
+            </label>
+            <input type="file" accept=".json" id="importDataBtn" class="file-input-hidden"></input>
+            <br>
+            <h3 id="importExportFolderMappingFormat">import/export Bookmarks Folder Mapping</h3>
+            <small>folder mapping of how bookmarks are saved inside the browser</small>
             <br>
             <br>
-            <button type="button" id="exportDataBtn">Export Hermidata as JSON</button>
-            <input type="file" accept=".json" placeholder="select Hermidata json" id="importDataBtn"></input>
-            <br>
-            <br>
-            <button type="button" id="exportFolderMappingBtn">Export Bookmarks folder mapping as JSON</button>
-            <input type="file" accept=".json" placeholder="select Hermidata json" id="importFolderMappingBtn"></input>
+            <button type="button" id="exportFolderMappingBtn">Export Folder Mapping</button>
+            <label class="file-btn" for="importFolderMappingBtn">
+                <span class="file-btn-text" id="importFolderMappingBtnText">Import Folder Mapping</span>
+            </label>
+            <input type="file" accept=".json" id="importFolderMappingBtn" class="file-input-hidden"></input>
             <br>
             <hr>
             <br>
             <h3 id="importExportToMALFormat">import/export To MAL format</h3>
             <br>
-            <button type="button" id="exportToMALBtn">Export To MAL</button>
-            <input type="file" accept=".json" placeholder="select MAL json" id="importToMALBtn"></input>
+            <button type="button" id="exportToMALBtn">Export MAL</button>
+            <label class="file-btn" for="importToMALBtn">
+                <span class="file-btn-text" id="importToMALBtnText">Import MAL</span>
+            </label>
+            <input type="file" accept=".xml" id="importToMALBtn" class="file-input-hidden"></input>
             <br>
             <br>
             <hr>
             <br>
             <button type="button" id="exportRSSBtn" data-active="false">Export RSS as JSON</button>
-            <input type="file" accept=".json" placeholder="select Hermidata json" id="importRSSBtn" data-active="false"></input>
+            <label class="file-btn" for="importRSSBtn" data-active="false">
+                <span class="file-btn-text" id="importRSSBtnText">Import RSS data</span>
+            </label>
+            <input type="file" accept=".json" id="importRSSBtn" class="file-input-hidden" data-active="false"></input>
             <br>
             <br>
-            <button type="button" id="exportSyncDataBtn" data-active="false">Export browser sync data as JSON</button>
-            <input type="file" accept=".json" placeholder="select Hermidata json" id="importSyncDataBtn" data-active="false"></input>
+            <button type="button" id="exportSyncDataBtn" data-active="false">Export browser sync data</button>
+            <label class="file-btn" for="importSyncDataBtn" data-active="false">
+                <span class="file-btn-text" id="importSyncDataBtnText">Import Sync Data</span>
+            </label>
+            <input type="file" accept=".json" id="importSyncDataBtn" class="file-input-hidden" data-active="false"></input>
             <!-- <button type="button" id="deleteSyncDataBtn" style="background-color: red;" data-active="false">Delete browser sync data</button> -->
             <br>
             <br>
@@ -470,8 +492,10 @@
     <section class="promptSection">
         <label for="genericInput" class="genericLabel"></label>
         <input class="genericInput" type="text" placeholder="genericInput"></input>
-        <button type="button" class="genericButton1 Btn" >Save</button>
-        <button type="button" class="genericButton2 Btn" >Cancel</button>
+        <div class="genericPromptBtns">
+            <button type="button" class="genericButton1 Btn" >Save</button>
+            <button type="button" class="genericButton2 Btn" >Cancel</button>
+        </div>
     </section>
 </body>
 <script src="../scripts/settings/Settings.ts" type=module></script>

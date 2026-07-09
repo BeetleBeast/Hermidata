@@ -110,7 +110,7 @@ export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', cu
     current: currentChapter,
     history: history,
     label: 'Primary',
-    color: 'blue',
+    color: '#5979d6',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     note: notes,

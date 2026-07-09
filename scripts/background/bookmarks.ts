@@ -10,6 +10,7 @@ import type { HermidataModel } from "../shared/utils/HermidataSelector";
 
 declare const browser: typeof chrome | undefined;
 
+let currentRequestId = 0;
 
 export async function writeToBookmarks(hermidata: HermidataModel) {
     const bookmarks = await searchValidBookmarks();
@@ -37,7 +38,7 @@ async function addBookmark(hermidata: HermidataModel) {
     }
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
-    : "Bookmarks";
+    : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
     const bookmarkTitle = `${hermidata.title} - Chapter ${hermidata.GetChapter() || '0'}`;
@@ -65,7 +66,7 @@ async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplac
 
     const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
-    : "Bookmarks";
+    : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
 
     const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
@@ -251,19 +252,25 @@ export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.Bo
     });
 }
 export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
+    const requestId = ++currentRequestId;
+
     const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
     if (!currentTab && !Url) return;
     // initialize currentBookmark
     let searchUrl = Url ?? currentTab.url;
     let NewUrl;
 
-    const fuzzyPromise = hasRelatedBookmarkCached(currentTab);
+    const currentTabComplete = await ext.tabs.get(currentTab.id!); // bugfix: Title only updates after first call
+
+    const fuzzyPromise = hasRelatedBookmarkCached(currentTabComplete);
 
     // get valid bookmark
     const validBookmarks = await searchValidBookmarks(searchUrl);
+    if (requestId !== currentRequestId) return; // a newer call has started — abandon this one
+
     if (validBookmarks.length > 0) {
         setState.currentBookmark(validBookmarks[0]);
-        updateIcon(currentBookmark?.url);
+        updateIcon(validBookmarks[0].url);
     }else {
         setState.currentBookmark(null);
         updateIcon(NewUrl, currentTab);
@@ -271,11 +278,12 @@ export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
     if (!currentBookmark) { // if dons't already have valid bookmark
         // get fuzzy bookmark & hermidata | slower
         const validFuzzyBookmarks = await fuzzyPromise;
-        const isValid = validFuzzyBookmarks?.bookmarkSameChapter || validFuzzyBookmarks?.hermidataSameChapter || false;
-        const validEntry = validFuzzyBookmarks?.bookmark || validFuzzyBookmarks?.hermidata || null;
+        if (validFuzzyBookmarks.type === 'none') return;
+        const isValid = validFuzzyBookmarks?.type === 'bookmark' ? validFuzzyBookmarks.sameChapter : validFuzzyBookmarks.sameChapter;
+        const validEntry = validFuzzyBookmarks?.type === 'bookmark' ? validFuzzyBookmarks.match : validFuzzyBookmarks.match;
         if (isValid && validEntry) {
-            setState.currentBookmark(validEntry);
-            updateIcon(validEntry.url || validEntry.currentUrl || searchUrl);
+            setState.currentBookmark(validBookmarks[0]);
+            updateIcon(validEntry.currentUrl || searchUrl);
         }
     }
 }
@@ -286,7 +294,7 @@ export async function createNestedFolders(pathSegments: string[], rootTitle: str
     if (!rootId) throw new Error(`Root folder "${rootTitle}" not found`);
     const existingFolder = await findFolderPath(rootId, pathSegments);
     if (existingFolder) return existingFolder.id;
-
+    debugger;
     return createMissingFolders(rootId, pathSegments);
 
 }

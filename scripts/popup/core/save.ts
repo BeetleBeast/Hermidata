@@ -87,7 +87,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
         current: 0,
         history: [],
         label: label,
-        color: 'blue',
+        color: '#5979d6',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         note: '',
