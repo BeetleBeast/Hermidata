@@ -208,22 +208,19 @@ export class SortOption extends Sort {
         this.filterEntries(query, filtered);
 
         // Autocomplete suggestions
-        const suggestions = filtered
-            .map(f => f.title)
-            .filter((v, i, arr) => arr.indexOf(v) === i)
-            .slice(0, 7);
+        const suggestions = [...new Set(filtered.flatMap(f => f.meta.altTitles))].slice(0, 7);
 
         // Build suggestion elements
-        suggestions.forEach((s) => {
+        for (const alTitle of suggestions) {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
-            div.textContent = s;
+            div.textContent = alTitle;
             div.addEventListener('click', () => {
                 const target = e.target as HTMLInputElement;
-            this.applySearchSelection(target, suggestionBox, s);
+            this.applySearchSelection(target, suggestionBox, alTitle);
             });
             suggestionBox.appendChild(div);
-        });
+        }
     }
 
     private filterEntries(query: string, filtered: Hermidata[] | null = null) {
