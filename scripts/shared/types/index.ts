@@ -87,6 +87,11 @@ export type {
 
     RSSDOM,
     RSSData,
+
+    FuzzyHermidataMatches,
+    FuzzyBookmarkMatches,
+    FuzzyMatchResult,
+
 } from "./rss";
 
 export type {

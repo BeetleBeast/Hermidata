@@ -58,3 +58,24 @@ export type RSSData = {
     feeds: AllHermidata; // this one has RSS the other is all
     hermidata: AllHermidata;
 }
+
+export interface FuzzyBookmarkMatches {
+    folderPath: string;
+    bookmarkTitle: string;
+    fuzzySearchUrl: string;
+    currentUrl: string | undefined;
+    similarity: number;
+}
+export interface FuzzyHermidataMatches {
+    bookmarkTitle: string,
+    fuzzySearchUrl: string,
+    chapter: number,
+    currentUrl: string | undefined,
+    similarity: number
+}
+
+
+export type FuzzyMatchResult =
+    | { type: 'bookmark'; match: FuzzyBookmarkMatches; sameChapter: boolean }
+    | { type: 'hermidata'; match: FuzzyHermidataMatches; sameChapter: boolean }
+    | { type: 'none' };
