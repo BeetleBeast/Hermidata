@@ -532,10 +532,7 @@ export class HermidataMigration {
     public static async migrateFeedsToLatest(): Promise<void> {
         const db = await getDb();
         const alreadyMigrated = await db.get('settings', 'migrated_Feeds_V2');
-        if (alreadyMigrated) {
-            console.log('[DB] Already migrated to Feeds V2');
-            return;
-        }
+        if (alreadyMigrated) return;
 
         console.log('[DB] Starting migration to Feeds V2...');
 

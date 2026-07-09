@@ -391,10 +391,7 @@ export async function putSettings(settings: Settings): Promise<void> {
 export async function migrateFromChromeStorage(): Promise<void> {
     const db = await getDb();
     const alreadyMigrated = await db.get('settings', 'migrated_v1');
-    if (alreadyMigrated) {
-        console.log('[DB] Already migrated from chrome.storage');
-        return;
-    }
+    if (alreadyMigrated) return;
 
     console.log('[DB] Starting migration from chrome.storage...');
 
