@@ -67,11 +67,11 @@ export class EventListener extends RssBuild {
             "separator",
             { label: "Clear notification", action: () => this.clearNotification(e.target as HTMLDivElement) },
             "separator",
-            { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement) },
+            { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement), danger: true },
         ];
         const optinalMenuOption: MenuOptions[] = isRSSItem ? [
             "separator",
-            { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement) },
+            { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement), danger: true },
         ] : [];
 
         const optionsAllItems: MenuOptions[] = [
@@ -86,7 +86,7 @@ export class EventListener extends RssBuild {
             { label: "Rename", action: async () => await this.RenameItem(e.target as HTMLDivElement) },
             ...optinalMenuOption,
             "separator",
-            { label: "delete", action: async () => await this.remove(e.target as HTMLDivElement) },
+            { label: "delete", action: async () => await this.remove(e.target as HTMLDivElement), danger: true },
         ];
         const itemLocation = this.getNotificationItem(e.target as HTMLDivElement) ? 'notification' :  'entries'
         
@@ -164,6 +164,7 @@ export class EventListener extends RssBuild {
 
             const item = document.createElement("div");
             item.className = "menu-item";
+            item.dataset.danger = opt.danger === true ? "true" : "false";
             item.textContent = opt.label;
             item.addEventListener("click", () => {
             opt.action();
@@ -455,11 +456,13 @@ export class EventListener extends RssBuild {
 
         if (!NotificationSection || !AllItemSection) throw new Error('Element not found');
 
-        await this.unLinkRSSFeed(entry);
+        const confirmation = await customConfirm(`are you sure you want to Unsubscribe to ${entry.title}`, {accept: 'Unsubscribe', reject: 'Cancel'});
+        if ( !confirmation) return;
+
         console.log('un-link RSS to extention')
-        this.reloadContent(NotificationSection, AllItemSection)
+        await this.unLinkRSSFeed(entry);
         console.log('reloading notification')
-        await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
+        await this.reloadContent(NotificationSection, AllItemSection)
     }
     private async unLinkRSSFeed(entry: HermidataModel) {
         if (!entry) return;

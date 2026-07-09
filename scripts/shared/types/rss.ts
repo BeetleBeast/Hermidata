@@ -9,6 +9,7 @@ export type AllsortsType = (NormalSortsType | ReverseAllsortsType) | ExeptionSor
 export type MenuOption = {
     label: string;
     action: () => void | Promise<void>;
+    danger?: boolean;
 }
 export type subMenu = {
     label: string;

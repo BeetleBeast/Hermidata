@@ -136,7 +136,7 @@ export function customPrompt(msg: string, defaultInput: string = '', inputText: 
         btn2.addEventListener('click', onNo);
     });
 }
-export function customConfirm(msg: string, inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }, contentDirection: 'vertical' | 'horizontal' = 'horizontal'): Promise<boolean> {
+export function customConfirm(msg: string, inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }, contentDirection: 'vertical' | 'horizontal' = 'vertical'): Promise<boolean> {
     return new Promise((resolve) => {
         const container = getElement('.promptSection');
         const label = getElement('.genericLabel');
