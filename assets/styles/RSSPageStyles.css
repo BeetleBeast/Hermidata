@@ -166,6 +166,13 @@ body {
     border: 1px solid var(--border)
 }
 
+#detail-altSources-multiAltTitle-input {
+    min-width: min-content;
+    min-height: min-content;
+    max-width: -webkit-fill-available;
+    max-height: -webkit-fill-available;
+}
+
 input[type=number],
 input[type=number]::-webkit-inner-spin-button {
     -webkit-appearance: none;

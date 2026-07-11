@@ -1,5 +1,6 @@
 import { PastHermidata } from "../popup/core/Past";
 import type { Hermidata, Settings } from "../shared/types";
+import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { Detail } from "./build/detail";
 
 export abstract class RSSPageBuilder {
@@ -20,7 +21,7 @@ export abstract class RSSPageBuilder {
     }
 
     protected openDetails(id: string): void {
-        const editEntry = this.AllHermidata![id];
+        const editEntry = new HermidataModel(this.AllHermidata![id]);
         new Detail(editEntry).open();
     }
 

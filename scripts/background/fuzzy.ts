@@ -78,7 +78,10 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
     const fuzzyMatches: FuzzyHermidataMatches[] = [];
     const allHermidata = await PastHermidata.getAllHermidata();
     console.groupCollapsed("Fuzzy Bookmark Detection");
-    if (!currentTab.title || !currentTab.url) throw new Error("No title or url");
+    if (!currentTab.title || !currentTab.url) {
+        console.groupEnd();
+        throw new Error("No title or url");
+    }
     console.log("Current tab:", currentTab.title);
     const trimmedTitle = TrimTitle.trimTitle(currentTab.title, currentTab.url).title;
     console.log("Current tab trimmed: ", trimmedTitle)

@@ -125,6 +125,27 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history = history;
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
     }
+    SetAltTitle(title: string): void {
+        // remove duplicates
+        let altTitles = Array.from(new Set(this.meta.altTitles));
+        // remove empty strings
+        altTitles = altTitles.filter((title) => title !== '');
+        // add new title (only if not already in list )
+        if (!altTitles.includes(title)) this.meta.altTitles.push(title);
+    }
+    SetMultipleAltTitles(titles: string[]): void {
+        // remove duplicates from list & current altTitles
+        let newAltTitles = Array.from(new Set(titles));
+        let altTitles = Array.from(new Set(this.meta.altTitles));
+        // remove empty strings
+        altTitles = altTitles.filter((title) => title !== '');
+        newAltTitles = newAltTitles.filter((title) => title !== '');
+        // add new title (only if not already in list )
+        for (const newTitle of newAltTitles) {
+            if (!altTitles.includes(newTitle)) altTitles.push(newTitle);
+        }
+        this.meta.altTitles = altTitles;
+    }
     SetScrollPosition(scrollPosition: number): void;
     SetScrollPosition(scrollPosition: number, bookmarkInUseId: string): void;
     SetScrollPosition(scrollPosition: number, bookmarkInUseId?: string): void {

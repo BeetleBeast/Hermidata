@@ -1,5 +1,6 @@
 import { getSettings, saveHermidata } from "../../shared/db/Storage";
 import type { Bookmark, Hermidata, Settings } from "../../shared/types";
+import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement } from "../../shared/utils/Selection";
 import { returnBookmarkHash } from "../../shared/utils/StringOutput";
 
@@ -19,16 +20,21 @@ export class Detail {
     private readonly tagsContainer: HTMLDivElement | null = getElement('#detail-tags-container');
     private readonly altSourcesContainer: HTMLDivElement | null = getElement('#detail-altSources-container');
     private readonly altTitlesContainer: HTMLDivElement | null = getElement('#detail-altTitles-container');
+
+    private readonly multiAltTitleInput: HTMLTextAreaElement | null = getElement('#detail-altSources-multiAltTitle-input');
     
     private readonly saveDetail: HTMLButtonElement | null = getElement('#saveDetail');
     private readonly closeDetail: HTMLButtonElement | null = getElement('#closeDetail');
 
+    private saveDetailHandler = async () => await this.saveDetails();
+    private closeDetailHandler = () => this.close();
+
     private settings: Settings | null = null;
-    private editEntry: Hermidata | null = null;
+    private editEntry: HermidataModel | null = null;
 
     private latestExtraInput: Record<string, number> = {};
 
-    constructor(editEntry: Hermidata) {
+    constructor(editEntry: HermidataModel) {
         
         this.editEntry = editEntry;
     }
@@ -63,16 +69,16 @@ export class Detail {
         this.parentContainer!.style.right = '-50%';
     }
     protected reload(): void {
-        this.saveDetail!.removeEventListener('click', () => this.saveDetails());
+        this.saveDetail!.removeEventListener('click', this.saveDetailHandler);
         this.build();
     }
     private AddEventListener() {
         // remove event listeners
-        this.saveDetail!.removeEventListener('click', () => this.saveDetails());
-        this.closeDetail!.removeEventListener('click', () => this.close());
+        this.saveDetail!.removeEventListener('click', this.saveDetailHandler);
+        this.closeDetail!.removeEventListener('click', this.closeDetailHandler);
         //  add event listeners
-        this.saveDetail!.addEventListener('click', () => this.saveDetails());
-        this.closeDetail!.addEventListener('click', () => this.close());
+        this.saveDetail!.addEventListener('click', this.saveDetailHandler);
+        this.closeDetail!.addEventListener('click', this.closeDetailHandler);
 
         // add new latest empty input if needed
         this.tagsContainer!.addEventListener('input', () => {
@@ -108,9 +114,21 @@ export class Detail {
             this.editEntry.chapter.bookmarkInUse = Object.keys(this.editEntry.chapter.bookmarks)[0];
         }
 
+        this.setMultiAltTitles();
+
         this.editEntry.meta.updated = new Date().toISOString();
 
         await saveHermidata(this.editEntry.id, this.editEntry);
+    }
+    private setMultiAltTitles(): void {
+        const altTitleInput = this.multiAltTitleInput?.value ?? "";
+        const multiAltTitleRaw = altTitleInput.split('\n');
+        const multiAltTitle = multiAltTitleRaw.map((title) => title.trim()).filter((title) => title.length > 0);
+
+        // early return if no multi alt title exist/left
+        if (multiAltTitle.length === 0) return;
+
+        this.editEntry?.SetMultipleAltTitles(multiAltTitle);
     }
     /** Get names from container */
     private getNamesFromContainer(container: HTMLDivElement | null): string[] {
@@ -127,12 +145,13 @@ export class Detail {
             const bookmarkEl = bookmarkElement as HTMLDivElement;
             const oldID = bookmarkEl.dataset.bookmarkId;
             if (!oldID || !this.editEntry) continue;
-            const label = bookmarkEl.querySelector('.bookmark-label')!.textContent;
-            const currentChapter = bookmarkEl.querySelector('.bookmark-chapter')!.textContent;
+            const label = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-label')!.textContent;
+            const url = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-url')!.value;
+            const currentChapter = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-chapter')!.textContent;
             const allchapterHistory = bookmarkEl.querySelectorAll<HTMLInputElement>('.bookmark-history-chapter');
             const history = Array.from(allchapterHistory).map((chapter) => Number(chapter.value));
-            const notes = bookmarkEl.querySelector('.bookmark-note')!.textContent;
-            const colour = bookmarkEl.querySelector('.bookmark-colour')!.textContent;
+            const notes = bookmarkEl.querySelector<HTMLTextAreaElement>('.bookmark-note')!.textContent;
+            const colour = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-colour')!.value;
             const readStatus = bookmarkEl.querySelector<HTMLSelectElement>('.bookmark-readStatus')!.selectedOptions[0].value;
             const bookmark: Bookmark = {
                 id: returnBookmarkHash(label),
@@ -146,7 +165,7 @@ export class Detail {
                 createdAt: this.editEntry.chapter.bookmarks[oldID].createdAt,
                 updatedAt: new Date().toISOString(),
                 scrollPosition: this.editEntry.chapter.bookmarks[oldID].scrollPosition,
-                url: this.editEntry.chapter.bookmarks[oldID].url
+                url: url
             }
             bookmarks.set(bookmark.id, bookmark);
         }
@@ -346,6 +365,7 @@ export class Detail {
 
         this.popuplateSelects(settings);
 
+        this.multiAltTitleInput!.value = ""; // empty so that user can add new alt title
 
         this.buildMultipleCases('tags', this.tagsContainer, this.editEntry.meta.tags, true);
         this.buildMultipleCases('titles', this.altTitlesContainer, this.editEntry.meta.altTitles, true);
