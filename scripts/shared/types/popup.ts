@@ -127,6 +127,7 @@ export type Feed = {
     lastFetched: null | string, // Date when last fetched
     latestItem: FeedItem
     lastBuildDate?: null | Date,
+    Notified?: true;
 }
 // raw feed has multiple items
 export type RawFeed = {

@@ -351,8 +351,8 @@ export class EventListener extends RssBuild {
         }
         item.remove()
         const hashItem = this.GetHashItem(item);
-        setNotificationList(hashItem)
-        // remove from back-end
+
+        if (this.AllHermidata[hashItem].rss?.Notified) this.AllHermidata[hashItem].rss.Notified = undefined;
     }
     private async addAltTitle(target: HTMLDivElement | null) {
         if (!target) return;
