@@ -17,28 +17,31 @@ export function initTabs() {
 }
 
 
-export function updateIcon(Url: string | null = null, currentTabParameter: chrome.tabs.Tab | null = null) {
+export async function updateIcon(Url: string | null = null, currentTabParameter: chrome.tabs.Tab | null = null): Promise<boolean> {
     const actionApi = ext.action || ext.browserAction;
 
-    const currentTabId = currentTab?.id || currentTabParameter?.id;
+    const currentTabId = currentTabParameter?.id ?? currentTab?.id;
 
-    if (Url) {
-        ext.tabs.query({active : true}, (tabs) => {
-            const matchedTab = tabs.find(t => t.url === Url);
-            if (!matchedTab) {
-                console.warn("No tab found with matching URL");
-                return;
-            }
-            if (!matchedTab.id) {
-                console.warn("Tab id not found");
-                return;
-            }
-            setIconAndTitle(actionApi, matchedTab.id);
-        });
+    if (Url && currentTabParameter?.id) {
+        await setIconAndTitle(actionApi, currentTabParameter.id);
+        return true;
+    }
+    else if (Url) {
+        const tabs = await ext.tabs.query({active : true, currentWindow: true});
+        const matchedTab = tabs.find(t => t.url === Url);
+
+        if (!matchedTab?.id) {
+            console.warn("No matching tab found for icon update");
+            return false;
+        }
+        await setIconAndTitle(actionApi, matchedTab.id);
+        return true;
     } else if (currentTabId) {
-        setIconAndTitle(actionApi, currentTabId);
+        await setIconAndTitle(actionApi, currentTabId);
+        return true;
     } else {
         console.warn("No valid tab to set icon");
+        return false;
     }
 }
 
