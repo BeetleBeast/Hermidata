@@ -258,7 +258,6 @@ export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
     if (!currentTab && !Url) return;
     // initialize currentBookmark
     let searchUrl = Url ?? currentTab.url;
-    let NewUrl;
 
     const currentTabComplete = await ext.tabs.get(currentTab.id!); // bugfix: Title only updates after first call
 
@@ -273,16 +272,21 @@ export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
         updateIcon(validBookmarks[0].url);
     }else {
         setState.currentBookmark(null);
-        updateIcon(NewUrl, currentTab);
+        updateIcon(null, currentTab);
     }
     if (!currentBookmark) { // if dons't already have valid bookmark
+        if (requestId !== currentRequestId) return;
+
         // get fuzzy bookmark & hermidata | slower
         const validFuzzyBookmarks = await fuzzyPromise;
         if (validFuzzyBookmarks.type === 'none') return;
-        const isValid = validFuzzyBookmarks?.type === 'bookmark' ? validFuzzyBookmarks.sameChapter : validFuzzyBookmarks.sameChapter;
-        const validEntry = validFuzzyBookmarks?.type === 'bookmark' ? validFuzzyBookmarks.match : validFuzzyBookmarks.match;
+        const isValid = validFuzzyBookmarks.sameChapter;
+        const validEntry = validFuzzyBookmarks.match;
         if (isValid && validEntry) {
-            setState.currentBookmark(validBookmarks[0]);
+            
+            const validEntryBookmark = await searchValidBookmarks(validEntry.fuzzySearchUrl).then(b => b[0]);
+
+            setState.currentBookmark(validEntryBookmark);
             updateIcon(validEntry.currentUrl || searchUrl);
         }
     }
