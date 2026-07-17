@@ -3,7 +3,7 @@ import type { RSSData, RSSDOM } from "../shared/types/index";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
-import { getHermidataWithRssFromBackground } from "./load";
+import { getHermidataNotification } from "./load";
 
 
 let rssPreloadPromise: Promise<RSSDOM> | null = null;
@@ -138,7 +138,7 @@ export class RSS {
 
     private async loadRSSData(): Promise<RSSData> {
         const [feeds, hermidata] = await Promise.all([
-            getHermidataWithRssFromBackground(),
+            getHermidataNotification(),
             PastHermidata.getAllHermidata()
         ]);
         const merged = { ...hermidata, ...feeds }; // Overwrite stale hermidata entries with the updated RSS ones
