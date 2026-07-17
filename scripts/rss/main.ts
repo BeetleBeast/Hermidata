@@ -107,7 +107,7 @@ export class RSS {
         };
 
         // Build notification items
-        rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makefeedItem(feeds, false));
+        rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makefeedItem(feeds, false, true));
 
         // Build all items header
         rssDomPackage.allItems.header.appendChild(await this.BuildRSS.makeItemHeader());
