@@ -1,6 +1,8 @@
+import { setAllHermidata } from "../../shared/db/Storage";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
+import { getHermidataNotification } from "../load";
 
     
     
@@ -9,35 +11,46 @@ export class Footer extends RssBuild {
     public makeFooterSection(): void {
         
         // clear notification
+        this.ClearNotification();
+        // open RSS full page
+        this.openRSSPage();
+        // sync text & button
+        this.SyncTextAndButtonOfRSS();
+        // manifest version
+        this.setVersion();
+    }
+    private ClearNotification(): void {
         const clearNotification = getElement("#clear-notifications");
         if (!clearNotification) throw new Error('Element not found');
+
         clearNotification.addEventListener('click', () => {
             const rssNotificationContainer = getElement<HTMLDivElement>("#RSS-Notification");
             if (!rssNotificationContainer) throw new Error('Element not found');
+
             this.removeAllChildNodes(rssNotificationContainer) // clear front-end
-            this.setNotificationListAllToNull(null) // clear back-end
+            this.removeNotificationFromBackEnd() // clear back-end
         });
-        // open RSS full page
+    }
+    private openRSSPage(): void {
         const FullpageRSSButton = getElement(".fullpage-RSS-btn");
         if (!FullpageRSSButton) throw new Error('Element not found');
         FullpageRSSButton.addEventListener('click', () => open('./RSSFullpage.html'))
-        
-        // sync text & button
-        this.SyncTextAndButtonOfRSS()
-
-        // manifest version
+    }
+    private setVersion(): void {
         setElement("#version", el => el.innerHTML = chrome.runtime.getManifest().version);
     }
 
-    private async setNotificationListAllToNull(value: any = null): Promise<Record<string, boolean>> {
-        return new Promise<Record<string, boolean>>((_resolve, reject) => {
-            ext.storage.local.set({"clearedNotification": value}, () => {
-                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-            });
-        }).catch(error => {
-            console.error('Extention error: Failed Premise getHermidata: ',error);
-            return {};
-        });
+    private async removeNotificationFromBackEnd() {
+        const allNotificationList = await getHermidataNotification();
+
+        const newHermidataWithNoNotification = [];
+
+        for (const notification of Object.values(allNotificationList)) {
+            if (!notification.rss) continue;
+            notification.rss.Notified = undefined;
+            newHermidataWithNoNotification.push(notification);
+        }
+        await setAllHermidata(newHermidataWithNoNotification);
     }
     private SyncTextAndButtonOfRSS(): void {
         const latestRSSSync = getElement("#RSS-latest-sync-div");

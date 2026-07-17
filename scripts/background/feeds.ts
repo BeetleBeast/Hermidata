@@ -1,6 +1,6 @@
 import { ext } from "../shared/utils/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
-import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidata, setAllRawFeeds } from "../shared/db/Storage";
+import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidata, setAllHermidata, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
 import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput";
 
@@ -77,6 +77,8 @@ async function webSearch() {
     const allHermidata = await getAllHermidata();
     const allnovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
 
+    const allNewItemsKey: string[] = [];
+
     console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allnovelRSS.length}`);
 
     const combined = Object.values(savedFeeds)
@@ -127,6 +129,7 @@ async function webSearch() {
             latestItem: item,
             lastToken: token,
         };
+        allNewItemsKey.push(newFeed.id);
 
         // check if the feed is already in savedFeeds via token
         // const existingFeed = savedFeeds.find(f => f.lastToken === token);
@@ -162,16 +165,18 @@ async function webSearch() {
         console.log(`[Hermidata] ${Object.keys(combined).length} feeds saved to local storage`);
     })
 
-    const HermidataToUpdate: Record<string, Hermidata> = {};
+    const HermidataToUpdate: Hermidata[] = [];
     for (const feed of combined) {
         const related = Object.values(allHermidata).find(h => h.rss?.url === feed.url);
         if (related?.rss) {
             related.rss.lastFetched = feed.lastFetched;
             related.rss.latestItem = feed.latestItem;
-            HermidataToUpdate[related.id] = related;
+            if (allNewItemsKey.includes(related.id)) related.rss.Notified = true;
+
+            HermidataToUpdate.push(related);
         }
     }
-    for (const [key, value] of Object.entries(HermidataToUpdate)) await saveHermidata(key, value);
+    if (HermidataToUpdate.length > 0) await setAllHermidata(HermidataToUpdate);
 
     console.groupEnd();
 }

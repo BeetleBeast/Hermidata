@@ -121,6 +121,13 @@ export async function getHermidataWithRssFromBackground(): Promise<Record<string
         });
     });
 }
+/** get hermidata with RSS that have the notification set to true */
+export async function getHermidataNotification(): Promise<Record<string, Hermidata>> {
+    const hermidata = await getHermidataWithRssFromBackground();
+    const newNotification = Object.values(hermidata).filter(h => h.rss?.Notified)
+
+    return Object.fromEntries(newNotification.map(h => [h.id, h]));
+}
 
 
 /** Refreshes RSS info by comparing to rawFeeds and hermidata */

@@ -58,8 +58,8 @@ export class BuildRSSController {
         return new FeedItem( await RssBuild.init()).makeItemHeader();
     }
     
-    public async makefeedItem(HermidataList: Record<string, Hermidata>, isRSSItem = false): Promise<DocumentFragment> {
-        return new FeedItem( await RssBuild.init()).makefeedItem(HermidataList, isRSSItem);
+    public async makefeedItem(HermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
+        return new FeedItem( await RssBuild.init()).makefeedItem(HermidataList, isRSSItem, sortByLastUpdated);
     }
     
     public async makeFooterSection(): Promise<void> {
