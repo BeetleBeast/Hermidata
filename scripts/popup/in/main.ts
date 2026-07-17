@@ -328,7 +328,7 @@ class HermidataController {
         // from front-end
         const { title, Type, Chapter, status, novelStatuses, notes } = this.getLatestValueFromUI();
         
-        if (!title || !Type || !Chapter || !status || !novelStatuses) throw new Error('Missing required fields');
+        if (!title || !Type || ( Chapter === undefined || Chapter === null ) || !status || !novelStatuses) throw new Error('Missing required fields');
         
         
         // get latest values from UI and back-end
