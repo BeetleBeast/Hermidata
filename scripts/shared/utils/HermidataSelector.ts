@@ -445,7 +445,8 @@ export class HermidataModel implements Hermidata {
             domain: latestFetchedIsNewer ? rawFeed.domain : this.rss.domain,
             lastFetched: new Date().toISOString(),
             latestItem: latestFetchedIsNewer ? rawFeed.latestItem : this.rss.latestItem,
-            lastBuildDate: this.rss?.lastBuildDate
+            lastBuildDate: this.rss?.lastBuildDate,
+            Notified: true
         };
         this.chapter.latest = latestChapter;
     }
