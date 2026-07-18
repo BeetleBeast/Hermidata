@@ -48,6 +48,12 @@ export class SortOption extends Sort {
 
         searchInput.addEventListener('input', (e) => this.handleSearchInput(e, autocompleteContainer));
         searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer));
+        // update highlighted suggestion on hover
+        autocompleteContainer.addEventListener('mouseover', (e) => {
+            this.selectedIndex = Array.from(autocompleteContainer.children).indexOf(e.target as HTMLDivElement);
+            const array = autocompleteContainer.querySelectorAll('div') as NodeListOf<HTMLDivElement>;
+            this.updateHighlightedSuggestion(array, this.selectedIndex);
+        });
 
         const filterSectionTitle = this.CreateFilterButtonTitle();
 
