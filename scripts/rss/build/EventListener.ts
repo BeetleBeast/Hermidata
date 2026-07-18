@@ -59,11 +59,11 @@ export class EventListener extends RssBuild {
         // Define your menu options
         const optionsNotification: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open latest bookmark in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open latest bookmark in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest marker in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open latest marker in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
             "separator",
-            { label: "Open bookmark in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
-            { label: "Open bookmark in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
+            { label: "Open marker in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
+            { label: "Open marker in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "Clear notification", action: () => this.clearNotification(e.target as HTMLDivElement) },
             "separator",
@@ -76,11 +76,11 @@ export class EventListener extends RssBuild {
 
         const optionsAllItems: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
-            { label: "Open latest bookmark in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open latest bookmark in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest marker in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
+            { label: "Open latest marker in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
             "separator",
-            { label: "Open Bookmark in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
-            { label: "Open Bookmark in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
+            { label: "Open marker in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
+            { label: "Open marker in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "add alt title", action: async () => await this.addAltTitle(e.target as HTMLDivElement) },
             { label: "Rename", action: async () => await this.RenameItem(e.target as HTMLDivElement) },
