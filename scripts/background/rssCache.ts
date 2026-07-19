@@ -1,7 +1,7 @@
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/utils/BrowserCompat"
 import { getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
-import type { Filters, Hermidata, RawFeed, RawScrappedFeed } from "../shared/types/index"
+import type { Filters, Hermidata, RawFeed, RawScrapedItem, RawScrappedFeed } from "../shared/types/index"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
@@ -75,7 +75,7 @@ export function handleGetLastSync(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export async function handleSaveRawFeeds(incomingFeeds: RawScrappedFeed[], sendResponse: (r: unknown) => void): Promise<true> {
+async function handleSaveRawFeeds(incomingFeeds: RawScrappedFeed[]): Promise<true> {
     const existing = await getAllRawFeeds()
     
     for (const feed of incomingFeeds) {
@@ -86,8 +86,85 @@ export async function handleSaveRawFeeds(incomingFeeds: RawScrappedFeed[], sendR
             await putRawFeed(enriched)
         }
     }
-    sendResponse({ status: 'ok' })
     return true
+}
+
+export async function handleBuildAndSaveRawFeeds(partials: Partial<RawScrappedFeed>[], sendResponse: (r: unknown) => void): Promise<true> {
+    const results = await Promise.allSettled( partials.map(f => buildFullFeed(f)) );
+
+    const feeds: RawScrappedFeed[] = results
+        .filter((r): r is PromiseFulfilledResult<RawScrappedFeed> => 
+            r.status === 'fulfilled' && r.value !== null
+        )
+        .map(r => r.value);
+
+    if (feeds.length) {
+        console.log(`[Hermidata] Successfully built ${feeds.length} feed(s)`);
+        // Save to IndexedDB here
+        handleSaveRawFeeds(feeds);
+        sendResponse({ status: 'ok' })
+    } else sendResponse({ status: 'failed' })
+    return true
+}
+
+async function buildFullFeed(partial: Partial<RawScrappedFeed>): Promise<RawScrappedFeed | null> {
+    if (!partial.url) return null;
+    try {
+        const [items, lastBuildDate, image] = await fetchAndParseRSS(partial.url);
+
+        if (items.length === 0) {
+            console.warn(`[Hermidata] Feed ${partial.url} has no items`);
+            return null; // or return a default object
+        }
+
+        return {
+            title: partial.title ?? "",
+            url: partial.url,
+            domain: partial.domain ?? new URL(partial.url).hostname.replace(/^www\./, ''),
+            latestItem: items[0],
+            lastBuildDateStr: lastBuildDate ?? new Date().toISOString(),
+            image: image ?? '',
+            lastFetched: new Date().toISOString(),
+            lastToken: null,
+        };
+    } catch (err) {
+        console.warn(`[Hermidata] Failed to fetch feed ${partial.url}:`, err);
+        return null;
+    }
+}
+
+async function fetchAndParseRSS(feedUrl: string): Promise<[RawScrapedItem[], string | null, string | null]> {
+    const response = await fetch(feedUrl);
+    if (!response.ok) throw new Error(`Feed fetch failed: ${feedUrl} (${response.status})`);
+
+    const text = await response.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, 'text/xml');
+
+    if (xml.querySelector('parsererror')) {
+        throw new Error(`XML parse error for feed: ${feedUrl}`);
+    }
+
+    const items: RawScrapedItem[] = [...xml.querySelectorAll('item, entry')].slice(0, 10).map(item => ({
+        title: item.querySelector('title')?.textContent?.trim() ?? '',
+        link: (
+            item.querySelector('link')?.getAttribute('href') ??
+            item.querySelector('link')?.textContent ??
+            ''
+        ).trim(),
+        pubDate: new Date(item.querySelector('pubDate, updated, published')?.textContent ?? Date.now()),
+        guid: (
+            item.querySelector('guid')?.textContent ??
+            item.querySelector('id')?.textContent ??
+            item.querySelector('link')?.textContent ??
+            ''
+        )
+    }));
+
+    const lastBuildDate = xml.querySelector('lastBuildDate, updated')?.textContent ?? null;
+    const image = xml.querySelector('image > url')?.textContent ?? null;
+
+    return [items, lastBuildDate, image];
 }
 
 function buildFeedItem(raw: RawScrappedFeed): RawFeed {
