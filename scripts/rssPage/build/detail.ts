@@ -119,6 +119,8 @@ export class Detail {
         this.editEntry.meta.updated = new Date().toISOString();
 
         await saveHermidata(this.editEntry.id, this.editEntry);
+
+        this.close()
     }
     private setMultiAltTitles(): void {
         const altTitleInput = this.multiAltTitleInput?.value ?? "";
