@@ -127,6 +127,7 @@ export type Feed = {
     lastFetched: null | string, // Date when last fetched
     latestItem: FeedItem
     lastBuildDate?: null | Date,
+    Notified?: true;
 }
 // raw feed has multiple items
 export type RawFeed = {
@@ -149,6 +150,24 @@ export type FeedItem = {
     chapter: number,
     pubDate: Date,
     guid: string
+}
+/** scripts file output */
+export type RawScrappedFeed = {
+    title: string;
+    url: string;
+    domain: string;
+    lastFetched: string;
+    lastBuildDateStr: string;
+    image: string;
+    latestItem: RawScrapedItem;
+    lastToken: string | null;
+}
+/** scripts file output */
+export type RawScrapedItem  = {
+    title: string;
+    link: string;
+    pubDate: Date;
+    guid: string;
 }
 
 export interface LatestValue {

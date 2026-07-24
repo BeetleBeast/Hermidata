@@ -4,18 +4,18 @@
 // Types
 // ============================================================
 
-type RawFeed = {
+type RawScrappedFeed = {
     title: string;
     url: string;
     domain: string;
     lastFetched: string;
-    lastBuildDate: string;
+    lastBuildDateStr: string;
     image: string;
-    items: FeedItem[];
+    latestItem: RawScrapedItem;
     lastToken: string | null;
 };
 
-type FeedItem = {
+type RawScrapedItem  = {
     title: string;
     link: string;
     pubDate: Date;
@@ -39,7 +39,7 @@ addFeedToGlobalMain();
 // Detection
 // ============================================================
 
-async function getRssFeedsInHead(): Promise<Partial<RawFeed>[]> {
+async function getRssFeedsInHead(): Promise<Partial<RawScrappedFeed>[]> {
     const rssLinks = [
         ...document.querySelectorAll(
             'link[rel="alternate"][type="application/rss+xml"], link[rel="alternate"][type="application/atom+xml"]'
@@ -51,7 +51,7 @@ async function getRssFeedsInHead(): Promise<Partial<RawFeed>[]> {
     }));
 }
 
-async function getRssFeedsInBody(feeds: Partial<RawFeed>[]): Promise<Partial<RawFeed>[]> {
+async function getRssFeedsInBody(feeds: Partial<RawScrappedFeed>[]): Promise<Partial<RawScrappedFeed>[]> {
     const existing = new Set(feeds.map(f => f.url));
     const anchorCandidates = [...document.querySelectorAll<HTMLAnchorElement>('a[href*="rss"], a[href*="feed"], a[href$=".xml"]')];
 
@@ -84,7 +84,7 @@ async function getRssFeedsInBody(feeds: Partial<RawFeed>[]): Promise<Partial<Raw
  * Only called if head + body detection found nothing.
  * Probes common RSS paths — avoids unnecessary network requests on every page.
  */
-async function getRssFeedsFromDefaultPaths(feeds: Partial<RawFeed>[]): Promise<Partial<RawFeed>[]> {
+async function getRssFeedsFromDefaultPaths(feeds: Partial<RawScrappedFeed>[]): Promise<Partial<RawScrappedFeed>[]> {
     if (feeds.length > 0) return feeds; // ← skip if we already found something
 
     const possiblePaths = ['/feed', '/rss', '/atom.xml', '/rss.xml'];
@@ -114,7 +114,7 @@ async function getRssFeedsFromDefaultPaths(feeds: Partial<RawFeed>[]): Promise<P
 // Fetch + parse
 // ============================================================
 
-async function fetchAndParseRSS(feedUrl: string): Promise<[FeedItem[], string | null, string | null]> {
+async function fetchAndParseRSS(feedUrl: string): Promise<[RawScrapedItem[], string | null, string | null]> {
     const response = await fetch(feedUrl);
     if (!response.ok) throw new Error(`Feed fetch failed: ${feedUrl} (${response.status})`);
 
@@ -126,7 +126,7 @@ async function fetchAndParseRSS(feedUrl: string): Promise<[FeedItem[], string | 
         throw new Error(`XML parse error for feed: ${feedUrl}`);
     }
 
-    const items: FeedItem[] = [...xml.querySelectorAll('item, entry')].slice(0, 10).map(item => ({
+    const items: RawScrapedItem[] = [...xml.querySelectorAll('item, entry')].slice(0, 10).map(item => ({
         title: item.querySelector('title')?.textContent?.trim() ?? '',
         link: (
             item.querySelector('link')?.getAttribute('href') ??
@@ -148,30 +148,30 @@ async function fetchAndParseRSS(feedUrl: string): Promise<[FeedItem[], string | 
     return [items, lastBuildDate, image];
 }
 
-function normalizeFeedData(feed: Partial<RawFeed>): Partial<RawFeed> {
+function normalizeFeedData(feed: Partial<RawScrappedFeed>): Partial<RawScrappedFeed> {
     if (!feed.url || !feed.title) throw new Error(`Feed missing url or title: ${JSON.stringify(feed)}`);
     const domain = new URL(feed.url).hostname.replace(/^www\./, '');
     return {
         title: feed.title.trim(),
         url: feed.url,
         domain,
-        items: [],
-        lastToken: null
     };
 }
 
-async function buildFullFeed(partial: Partial<RawFeed>): Promise<RawFeed | null> {
+async function buildFullFeed(partial: Partial<RawScrappedFeed>): Promise<RawScrappedFeed | null> {
     if (!partial.url) return null;
     try {
         const [items, lastBuildDate, image] = await fetchAndParseRSS(partial.url);
         return {
-            ...partial,
-            items,
-            lastBuildDate: lastBuildDate ?? new Date().toISOString(),
+            title: partial.title ?? "",
+            url: partial.url,
+            domain: partial.domain ?? new URL(partial.url).hostname.replace(/^www\./, ''),
+            latestItem: items[0],
+            lastBuildDateStr: lastBuildDate ?? new Date().toISOString(),
             image: image ?? '',
             lastFetched: new Date().toISOString(),
             lastToken: null,
-        } as RawFeed;
+        };
     } catch (err) {
         console.warn(`[Hermidata] Failed to fetch feed ${partial.url}:`, err);
         return null;
@@ -183,7 +183,7 @@ async function buildFullFeed(partial: Partial<RawFeed>): Promise<RawFeed | null>
 // so we message the background to handle writes
 // ============================================================
 
-async function saveFeeds(feeds: RawFeed[]): Promise<void> {
+async function saveFeeds(feeds: RawScrappedFeed[]): Promise<void> {
     if (!feeds.length) return;
 
     try {
@@ -207,7 +207,7 @@ async function addFeedToGlobalMain(): Promise<void> {
         console.log('[Hermidata] content.ts loaded on', location.href);
 
         // 1. Head detection (cheapest — no network)
-        let partials: Partial<RawFeed>[] = await getRssFeedsInHead();
+        let partials: Partial<RawScrappedFeed>[] = await getRssFeedsInHead();
 
         // 2. Body link detection (no network)
         partials = await getRssFeedsInBody(partials);
@@ -225,13 +225,13 @@ async function addFeedToGlobalMain(): Promise<void> {
         // 4. Normalize metadata (no network)
         const normalized = partials
             .map(f => { try { return normalizeFeedData(f) } catch { return null } })
-            .filter(Boolean) as Partial<RawFeed>[];
+            .filter(Boolean) as Partial<RawScrappedFeed>[];
 
         // 5. Fetch all feeds in parallel (network)
         const results = await Promise.allSettled(normalized.map(f => buildFullFeed(f)));
 
-        const feeds: RawFeed[] = results
-            .filter((r): r is PromiseFulfilledResult<RawFeed> => r.status === 'fulfilled' && r.value !== null)
+        const feeds: RawScrappedFeed[] = results
+            .filter((r): r is PromiseFulfilledResult<RawScrappedFeed> => r.status === 'fulfilled' && r.value !== null)
             .map(r => r.value);
 
         if (!feeds.length) {

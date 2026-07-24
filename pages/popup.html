@@ -20,13 +20,13 @@
             <svg class="openBookmarkMenu imgBookmark" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960">
                     <g class="imgBookmark-g">
                         <path d="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640h-80v280l-100-60-100 60v-280H240v640Zm0 0v-640 640Zm200-360 100-60 100 60-100-60-100 60Z">
-                            <title class="RSSLinkState-title">Change Bookmark</title>
+                            <title class="RSSBookmarkMenuImg-title">Change Bookmark</title>
                         </path>
                     </g>
                 </svg>
             <input id="title" class="autoInput" data-name="Title" type="text" spellcheck="false" placeholder="Title" />
             <button class="openSettings" type="button" >
-                <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png'/>
+                <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png' title="Settings"/>
             </button>
         </div>
         <div class="table-2-container">
@@ -151,11 +151,11 @@
 <section class="material-symbols-outlinedContainer">
     <span class="material-symbols-outlined">progress_activity</span>
 </section>
-    <div id="spreadsheetPrompt">
-        <label for="sheetUrlInput">Enter Spreadsheet URL:</label>
-        <input type="text" id="sheetUrlInput" />
-        <button type="button" id="saveSheetUrlBtn" class="Btn">Save</button>
-    </div>
+<section id="spreadsheetPrompt">
+    <label for="sheetUrlInput">Enter Spreadsheet URL:</label>
+    <input type="text" id="sheetUrlInput" />
+    <button type="button" id="saveSheetUrlBtn" class="Btn">Save</button>
+</section>
     <script src="../scripts/popup/in/main.ts" type="module"></script>
 </body>
 </html>

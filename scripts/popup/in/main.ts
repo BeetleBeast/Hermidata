@@ -246,14 +246,9 @@ class HermidataController {
 
 
         // if new novel type, then merge the old to new
-        const newNovelType = this.pastHermidata ? this.pastHermidata?.novelType !== this.hermidata.novelType : false;
-        const newHermidata = newNovelType && this.past.pastHermidata ? await this.mergeNovelType(this.hermidata, this.past.pastHermidata) : this.hermidata;
-        if (!newHermidata) {
-            console.error('new Hermidata has different novel type and user declined to merge');
-            return;
-        }
-        this.hermidata = new HermidataModel(newHermidata);
-        
+        const hasMergedNovelType = await this.updateNovelType();
+        if (!hasMergedNovelType) return; // if merge failed/ declined then exit saving
+
         // TODO: sheck if it works
         // migrate if duplicate
         const hasMigrated = await this.migrateIfDuplicate();
@@ -274,6 +269,17 @@ class HermidataController {
         const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet});
 
         if (!this.Testing && savedInStorage && saved ) setTimeout( () => window.close(), 400);
+    }
+    /** merge novel type if changed */
+    private async updateNovelType(): Promise<boolean> {
+        const newNovelType = this.pastHermidata ? this.pastHermidata?.novelType !== this.hermidata.novelType : false;
+        const newHermidata = newNovelType && this.past.pastHermidata ? await this.mergeNovelType(this.hermidata, this.past.pastHermidata) : this.hermidata;
+        if (!newHermidata) {
+            console.error('new Hermidata has different novel type and user declined to merge');
+            return false;
+        }
+        this.hermidata = new HermidataModel(newHermidata);
+        return true;
     }
     private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
         const msg = `
@@ -328,7 +334,7 @@ class HermidataController {
         // from front-end
         const { title, Type, Chapter, status, novelStatuses, notes } = this.getLatestValueFromUI();
         
-        if (!title || !Type || !Chapter || !status || !novelStatuses) throw new Error('Missing required fields');
+        if (!title || !Type || ( Chapter === undefined || Chapter === null ) || !status || !novelStatuses) throw new Error('Missing required fields');
         
         
         // get latest values from UI and back-end

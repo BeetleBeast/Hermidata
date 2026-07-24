@@ -20,26 +20,33 @@ interface ItemInfo {
 export class FeedItem {
 
     protected AllHermidata: AllHermidata;
-    private isFirstItem = false;
     
     constructor(AllHermidata: AllHermidata) {
         this.AllHermidata = AllHermidata;
     }
+    private sortByLastUpdated(a: Hermidata, b: Hermidata) {
+        const dateA = new Date(a.rss?.lastFetched ?? a.meta.updated).getTime();
+        const dateB = new Date(b.rss?.lastFetched ?? b.meta.updated).getTime();
+        return dateB - dateA;
+    }
 
-    public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false): Promise<DocumentFragment> {
+    public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
         const fragment = document.createDocumentFragment();
-        for (const [key, item] of Object.entries(hermidataList)) {
-            this.isFirstItem = Object.keys(hermidataList)[0] === key
+        const sortedList = sortByLastUpdated ? Object.values(hermidataList).sort(this.sortByLastUpdated) : Object.values(hermidataList);
+
+        for (const item of sortedList) {
+
+            const isFirstItem = sortedList.indexOf(item) === 0;
             const Hermidata = new HermidataModel(item);
             
-            const itemInfo = await this.getItemInfo(key, Hermidata, isRSSItem);
-            if ( getElement(`[data-hash-key="${key}"]`)?.dataset.hashKey && itemInfo.isRead && itemInfo.clearedNotification) continue;
+            const itemInfo = await this.getItemInfo(item.id, Hermidata, isRSSItem);
+            if ( getElement(`[data-hash-key="${item.id}"]`)?.dataset.hashKey && itemInfo.isRead && itemInfo.clearedNotification) continue;
 
-            const li = this.createItemContainer(key, isRSSItem);
+            const li = this.createItemContainer(item.id, isRSSItem);
 
-            const lines = this.createItemLines(Hermidata);
+            const lines = this.createItemLines(Hermidata, isFirstItem);
             
-            const ItemInfoContainer = await this.createItemInfoContainer(key, Hermidata, itemInfo, isRSSItem);
+            const ItemInfoContainer = await this.createItemInfoContainer(item.id, Hermidata, itemInfo, isRSSItem);
             
             li.append(lines, ItemInfoContainer);
             fragment.appendChild(li);
@@ -143,7 +150,7 @@ export class FeedItem {
 
         return { groupLeft: diamondgroupLeft, groupRight: diamondgroupRight }
     }
-    private createItemLines(item: Hermidata) {
+    private createItemLines(item: Hermidata, isFirstItemOfList: boolean = false): SVGElement {
         const svgNS = "http://www.w3.org/2000/svg";
         
         const svg = document.createElementNS(svgNS, 'svg');
@@ -190,7 +197,7 @@ export class FeedItem {
             svg.appendChild(notifyRSSLinkIcon);
         }
 
-        const { groupLeft, groupRight } = this.isFirstItem ? this.CreateSidestriangle() : this.CreateSidesDiamond();
+        const { groupLeft, groupRight } = isFirstItemOfList ? this.CreateSidestriangle() : this.CreateSidesDiamond();
         svg.append(
             groupLeft, groupRight, 
             diamondgroup, topLeftBend, 
@@ -221,9 +228,10 @@ export class FeedItem {
     }
     private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
-        pubDate.className = "hermidata-item-pubDate"
-        const dateString = this.showLatestDate(item).toLocaleString().split(',')[0];
-        const pubDateText = `Published: ${dateString}`;
+        pubDate.className = "hermidata-item-pubDate";
+        const latestDate = this.showLatestDate(item);
+        const dateString = latestDate.date.toLocaleDateString('fr-FR');
+        const pubDateText = `${latestDate.originalDateVariable}: ${dateString}`;
         pubDate.textContent = pubDateText;
         pubDate.title = pubDateText;
         return pubDate
@@ -347,7 +355,7 @@ export class FeedItem {
         return li
     }
 
-    private showLatestDate(item: Hermidata): Date {
+    private showLatestDate(item: Hermidata): { date: Date, originalDateVariable: string} {
 
         const allDatesExeptBookmarks = item.rss ? {
             added: new Date(item.meta.added),
@@ -366,7 +374,14 @@ export class FeedItem {
         const allDates = [...Object.values(allDatesExeptBookmarks), ...allBookmarkDates];
         const date = allDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 
-        return date;
+        let originalDateVariable: string = '';
+        if (date === allDatesExeptBookmarks.updated) originalDateVariable = 'updated';
+        if (date === allDatesExeptBookmarks.added) originalDateVariable = 'added';
+        if (date === allDatesExeptBookmarks.latestrss) originalDateVariable = 'updated';
+        if (allBookmarkDates.some(bookmark => bookmark.updatedAt === date)) originalDateVariable = 'updated';
+        if (allBookmarkDates.some(bookmark => bookmark.createdAt === date)) originalDateVariable = 'added';
+
+        return {date, originalDateVariable};
     }
 }
 

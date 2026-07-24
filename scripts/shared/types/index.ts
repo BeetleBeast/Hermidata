@@ -63,6 +63,9 @@ export type {
 
     StringListFieldPath,
     ValueAtPath,
+
+    RawScrapedItem,
+    RawScrappedFeed,
     
 
 } from "./popup";

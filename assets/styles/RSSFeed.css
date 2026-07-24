@@ -416,7 +416,7 @@
     
 }
 .filter-header-container:has(.filter-header-symbol[data-filter-state="up"]) ~ .filter-list {
-    max-height: 500px;
+    grid-template-rows: 1fr;
     transform: translateY(0);
     opacity: 1;
     width: auto;
@@ -507,18 +507,27 @@
     transition: height 0.3s ease, padding 0.3s ease, margin 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
     
 }
-/* List of checkboxes under each filter */
+/* wrapper for List of checkboxes under each filter */
 .filter-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 0fr;
     flex-wrap: nowrap;
     margin-top: 0.4rem;
 
-    max-height: 0;
+    /*max-height: 0;*/
     overflow: hidden;
-    opacity: 0;
+    /*opacity: 0;*/
     transform: translateY(-10px);
-    transition: max-height 0.3s  cubic-bezier(0.4,0,0.2,1), transform 0.3s  cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+    transition: grid-template-rows 0.3s cubic-bezier(0.4,0,0.2,1), transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+}
+/* list of checkboxes under each filter */
+.filter-list-inner {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
 }
 
 /* Each checkbox + label combo */
@@ -526,7 +535,7 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    cursor: pointer;
+    /*cursor: pointer;*/
     border-radius: 4px;
 }
 .filter-item-container:has(.custom-checkbox[data-state="2"]) {

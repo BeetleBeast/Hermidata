@@ -1,8 +1,10 @@
 import { ext } from "../shared/utils/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
-import { getAllHermidata, getAllRawFeeds, getSettings, saveHermidata, setAllRawFeeds } from "../shared/db/Storage";
+import { getAllHermidata, getAllRawFeeds, getSettings, setAllHermidata, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
-import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput";
+import { returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput";
+import { XMLParser } from 'fast-xml-parser';
+import { getLatestToken, parseItems } from "./parseXML";
 
 
 type Meta = {
@@ -50,8 +52,12 @@ export async function checkFeedsForUpdates() {
                 }
 
                 // Parse and handle feed contents
-                const xml = parseXmlSafely(text, feed.title);
-                const item = parseItems(xml, feed.title);
+                const parser = new XMLParser({ ignoreAttributes: false });
+                const doc = parser.parse(text);
+                const item = parseItems(doc, feed.title);
+                if (!item) continue;
+
+                // Save item
                 compareLastSeen(item, feed);
 
                 // Save metadata
@@ -77,6 +83,8 @@ async function webSearch() {
     const allHermidata = await getAllHermidata();
     const allnovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
 
+    const allNewItemsKey: string[] = [];
+
     console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allnovelRSS.length}`);
 
     const combined = Object.values(savedFeeds)
@@ -85,7 +93,7 @@ async function webSearch() {
     for (const novel of allnovelRSS) {
         if (!novel) continue;
         if (!novel.domain || !novel.latestItem?.title || !novel.url) {
-            console.groupEnd();
+            // console.groupEnd();
             continue;
         }
         console.groupCollapsed(`[Hermidata] Web search for ${novel.latestItem?.title} in ${novel.domain}`);
@@ -108,8 +116,9 @@ async function webSearch() {
         console.log(`[Hermidata] Latest token: ${token}`);
 
         // get the items
-        const xml = parseXmlSafely(feedText, novel.latestItem?.title);
-        const item: FeedItem | null = parseItems(xml, novel.latestItem?.title);
+        const parser = new XMLParser({ ignoreAttributes: false });
+        const doc = parser.parse(feedText);
+        const item: FeedItem | null = parseItems(doc, novel.latestItem?.title);
         if (!item) {
             console.warn("No items found in feed:", novel.url);
             console.groupEnd();
@@ -127,6 +136,7 @@ async function webSearch() {
             latestItem: item,
             lastToken: token,
         };
+        allNewItemsKey.push(newFeed.id);
 
         // check if the feed is already in savedFeeds via token
         // const existingFeed = savedFeeds.find(f => f.lastToken === token);
@@ -138,23 +148,16 @@ async function webSearch() {
         // }
         console.log(`[Hermidata] Adding feed title: ${item.title}`);
         
-        const existingIndex = combined.findIndex(f => f.url === newFeed.url && f.url !== undefined);
-        console.log(`[Hermidata] existingIndex: ${existingIndex}`);
-        if (existingIndex === -1) {
+        const existing = combined.find(f => f.url === newFeed.url);
+
+        
+        if (!existing) {
             combined.push(newFeed);
             console.log(`[Hermidata] New feed added: ${newFeed.latestItem.title}`);
-        } else {
-            // Existing feed → update if newer
-            const existing = combined[existingIndex];
-            console.log(`[Hermidata] Existing feed found: ${existing.latestItem.title}`);
-            console.log(`[Hermidata] Existing feed lastFetched: ${existing.lastFetched}, New feed lastFetched: ${newFeed.lastFetched}`);
-            if (newFeed.lastFetched > existing.lastFetched) {
-                combined[existingIndex] = { ...existing, ...newFeed };
-                console.log(`[Hermidata] Updated feed: ${newFeed.latestItem.title}`);
-            }
+        } else if (newFeed.lastFetched > existing.lastFetched) {
+            Object.assign(existing, newFeed);
+            console.log(`[Hermidata] Updated feed: ${newFeed.latestItem.title}`);
         }
-        
-        
         
         console.groupEnd();
     }
@@ -162,16 +165,18 @@ async function webSearch() {
         console.log(`[Hermidata] ${Object.keys(combined).length} feeds saved to local storage`);
     })
 
-    const HermidataToUpdate: Record<string, Hermidata> = {};
+    const HermidataToUpdate: Hermidata[] = [];
     for (const feed of combined) {
         const related = Object.values(allHermidata).find(h => h.rss?.url === feed.url);
         if (related?.rss) {
             related.rss.lastFetched = feed.lastFetched;
             related.rss.latestItem = feed.latestItem;
-            HermidataToUpdate[related.id] = related;
+            if (allNewItemsKey.includes(related.id)) related.rss.Notified = true;
+
+            HermidataToUpdate.push(related);
         }
     }
-    for (const [key, value] of Object.entries(HermidataToUpdate)) await saveHermidata(key, value);
+    if (HermidataToUpdate.length > 0) await setAllHermidata(HermidataToUpdate);
 
     console.groupEnd();
 }
@@ -193,37 +198,10 @@ async function sha1Hex(str: string) {
 // ==== feed helpers ====
 
 // Helper: parse only the first 1–2 items
-function getFeedLatestToken(xmlText: string) {
-    try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xmlText, "text/xml");
-        const items = [...doc.querySelectorAll("item, entry")].slice(0, 2); // Only first 2
-        if (items.length === 0) return null;
-
-        // Prefer guid/id/link/pubDate/title — whichever exists first
-        const item = items[0];
-        const guid = item.querySelector("guid")?.textContent?.trim();
-        if (guid) return `guid:${guid}`;
-        const id = item.querySelector("id")?.textContent?.trim();
-        if (id) return `id:${id}`;
-
-        const linkEl = item.querySelector("link");
-        const href = linkEl?.getAttribute?.("href");
-        if (href) return `link:${href}`;
-        const linkText = linkEl?.textContent?.trim();
-        if (linkText) return `link:${linkText}`;
-
-        const pub = item.querySelector("pubDate, updated, published")?.textContent?.trim();
-        if (pub) return `pub:${pub}`;
-
-        const title = item.querySelector("title")?.textContent?.trim();
-        if (title) return `title:${title}`;
-
-        return null;
-    } catch (e) {
-        console.warn("[Hermidata] XML parse error:", e);
-        return null;
-    }
+function getFeedLatestToken(xmlText: string): string | null {
+    const parser = new XMLParser({ ignoreAttributes: false });
+    const doc = parser.parse(xmlText);
+    return getLatestToken(doc, xmlText);
 }
 
 function isFeedUnchanged(feed: RawFeed, meta: Meta) {
@@ -292,48 +270,6 @@ async function hasFeedChanged(feed: RawFeed, text: string) {
     }
 
     return feedChanged;
-}
-function parseXmlSafely(text: string, title: string) {
-    const parser = new DOMParser();
-    let xml = parser.parseFromString(text, "text/xml");
-
-    if (xml.querySelector("parsererror")) {
-        console.warn(`[Hermidata] XML parsing failed for ${title}, falling back to text/html mode.`);
-        xml = parser.parseFromString(text, "text/html");
-    }
-
-    return xml;
-}
-
-function parseItems(xml: Document, title: string): FeedItem | null {
-    const entries = [...xml.querySelectorAll("item, entry")];
-    if (!entries.length) {
-        console.warn(`[Hermidata] No <item> or <entry> elements found in ${title}.`);
-        return null;
-    }
-    return entries.map<FeedItem>(item => {
-        const rawTitle = item.querySelector("title")?.textContent.trim() ?? 
-            title ?? 
-            "";
-        const linkUrl = item.querySelector("link")?.getAttribute?.("href") ??
-            item.querySelector("link")?.textContent ??
-            "";
-        const trimmedTitle = TrimTitle.trimTitle(rawTitle, linkUrl).title;
-        const pubDate = new Date(item.querySelector("pubDate, updated, published")?.textContent.trim() ?? new Date().toISOString());
-        const guid = item.querySelector("guid")?.textContent ??
-            item.querySelector("id")?.textContent ??
-            item.querySelector("link")?.textContent ??
-            "";
-        return {
-            id: returnHashedFeedId(trimmedTitle, linkUrl),
-            rawTitle,
-            chapter: getChapterFromTitle(rawTitle, linkUrl),
-            title: trimmedTitle,
-            link: linkUrl.trim(),
-            pubDate,
-            guid
-        }
-    })[0];
 }
 
 function saveFeedMetaData(feed: RawFeed, meta: Meta) {

@@ -1,13 +1,14 @@
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/utils/BrowserCompat"
 import { getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
-import type { Filters, Hermidata, InputArrayType, RawFeed } from "../shared/types/index"
+import type { Filters, Hermidata, RawFeed, RawScrappedFeed } from "../shared/types/index"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { writeToSheet } from "./sheets"
 import { lastAutoFeedCkeck, lastFeedCkeck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
+import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput"
 
 let rssCache: Record<string, Hermidata> | null = null
 let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
@@ -74,18 +75,44 @@ export function handleGetLastSync(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export async function handleSaveRawFeeds(incomingFeeds: RawFeed[], sendResponse: (r: unknown) => void): Promise<true> {
+export async function handleSaveRawFeeds(incomingFeeds: RawScrappedFeed[], sendResponse: (r: unknown) => void): Promise<true> {
     const existing = await getAllRawFeeds()
     
     for (const feed of incomingFeeds) {
         const existingFeed = existing[feed.url]
         // Only update if newer or not yet stored
         if (!existingFeed || feed.lastFetched > existingFeed.lastFetched) {
-            await putRawFeed(feed)
+            const enriched = buildFeedItem(feed)
+            await putRawFeed(enriched)
         }
     }
     sendResponse({ status: 'ok' })
     return true
+}
+
+function buildFeedItem(raw: RawScrappedFeed): RawFeed {
+    const url = raw.latestItem.link;
+    const rawTitle = raw.latestItem.title;
+    const trimmedTitle = TrimTitle.trimTitle(rawTitle, url).title;
+    return {
+        id: returnHashedFeedId(trimmedTitle, raw.url),
+        title: trimmedTitle,
+        url,
+        domain: raw.domain ?? new URL(url).hostname.replace(/^www\./, ''),
+        latestItem: {
+            id: returnHashedFeedId(trimmedTitle, url),
+            title: trimmedTitle,
+            rawTitle: rawTitle,
+            link: raw.latestItem.link,
+            chapter: getChapterFromTitle(rawTitle, url),
+            pubDate: new Date(raw.latestItem.pubDate ?? new Date().toISOString()),
+            guid: raw.latestItem.guid,
+        },
+        image: raw.image ?? null,
+        lastFetched: raw.lastFetched,
+        lastBuildDate: new Date(raw.lastBuildDateStr),
+        lastToken: raw.lastToken,
+    };
 }
 
 export async function handleDbOperation( store: 'hermidata' | 'feeds' | 'settings', 
