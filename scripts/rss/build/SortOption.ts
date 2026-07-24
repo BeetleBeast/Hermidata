@@ -124,6 +124,9 @@ export class SortOption extends Sort {
         
         const list = document.createElement('div');
         list.className = 'filter-list';
+
+        const innerList = document.createElement('div');
+        innerList.className = 'filter-list-inner';
         
         headerContainer.addEventListener('click', () => {
             headersymbol.dataset.filterState = headersymbol.dataset.filterState === 'down' ? 'up' : 'down';
@@ -148,9 +151,10 @@ export class SortOption extends Sort {
 
             itemContainer.appendChild(checkbox);
             itemContainer.appendChild(label);
-            list.appendChild(itemContainer);
+            innerList.appendChild(itemContainer);
         }
 
+        list.appendChild(innerList);
         section.appendChild(list);
         return section;
     };
