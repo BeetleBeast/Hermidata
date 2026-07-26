@@ -139,13 +139,13 @@ export class HermidataMigration {
         );
         // check if Hash is the old way
         // Use your existing mergeTwoHermidata logic
-        const merged = await HermidataMigration.mergeTwoHermidata(newer, older,
+        const merged: Hermidata | Error = await HermidataMigration.mergeTwoHermidata(newer, older,
             olderHashType === 'old' ? 'OLD' : 'DEFAULT',
             newerHashType === 'old' ? 'OLD' : 'DEFAULT'
         );
     
         // Save and remove the old entry key
-        if (merged) {
+        if (!(merged instanceof Error)) {
             await updateHermidata(older.id, merged.id, merged);
             console.log(`Merged "${older.title}" into "${newer.title}"`);
         } else {
@@ -331,9 +331,9 @@ export class HermidataMigration {
      * Entry point to migrate duplicates by user selection
      * Migrates a list of Hermidata objects by finding and merging duplicates
      * @param objs - list of Hermidata objects that are potential duplicates of the same series
-     * @returns - merged Hermidata object or null if migration was cancelled or failed
+     * @returns - merged Hermidata object or Error if migration was cancelled or failed
      */
-    public static async migrateCopy(objs: Hermidata[]): Promise<Hermidata | null> {
+    public static async migrateCopy(objs: Hermidata[]): Promise<Hermidata | Error> {
         // Compare pairs and pick which one is newer vs older
         for (let i = 0; i < objs.length; i++) {
             for (let j = i + 1; j < objs.length; j++) {
@@ -416,7 +416,7 @@ export class HermidataMigration {
 
 
 
-    public static async mergeTwoHermidata(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | null> {
+    public static async mergeTwoHermidata(newer: Hermidata, older: Hermidata, OLD_KEY = 'DEFAULT', NEW_KEY = 'DEFAULT'): Promise<Hermidata | Error> {
         // step 1. new key
         // re-make keys
         const [ newTitle, newType ] = [newer.title, newer.novelType]
@@ -424,7 +424,7 @@ export class HermidataMigration {
         const newKey = NEW_KEY == 'DEFAULT' ? returnHashedTitle(newTitle, newType) : this.getOldIDType(newer);
         const oldKey = OLD_KEY == 'DEFAULT' ? returnHashedTitle(oldTitle, oldType) : this.getOldIDType(older);
         // check keys validity
-        if ( newKey !== newer.id || oldKey !== older.id) return null;
+        if ( newKey !== newer.id || oldKey !== older.id) return new Error("Invalid keys, aborting.");
         // step 2. start with shell
         const mergeAltTitles = (mainTitle: string, ...altLists: string[][]) => {
             return [

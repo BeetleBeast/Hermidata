@@ -283,7 +283,7 @@ class HermidataController {
     }
     private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
         const msg = `
-            The Novel Type of "${older.title}" has changed from "${older.novelType}" to "${newer.novelType}".
+            The Novel Type of "${older.title}" will changed from "${older.novelType}" to "${newer.novelType}".
             <br>
             <br>
             Are you sure you want to change it?
@@ -291,7 +291,7 @@ class HermidataController {
         const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
         if (!confirmed) return false;
         const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
-        if (!merged) return false;
+        if (merged instanceof Error) return false;
         console.log(`Merged "${older.title}" with "${newer.title}"`);
         return merged;
     }
