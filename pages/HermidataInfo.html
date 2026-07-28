@@ -1,32 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Hermidata — RSS / Library</title>
-<link rel="stylesheet" href="../assets/styles/styles.css">
-<link rel="stylesheet" href="../assets/styles/RSSFullPage.css">
-<link rel="stylesheet" href="../assets/styles/RSSPageStyles.css" />
-</head>
-<body>
-
-  <section class="topbar">
-    <h1>Hermidata — RSS & Library</h1>
-    <div class="toolbar">
-      <button type="button" id="bulkEditButton" class="Btn">bulk edit selected</button>
-      <button type="button" id="mergeTwoHermidatas" class="Btn">merge two hermidatas</button>
-      <button type="button" id="bulkOpen" class="Btn">Open selected</button>
-      <button type="button" id="reloadData" class="Btn">Reload</button>
-    </div>
-  </section>
 
 <section class="fullpage-RSS">
-  <section class="left-container">
-    <section class="search-container">
-      <input id="search" placeholder="Search titles / tags..." />
-    </section>
-    <section class="all-entries-container"><!-- Dynamic load items--></section>
-  </section>
 
   <section class="entry-details-container">
     <h3>Details</h3>
@@ -68,27 +41,6 @@
   <section class="entry-details-bookmarks"><!-- Dynamic load items--></section>
   <button type="button" id="saveDetail">Save</button>
   </section>
-  <section id="bulkEditPanel" data-open="false" >
-    <h3>Bulk Edit</h3>
-    <label for="bulkEditType">Novel Type:</label>
-    <select id="bulkEditType"></select>
-    <br>
-    <label for="bulkEditStatus">Novel Status:</label>
-    <select id="bulkEditStatus"></select>
-    <br>
-    <label for="bulkEditTags">Tags</label>
-    <div type="text" id="bulkEditTags"></div>
-    <br>
-    <div id="bulkEditButtons">
-      <button type="button" id="saveBulkEditButton">Save Changes</button>
-      <button type="button" class="CancelBulkEditButton">Cancel</button>
-    </div>
-  </section>
+
 
 </section>
-
-
-
-<script src="../scripts/rssPage/main.ts" type="module"></script>
-</body>
-</html>

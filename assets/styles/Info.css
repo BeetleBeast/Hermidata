@@ -1,0 +1,98 @@
+
+/* entry details */
+
+.entry-details-container {
+	display: flex;
+	position: absolute;
+	width: 30%;
+	border: 1px solid;
+	flex-direction: column;
+	gap: 10px;
+	background: var(--card);
+	padding: 12px;
+	border-radius: var(--radius);
+	box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+	top: 0;
+	right: -50%;
+}
+
+
+.entry-details-mainContent {
+	gap: 10px;
+	display: flex;
+	flex-direction: column;
+	width: 80%;
+	align-self: center;
+	border: 1px solid;
+	border-radius: 10px;
+	padding: 10px;
+}
+
+
+
+#detail-tags-container {
+	display: flex;
+	flex-direction: row;
+	gap: 15px;
+	padding: 5px;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+#detail-altSources-container {
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	padding: 5px;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+#detail-altTitles-container {
+	display: flex;
+	flex-direction: column;
+	padding: 10px;
+	flex-wrap: wrap;
+}
+
+.entry-details-bookmarks {
+	display: flex;
+	flex-direction: column;
+	width: 80%;
+	align-self: center;
+	gap: 10px;
+}
+
+.bookmark {
+	border: 1px solid;
+	padding: 10px;
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.bookmark-history {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 15px;
+}
+
+
+#saveDetail {
+	width: fit-content;
+}
+
+#closeDetail {
+	width: fit-content;
+	position: absolute;
+	right: 25px;
+	top: 25px;
+}
+
+
