@@ -96,9 +96,7 @@ button:disabled,
 
 input[type=number],
 input[type=number]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
     appearance: none;
-    -moz-appearance: textfield;
 }
 input,
 select  {
@@ -299,6 +297,13 @@ input:invalid:not(:placeholder-shown) {
     color: var(--resetFilterBtn);
     border-radius: 5px;
     border: 1px solid #12174f;
+}
+#resetFilters-label-hidden {
+    opacity: 0;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 #resetFilters:hover {
     background-color: var(--resetFilterBtn_hover);
