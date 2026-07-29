@@ -749,3 +749,50 @@ body[data-list-mode="true"]
 	border-radius: 10px;
 	padding: 10px;
 }
+
+/* filter */
+
+
+#StarRating-dialog:popover-open {
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	justify-content: center;
+	align-items: center;
+}
+
+.star-rating-checkbox {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.filter-item-checkbox {
+	width: 18px;
+	height: 18px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.filter-item-checkbox:hover {
+    background: var(--Btn_hover);
+    border-color: var(--border-focus);
+}
+
+/* temporary */
+.filter-item-checkbox[data-state="1"] {
+    background-color: var(--Btn);
+    border-color: var(--border-focus);
+    color: var(--bg);
+}
+/* temporary */
+.filter-item-checkbox[data-state="2"] {
+    background-color: var(--Btn);
+    border-color: var(--border-focus);
+    color: var(--bg);
+}

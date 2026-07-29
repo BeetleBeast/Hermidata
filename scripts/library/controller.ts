@@ -1,10 +1,14 @@
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
 import { feed } from "./build/feed";
+import { filter } from "./build/setFilter";
 
 export class Controller {
+    
 
     private readonly feed: feed;
+
+    private readonly filter: filter;
     
 
     private readonly reloadData = getElement<HTMLButtonElement>("#reloadData");
@@ -16,6 +20,7 @@ export class Controller {
 
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         this.feed = new feed(allHermidata, settings);
+        this.filter = new filter(allHermidata, settings);
     }
 
 
@@ -23,6 +28,8 @@ export class Controller {
     public async init() {
         // build
         await this.feed.build();
+
+        await this.filter.build();
 
         this.setEventListener();
     }

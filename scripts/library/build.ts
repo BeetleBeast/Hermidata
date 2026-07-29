@@ -28,4 +28,20 @@ export abstract class RSSPageBuilder {
     public abstract build(): Promise<void>;
 
     protected abstract reload(): void;
+
+
+    protected async dbRequest<T>(store: string, operation: string, payload?: { id: string, data: any}): Promise<T> {
+        try {
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
+                    if (!response) reject(new Error('No response from background script'));
+                    if (!response?.success) reject(new Error(response.error));
+                    resolve(await response.result as T);
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
 }

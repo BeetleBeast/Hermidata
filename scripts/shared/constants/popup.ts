@@ -15,6 +15,19 @@ export const DEFAULT_TAGS: string[] = [
     'Seinen', 'Shoujo', 'Shoujoai', 'Shounen', 'Shounenai', 'Josei', 'Yaoi', 'Yuri',
     'Isekai', 'Mecha', 'Demons', 'Ghosts', 'Vampire', 'Psychological', 'Super Power', 
 ];
+
+// [ back-end, [front-end, default state] ]
+export const CONTENT_RATINGS: Map<string, [string, boolean]> = new Map([
+    ['G', ['Safe', true]],
+    ['PG', ['Suggestive', true]],
+    ['R', ['Erotica', false]],
+    ['NR', ['Pornographic', false]],
+]);
+
+export const DEMOGRAPHIC_TAGS: string[] = [
+    'Seinen', 'Josei', 'Shoujo', 'Yaoi', 'Shounen', 'Shoujoai', 'Shounenai'
+];
+
 // hardcoded default tag colours in hex | <tag, hex colour>
 // hardcoded default tag colours in hex | <tag, hex colour>
 export const DEFAULT_TAG_COLOURS: Record<string, string> = {

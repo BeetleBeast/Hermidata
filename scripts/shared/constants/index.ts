@@ -6,6 +6,8 @@ export {
     DEFAULT_TAGS,
     DEFAULT_TAG_COLOURS,
 
+    CONTENT_RATINGS,
+    DEMOGRAPHIC_TAGS,
 
     makeDefaultHermidata,
     makeDefaultBookmark
