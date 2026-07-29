@@ -13,7 +13,7 @@ export default defineConfig({
                 popup:      resolve(__dirname, 'pages/popup.html'),
                 settings:   resolve(__dirname, 'pages/settings.html'),
                 library:    resolve(__dirname, 'pages/Library.html'),
-                info:       resolve(__dirname, 'pages/HermidataInfo.html'),
+                info:       resolve(__dirname, 'pages/Hermidata.html'),
                 // Background has no HTML, so it's listed directly
                 background: resolve(__dirname, 'scripts/background/background.ts'),
             },

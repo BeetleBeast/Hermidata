@@ -211,7 +211,7 @@ input:invalid:not(:placeholder-shown) {
 
 /* top bar */
 
-.topbar {
+.topBar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -306,6 +306,16 @@ input:invalid:not(:placeholder-shown) {
     border-radius: 5px;
     border: 1px solid cornflowerblue;
 }
+
+/* library container */
+
+#library-container {
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+}
+
+
 /* library feed info  */
 
 #library-entries-info {
@@ -346,23 +356,23 @@ input:invalid:not(:placeholder-shown) {
 #library-entries-ViewMode-list {
     width: 50px;
     height: 35px;
-    color: var(--Text);
+    color: var(--Text-color);
 }
-[data-active_view_mode] {
+[data-active_view_mode="true"] {
     background-color: var(--Btn_hover);
 }
-[data-active_view_mode]:hover,
-[data-active_view_mode]:active,
-[data-active_view_mode]:focus-visible {
+[data-active_view_mode="true"]:hover,
+[data-active_view_mode="true"]:active,
+[data-active_view_mode="true"]:focus-visible {
     color: #fff;
     border-color: none;
     outline: none;
     background-color: none;
 }
 
-.viewMode-toggle:hover:not([data-active_view_mode]):focus-visible,
-.viewMode-toggle:hover:not([data-active_view_mode]):active,
-.viewMode-toggle:hover:not([data-active_view_mode]) {
+.viewMode-toggle:hover:not([data-active_view_mode="true"]):focus-visible,
+.viewMode-toggle:hover:not([data-active_view_mode="true"]):active,
+.viewMode-toggle:hover:not([data-active_view_mode="true"]) {
     color: #fff;
     background-color: inherit;
     outline: none;
@@ -386,9 +396,135 @@ input:invalid:not(:placeholder-shown) {
 	width: 30%;
 }
 #library-entries-container {
+	display: grid;
+	width: 70%;
+	scroll-behavior: auto;
+	align-items: center;
+	height: -moz-available;
+	grid-template-columns: auto auto auto;
+	justify-content: space-evenly;
+	grid-row-gap: 200px;
+	grid-column-gap: 100px;
+    margin-top: 80px;
+}
+.hermidata-item {
+	display: grid;
+	width: 100%;
+	height: 200px;
+	background-color: var(--card);
+	border-radius: 15px;
+	grid-template-areas: 
+    "site checkbox .     ." 
+    "img  type     type  type " 
+    "img  title    title title" 
+    "img  chapter  .     time ";
+	grid-template-columns: 150px;
+	grid-template-rows: 0px 30px 1fr 30px;
+    cursor: pointer;
+}
+
+.hermidata-item-image {
+	grid-area: img;
+	width: fit-content;
+    max-width: 150px;
+	height: 180px;
+	object-fit: scale-down;
+	display: flex;
+	align-self: center;
+	border-radius: 10px;
+	margin-left: 10px;
+	z-index: 15;
+}
+.hermidata-item-title {
+	grid-area: title;
+	font-size: 1.2em;
+	text-align: center;
+	color: var(--Text-color);
+	display: flex;
+	align-items: baseline;
+	justify-content: center;
+	padding: 10px;
+}
+.hermidata-item-novelType-container {
+	grid-area: type;
+	display: flex;
+	flex-direction: row;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin-left: 10px;
+	background-color: var(--border);
+	border-radius: 8px;
+	border: 1px solid var(--Btn_disabled);
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	height: fit-content;
+	padding-top: 1px;
+	padding-bottom: 1px;
+	margin-top: 6px;
+    gap: 10px;
+}
+.hermidata-item-novelType-svg {
+	width: 25px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	height: 25px;
+}
+.hermidata-item-novelType {
+	padding: 0;
+	height: fit-content;
+	margin: 0;
+}
+
+.hermidata-item-date {
+	grid-area: time;
+    padding-right: 15px;
+    text-align: end;
+}
+.hermidata-item-chapter {
+	grid-area: chapter;
+}
+
+.hermidata-item-site-container {
+	grid-area: site;
+	display: block;
+	position: relative !important;
+	width: 100%;
+	height: 100%;
+}
+.hermidata-item-site {
+	position: absolute;
+	top: -30px;
+	display: block;
+	background-color: var(--card);
+	padding-bottom: 20px;
+	padding-left: 15px;
+	padding-right: 15px;
+	padding-top: 5px;
+	border-radius: 10px 10px 0 0;
+}
+
+.hermidata-item-checkbox-container {
+    grid-area: checkbox;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+.hermidata-item-checkbox {
+    position: absolute;
+    top: -25px;
     display: block;
-    width: 80%;
-    scroll-behavior: auto;
+    background-color: var(--card);
+    padding-bottom: 20px;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 5px;
+    border-radius: 10px 10px 0 0;
+    pointer-events: initial;
+    transition: transform 0.3s ease-in-out;
+    z-index: -1;
 }
 
 .feed {

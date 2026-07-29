@@ -1,20 +1,21 @@
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
-import { Bulk } from "./build/bulk";
 import { feed } from "./build/feed";
 
-export class RSSPageController {
+export class Controller {
 
     private readonly feed: feed;
-    private readonly bulk: Bulk;
+    
 
     private readonly reloadData = getElement<HTMLButtonElement>("#reloadData");
 
     private readonly search = getElement<HTMLButtonElement>("#search");
 
+    private readonly gridViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-grid");
+    private readonly listViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-list");
+
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         this.feed = new feed(allHermidata, settings);
-        this.bulk = new Bulk(allHermidata, settings);
     }
 
 
@@ -22,20 +23,22 @@ export class RSSPageController {
     public async init() {
         // build
         await this.feed.build();
-        await this.bulk.build();
 
         this.setEventListener();
     }
 
     private async reload() {
         await this.feed.reload();
-        await this.bulk.reload();
     }
 
     private setEventListener() {
         this.removeEventListener();
         this.reloadData!.addEventListener('click', () => this.reload());
         this.search!.addEventListener('input', (e) => this.updateFeedList(e) );
+
+        // viewMode toggle
+        this.gridViewMode?.addEventListener('click', () => this.feed.setGridViewMode('list'));
+        this.listViewMode?.addEventListener('click', () => this.feed.setGridViewMode('grid'));
     }
     private removeEventListener() {
         this.reloadData!.removeEventListener('click', () => this.reload());

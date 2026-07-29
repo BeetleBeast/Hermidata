@@ -4,7 +4,7 @@ import { RSSPageBuilder } from "../build";
 
 export class feed extends RSSPageBuilder {
 
-    private readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('.all-entries-container');
+    private readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('#library-entries-container');
 
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         super(allHermidata, settings);

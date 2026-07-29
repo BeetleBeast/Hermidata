@@ -34,7 +34,7 @@ export class Footer extends RssBuild {
     private openRSSPage(): void {
         const FullpageRSSButton = getElement(".fullpage-RSS-btn");
         if (!FullpageRSSButton) throw new Error('Element not found');
-        FullpageRSSButton.addEventListener('click', () => open('./RSSFullpage.html'))
+        FullpageRSSButton.addEventListener('click', () => open('./Library.html'))
     }
     private setVersion(): void {
         setElement("#version", el => el.innerHTML = chrome.runtime.getManifest().version);
