@@ -313,6 +313,40 @@ export class TrimTitle {
         const Url_filter = Url_filter_parts.at(-1)?.replaceAll('-',' ').toLowerCase().trim() || '';
         return Url_filter
     }
+    /**
+     * Removes the chapter/volume/episode marker block from a title, choosing which side to keep based on structure rather than a word list:
+     *  - If a subtitle separator (: - – — |) immediately follows the marker block, the author intentionally continued the title -> keep the suffix.
+     *    e.g. "Volume 2, Chapter 5: Revenge" -> "Revenge"
+     *  - Otherwise, whatever trails the marker is scraper metadata (language tag, resolution, domain, scanlator name, etc.) with no reliable enumeration -> keep the prefix.
+     *    e.g. "The Generic Title Chapter 3 English online test.com" -> "The Generic Title"
+    */
+    private static stripChapterBlock(title: string, regexUsed: RegexConfig): string {
+        // TODO: rewrite this method for better readability
+        regexUsed.chapterRemoveRegexV3.lastIndex = 0;
+
+        let match: RegExpExecArray | null;
+        let blockStart = -1;
+        let blockEnd = -1;
+        while ((match = regexUsed.chapterRemoveRegexV3.exec(title)) !== null) {
+            if (blockStart === -1) blockStart = match.index;
+            blockEnd = match.index + match[0].length;
+            if (match[0].length === 0) regexUsed.chapterRemoveRegexV3.lastIndex++; // avoid infinite loop on zero-width match
+        }
+
+        if (blockStart === -1) return title; // no chapter marker found, nothing to do
+
+        const prefix = title.slice(0, blockStart).trim();
+        const rawSuffix = title.slice(blockEnd);
+
+        const subtitleMarker = /^\s*[:\-–—|]\s*/;
+        const hasMarker = subtitleMarker.test(rawSuffix);
+        const suffix = rawSuffix.replace(subtitleMarker, '').trim();
+
+        if (hasMarker && suffix) return suffix;
+        if (prefix) return prefix;
+        if (suffix) return suffix;
+        return '';
+    }
 
     private static makeTitle(filter: string[], regexUsed: RegexConfig, HermidataUrl: string): TrimmedTitle | null {
         if (!filter.length) return null;
@@ -343,8 +377,8 @@ export class TrimTitle {
         // early strip first string if its a leading number
         if (/^\d{1,4}(?:\.\d+)?$/.test(filter[0])) return TrimTitle.makeTitle(filter.slice(1), regexUsed, HermidataUrl);
 
-        mainTitle = filter[0]
-        .replace(regexUsed.chapterRemoveRegexV3, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
+        mainTitle = TrimTitle.stripChapterBlock(filter[0], regexUsed)
+        // .replace(regexUsed.chapterRemoveRegexV3, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
         .replace(/^\d{1,4}(?:\d+)?\s+(?=[A-Za-z\u3040-\u9FFF])/, '') // remove leading numbers if followed by text (to catch cases like "12 Monkeys" where "12" is not a chapter number)
         .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation
