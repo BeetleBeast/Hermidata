@@ -217,6 +217,9 @@ export class TrimTitle {
 
         const keyword = ['manga', 'novel', 'anime', 'tv-series', 'comic', 'webtoon', 'ln'];
         const keywordPattern = keyword.join('|');
+        
+        const trailingJunkWords = ['english', 'eng', 'raw', 'online', 'free', 'sub', 'dub', 'hd'];
+        const trailingJunkPattern = trailingJunkWords.join('|');
 
         /**
          * Matches a full chapter reference, including optional leading/trailing numbers.
@@ -245,6 +248,10 @@ export class TrimTitle {
         // const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
         const readRegex = /^\s*read(\s+online|\s+now)?\s*$/i;
 
+        // Words that commonly trail a chapter marker on scraper sites
+        // e.g. "... Chapter 3 English Online" -> after chapter removal, "... English Online" is left dangling
+        const trailingJunkRegex = new RegExp(String.raw`(?:\s*\b(?:${trailingJunkPattern})\b)+\s*$`, 'i');
+
         // Regex for "novel bin"
         const junkRegex = new RegExp(String.raw`\b(${junkKeywordPattern})\b`, 'i');
 
@@ -272,7 +279,8 @@ export class TrimTitle {
             flexibleSiteNameRegex,
             cleanTitleKeywordEnd,
             cleanTitleKeywordStart,
-            stripReadOnline
+            stripReadOnline,
+            trailingJunkRegex
         }
     }
     private static removeJunkAndSiteName(parts: string[], regexUsed: RegexConfig) {
@@ -286,6 +294,7 @@ export class TrimTitle {
             .filter(p => !regexUsed.siteNameRegex.test(p))
             .filter(p => !regexUsed.flexibleSiteNameRegex.test(p))
             .map(p => p.replace(regexUsed.cleanTitleKeywordStart, '').replace(regexUsed.cleanTitleKeywordEnd, '').trim())
+            .map(p => p.replace(regexUsed.trailingJunkRegex, ''))
             .map(p => p.replace(/^[\s:;,\-–—|]+/, "").trim()) // remove leading punctuation + spaces
             .map(p => p.replace('#', ' ').trim()) // remove any '#' characters
             .map(p => p.replace('／', " ").trim()) // remove trailing punctuation + spaces

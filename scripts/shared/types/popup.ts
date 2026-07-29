@@ -11,7 +11,8 @@ export type RegexConfig = {
     flexibleSiteNameRegex: RegExp,
     cleanTitleKeywordEnd: RegExp,
     cleanTitleKeywordStart: RegExp,
-    stripReadOnline: RegExp
+    stripReadOnline: RegExp,
+    trailingJunkRegex: RegExp
 }
 /**
  * @fileoverview Types
