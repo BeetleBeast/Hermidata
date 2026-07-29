@@ -392,14 +392,7 @@ input:invalid:not(:placeholder-shown) {
 }
 /* --- Feed --- */
 
-.all-entries-container {
-	list-style: none;
-	padding: 0;
-	margin: 8px 0;
-	display: grid;
-	gap: 8px;
-	width: 30%;
-}
+body[data-list-mode="true"]
 #library-entries-container {
 	display: grid;
 	width: 70%;
@@ -412,6 +405,21 @@ input:invalid:not(:placeholder-shown) {
 	grid-column-gap: 100px;
     margin-top: 80px;
 }
+body[data-list-mode="false"]
+#library-entries-container {
+    display: grid;
+    width: 70%;
+    scroll-behavior: auto;
+    align-items: center;
+    height: -moz-available;
+    grid-template-columns: auto auto auto auto auto auto;
+    justify-content: space-evenly;
+    grid-row-gap: 200px;
+    grid-column-gap: 100px;
+    margin-top: 80px;
+}
+
+body[data-list-mode="true"]
 .hermidata-item {
 	display: grid;
 	width: 100%;
@@ -428,6 +436,25 @@ input:invalid:not(:placeholder-shown) {
     cursor: pointer;
 }
 
+body[data-list-mode="false"]
+.hermidata-item {
+	display: grid;
+	width: 250px;
+	height: 410px;
+	/* background-color: var(--card); */
+	border-radius: 15px;
+	grid-template-areas:
+        "checkbox .     .    " 
+        "type     type  type " 
+        "img      img   img  " 
+        "chapter  site  time " 
+        "title    title title";
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 0px 0px 350px 30px 30px;
+	cursor: pointer;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-image {
 	grid-area: img;
 	width: fit-content;
@@ -440,6 +467,19 @@ input:invalid:not(:placeholder-shown) {
 	margin-left: 10px;
 	z-index: 15;
 }
+
+body[data-list-mode="false"]
+.hermidata-item-image {
+	grid-area: img;
+	width: 250px;
+	height: 350px;
+	object-fit: scale-down;
+	align-self: center;
+	border-radius: 10px;
+	z-index: 15;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-title {
 	grid-area: title;
 	font-size: 1.2em;
@@ -450,6 +490,20 @@ input:invalid:not(:placeholder-shown) {
 	justify-content: center;
 	padding: 10px;
 }
+
+body[data-list-mode="false"]
+.hermidata-item-title {
+	grid-area: title;
+	font-size: 1.2em;
+	text-align: center;
+	color: var(--Text-color);
+	display: flex;
+	align-items: baseline;
+	justify-content: center;
+	padding: 10px;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-novelType-container {
 	grid-area: type;
 	display: flex;
@@ -469,6 +523,32 @@ input:invalid:not(:placeholder-shown) {
 	margin-top: 6px;
     gap: 10px;
 }
+
+body[data-list-mode="false"]
+.hermidata-item-novelType-container {
+	grid-area: type;
+	display: flex;
+	flex-direction: row;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin-left: 10px;
+    
+    background-color: rgba(var(--color-rgb), 0.5);
+	background-color: color-mix(in srgb, var(--border) 70%, transparent);
+	border-radius: 8px;
+	border: 1px solid var(--Btn_disabled);
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	height: fit-content;
+	padding-top: 1px;
+	padding-bottom: 1px;
+	margin-top: 6px;
+    gap: 10px;
+    z-index: 20;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-novelType-svg {
 	width: 25px;
 	display: flex;
@@ -477,21 +557,62 @@ input:invalid:not(:placeholder-shown) {
 	position: relative;
 	height: 25px;
 }
+
+body[data-list-mode="false"]
+.hermidata-item-novelType-svg {
+	width: 25px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	height: 25px;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-novelType {
 	padding: 0;
 	height: fit-content;
 	margin: 0;
 }
 
+body[data-list-mode="false"]
+.hermidata-item-novelType {
+    padding: 0;
+	height: fit-content;
+    color: contrast-color(var(--border));
+	margin: 0;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-date {
 	grid-area: time;
     padding-right: 15px;
     text-align: end;
 }
+
+body[data-list-mode="false"]
+.hermidata-item-date {
+    grid-area: time;
+    text-align: end;
+    white-space: nowrap;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-chapter {
 	grid-area: chapter;
 }
 
+body[data-list-mode="false"]
+.hermidata-item-chapter {
+	grid-area: chapter;
+    text-align: left;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    width: fit-content;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-site-container {
 	grid-area: site;
 	display: block;
@@ -499,6 +620,23 @@ input:invalid:not(:placeholder-shown) {
 	width: 100%;
 	height: 100%;
 }
+
+
+
+body[data-list-mode="false"]
+.hermidata-item-site-container {
+	grid-area: site;
+	display: flex;
+	width: 100%;
+	height: 100%;
+	/* margin-right: 10px; */
+	/* margin-left: 10px; */
+	align-self: center;
+	justify-self: center;
+	text-align: center;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-site {
 	position: absolute;
 	top: -30px;
@@ -511,12 +649,31 @@ input:invalid:not(:placeholder-shown) {
 	border-radius: 10px 10px 0 0;
 }
 
+body[data-list-mode="false"]
+.hermidata-item-site {
+	display: block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    text-align: center;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-checkbox-container {
     grid-area: checkbox;
     position: relative;
     width: 100%;
     height: 100%;
 }
+
+body[data-list-mode="false"]
+.hermidata-item-checkbox-container {
+    grid-area: checkbox;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+body[data-list-mode="true"]
 .hermidata-item-checkbox {
     position: absolute;
     top: -25px;
@@ -528,8 +685,28 @@ input:invalid:not(:placeholder-shown) {
     padding-top: 5px;
     border-radius: 10px 10px 0 0;
     pointer-events: initial;
-    transition: transform 0.3s ease-in-out;
-    z-index: -1;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    z-index: 5;
+}
+
+body[data-list-mode="false"]
+.hermidata-item-checkbox {
+    position: absolute;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    z-index: 5;
+    top: 10px;
+}
+
+body[data-list-mode="false"]
+.hermidata-item-checkbox:checked {
+    opacity: 1 !important;
+    transform:  translateX(-20px) !important;
+}
+
+body[data-list-mode="true"]
+.hermidata-item-checkbox:checked {
+    opacity: 1 !important;
+    transform:  translateX(0) !important;
 }
 
 .feed {

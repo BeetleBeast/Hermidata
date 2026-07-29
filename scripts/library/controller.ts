@@ -37,8 +37,8 @@ export class Controller {
         this.search!.addEventListener('input', (e) => this.updateFeedList(e) );
 
         // viewMode toggle
-        this.gridViewMode?.addEventListener('click', () => this.feed.setGridViewMode('list'));
-        this.listViewMode?.addEventListener('click', () => this.feed.setGridViewMode('grid'));
+        this.gridViewMode?.addEventListener('click', () => this.feed.setGridViewMode('grid'));
+        this.listViewMode?.addEventListener('click', () => this.feed.setGridViewMode('list'));
     }
     private removeEventListener() {
         this.reloadData!.removeEventListener('click', () => this.reload());

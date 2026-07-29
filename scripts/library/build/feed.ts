@@ -7,7 +7,7 @@ export class feed extends RSSPageBuilder {
 
     private readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('#library-entries-container');
 
-    public viewMode: 'grid' | 'list' = 'grid';
+    public viewMode: 'grid' | 'list' = 'list';
     
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         super(allHermidata, settings);
@@ -29,28 +29,33 @@ export class feed extends RSSPageBuilder {
         const visibleElements = this.AllHermidataContainer?.querySelectorAll<HTMLDivElement>('div[aria-hidden="false"]');
         if (!visibleElements) return;
 
-        const updates: { checkbox: HTMLInputElement; left: number }[] = [];
+        const updates: { checkbox: HTMLInputElement; position: number }[] = [];
+
+        const translationPosition = () => this.viewMode === 'list' ? -20 : 10;
+
+        const setWith = (siteWidth: number) => this.viewMode === 'grid' ? 0 : -(150 - siteWidth);
 
         // READ phase — no writes here
         for (const el of visibleElements) {
-            const site = el.querySelector<HTMLDivElement>('.hermidata-item-site');
+            const site = this.viewMode === 'grid' ? el.querySelector<HTMLImageElement>('.hermidata-item-image') : el.querySelector<HTMLDivElement>('.hermidata-item-site');
             const checkbox = el.querySelector<HTMLInputElement>('.hermidata-item-checkbox');
             if (!site || !checkbox) continue;
 
             const siteWidth = site.getBoundingClientRect().width;
-            updates.push({ checkbox, left: -(150 - siteWidth) });
+            updates.push({ checkbox, position: setWith(siteWidth) });
         }
 
         // WRITE phase — no reads here
-        for (const { checkbox, left } of updates) {
-            checkbox.style.left = `${left}px`;
+        for (const { checkbox, position } of updates) {
+            checkbox.style.opacity = '0';
+            checkbox.style.transform = `translateX(${translationPosition()}px)`;
+            checkbox.style.left = `${position}px`;
         }
     }
 
     public setGridViewMode(newViewMode: 'grid' | 'list'): void {
         const buttons = document.querySelectorAll<HTMLButtonElement>('.viewMode-toggle');
-        const currentButtonSelected = document.querySelector<HTMLButtonElement>(newViewMode === 'grid' ? "#library-entries-ViewMode-list" : "#library-entries-ViewMode-grid");
-
+        const currentButtonSelected = document.querySelector<HTMLButtonElement>(newViewMode === 'list' ? "#library-entries-ViewMode-list" : "#library-entries-ViewMode-grid");
 
         if (!currentButtonSelected) return;
         
@@ -66,11 +71,9 @@ export class feed extends RSSPageBuilder {
         });
         this.viewMode = newViewMode;
 
-        this.changeViewMode();
-    }
+        document.body.dataset.listMode = this.viewMode === 'list' ? 'true' : 'false';
 
-    private changeViewMode() {
-
+        this.setCheckBoxAtCorrectState();
     }
     /** Count the amount of Elements are visible in the DOM, then write inside the counter and return it */
     private countVisibleEntries(): number {
@@ -150,7 +153,18 @@ export class feed extends RSSPageBuilder {
         const checkbox = container.querySelector<HTMLInputElement>('.hermidata-item-checkbox');
         if (!checkbox) return;
 
-        checkbox.style.transform = `translateX(${entry === 'show' ? '0px': '-20px'})`;
+        const isListMode = this.viewMode === 'list';
+
+        const normal = () => (entry === 'show') ? '0px' : '-20px';
+        const reverse = () => (entry === 'show') ? '-20px' : '10px';
+
+        const value = isListMode ? normal() : reverse();
+
+
+
+        checkbox.style.opacity = `${entry === 'show' ? '1' : '0'}`;
+
+        checkbox.style.transform = `translateX(${value})`;
     }
 
     private buildImage(entry: Hermidata): HTMLImageElement {
@@ -326,7 +340,9 @@ export class feed extends RSSPageBuilder {
         checkbox.checked = false;
         checkbox.ariaChecked = 'false';
 
-        checkbox.style.transform = `translateX(-20px)`;
+        const value = this.viewMode === 'list' ? '-20px' : '10px';
+
+        checkbox.style.transform = `translateX(${value})`;
 
         checkbox.addEventListener('click', (e) => {
             e.stopPropagation();
