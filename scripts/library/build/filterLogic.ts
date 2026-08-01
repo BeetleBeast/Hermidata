@@ -1,0 +1,533 @@
+import { getLastLibraryFilters, setLastLibraryFilters, setLastLibrarySortOption } from "../../shared/db/Storage";
+import type { Hermidata, Settings } from "../../shared/types";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { getElement, setElement } from "../../shared/utils/Selection";
+import { Sort, type AllSortsType, type BasicSortsType } from "./filter";
+
+
+
+export type Filters = {
+    include: Record<string, string[]>; // { type: ['Manga'], status: ['Ongoing'] }
+    exclude: Record<string, string[]>;
+    sort: AllSortsType;
+}
+
+
+
+export class FilterLogic extends Sort {
+
+
+    private readonly libraryEntriesContainer = document.querySelector<HTMLDivElement>('#filter-container');
+
+    private readonly searchInput = document.querySelector<HTMLInputElement>('#search'); // Hermidata search bar
+    private readonly autocompleteContainer = document.querySelector<HTMLDivElement>('#search-suggestions'); // Hermidata search-suggestions
+
+    private get tagsSearchInput(): HTMLInputElement | null {
+        return document.querySelector<HTMLInputElement>('#tag-search-input');
+    }
+
+    // private readonly tagsSearchInput = document.querySelector<HTMLInputElement>('#tag-search-input'); // tags search bar
+
+    private readonly filterReset = document.querySelector<HTMLButtonElement>('#resetFilters');
+
+    private readonly ChapterCompletionFilter = document.querySelector<HTMLInputElement>('#ChapterCompletion-filter');
+
+
+    private readonly allSearchableItems = new Set<HTMLDivElement>();
+
+    private selectedIndex: number = -1;
+
+
+    public build(): void {
+        if (!this.libraryEntriesContainer || !this.searchInput || !this.autocompleteContainer) {
+            throw new Error('One or more required elements not found');
+        }
+
+        this.sortOptionLogic(this.libraryEntriesContainer);
+
+        // Hermidata  bar
+        this.searchInput.addEventListener('input', (e) => this.handleSearchInput(e, this.autocompleteContainer!));
+        this.searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!));
+        // tags search bar
+        this.tagsSearchInput?.addEventListener('input', (e) => this.handleTagsSearchInput(e));
+
+        // ChapterCompletionFilter
+        this.ChapterCompletionFilter?.addEventListener('input', (e) => this.applyChapterCompletionFilter(e));
+
+        // update highlighted suggestion on hover
+        this.autocompleteContainer.addEventListener('mouseover', (e) => {
+            this.selectedIndex = Array.from(this.autocompleteContainer!.children).indexOf(e.target as HTMLDivElement);
+            const array = this.autocompleteContainer!.querySelectorAll('div') as NodeListOf<HTMLDivElement>;
+            this.updateHighlightedSuggestion(array, this.selectedIndex);
+        });
+
+        this.filterReset?.addEventListener('click', () => {
+            this.resetFilters();
+        });
+
+        this.countVisibleEntries();
+    }
+    protected reload(): void {
+        throw new Error("Method not implemented.");
+    }
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
+        super(AllHermidata, settings);
+    }
+    /** Count the amount of Elements are visible in the DOM, then write inside the counter and return it */
+    private countVisibleEntries(hidden: boolean = false): number {
+        // get visible elements
+        // TODO: implement
+        const visibleElements = hidden ? 
+            Array.from(document?.querySelectorAll<HTMLDivElement>('.hermidata-item')).filter(el => el.style.display !== 'none')
+            : document?.querySelectorAll('.hermidata-item[data-searchable="true"]');
+
+        // count elements
+        const count = visibleElements?.length || 0;
+
+        // write to counter
+        setElement<HTMLSpanElement>('#library-entries-info-amount', el => el.textContent = count.toString());
+
+        // return
+        return count;
+    }
+
+    private resetFilters() {
+        // Reset all checkboxes
+        const checkboxes = document.querySelectorAll<HTMLDivElement>(".custom-checkbox");
+        for (const cb of checkboxes) {
+            cb.dataset.state = "0";
+        }
+        const filters: Filters = {
+            include: {}, // { type: ['Manga'], status: ['Ongoing'] }
+            exclude: {},
+            sort: 'Alphabetical'
+        };
+        this.applyFilterToEntries(filters);
+        this.applySortToEntries(filters.sort);
+        
+        // reset search input
+        this.searchInput!.value = '';
+        this.autocompleteContainer!.innerHTML = '';
+
+        // reset tags search input
+        //this.tagsSearchInput!.value = '';
+
+        // reset chapter completion filter
+        this.ChapterCompletionFilter!.value = '';
+
+        // 
+
+        // set sort to default
+        const sortCheckboxAlphabetical = getElement<HTMLDivElement>('#sort-checkbox-Alphabetical');
+        if (!sortCheckboxAlphabetical) return
+        sortCheckboxAlphabetical.dataset.state = '1';
+
+        // persist the reset state to local storage
+        setLastLibraryFilters(filters);
+    }
+
+
+
+
+    public async sortOptionLogic(parent_section: HTMLElement): Promise<void> {
+        // state object for filters
+        const lastSort: Filters | undefined = await getLastLibraryFilters() as Filters | undefined;
+        const filters: Filters = lastSort ?? {
+            include: {}, // { type: ['Manga'], status: ['Ongoing'] }
+            exclude: {},
+            sort: 'Alphabetical'
+        };
+    
+        // find all custom checkboxes
+        const checkboxes = parent_section.querySelectorAll<HTMLDivElement>(".custom-checkbox");
+    
+        for (const cb of checkboxes) {
+            cb.removeEventListener("click", () => this.eventOnClick(cb, filters));
+            cb.addEventListener("click", () => this.eventOnClick(cb, filters));
+        };
+        const makeActiveState = (cb: HTMLDivElement) => {
+            const label = cb.nextElementSibling?.textContent?.trim();
+            const section = cb.dataset.filterType?.trim();
+            let state = 0;
+    
+            if (!label || !section) return state;
+    
+            const includeSelection = filters?.include?.[section] || [];
+            const excludeSelection = filters?.exclude?.[section] || [];
+            if ( includeSelection.length === 0 && excludeSelection.length === 0 && filters?.sort === undefined) return state;
+            
+            if ( includeSelection.includes(label) ) state = 1;
+            else if ( excludeSelection.includes(label) ) state = 2;
+            else if ( filters?.sort === label ) state = 1;
+            return state;
+        }
+        // apply filters from local storage Visually
+        for (const cb of checkboxes) {
+            cb.dataset.state = String(makeActiveState(cb));
+        };
+        const hasAnyFilters = (filters: Filters) => {
+            return (
+                Object.values(filters.include || {}).some(v => v.length > 0) ||
+                Object.values(filters.exclude || {}).some(v => v.length > 0) ||
+                !!filters.sort
+            );
+        }
+    
+        // apply filters from local storage Logically
+        setTimeout(() => {
+            if (hasAnyFilters(filters)) {
+                this.applyFilterToEntries(filters);
+                if (filters.sort) {
+                    this.applySortToEntries(filters.sort);
+                }
+            }
+        }, 300);
+    
+    }
+
+    private eventOnClick(cb: HTMLDivElement, filters: Filters) {
+        let state = Number.parseInt(cb.dataset.state || "0");
+
+        // If the checkbox is disabled, do nothing
+        if( cb.dataset.disabled === 'true') return;
+
+        // cycle 0→1→2→0
+        state = (state + 1 ) % 3;
+        cb.dataset.state = state.toString();
+
+        // find its label text (filter name)
+        const label = cb.nextElementSibling?.textContent?.trim();
+        // find which section it belongs to (Type, Status, etc.)
+        const section = cb.dataset.filterType?.trim();
+        if (!label || !section) return;
+
+        if (section === "Sort") {
+            // Reset all sort checkboxes first
+            filters.sort = 'Alphabetical';
+            const sortCheckboxes = document.querySelectorAll<HTMLDivElement>(".sort-checkbox-item");
+            if (!sortCheckboxes) return
+            for (const otherCb of sortCheckboxes) otherCb.dataset.state = "0";
+
+            // Enable current one
+            if (state === 1) {
+                cb.dataset.state = "1" 
+                filters.sort = label as BasicSortsType;
+            } else if (state === 2) {
+                cb.dataset.state = "2";
+                filters.sort = `Reverse-${label as BasicSortsType}`
+            } else if (state === 0) {
+                // If the user force the state back to 1, as with sort checkboxes, we will reset the sort to default
+                cb.dataset.state = "1";
+                state = 1;
+                filters.sort = label as BasicSortsType;
+
+            }
+
+            // apply and persist
+            if (filters.sort) {
+                setLastLibrarySortOption(filters.sort);
+                this.applySortToEntries(filters.sort);
+            }
+            return;
+        }
+
+        // init arrays if not exist
+        if (!filters.include[section]) filters.include[section] = [];
+        if (!filters.exclude[section]) filters.exclude[section] = [];
+
+        // reset previous state
+        filters.include[section] = filters.include[section].filter(v => v !== label);
+        filters.exclude[section] = filters.exclude[section].filter(v => v !== label);
+
+        // apply new state
+        if (state === 1) filters.include[section].push(label);
+        else if (state === 2) filters.exclude[section].push(label);
+        // trigger filtering logic here
+        this.applyFilterToEntries(filters);
+        setLastLibraryFilters(filters);
+    };
+
+    private applyFilterToEntries(filters: Filters) {
+        const entries = document.querySelectorAll<HTMLDivElement>(`.hermidata-item`);
+
+        for (const entry of entries) {
+            this.applyIndividualFilterToEntries(entry, filters);
+        }
+
+        this.setAllFilterLabels(filters);
+
+        this.countVisibleEntries();
+    }
+    private setAllFilterLabels(filters: Filters) {
+        const filterButtons= document.querySelectorAll<HTMLDivElement>(".filter-button:not(#resetFilters, #Sort-filter)");
+
+        for (const filterButton of filterButtons) {
+            let titleList: string[] = []
+            if (filterButton.dataset.filterType === "Genres & Themes") {
+                const Demographic = this.firstNonEmpty(filters.include["Demographic"], filters.exclude["Demographic"]);
+                const genresThemes = this.firstNonEmpty(filters.include["genres-themes"], filters.exclude["genres-themes"]);
+                const result = this.firstNonEmpty(Demographic, genresThemes);
+                if (result) titleList.push(...result);
+            }
+            const possibleTitles = this.firstNonEmpty(filters.include[filterButton.dataset.filterType || ""], filters.exclude[filterButton.dataset.filterType || ""]);
+            if (possibleTitles) titleList.push(...(possibleTitles));
+
+            const title = (titleList.length >= 2)  ? `${titleList[0]} +[${titleList.length-1}]` : titleList[0] || "Any";
+            filterButton.textContent = title;
+        }
+    }
+    private firstNonEmpty<T>(...arrays: (T[] | undefined)[]): T[] | undefined {
+        return arrays.find(arr => arr && arr.length > 0);
+    }
+
+    private applyIndividualFilterToEntries(entry: HTMLDivElement, filters: Filters): void {
+        const hashItem = this.GetHashItem(entry);
+        const entryData = this.AllHermidata[hashItem];
+        const Type = entryData.novelType;
+        const ReadStatus = entryData.chapter.bookmarks[entryData.chapter.bookmarkInUse].readStatus;
+        const NovelStatus = entryData.meta?.novelStatus
+        const Source = entryData.source;
+        const Tag = entryData.meta.tags || "";
+        const DateFilter = this.getYearBucket(entryData.meta.added);
+
+        const inputs = [Type, ReadStatus, Source, NovelStatus, Tag, DateFilter];
+
+
+        let visible = true;
+
+        // Check all include filters — must match at least one in each group
+        visible = this.matchingFilter(filters, inputs, 'include');
+
+        // Check exclude filters — hide if matches any
+        if (visible) {
+            visible = this.matchingFilter(filters, inputs, 'exclude');
+        }
+
+        entry.style.display = visible ? "" : "none";
+        entry.dataset.searchable = visible ? 'true' : 'false';
+    };
+
+    private matchingFilter(filters: Filters, inputs: (string | string[])[], filterType: 'include' | 'exclude'): boolean {
+        const isInclude = filterType === 'include';
+        const loopEntries = isInclude ? filters.include : filters.exclude;
+
+        let visible = true;
+
+        for (const [, values] of Object.entries(loopEntries)) {
+            if (values.length === 0) continue;
+
+                    
+            const val = this.setState(values, inputs) ?? 'none'; // error here
+            
+            const match = Array.isArray(val)
+                ? val.some(v => values.includes(v))
+                : values.includes(val);
+
+            if ((!match && isInclude) ||( match && !isInclude)) {
+                visible = false;
+                break;
+            }
+        }
+        return visible
+    }
+    private setState(values: string[], input: (string | string[])[] ): string | void {
+        for (const value of values) { // value is the filter value
+            for (const type of input) {
+                if (value === type) {
+                    return type
+                } else if (Array.isArray(type) && type.includes(value)) {
+                    return type[type.indexOf(value)];
+                }
+            }
+        }
+    }
+
+    private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {
+        const target = e.target as HTMLInputElement;
+        const query = target.value.trim().toLowerCase();
+        suggestionBox.innerHTML = '';
+
+        if (!query || query == '') {
+            this.filterEntries('');
+            return;
+        }
+
+        const visibleItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-searchable="true"]`);
+        for (const item of visibleItems) this.allSearchableItems.add(item);
+        const visibleHashes = Array.from(visibleItems).map(item => this.GetHashItem(item));
+    
+        const filtered = Object.entries(this.AllHermidata).filter(([hash, item]) => {
+            // Only include if item is currently visible
+            if (!visibleHashes.includes(hash)) return false;
+            
+            return [item.title, ...(item.meta?.altTitles || [])].some(t => t.toLowerCase().includes(query));
+        }).map(([, item]) => item);
+
+
+        this.filterEntries(query, 'title');
+
+        // Autocomplete suggestions
+        const suggestions = [...new Set(filtered.flatMap(f => f.meta.altTitles))].slice(0, 7);
+
+        // Build suggestion elements
+        for (const alTitle of suggestions) {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.textContent = alTitle;
+            div.addEventListener('click', () => {
+                const target = e.target as HTMLInputElement;
+            this.applySearchSelection(target, suggestionBox, alTitle);
+            });
+            suggestionBox.appendChild(div);
+        }
+    }
+    private filterEntries(query: string, queryType: 'title' | 'chapter' | 'author' = 'title') {
+        const allItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item`);
+
+        // If no query, restore all items to their filter-determined state
+        if (!query) {
+            allItems.forEach(item => {
+                // Restore visibility based on what filters decided
+                const isFilteredIn = item.dataset.searchable === 'true';
+                item.style.display = isFilteredIn ? '' : 'none';
+                item.dataset.searchable = String(isFilteredIn);
+            });
+            this.countVisibleEntries(true);
+            return;
+        }
+
+        // With a query: check both filter state AND search match
+        allItems.forEach(item => {
+            // First check: Is this item allowed by current filters?
+            const isFilteredIn = item.dataset.searchable === 'true';
+            if (!isFilteredIn) {
+                // Filters say NO - keep it hidden, don't even check search
+                item.style.display = 'none';
+                return;
+            }
+
+            // Second check: Item passed filters, now check if it matches search
+
+            const hashItem = this.GetHashItem(item);
+            const hermidata = new HermidataModel(this.AllHermidata[hashItem]);
+
+            const matchFilter = this.getQueryItem(hermidata, query, queryType);
+
+            // Show only if it passes BOTH filters AND search
+            item.style.display = matchFilter ? '' : 'none';
+        });
+
+        this.countVisibleEntries(true);
+    }
+    /** - get all items that match the query */
+    private getQueryItem(item: HermidataModel, query: string, queryType: 'title' | 'chapter' | 'author' = 'title'): boolean {
+        if (queryType === 'title') return [item.title, ...(item.meta?.altTitles || [])].some(t => t.toLowerCase().includes(query));
+        if (queryType === 'chapter') {
+            const percentageCompleted = item.rss?.latestItem.chapter ?? item.chapter.latest / item.GetChapter();
+            
+            return percentageCompleted >= Number(query);
+        }
+        // if (queryType === 'author') return item.author?.toLowerCase().includes(query);
+        return false
+        
+    }
+    private applySearchSelection(input: HTMLInputElement, suggestionBox: HTMLDivElement, value: string) {
+        input.value = value;
+        this.filterEntries(value);
+        suggestionBox.innerHTML = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        suggestionBox.innerHTML = '';
+        input.focus();
+    }
+
+    private setupSearchBar(e_: KeyboardEvent, suggestionBox: HTMLDivElement) {
+        const searchInput = getElement<HTMLInputElement>('#search');
+
+        if (!searchInput) throw new Error('Element not found');
+
+        // const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-searchable="true"]`);
+        const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
+        if (!items.length) return;
+
+        if (e_.key === 'ArrowDown') {
+            e_.preventDefault();
+            this.selectedIndex = (this.selectedIndex + 1) % items.length;
+            this.updateHighlightedSuggestion(items, this.selectedIndex);
+        } else if (e_.key === 'ArrowUp') {
+            e_.preventDefault();
+            this.selectedIndex = (this.selectedIndex - 1 + items.length) % items.length;
+            this.updateHighlightedSuggestion(items, this.selectedIndex);
+        } else if (e_.key === 'Enter') {
+            e_.preventDefault();
+            if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
+                // use selected suggestion
+                const chosen = items[this.selectedIndex].textContent;
+                this.applySearchSelection(searchInput, suggestionBox, chosen);
+            } else if (items.length > 0) {
+                // autocomplete to first suggestion
+                const chosen = items[0].textContent;
+                this.applySearchSelection(searchInput, suggestionBox, chosen);
+            }
+        }
+
+        // Hide autocomplete when clicking elsewhere
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLInputElement;
+            if (target !== searchInput && !suggestionBox.contains(target)) {
+                suggestionBox.innerHTML = '';
+            }
+        });
+    }
+    private updateHighlightedSuggestion(items: NodeListOf<HTMLDivElement>, selectedIndex: number) {
+        items.forEach((el, i) => {
+            el.classList.toggle('highlighted', i === selectedIndex);
+        });
+    }
+    private applyChapterCompletionFilter(e: Event) {
+        const target = e.target as HTMLInputElement;
+        const value = target.value;
+        this.filterEntries(value, 'chapter');
+    }
+    private handleTagsSearchInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        const value = target.value;
+        this.filterTags(value);
+    
+    }
+    private filterTags(query: string) {
+        const allItems = getElement('#Genres-dialog')?.querySelectorAll<HTMLDivElement>(('.genres-themes-demographic-item-list'));
+        const allDemographicCheckboxes = document.querySelectorAll<HTMLDivElement>('.demographic-item-list');
+        const allGenresCheckboxes = document.querySelectorAll<HTMLDivElement>('.genres-themes-item-list');
+        if (!allItems) return
+        // If no query, restore all items to their filter-determined state
+        if (!query) {
+            allItems.forEach(item => {
+                // Restore visibility based on what filters decided
+                
+                item.style.display = 'flex';
+            });
+            return;
+        }
+
+        // With a query: check both filter state AND search match
+        allItems.forEach(parent => {
+            const item = parent.children[0] as HTMLDivElement;
+            const value = (item.dataset.value ?? item.textContent).toLocaleLowerCase();
+            const queryLower = query.toLocaleLowerCase();
+
+
+
+            const matchFilter = value.includes(queryLower);
+
+            // Show only if it passes BOTH filters AND search
+            parent.style.display = matchFilter ? 'flex' : 'none';
+        });
+
+        // if empty
+        const allHidden = (checkboxes: NodeListOf<HTMLDivElement>) => Array.from(checkboxes).every(el => el.style.display === "none");
+        
+        document.querySelector<HTMLDivElement>('.Demographic-container-label')!.style.display = allHidden(allDemographicCheckboxes)  ? "none" : "flex";
+        document.querySelector<HTMLDivElement>('.genres-themes-container-label')!.style.display = allHidden(allGenresCheckboxes) ? "none" : "flex";
+    }
+
+}

@@ -25,7 +25,7 @@ export abstract class RSSPageBuilder {
         new Detail(editEntry).open();
     }
 
-    public abstract build(): Promise<void>;
+    public abstract build(): void;
 
     protected abstract reload(): void;
 
@@ -43,5 +43,11 @@ export abstract class RSSPageBuilder {
             console.error(error);
             throw error;
         }
+    }
+    protected GetHashItem(item: HTMLElement): string {
+        const newVersion = item.dataset.id;
+        if(!newVersion) throw new Error('hash not found');
+
+        return newVersion;
     }
 }

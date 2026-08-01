@@ -14,6 +14,9 @@ import { getElement, setElement } from '../utils/Selection';
 import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types/index';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
+import type { AllSortsType } from '../../library/build/filter';
+import type { Filters as LibraryFilters } from '../../library/build/filterLogic';
+
 
 // ============================================================
 // Hermidata
@@ -378,6 +381,34 @@ export async function setLastFilter(lastFilter: Filters): Promise<boolean> {
     }
 }
 
+export async function getLastLibraryFilters(): Promise<LibraryFilters | undefined> {
+    try {
+        return await new Promise<LibraryFilters | undefined>((resolve, reject) => {
+            ext.storage.local.get('lastLibraryFilter', (result: { lastLibraryFilter: LibraryFilters }) => {
+                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+                resolve(result?.lastLibraryFilter ?? undefined);
+            });
+        });
+    } catch (err) {
+        console.error('[Storage] getLastLibraryFilters:', err);
+        return undefined;
+    }
+}
+
+export async function setLastLibraryFilters(lastFilter: LibraryFilters): Promise<boolean> {
+    try {
+        return await new Promise<boolean>((resolve, reject) => {
+            ext.storage.local.set({ lastLibraryFilter: lastFilter }, () => {
+                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+                resolve(true);
+            });
+        });
+    } catch (err) {
+        console.error('[Storage] setLastLibraryFilters:', err);
+        return false;
+    }
+}
+
 export async function getLastSortOption(): Promise<AllsortsType | undefined> {
     try {
         const filter = await getLastFilter();
@@ -398,6 +429,30 @@ export async function setLastSortOption(lastSortOption: AllsortsType): Promise<b
         });
     } catch (err) {
         console.error('[Storage] setLastSortOption:', err);
+        return false;
+    }
+}
+
+export async function getLastLibrarySortOption(): Promise<AllSortsType | undefined> {
+    try {
+        const filter = await getLastLibraryFilters();
+        return filter?.sort ?? undefined;
+    } catch (err) {
+        console.error('[Storage] getLastLibrarySortOption:', err);
+        return undefined;
+    }
+}
+
+export async function setLastLibrarySortOption(lastSortOption: AllSortsType): Promise<boolean> {
+    try {
+        const lastFilter = await getLastLibraryFilters();
+        return setLastLibraryFilters({
+            include: lastFilter?.include ?? {},
+            exclude: lastFilter?.exclude ?? {},
+            sort: lastSortOption,
+        });
+    } catch (err) {
+        console.error('[Storage] setLastLibrarySortOption:', err);
         return false;
     }
 }

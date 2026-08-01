@@ -77,9 +77,9 @@ export interface Hermidata {
     };
 }
 
-// FIXME: make sure oginalRelease is there
+// FIXME: make sure originalRelease is there
 
-export type HermidataDateType = 'added' | 'updated';
+export type HermidataDateType = 'added' | 'updated' | 'originalRelease';
 export type HermidataSortType = 'pubDate';
 
 

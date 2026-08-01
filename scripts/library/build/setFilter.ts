@@ -2,9 +2,9 @@ import { CONTENT_RATINGS, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
 import type { Hermidata, Settings } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
-import { RSSPageBuilder } from "../build";
+import { Sort } from "./filter";
 
-export class filter extends RSSPageBuilder {
+export class filter extends Sort {
 
     private readonly starRatingDialog: HTMLElement | null = getElement('#StarRating-dialog');
 
@@ -15,7 +15,17 @@ export class filter extends RSSPageBuilder {
     private readonly genresDialog: HTMLElement | null = getElement('#Genres-dialog');
     
     private readonly demographicDialog: HTMLElement | null = getElement('#Demographic-dialog');
+
+    private readonly NovelStatusDialog: HTMLElement | null = getElement('#NovelStatus-dialog');
     
+    private readonly SiteDialog: HTMLElement | null = getElement('#Site-dialog');
+
+    private readonly ReleaseDateDialog: HTMLElement | null = getElement('#ReleaseDate-dialog');
+
+    private readonly SortDialog: HTMLElement | null = getElement('#Sort-dialog');
+
+    private readonly tagSearchRadioModeAll = document.querySelector<HTMLDivElement>('#search-mode-radio-all');
+    private readonly tagSearchRadioModeAny = document.querySelector<HTMLDivElement>('#search-mode-radio-any');
 
     /*
     Most checkboxes will be custom made and will be made with simple divs here but with data attributes for state
@@ -30,11 +40,9 @@ export class filter extends RSSPageBuilder {
     }
 
 
-    public build(): Promise<void> {
+    public build(): void {
         
         this.setFilterContent();
-
-        return Promise.resolve();
 
     }
     protected reload(): void {
@@ -67,29 +75,26 @@ export class filter extends RSSPageBuilder {
         this.setFilterNovelTypeFilter();
 
         // RENAMED: from tags with 4 less options
-        // Genres & themes
+        // Genres & themes, Demographic with search bar and inclusion mode (all, any)
         this.setGenresThemesFilter();
 
-        // Demographic
-        // this.setDemographicFilter();
-
         // Novel Status
-        // this.setNovelStatusFilter();
+        this.setNovelStatusFilter();
 
         // Site
-        // this.setSiteFilter();
+        this.setSiteFilter();
 
         // Author
         // this.setAuthorFilter();
 
         // Release Date
-        // this.setReleaseDateFilter();
+        this.setReleaseDateFilter();
 
         // Chapter completion level
         // this.setChapterCompletionFilter();
 
         // Sort
-
+        this.setSortFilter();
         
     }
 
@@ -102,9 +107,7 @@ export class filter extends RSSPageBuilder {
 
         const starRatingCheckbox = this.buildStarRatingCheckbox(1,5);
 
-        const starRatingLabel = this.buildStarRatingLabel(1,5);
-
-        container.append(starRatingCheckbox, starRatingLabel);
+        container.append(starRatingCheckbox);
     }
     private setContentRatingFilter() {
         const container = this.contentRatingDialog;
@@ -114,9 +117,7 @@ export class filter extends RSSPageBuilder {
 
         const contentRatingCheckbox = this.buildContentRatingCheckbox();
 
-        const contentRatingLabel = this.buildContentRatingLabel();
-
-        container.appendChild(contentRatingCheckbox);
+        container.append(contentRatingCheckbox);
     }
     private setFilterNovelTypeFilter() {
         const container = this.novelTypeDialog;
@@ -126,7 +127,7 @@ export class filter extends RSSPageBuilder {
 
         const novelTypeCheckbox = this.buildNovelTypeCheckbox();
 
-        container.appendChild(novelTypeCheckbox);
+        container.append(novelTypeCheckbox);
     }
     private setGenresThemesFilter() {
         const container = this.genresDialog;
@@ -134,77 +135,215 @@ export class filter extends RSSPageBuilder {
 
         container.innerHTML = '';
 
+        const searchMode = this.buildSearchMode();
+
+        const searchInput = this.buildSearchInput();
+
+        const demographicLabel = this.buildDemographicLabel();
+
+        const demographicCheckbox = this.buildDemographicCheckbox();
+        
+        const themesLabel = this.buildThemeLabel();
+
         const genresThemesCheckbox = this.buildGenresThemesCheckbox();
 
-        container.appendChild(genresThemesCheckbox);
+        container.append(searchMode, searchInput, demographicLabel, demographicCheckbox, themesLabel, genresThemesCheckbox);
+    }
+    private buildSearchMode(): HTMLDivElement {
+        // container for search mode
+        const container = document.createElement('div');
+        container.classList.add('search-mode-container');
+
+        // label for search mode
+        const label = document.createElement('h4');
+        label.textContent = 'Inclusion mode';
+        label.classList.add('search-mode-label');
+
+        // radio container for search mode
+        const radioContainer = document.createElement('div');
+        
+        radioContainer.id = 'search-mode-checkbox';
+        radioContainer.classList.add('search-mode-radio-container');
+
+        // radio button for search mode | all
+        const radioAll = document.createElement('div');
+        radioAll.id = 'search-mode-radio-all';
+        radioAll.classList.add('search-mode-radio-item', 'custom-radio');
+        radioAll.dataset.value = 'all';
+        radioAll.dataset.state = 'true'; // default state is "all" selected | set as boolean to distinguish from the other state values (0, 1, 2) 
+        // radio button for search mode | any
+        const radioAny = document.createElement('div');
+        radioAny.id = 'search-mode-radio-any';
+        radioAny.classList.add('search-mode-radio-item', 'custom-radio');
+        radioAny.dataset.value = 'any';
+        radioAny.dataset.state = 'false'; // default state is "any" selected
+        // label for radio button | all
+        const labelAll = document.createElement('div');
+        labelAll.id = 'search-mode-label-all';
+        labelAll.classList.add('search-mode-radio-label');
+        labelAll.textContent = 'All';
+        // label for radio button | any
+        const labelAny = document.createElement('div');
+        labelAny.id = 'search-mode-label-any';
+        labelAny.classList.add('search-mode-radio-label');
+        labelAny.textContent = 'Any';
+
+        // include / exclude tags logic
+        radioAll?.addEventListener('click', () => {
+            radioAll!.dataset.state = 'true';
+            radioAny!.dataset.state = 'false';
+        })
+        radioAny?.addEventListener('click', () => {
+            radioAll!.dataset.state = 'false';
+            radioAny!.dataset.state = 'true';
+        })
+
+        radioContainer.append(radioAll, labelAll, radioAny, labelAny);
+
+        container.append(label, radioContainer);
+
+        return container;
+    }
+    private buildSearchInput(): HTMLDivElement {
+        const searchContainer = document.createElement('div');
+        searchContainer.classList.add('genres-themes-search-container');
+
+        const searchInputContainer = document.createElement('div');
+        searchInputContainer.classList.add('genres-themes-search-input-container');
+
+        const searchIcon = document.createElement('div');
+        searchIcon.classList.add('search-icon');
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Search genres & themes...';
+        searchInput.id = 'tag-search-input';
+        searchInput.classList.add('genres-themes-search-input');
+
+        searchInputContainer.append(searchIcon, searchInput);
+
+        searchContainer.append(searchInput);
+
+        return searchContainer;
+    }
+    private buildThemeLabel(): HTMLDivElement {
+        const label = document.createElement('h4');
+        label.textContent = 'Genres & Themes';
+        label.classList.add('genres-themes-container-label');
+
+        return label;
+    }
+    private buildDemographicLabel(): HTMLDivElement {
+        const label = document.createElement('h4');
+        label.textContent = 'Demographic';
+        label.classList.add('Demographic-container-label');
+
+        return label;
+    }
+    private buildGenericListItem({id, classes}: { id: string, classes: string[] }): HTMLDivElement {
+        const container = document.createElement('div');
+        container.id = id;
+        container.classList.add(...classes, 'filter-item-list');
+
+        return container;
+    }
+    private setNovelStatusFilter() {
+        const container = this.NovelStatusDialog;
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const novelStatusCheckbox = this.buildNovelStatusCheckbox();
+
+        container.append(novelStatusCheckbox);
+    }
+    private setSiteFilter() {
+        const container = this.SiteDialog;
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const siteCheckbox = this.buildSiteCheckbox();
+
+        container.append(siteCheckbox);
+    }
+    private setReleaseDateFilter() {
+        const container = this.ReleaseDateDialog;
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const releaseDateCheckbox = this.buildReleaseDateCheckbox();
+
+        container.append(releaseDateCheckbox);
+    }
+    private setSortFilter() {
+        const container = this.SortDialog;
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const sortCheckbox = this.buildSortCheckbox();
+
+        container.append(sortCheckbox);
     }
     private buildStarRatingCheckbox(min: number, max: number): HTMLDivElement {
         const container = document.createElement('div');
-        container.classList.add('star-rating-checkbox');
+
+        container.classList.add('star-rating-checkbox-container', 'filter-checkbox-container');
 
         for (let i = min; i <= max; i++) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${i}`, classes: ['star-rating-item-list']});
+
+            // build checkbox to list item
             const checkbox = document.createElement('div');
             checkbox.id = `star-rating-checkbox-${i}`;
             checkbox.classList.add('star-rating-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
-            checkbox.dataset.value = `${i}`;
+            checkbox.dataset.value = String(i);
             checkbox.dataset.state = '0';
-            container.appendChild(checkbox);
-        }
+            checkbox.dataset.filterType = 'star-rating';
 
-        return container;
-    }
-    private buildStarRatingLabel(min: number, max: number): HTMLDivElement {
-        const container = document.createElement('div');
-        container.classList.add('star-rating-label');
+            // build label to list item
+            const label = document.createElement('div');
+            label.id = `star-rating-label-${i}`;
+            label.classList.add('star-rating-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = i === 1 ? '1 star' : `${i} stars`;
+            label.dataset.value = String(i);
 
-        for (let i = min; i <= max; i++) {
-            const checkbox = document.createElement('div');
-            checkbox.id = `star-rating-checkbox-${i}`;
-            checkbox.classList.add('star-rating-checkbox-item', 'filter-item-label', 'custom-checkbox');
-            checkbox.textContent = i === 1 ? '1 star' : `${i} stars`;
-
-            container.appendChild(checkbox);
+            // append checkbox & label to list item
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
         }
         return container;
     }
+    
 
     private buildContentRatingCheckbox(): HTMLDivElement {
         const container = document.createElement('div');
-        container.classList.add('content-rating-checkbox');
-        
-        // temporary constants, will be moved to constants file
-        // [ back-end, [front-end, default state] ]
-        const contentRatings: Map<string, [string, boolean]> = new Map([
-            ['G', ['Safe', true]],
-            ['PG', ['Suggestive', true]],
-            ['R', ['Erotica', false]],
-            ['NR', ['Pornographic', false]],
-        ])
+        container.classList.add('content-rating-checkbox', 'filter-checkbox-container');
 
-        for (const [i, [_, defaultCheckConfig]] of contentRatings) {
+        for (const [i, name, defaultCheckConfig] of CONTENT_RATINGS) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${i}`, classes: ['content-rating-item-list']});
+
+            // build checkbox
             const checkbox = document.createElement('div');
             checkbox.id = `content-rating-checkbox-${i}`;
             checkbox.classList.add('content-rating-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
             checkbox.dataset.value = `${i}`;
             checkbox.dataset.state = String(defaultCheckConfig);
+            checkbox.dataset.filterType = 'Content Rating';
 
-            container.appendChild(checkbox);
-        }
+            // build label
+            const label = document.createElement('div');
+            label.id = `content-rating-label-${i}`;
+            label.classList.add('content-rating-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = String(name);
 
-        return container;
-    }
-    private buildContentRatingLabel(): HTMLDivElement {
-        const container = document.createElement('div');
-        container.classList.add('content-rating-label');
-
-
-        for (const [i, [name, _]] of CONTENT_RATINGS) {
-            const checkbox = document.createElement('div');
-            checkbox.id = `content-rating-checkbox-${i}`;
-            checkbox.classList.add('content-rating-checkbox-item', 'filter-item-label', 'custom-checkbox');
-            checkbox.textContent = `${name}`;
-
-            container.appendChild(checkbox);
+            
+            listItem.append(checkbox, label);
+            container.append(listItem);
         }
 
         return container;
@@ -212,37 +351,229 @@ export class filter extends RSSPageBuilder {
 
     private buildNovelTypeCheckbox(): HTMLDivElement {
         const container = document.createElement('div');
-        container.classList.add('novel-type-checkbox');
+        container.classList.add('novel-type-checkbox', 'filter-checkbox-container');
 
         const novelTypes = this.settings.ContentTypesAndStatuses.TYPE_OPTIONS;
 
         for (const name of novelTypes) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${name}`, classes: ['novel-type-item-list']});
+
+            // build checkbox
             const checkbox = document.createElement('div');
             checkbox.id = `novel-type-checkbox-${name}`;
-            checkbox.classList.add('novel-type-checkbox-item', 'filter-checkbox-item');
+            checkbox.classList.add('novel-type-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
             checkbox.dataset.value = `${name}`;
             checkbox.dataset.state = '0';
-            checkbox.textContent = `${name}`;
+            checkbox.dataset.filterType = 'Novel Type';
+
+            // build label
+            const label = document.createElement('div');
+            label.id = `novel-type-label-${name}`;
+            label.classList.add('novel-type-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = `${name}`;
+
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
         }
         return container;
     }
     private buildGenresThemesCheckbox(): HTMLDivElement {
         const container = document.createElement('div');
-        container.classList.add('genres-themes-checkbox');
+        container.classList.add('genres-themes-checkbox', 'filter-checkbox-container');
         
         const allTagsValues = Array.from(getAllTags(this.AllHermidata).keys());
 
         
 
-        const genresThemes = allTagsValues.filter(tag => DEMOGRAPHIC_TAGS.includes(tag));
+        const genresThemes = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
 
         for (const name of genresThemes) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${name}`, classes: ['genres-themes-item-list', 'genres-themes-demographic-item-list']});
+
+            // build checkbox
             const checkbox = document.createElement('div');
             checkbox.id = `genres-themes-checkbox-${name}`;
-            checkbox.classList.add('genres-themes-checkbox-item', 'filter-checkbox-item');
+            checkbox.classList.add('genres-themes-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
             checkbox.dataset.value = `${name}`;
             checkbox.dataset.state = '0';
-            checkbox.textContent = `${name}`;
+            checkbox.dataset.filterType = 'genres-themes';
+
+            // build label
+            const label = document.createElement('div');
+            label.id = `genres-themes-label-${name}`;
+            label.classList.add('genres-themes-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = `${name}`;
+
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
+        }
+        return container;
+    }
+    private buildDemographicCheckbox(): HTMLDivElement {
+        const container = document.createElement('div');
+        container.classList.add('demographic-checkbox', 'filter-checkbox-container');
+
+        for (const name of DEMOGRAPHIC_TAGS) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${name}`, classes: ['demographic-item-list', 'genres-themes-demographic-item-list']});
+
+            // build checkbox
+            const checkbox = document.createElement('div');
+            checkbox.id = `demographic-checkbox-${name}`;
+            checkbox.classList.add('demographic-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
+            checkbox.dataset.value = `${name}`;
+            checkbox.dataset.state = '0';
+            checkbox.dataset.filterType = 'Demographic';
+
+            // build label
+            const label = document.createElement('div');
+            label.id = `demographic-label-${name}`;
+            label.classList.add('demographic-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = `${name}`;
+
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
+        }
+        return container;
+    }
+    private buildNovelStatusCheckbox(): HTMLDivElement {
+        const container = document.createElement('div');
+        container.classList.add('novel-status-checkbox', 'filter-checkbox-container');
+
+        const novelStatuses = this.settings.ContentTypesAndStatuses.STATUS_OPTIONS;
+
+        for (const name of novelStatuses) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${name}`, classes: ['novel-status-item-list']});
+
+            // build checkbox
+            const checkbox = document.createElement('div');
+            checkbox.id = `novel-status-checkbox-${name}`;
+            checkbox.classList.add('novel-status-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
+            checkbox.dataset.value = `${name}`;
+            checkbox.dataset.state = '0';
+            checkbox.dataset.filterType = 'Novel Status';
+
+            // build label
+            const label = document.createElement('div');
+            label.id = `novel-status-label-${name}`;
+            label.classList.add('novel-status-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = `${name}`;
+
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
+        }
+        return container;
+    }
+    private buildSiteCheckbox(): HTMLDivElement {
+        const container = document.createElement('div');
+        container.classList.add('site-checkbox', 'filter-checkbox-container');
+
+        const siteNames = Array.from(new Set(Object.values(this.AllHermidata).flatMap(novel => novel.meta.altSources || novel.source)))
+            .filter(name => name !== null && name !== undefined && name.trim() !== '');
+        
+        for (const name of siteNames) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${name}`, classes: ['site-item-list']});
+
+            // build checkbox
+            const checkbox = document.createElement('div');
+            checkbox.id = `site-checkbox-${name}`;
+            checkbox.classList.add('site-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
+            checkbox.dataset.value = `${name}`;
+            checkbox.dataset.state = '0';
+            checkbox.dataset.filterType = 'Site';
+
+            // build label
+            const label = document.createElement('div');
+            label.id = `site-label-${name}`;
+            label.classList.add('site-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = `${name}`;
+
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
+        }
+        return container;
+    }
+    private buildReleaseDateCheckbox(): HTMLDivElement {
+        const container = document.createElement('div');
+        container.classList.add('release-date-checkbox', 'filter-checkbox-container');
+
+        const RELEASE_DATE_TAGS = this.generateDateFilterSection();
+
+        for (const name of RELEASE_DATE_TAGS) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${name}`, classes: ['release-date-item-list']});
+
+            // build checkbox
+            const checkbox = document.createElement('div');
+            checkbox.id = `release-date-checkbox-${name}`;
+            checkbox.classList.add('release-date-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
+            checkbox.dataset.value = `${name}`;
+            checkbox.dataset.state = '0';
+            checkbox.dataset.filterType = 'Release Date';
+
+            // build label
+            const label = document.createElement('div');
+            label.id = `release-date-label-${name}`;
+            label.classList.add('release-date-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = `${name}`;
+
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
+        }
+        return container;
+    }
+    private generateDateFilterSection() {
+        const allEntries = Object.values(this.AllHermidata || {});
+        const yearBuckets = allEntries.map(entry => {
+            const dateStr = entry.meta?.originalRelease || entry.meta?.added || entry.meta?.updated;
+            return this.getYearBucket(dateStr);
+        });
+
+        const uniqueBuckets = Array.from(new Set(yearBuckets)).filter(Boolean);
+        this.amountOfYearBuckets = uniqueBuckets.length
+
+        const thisYear = new Date().getFullYear()
+        const everySingleYear = thisYear - 2020
+        const sortOrderOldType = ["2020s", "2010s", "2000s", "1990s", "1980s", "Unknown"];
+        const sortOrderEveryYearType = []
+        for (let index = 0; index < everySingleYear; index++) {
+            sortOrderEveryYearType.push(String(thisYear - index))
+        }
+        const sortOrder = sortOrderEveryYearType.concat(sortOrderOldType)
+        uniqueBuckets.sort((a, b) => sortOrder.indexOf(a) - sortOrder.indexOf(b));
+        return uniqueBuckets;
+    }
+    private buildSortCheckbox(): HTMLDivElement {
+        const container = document.createElement('div');
+        container.classList.add('sort-checkbox', 'filter-checkbox-container');
+
+        const SORT_TAGS = this.generateSortFilterSection();
+
+        for (const name of SORT_TAGS) {
+            // create a generic list item for each dataset entry
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${name}`, classes: ['sort-item-list']});
+
+            // build checkbox
+            const checkbox = document.createElement('div');
+            checkbox.id = `sort-checkbox-${name}`;
+            checkbox.classList.add('sort-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
+            checkbox.dataset.value = `${name}`;
+            checkbox.dataset.state = '0';
+            checkbox.dataset.filterType = 'Sort';
+            if (name === "Rating" || name === "Author" || name === "Release Date") checkbox.dataset.disabled = 'true'; // TEMP: disable sort options until implemented
+
+            // build label
+            const label = document.createElement('div');
+            label.id = `sort-label-${name}`;
+            label.classList.add('sort-label-item', 'filter-item-label', 'custom-checkbox');
+            label.textContent = `${name}`;
+
+            listItem.append(checkbox, label);
+            container.appendChild(listItem);
         }
         return container;
     }

@@ -14,9 +14,13 @@
     <h1>Hermidata Library</h1>
     <div class="toolbar">
       
-      <button type="button" id="mergeTwoHermidatas" class="Btn">merge two hermidata's</button>
+      <button type="button" popovertargetaction="toggle" popovertarget="merger-dialog" id="mergeTwoHermidatas" class="Btn">merge two hermidata's</button>
       <!--<button type="button" id="bulkOpen" class="Btn">Open in Tab</button>--> <!-- TODO: Add this feature later -->
       <button type="button" id="reloadData" class="Btn">Reload</button>
+      <div id="merger-dialog" class="filter-dialog" popover>
+        <p id="merger-dialog-text">Select two hermidata's to merge</p>
+        
+      </div>
     </div>
   </section>
 
@@ -26,70 +30,69 @@
 
       </div>
       <input id="search" placeholder="Search titles..." />
+      <div id="search-suggestions"></div>
       
     </div>
     <div id="filter-container">
       <div class="filter-row-1">
         <div id="StarRating-filter-container" class="filter-container">
           <h4>Star Rating</h4>
-          <button id="StarRating-filter" class="filter-button" title="Star Rating" type="button" popovertargetaction="toggle" popovertarget="StarRating-dialog">Open dialog</button>
+          <button id="StarRating-filter" class="filter-button" title="Star Rating" type="button" data-filter-type="star-rating" popovertargetaction="toggle" popovertarget="StarRating-dialog">Any</button>
           
-          <div id="StarRating-dialog" popover>
+          <div id="StarRating-dialog" class="filter-dialog" popover>
           </div>
         </div>
         <div id="ContentRating-filter-container" class="filter-container">
           <h4>Content Rating</h4>
-          <button id="ContentRating-filter" class="filter-button" title="Content Rating" type="button" popovertargetaction="toggle" popovertarget="ContentRating-dialog">Open dialog</button>
+          <button id="ContentRating-filter" class="filter-button" title="Content Rating" data-filter-type="Content Rating" type="button" popovertargetaction="toggle" popovertarget="ContentRating-dialog">Any</button>
           
-          <div id="ContentRating-dialog" popover>
+          <div id="ContentRating-dialog" class="filter-dialog" popover>
           </div>
         </div>
         <div id="NovelType-filter-container" class="filter-container">
           <h4>Novel Type</h4>
-          <button id="NovelType-filter" class="filter-button" title="Novel Type" type="button" popovertargetaction="toggle" popovertarget="NovelType-dialog">Open dialog</button>
+          <button id="NovelType-filter" class="filter-button" title="Novel Type" type="button" data-filter-type="Novel Type" popovertargetaction="toggle" popovertarget="NovelType-dialog">Any</button>
           
-          <div id="NovelType-dialog" popover>
+          <div id="NovelType-dialog"class="filter-dialog" popover>
           </div>
         </div>
         <div id="Genres-filter-container" class="filter-container">
           <h4>Genres & themes</h4>
-          <button id="Genres-filter" class="filter-button" title="Genres & themes" type="button" popovertargetaction="toggle" popovertarget="Genres-dialog">Open dialog</button>
+          <button id="Genres-filter" class="filter-button" title="Genres & themes" type="button" data-filter-type="Genres & Themes" popovertargetaction="toggle" popovertarget="Genres-dialog">Any</button>
           
-          <div id="Genres-dialog" popover>
-          </div>
-        </div>
-        <div id="Demographic-filter-container" class="filter-container">
-          <h4>Demographic</h4>
-          <button id="Demographic-filter" class="filter-button" title="Demographic" type="button" popovertargetaction="toggle" popovertarget="Demographic-dialog">Open dialog</button>
-          
-          <div id="Demographic-dialog" popover>
+          <div id="Genres-dialog"class="filter-dialog" popover>
           </div>
         </div>
         <div id="NovelStatus-filter-container" class="filter-container">
           <h4>Novel Status</h4>
-          <button id="NovelStatus-filter" class="filter-button" title="Novel Status" type="button" popovertargetaction="toggle" popovertarget="NovelStatus-dialog">Open dialog</button>
+          <button id="NovelStatus-filter" class="filter-button" title="Novel Status" type="button" data-filter-type="Novel Status" popovertargetaction="toggle" popovertarget="NovelStatus-dialog">Any</button>
           
-          <div id="NovelStatus-dialog" popover>
-            <p>This dialog was opened using an invoker command.</p>
+          <div id="NovelStatus-dialog" class="filter-dialog" popover>
           </div>
         </div>
       </div>
       <div class="filter-row-2">
+        <div id="Sort-filter-container" class="filter-container">
+          <h4>Sort</h4>
+          <button id="Sort-filter" class="filter-button" title="Sort" type="button" popovertargetaction="toggle" popovertarget="Sort-dialog">Alphabetical</button>
+          
+          <div id="Sort-dialog" class="filter-dialog" popover>
+          </div>
+        </div>
         <div id="Site-filter-container" class="filter-container">
           <h4>Site</h4>
-          <button id="Site-filter" class="filter-button" title="Site" type="button" popovertargetaction="toggle" popovertarget="Site-dialog">Open Site dialog</button>
+          <button id="Site-filter" class="filter-button" title="Site" type="button" data-filter-type="Site" popovertargetaction="toggle" popovertarget="Site-dialog">Open Site dialog</button>
           
-          <div id="Site-dialog" popover>
-            <p>This dialog was opened using an invoker command.</p>
+          <div id="Site-dialog" class="filter-dialog" popover>
           </div>
           
         </div>
         <div id="Author-filter-container" class="filter-container">
           <h4>Author</h4>
 
-          <button id="Author-filter" class="filter-button" title="Author" type="button" popovertargetaction="toggle" popovertarget="Author-dialog">Author</button>
+          <button id="Author-filter" class="filter-button" title="Author" type="button" data-filter-type="Author" popovertargetaction="toggle" popovertarget="Author-dialog">Author</button>
           
-          <div id="Author-dialog" popover>
+          <div id="Author-dialog" class="filter-dialog" popover>
             <div id="Author-input-container">
               <input id="Author-filter-input" title="Author" />
               <p id="Author-filter-suggestions"></p>
@@ -99,24 +102,15 @@
         </div>
         <div id="ReleaseDate-filter-container" class="filter-container">
           <h4>Release Date</h4>
-          <button id="ReleaseDate-filter" class="filter-button" title="Release Date" type="button" popovertargetaction="toggle" popovertarget="ReleaseDate-dialog">Open dialog</button>
+          <button id="ReleaseDate-filter" class="filter-button" title="Release Date" type="button" data-filter-type="Release Date" popovertargetaction="toggle" popovertarget="ReleaseDate-dialog">Any</button>
           
-          <div id="ReleaseDate-dialog" popover>
-            <p>This dialog was opened using an invoker command.</p>
+          <div id="ReleaseDate-dialog" class="filter-dialog" popover>
           </div>
 
         </div>
         <div id="ChapterCompletion-filter-container" class="filter-container">
-          <h4>Chapter Completion level</h4>
-          <input id="ChapterCompletion-filter" class="filter-button" title="Chapter Completion level" type="number" placeholder="Any">
-        </div>
-        <div id="Sort-filter-container" class="filter-container">
-          <h4>Sort</h4>
-          <button id="Sort-filter" class="filter-button" title="Sort" type="button" popovertargetaction="toggle" popovertarget="Sort-dialog">Sort</button>
-          
-          <div id="Sort-dialog" popover>
-            
-          </div>
+          <h4>Minimum chapters read</h4>
+          <input id="ChapterCompletion-filter" class="filter-button" title="minimum completion percentage" type="number" placeholder="0" value="0">
         </div>
         <div id="ResetFilters" class="filter-container">
           <h4 id="resetFilters-label-hidden" >0</h4>

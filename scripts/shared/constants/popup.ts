@@ -17,12 +17,12 @@ export const DEFAULT_TAGS: string[] = [
 ];
 
 // [ back-end, [front-end, default state] ]
-export const CONTENT_RATINGS: Map<string, [string, boolean]> = new Map([
-    ['G', ['Safe', true]],
-    ['PG', ['Suggestive', true]],
-    ['R', ['Erotica', false]],
-    ['NR', ['Pornographic', false]],
-]);
+export const CONTENT_RATINGS: Array<[string, string, boolean]> = new Array(
+    ['G', 'Safe', true],
+    ['PG', 'Suggestive', true],
+    ['R', 'Erotica', false],
+    ['NR', 'Pornographic', false],
+);
 
 export const DEMOGRAPHIC_TAGS: string[] = [
     'Seinen', 'Josei', 'Shoujo', 'Yaoi', 'Shounen', 'Shoujoai', 'Shounenai'

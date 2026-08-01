@@ -17,8 +17,6 @@ export class feed extends RSSPageBuilder {
     public build(): Promise<void> {
         this.buildFeedAll();
 
-        this.countVisibleEntries();
-
         this.setCheckBoxAtCorrectState();
         return Promise.resolve();
     }
@@ -38,7 +36,7 @@ export class feed extends RSSPageBuilder {
         // READ phase — no writes here
         for (const el of visibleElements) {
             const site = this.viewMode === 'grid' ? el.querySelector<HTMLImageElement>('.hermidata-item-image') : el.querySelector<HTMLDivElement>('.hermidata-item-site');
-            const checkbox = el.querySelector<HTMLInputElement>('.hermidata-item-checkbox');
+            const checkbox = el.querySelector<HTMLInputElement>('.hermidata-item-checkbox-invisible-container');
             if (!site || !checkbox) continue;
 
             const siteWidth = site.getBoundingClientRect().width;
@@ -74,21 +72,6 @@ export class feed extends RSSPageBuilder {
         document.body.dataset.listMode = this.viewMode === 'list' ? 'true' : 'false';
 
         this.setCheckBoxAtCorrectState();
-    }
-    /** Count the amount of Elements are visible in the DOM, then write inside the counter and return it */
-    private countVisibleEntries(): number {
-        // get visible elements
-        // TODO: implement
-        const visibleElements = this.AllHermidataContainer?.querySelectorAll('div[aria-hidden="false"]');
-
-        // count elements
-        const count = visibleElements?.length || 0;
-
-        // write to counter
-        setElement<HTMLSpanElement>('#library-entries-info-amount', el => el.textContent = count.toString());
-
-        // return
-        return count;
     }
 
     private buildFeedAll() {
@@ -150,7 +133,7 @@ export class feed extends RSSPageBuilder {
     }
     private transformCheckboxPosition(event: MouseEvent, entry: 'show' | 'hide') {
         const container = event.currentTarget as HTMLDivElement;
-        const checkbox = container.querySelector<HTMLInputElement>('.hermidata-item-checkbox');
+        const checkbox = container.querySelector<HTMLInputElement>('.hermidata-item-checkbox-invisible-container');
         if (!checkbox) return;
 
         const isListMode = this.viewMode === 'list';
@@ -195,7 +178,7 @@ export class feed extends RSSPageBuilder {
         const site = document.createElement('div');
         site.className = "hermidata-item-site";
 
-        site.textContent = entry.source;
+        site.textContent = entry.meta.altSources.join(', ') || entry.source;
 
         siteContainer.appendChild(site);
 
@@ -333,6 +316,9 @@ export class feed extends RSSPageBuilder {
         const checkboxContainer = document.createElement('div');
         checkboxContainer.className = "hermidata-item-checkbox-container";
 
+        const invisibleContainer = document.createElement('div');
+        invisibleContainer.className = "hermidata-item-checkbox-invisible-container";
+
         const checkbox = document.createElement('input');
         checkbox.className = "hermidata-item-checkbox";
 
@@ -342,14 +328,15 @@ export class feed extends RSSPageBuilder {
 
         const value = this.viewMode === 'list' ? '-20px' : '10px';
 
-        checkbox.style.transform = `translateX(${value})`;
+        invisibleContainer.style.transform = `translateX(${value})`;
 
         checkbox.addEventListener('click', (e) => {
             e.stopPropagation();
             // your existing checkbox logic here
         });
 
-        checkboxContainer.appendChild(checkbox);
+        invisibleContainer.appendChild(checkbox);
+        checkboxContainer.appendChild(invisibleContainer);
 
         return checkboxContainer;
     }

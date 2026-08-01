@@ -2,6 +2,8 @@ import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
 import { feed } from "./build/feed";
 import { filter } from "./build/setFilter";
+import { FilterLogic } from "./build/filterLogic";
+import { HermidataMerge } from "./build/merge";
 
 export class Controller {
     
@@ -10,10 +12,11 @@ export class Controller {
 
     private readonly filter: filter;
     
+    private readonly filterLogic: FilterLogic;
+
+    private readonly merger: HermidataMerge;
 
     private readonly reloadData = getElement<HTMLButtonElement>("#reloadData");
-
-    private readonly search = getElement<HTMLButtonElement>("#search");
 
     private readonly gridViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-grid");
     private readonly listViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-list");
@@ -21,6 +24,8 @@ export class Controller {
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         this.feed = new feed(allHermidata, settings);
         this.filter = new filter(allHermidata, settings);
+        this.filterLogic = new FilterLogic(allHermidata, settings);
+        this.merger = new HermidataMerge(allHermidata, settings);
     }
 
 
@@ -29,7 +34,13 @@ export class Controller {
         // build
         await this.feed.build();
 
-        await this.filter.build();
+
+        this.filter.build();
+
+        this.filterLogic.build();
+        
+        this.merger.build();
+
 
         this.setEventListener();
     }
@@ -41,7 +52,6 @@ export class Controller {
     private setEventListener() {
         this.removeEventListener();
         this.reloadData!.addEventListener('click', () => this.reload());
-        this.search!.addEventListener('input', (e) => this.updateFeedList(e) );
 
         // viewMode toggle
         this.gridViewMode?.addEventListener('click', () => this.feed.setGridViewMode('grid'));
@@ -49,24 +59,5 @@ export class Controller {
     }
     private removeEventListener() {
         this.reloadData!.removeEventListener('click', () => this.reload());
-    }
-
-    private updateFeedList(e: Event) {
-        const value = (e.target as HTMLInputElement).value;
-        const AllHermidataContainer = document.querySelector<HTMLDivElement>('.all-entries-container');
-        if (!AllHermidataContainer) return;
-        const allFeeds = AllHermidataContainer?.querySelectorAll<HTMLDivElement>('.feed');
-
-        if (value == '') {
-            AllHermidataContainer?.classList.remove('filtered');
-            allFeeds?.forEach(feed => feed.classList.remove('filtered'));
-        }
-        for (const feed of allFeeds || []) {
-            if (feed.textContent?.toLowerCase().includes(value.toLowerCase())) {
-                feed.classList.remove('filtered');
-                continue;
-            }
-            feed.classList.add('filtered');
-        }
     }
 }
