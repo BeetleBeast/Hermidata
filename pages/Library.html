@@ -18,7 +18,19 @@
       <!--<button type="button" id="bulkOpen" class="Btn">Open in Tab</button>--> <!-- TODO: Add this feature later -->
       <button type="button" id="reloadData" class="Btn">Reload</button>
       <div id="merger-dialog" class="filter-dialog" popover>
-        <p id="merger-dialog-text">Select two hermidata's to merge</p>
+        <div class="merger-dialog-progression-container">
+          <div class="merger-dialog-progression merger-dialog-progression-1" data-progression="2">
+            <p class="merger-dialog-progression-1-text">✓</p>
+          </div>
+          <p class="merger-dialog-progression-1-main-text" data-progression="2">Keep record A</p>
+          <svg class="merger-dialog-progression-line">
+            <line x1="0" y1="25" x2="100%" y2="25" stroke="var(--border)" stroke-width="1"></line>
+          </svg>
+          <div class="merger-dialog-progression merger-dialog-progression-2" data-progression="2">
+            <p class="merger-dialog-progression-2-text" data-progression="2">2</p>
+          </div>
+          <p class="merger-dialog-progression-2-main-text" data-progression="2">Resolve conflict</p>
+        </div>
         
       </div>
     </div>

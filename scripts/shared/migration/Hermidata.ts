@@ -1,11 +1,12 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
-import { getAllRawFeeds, getHermidataViaKey, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
+import { deleteHermidata, getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
+import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
 import { getChapterFromTitle, normaliseDateToIso, returnBookmarkHash, returnHashedTitle, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, allolderHermidata, AnyHermidataVersion, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings } from "../types";
+import type { AllHermidata, allolderHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
+import type { HermidataMigrationConfiguration, ScalarConflict } from "../types/rss";
 
 
 interface DuplicationResult {
@@ -483,8 +484,185 @@ export class HermidataMigration {
         updateHermidata(oldKey, newKey, merged);
 
         return merged;
+    
     }
-    public static async mergeTwoHermidataWithConfirmation(newer: Hermidata, older: Hermidata): Promise<boolean> { 
+    private static newer(a: string, b: string): string {
+        return new Date(a).getTime() >= new Date(b).getTime() ? a : b;
+    }
+    private static unionDedupe(a: string[], b: string[]): string[] {
+        return Array.from(new Set([...a, ...b]));
+    }
+    private static reconcileBookmarkKeys(bookmarks: Record<string, Bookmark>): Record<string, Bookmark> {
+        const reconciled: Record<string, Bookmark> = {};
+
+        for (const bookmark of Object.values(bookmarks)) {
+            reconciled[returnBookmarkHash(bookmark.label)] = bookmark;
+        }
+        return reconciled;
+    }
+    private static recomputeHermidataId(record: Hermidata): string {
+        return returnHashedTitle(record.title, record.novelType, record.source);
+    }
+
+    private static resolveBookmarkInUse( keep: Hermidata, discard: Hermidata, mergedBookmarks: Record<string, Bookmark> ): string {
+        const keepInUse = keep.chapter.bookmarks[keep.chapter.bookmarkInUse];
+
+        if (keepInUse) {
+            const key = returnBookmarkHash(keepInUse.label);
+            if (mergedBookmarks[key]) return key;
+        }
+
+        const discardInUse = discard.chapter.bookmarks[discard.chapter.bookmarkInUse];
+        
+        if (discardInUse) {
+            const key = returnBookmarkHash(discardInUse.label);
+            if (mergedBookmarks[key]) return key;
+        }
+
+        return Object.keys(mergedBookmarks)[0] ?? "";
+    }
+
+    public static mergeHermidata(keep: Hermidata, discard: Hermidata): { merged: Hermidata; conflicts: ScalarConflict[]; autoResolved: string[]; } {
+        const conflicts: ScalarConflict[] = [];
+        const autoResolved: string[] = [];
+        
+        const flagOrSkip = (path: string, a: unknown, b: unknown) => {
+            if (a === b) return a;
+            if (a === "" || a == null) { autoResolved.push(path); return b; }
+            if (b === "" || b == null) { autoResolved.push(path); return a; }
+            conflicts.push({ field: path, path, valueA: a, valueB: b });
+            return a; // placeholder until user resolves it
+        };
+        
+        const { merged: bookmarks } = this.mergeBookmarks(keep.chapter.bookmarks, discard.chapter.bookmarks);
+        autoResolved.push("chapter.bookmarks");
+        
+        const merged: Hermidata = {
+            id: keep.id,
+            title: flagOrSkip("title", keep.title, discard.title) as string,
+            novelType: flagOrSkip("novelType", keep.novelType, discard.novelType) as AnyNovelType,
+            source: flagOrSkip("source", keep.source, discard.source) as string,
+            chapter: {
+            latest: Math.max(keep.chapter.latest, discard.chapter.latest),
+            lastChecked: this.newer(keep.chapter.lastChecked, discard.chapter.lastChecked),
+            bookmarks,
+            revisitingCount: keep.chapter.revisitingCount + discard.chapter.revisitingCount,
+            bookmarkInUse: this.resolveBookmarkInUse(keep, discard, bookmarks),
+            },
+            rss: keep.rss ?? discard.rss,
+            import: keep.import ?? discard.import,
+            meta: {
+            tags: this.unionDedupe(keep.meta.tags, discard.meta.tags),
+            notes: flagOrSkip("meta.notes", keep.meta.notes, discard.meta.notes) as string,
+            added: keep.meta.added < discard.meta.added ? keep.meta.added : discard.meta.added, // earliest
+            updated: this.newer(keep.meta.updated, discard.meta.updated),
+            altSources: this.unionDedupe(keep.meta.altSources, discard.meta.altSources),
+            altTitles: this.unionDedupe(keep.meta.altTitles, discard.meta.altTitles),
+            originalRelease: keep.meta.originalRelease ?? discard.meta.originalRelease,
+            novelStatus: flagOrSkip("meta.novelStatus", keep.meta.novelStatus, discard.meta.novelStatus) as AnyNovelStatus,
+            },
+        };
+        
+        autoResolved.push(
+            "meta.tags", "meta.altSources", "meta.altTitles",
+            "chapter.latest", "chapter.lastChecked", "meta.updated", "meta.added"
+        );
+        
+        return { merged, conflicts, autoResolved };
+    }
+    private static mergeBookmarks( aRaw: Record<string, Bookmark>, bRaw: Record<string, Bookmark> ): { merged: Record<string, Bookmark>; conflicts: ScalarConflict[] } {
+        const a = this.reconcileBookmarkKeys(aRaw);
+        const b = this.reconcileBookmarkKeys(bRaw);
+
+        const merged: Record<string, Bookmark> = { ...a };
+        const conflicts: ScalarConflict[] = [];
+        
+        for (const [id, bBookmark] of Object.entries(b)) {
+            const aBookmark = merged[id];
+            if (!aBookmark) {
+            merged[id] = bBookmark; // new bookmark, just add it
+            continue;
+            }
+            // same id exists in both — only a real conflict if content actually differs
+            if (JSON.stringify(aBookmark) !== JSON.stringify(bBookmark)) {
+            // usually safe to auto-keep whichever was updated more recently
+            merged[id] = new Date(aBookmark.updatedAt) >= new Date(bBookmark.updatedAt)
+                ? aBookmark
+                : bBookmark;
+            }
+        }
+        
+        // ensure only one isPrimary survives
+        const primaries = Object.values(merged).filter(bm => bm.isPrimary);
+        if (primaries.length > 1) {
+            primaries.slice(1).forEach(bm => { bm.isPrimary = false; });
+        }
+        
+        return { merged, conflicts };
+    }
+    
+    private static applyConflictResolution(merged: Hermidata, path: string, value: unknown): void {
+        // Only the fields that can ever end up in `conflicts` need a setter here —
+        // this list should stay in sync with the flagOrSkip(...) calls in mergeHermidata().
+        const CONFLICT_FIELD_SETTERS: Record<string, (target: Hermidata, value: unknown) => void> = {
+        title: (target, value) => { target.title = value as string; },
+        novelType: (target, value) => { target.novelType = value as AnyNovelType; },
+        source: (target, value) => { target.source = value as string; },
+        "meta.notes": (target, value) => { target.meta.notes = value as string; },
+        "meta.novelStatus": (target, value) => { target.meta.novelStatus = value as AnyNovelStatus; },
+        };
+        const setter = CONFLICT_FIELD_SETTERS[path];
+        if (!setter) throw new Error(`No setter registered for conflict field "${path}"`);
+        setter(merged, value);
+    }
+
+    public static async mergeTwoHermidataWithConfiguration(recordToKeep: Hermidata, recordToRemove: Hermidata, config: HermidataMigrationConfiguration): Promise<boolean> { 
+        try {
+            if (config.keepId !== recordToKeep.id || config.removeId !== recordToRemove.id) {
+                throw new Error("Configuration does not match the provided records");
+            }
+        
+            const { merged, conflicts } = this.mergeHermidata(recordToKeep, recordToRemove);
+        
+            for (const conflict of conflicts) {
+                const chosen = config.resolutions[conflict.path];
+                if (!chosen) throw new Error(`Missing resolution for field "${conflict.path}"`);
+                const value = chosen === "A" ? conflict.valueA : conflict.valueB;
+                this.applyConflictResolution(merged, conflict.path, value);
+
+            }
+
+            merged.id = this.recomputeHermidataId(merged);
+            
+            const hermidataModel = new HermidataModel(merged);
+            if (merged.id !== recordToKeep.id) {
+                // identity shifted — neither original key is valid for the merged record
+                await updateHermidata(recordToRemove.id, hermidataModel.id, hermidataModel.toJSON());
+                await removeHermidata(recordToKeep.id);
+            } else {
+                await updateHermidata(recordToRemove.id, merged.id, hermidataModel.toJSON());
+            }
+
+
+            await updateHermidata(recordToRemove.id, recordToKeep.id, hermidataModel.toJSON());
+        
+            return true;
+        } catch (err) {
+            console.error("Failed to merge Hermidata:", err);
+            return false;
+        }
+    }
+    private static setByPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+        const keys = path.split(".");
+
+        let target: Record<string, unknown> = obj;
+        for (let i = 0; i < keys.length - 1; i++) {
+            target = target[keys[i]] as Record<string, unknown>;
+        }
+        target[keys[keys.length - 1]] = value;
+    }
+
+    public static async mergeTwoHermidataWithConfirmation(newer: Hermidata, older: Hermidata): Promise<boolean> {
         const msg = `
             Are you sure you want to merge "${older.title}" with "${newer.title}".
 

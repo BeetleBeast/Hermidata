@@ -79,3 +79,22 @@ export type FuzzyMatchResult =
     | { type: 'bookmark'; match: FuzzyBookmarkMatches; sameChapter: boolean }
     | { type: 'hermidata'; match: FuzzyHermidataMatches; sameChapter: boolean }
     | { type: 'none' };
+
+export interface HermidataMigrationConfiguration {
+    keepId: string;
+    removeId: string;
+    resolutions: Record<string, "A" | "B">; // only for fields that need a manual pick
+}
+export interface MergeAnalysis {
+    automaticallyMergedFields: string[];
+    automaticallyMergedFieldsAmount: number;
+    manuallyMergedFieldsAmount: number;
+    manuallyMergedFields: Record<string, { A: unknown; B: unknown }>;
+    configuration: HermidataMigrationConfiguration;
+}
+export interface ScalarConflict<K extends string = string> {
+    field: K;
+    path: string;        // e.g. "meta.novelStatus"
+    valueA: unknown;
+    valueB: unknown;
+}

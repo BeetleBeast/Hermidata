@@ -50,4 +50,7 @@ export abstract class RSSPageBuilder {
 
         return newVersion;
     }
+    protected setToFrenchDate(date: Date | string | number): string {
+        return new Date(date).toLocaleDateString('fr-FR');
+    }
 }

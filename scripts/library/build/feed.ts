@@ -234,9 +234,6 @@ export class feed extends RSSPageBuilder {
 
         return date;
     }
-    private setToFrenchDate(date: Date | string | number): string {
-        return new Date(date).toLocaleDateString('fr-FR');
-    }
     private buildNovelType(entry: HermidataModel): HTMLDivElement {
         // container
         const container = document.createElement('div');

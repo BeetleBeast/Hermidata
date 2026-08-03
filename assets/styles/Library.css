@@ -1120,3 +1120,338 @@ body[data-list-mode="false"]
     position-area: initial;
     padding: 20px;
 }
+
+/* incomplete */
+
+#merger-dialog[data-step="incomplete"] {
+	display: grid;
+	grid-template-areas: 
+    "counter .       exit   "
+    "text    text    text   "
+    "subtext subtext subtext"
+    ".       button  .      ";
+    grid-template-rows: 30px 50px 40px 60px;
+    grid-template-columns: 100px 1fr 100px;
+}
+
+.merger-dialog-counter {
+    grid-area: counter;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 100;
+    color: var(--Text-color);
+}
+.merger-dialog-exit {
+	grid-area: exit;
+	position: absolute;
+	display: inline-flex;
+	top: 0;
+	right: 0px;
+	cursor: pointer;
+	width: 0px;
+	height: fit-content;
+	padding: 10px;
+	padding-top: 0px;
+	padding-bottom: 4px;
+	text-align: center;
+	justify-content: center;
+	align-items: baseline;
+}
+.merger-dialog-text {
+    grid-area: text;
+    text-align: center;
+    font-size: 25px;
+    font-weight: 600;
+    color: var(--Text-color);
+}
+.merger-dialog-subtext {
+    grid-area: subtext;
+    text-align: center;
+    font-size: 14px;
+    color: var(--Text-color);
+}
+.merger-dialog-button {
+    grid-area: button;
+    text-align: center;
+    font-size: 14px;
+    color: var(--Text-color);
+    cursor: pointer;
+}
+
+/* first Step */
+#merger-dialog[data-step="secondStep"],
+#merger-dialog[data-step="firstStep"] {
+    transition: height 1s ease-in-out, width 1s ease-in-out, transform 1s ease-in-out;
+}
+
+#merger-dialog[data-step="firstStep"] {
+	display: grid;
+	grid-template-areas: 
+    "progression progression progression progression progression"
+    "step        .           .           .           ."
+    "text        text        text        text        text"
+    "subtext     subtext     subtext     subtext     subtext"
+    "record_A    record_A    .           record_B    record_B"
+    ".           .           button      .           .";
+    grid-template-rows: 50px 30px 40px 10px 500px 50px;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    width: 1000px;
+    transform: scale(1);
+    grid-row-gap: 20px;
+}
+#merger-dialog[data-step="secondStep"] {
+    display: grid;
+	grid-template-areas: 
+    "progression  progression  "
+    "step         .            "
+    "greenField   greenField   "
+    "warningField warningField "
+    "backButton   mergeButton  ";
+    grid-template-rows: 50px 30px auto 1fr 50px;
+    grid-template-columns: 1fr 1fr ;
+    width: 1000px;
+    transform: scale(1);
+}
+
+.merger-dialog-progression-container {
+    grid-area: progression;
+    text-align: center;
+    font-size: 14px;
+    color: var(--Text-color);
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	width: 100%;
+    margin-bottom: 20px;
+}
+.merger-dialog-progression.merger-dialog-progression-1,
+.merger-dialog-progression.merger-dialog-progression-2 {
+    transition: background-color 0.4S cubic-bezier(.55,.09,.68,.53);
+}
+.merger-dialog-progression.merger-dialog-progression-1[data-progression="1"] {
+    
+    color: var(--Text-color);
+	display: flex;
+    min-width: 50px;
+	width: 50px;
+	height: 50px;
+	text-align: center;
+	background-color: var(--Text-color);
+	border-radius: 25px;
+    align-items: center;
+    justify-content: center;
+}
+.merger-dialog-progression-1-text {
+	color: black;
+	text-align: center;
+	display: flex;
+	width: 10px;
+	height: 25px;
+}
+.merger-dialog-progression.merger-dialog-progression-1[data-progression="2"] {
+	color: black;
+	display: flex;
+	min-width: 50px;
+	width: 50px;
+	height: 50px;
+	text-align: center;
+	background-color: rgb(0, 172, 0);
+	border-radius: 25px;
+	align-items: center;
+	justify-content: center;
+}
+.merger-dialog-progression.merger-dialog-progression-2[data-progression="1"] {
+	color: var(--muted);
+	display: flex;
+    min-width: 50px;
+	width: 50px;
+	height: 50px;
+	text-align: center;
+	background-color: var(--bg_disabled);
+	border-radius: 25px;
+	align-items: center;
+	justify-content: center;
+}
+.merger-dialog-progression.merger-dialog-progression-2[data-progression="2"] {
+    
+    color: black;
+	display: flex;
+    min-width: 50px;
+	width: 50px;
+	height: 50px;
+	text-align: center;
+	background-color: var(--Text-color);
+	border-radius: 25px;
+    align-items: center;
+    justify-content: center;
+}
+
+.merger-dialog-progression-line {
+	width: 100%;
+	height: 50px;
+}
+.merger-dialog-progression-1-main-text,
+.merger-dialog-progression-2-main-tex {
+    transition: color 0.2s ease-in-out;
+}
+.merger-dialog-progression-1-main-text[data-progression="1"] {
+	white-space: nowrap;
+}
+.merger-dialog-progression-2-main-text[data-progression="2"] {
+    white-space: nowrap;
+}
+.merger-dialog-progression-1-main-text[data-progression="2"] {
+    color: var(--muted);
+    white-space: nowrap;
+}
+.merger-dialog-progression-2-main-text[data-progression="1"] {
+	color: var(--muted);
+    white-space: nowrap;
+}
+.merger-dialog-steps {
+	grid-area: step;
+	text-align: center;
+	font-size: 14px;
+	color: var(--Text-disabled);
+	width: fit-content;
+}
+.merger-dialog-text {
+	grid-area: text;
+	text-align: left;
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--Text-color);
+	padding: 0;
+	margin: 0;
+	height: 40px;
+	width: fit-content;
+}
+.merger-dialog-suggestion {
+	grid-area: subtext;
+	text-align: left;
+	height: 30px;
+	display: flex;
+	flex-direction: row;
+	gap: 5px;
+    color: var(--resetFilterBtn_hover);
+}
+
+.info-icon {
+	width: 25px;
+	height: 25px;
+}
+
+
+#merger-dialog-record-A {
+	grid-area: record_A;
+	width: 400px;
+	padding-left: 20px;
+	background-color: var(--card);
+	border-radius: 25px;
+	min-height: 400px;
+	padding-bottom: 15px;
+	margin-top: 10px;
+}
+#merger-dialog-record-B {
+	grid-area: record_B;
+	width: 400px;
+	padding-left: 20px;
+	background-color: var(--card);
+	border-radius: 25px;
+    min-height: 400px;
+    padding-bottom: 15px;
+    margin-top: 10px;
+}
+
+.merger-dialog-record-letter[data-suggested="true"] {
+    color: var(--Btn_hover_success);
+    font-weight: 600;
+    padding-left: 10px;
+}
+.merger-dialog-record-letter[data-suggested="false"] {
+    font-weight: 600;
+    padding-left: 10px;
+}
+
+.merger-dialog-record-tag-label {
+	display: inline-flex;
+	margin-right: 5px;
+}
+
+.merger-dialog-record-tags-container {
+	display: inline-flex;
+	flex-direction: row;
+	gap: 8px;
+	width: fit-content;
+}
+
+.merger-dialog-record-continue-button[data-suggested="true"] {
+	background-color: var(--Btn_success_fill);
+	color: var(--Btn_hover_success);
+}
+
+.merger-dialog-record-continue-button {
+	align-self: center;
+}
+
+
+.merger-dialog-button {
+    grid-area: button;
+    text-align: center;
+    font-size: 14px;
+    color: var(--Text-color);
+    cursor: pointer;
+}
+
+.merger-dialog-green-field {
+	grid-area: greenField;
+	background-color: var(--Btn_success_fill);
+	padding: 15px;
+	border-radius: 15px;
+}
+
+.merger-dialog-green-field-text-1 {
+	color: var(--Btn_hover_success);
+}
+.merger-dialog-warning-field-text {
+	color: var(--Btn_hover_Cancel);
+}
+.merger-dialog-warning-field {
+	grid-area: warningField;
+	background-color: var(--Btn_cancel_fill);
+	border-radius: 15px;
+	padding: 15px;
+}
+
+.merger-dialog-button-back {
+	grid-area: backButton;
+}
+
+.merger-dialog-button-merge {
+	grid-area: mergeButton;
+	background-color: var(--Btn_success_fill);
+}
+
+
+/* manual input */
+
+#merger-dialog-warning-field-title {
+	display: flex;
+	flex-direction: column;
+}
+
+.merger-dialog-warning-field-value-container.merger-dialog-warning-field-value-container-b,
+.merger-dialog-warning-field-value-container.merger-dialog-warning-field-value-container-a {
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	align-items: center;
+	justify-content: flex-start;
+    border: 1px solid var(--Btn_hover_Cancel);
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.merger-dialog-warning-field-value-text {
+	color: var(--muted);
+}
