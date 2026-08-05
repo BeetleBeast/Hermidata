@@ -22,11 +22,14 @@ export class FilterLogic extends Sort {
     private readonly searchInput = document.querySelector<HTMLInputElement>('#search'); // Hermidata search bar
     private readonly autocompleteContainer = document.querySelector<HTMLDivElement>('#search-suggestions'); // Hermidata search-suggestions
 
-    private get tagsSearchInput(): HTMLInputElement | null {
-        return document.querySelector<HTMLInputElement>('#tag-search-input');
-    }
+    private get tagsSearchInput(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('#tag-search-input'); }
 
-    // private readonly tagsSearchInput = document.querySelector<HTMLInputElement>('#tag-search-input'); // tags search bar
+    /** Returns true if tags search mode is set to "all" */
+    private get tagsSearchModeIsSetToAll(): boolean { return this.tagSearchMode[1]?.dataset.state === 'true'; }
+
+    private get tagSearchMode(): (HTMLDivElement | null)[] {
+        return [document.querySelector<HTMLDivElement>('#search-mode-radio-any'), document.querySelector<HTMLDivElement>('#search-mode-radio-all') ]
+    }
 
     private readonly filterReset = document.querySelector<HTMLButtonElement>('#resetFilters');
 
@@ -43,7 +46,14 @@ export class FilterLogic extends Sort {
             throw new Error('One or more required elements not found');
         }
 
-        this.sortOptionLogic(this.libraryEntriesContainer);
+        this.generalFilterOptionLogic(this.libraryEntriesContainer);
+
+        // on tag search inclusion mode change, update filters
+        this.tagSearchMode.forEach(mode => mode?.addEventListener('click', async () => {
+            const filters = await getLastLibraryFilters();
+            if (!filters) return;
+            this.applyFilterToEntries(filters);
+        }));
 
         // Hermidata  bar
         this.searchInput.addEventListener('input', (e) => this.handleSearchInput(e, this.autocompleteContainer!));
@@ -129,7 +139,7 @@ export class FilterLogic extends Sort {
 
 
 
-    public async sortOptionLogic(parent_section: HTMLElement): Promise<void> {
+    public async generalFilterOptionLogic(parent_section: HTMLElement): Promise<void> {
         // state object for filters
         const lastSort: Filters | undefined = await getLastLibraryFilters() as Filters | undefined;
         const filters: Filters = lastSort ?? {
@@ -140,10 +150,12 @@ export class FilterLogic extends Sort {
     
         // find all custom checkboxes
         const checkboxes = parent_section.querySelectorAll<HTMLDivElement>(".custom-checkbox");
+
+        const checkboxesWithLabels = parent_section.querySelectorAll<HTMLDivElement>(".filter-item-list");
     
-        for (const cb of checkboxes) {
-            cb.removeEventListener("click", () => this.eventOnClick(cb, filters));
-            cb.addEventListener("click", () => this.eventOnClick(cb, filters));
+        for (const cbWithLabel of checkboxesWithLabels) {
+            cbWithLabel.removeEventListener("click", () => this.eventOnClick(cbWithLabel, filters));
+            cbWithLabel.addEventListener("click", () => this.eventOnClick(cbWithLabel, filters));
         };
         const makeActiveState = (cb: HTMLDivElement) => {
             const label = cb.nextElementSibling?.textContent?.trim();
@@ -185,7 +197,9 @@ export class FilterLogic extends Sort {
     
     }
 
-    private eventOnClick(cb: HTMLDivElement, filters: Filters) {
+    private eventOnClick(cbWithLabel: HTMLDivElement, filters: Filters) {
+        const cb = cbWithLabel.querySelector<HTMLDivElement>(".custom-checkbox");
+        if (!cb) return;
         let state = Number.parseInt(cb.dataset.state || "0");
 
         // If the checkbox is disabled, do nothing
@@ -259,7 +273,7 @@ export class FilterLogic extends Sort {
         this.countVisibleEntries();
     }
     private setAllFilterLabels(filters: Filters) {
-        const filterButtons= document.querySelectorAll<HTMLDivElement>(".filter-button:not(#resetFilters, #Sort-filter)");
+        const filterButtons = document.querySelectorAll<HTMLDivElement>(".filter-button:not(#resetFilters, #Sort-filter)");
 
         for (const filterButton of filterButtons) {
             let titleList: string[] = []
@@ -287,7 +301,7 @@ export class FilterLogic extends Sort {
         const ReadStatus = entryData.chapter.bookmarks[entryData.chapter.bookmarkInUse].readStatus;
         const NovelStatus = entryData.meta?.novelStatus
         const Source = entryData.source;
-        const Tag = entryData.meta.tags || "";
+        const Tag = entryData.meta.tags || [];
         const DateFilter = this.getYearBucket(entryData.meta.added);
 
         const inputs = [Type, ReadStatus, Source, NovelStatus, Tag, DateFilter];
@@ -313,12 +327,23 @@ export class FilterLogic extends Sort {
 
         let visible = true;
 
-        for (const [, values] of Object.entries(loopEntries)) {
+        for (const [key, values] of Object.entries(loopEntries)) {
             if (values.length === 0) continue;
 
-                    
             const val = this.setState(values, inputs) ?? 'none'; // error here
             
+            if (key === 'genres-themes' || key === 'Demographic') {
+                const hasMatchAny = values.some(v => val.includes(v));
+                const hasMatchAll = values.every(v => val.includes(v));
+                const match = this.tagsSearchModeIsSetToAll ? hasMatchAll : hasMatchAny;
+
+                if ((!match && isInclude) || (match && !isInclude)) { 
+                    visible = false; 
+                    break;
+                }
+                continue;
+            }
+
             const match = Array.isArray(val)
                 ? val.some(v => values.includes(v))
                 : values.includes(val);
@@ -330,13 +355,15 @@ export class FilterLogic extends Sort {
         }
         return visible
     }
-    private setState(values: string[], input: (string | string[])[] ): string | void {
+    private setState(values: string[], input: (string | string[])[] ): string | string[] | void {
         for (const value of values) { // value is the filter value
             for (const type of input) {
                 if (value === type) {
+                    // if only one value, return it
                     return type
                 } else if (Array.isArray(type) && type.includes(value)) {
-                    return type[type.indexOf(value)];
+                    // if more than one value, return the whole array
+                    return type
                 }
             }
         }

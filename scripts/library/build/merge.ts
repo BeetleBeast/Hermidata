@@ -93,7 +93,7 @@ export class HermidataMerge extends RSSPageBuilder {
 
         if (!container) return;
 
-        this.removeAllMergeElements();
+        this.removeAllMergeElements(".merger-dialog-progression-container");
         container.dataset.step = 'incomplete';
 
         // mini functions

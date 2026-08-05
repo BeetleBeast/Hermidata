@@ -13,8 +13,6 @@ export class filter extends Sort {
     private readonly novelTypeDialog: HTMLElement | null = getElement('#NovelType-dialog');
     
     private readonly genresDialog: HTMLElement | null = getElement('#Genres-dialog');
-    
-    private readonly demographicDialog: HTMLElement | null = getElement('#Demographic-dialog');
 
     private readonly NovelStatusDialog: HTMLElement | null = getElement('#NovelStatus-dialog');
     
@@ -23,9 +21,6 @@ export class filter extends Sort {
     private readonly ReleaseDateDialog: HTMLElement | null = getElement('#ReleaseDate-dialog');
 
     private readonly SortDialog: HTMLElement | null = getElement('#Sort-dialog');
-
-    private readonly tagSearchRadioModeAll = document.querySelector<HTMLDivElement>('#search-mode-radio-all');
-    private readonly tagSearchRadioModeAny = document.querySelector<HTMLDivElement>('#search-mode-radio-any');
 
     /*
     Most checkboxes will be custom made and will be made with simple divs here but with data attributes for state
@@ -170,13 +165,13 @@ export class filter extends Sort {
         radioAll.id = 'search-mode-radio-all';
         radioAll.classList.add('search-mode-radio-item', 'custom-radio');
         radioAll.dataset.value = 'all';
-        radioAll.dataset.state = 'true'; // default state is "all" selected | set as boolean to distinguish from the other state values (0, 1, 2) 
+        radioAll.dataset.state = 'false'; // default state is "all" selected | set as boolean to distinguish from the other state values (0, 1, 2) 
         // radio button for search mode | any
         const radioAny = document.createElement('div');
         radioAny.id = 'search-mode-radio-any';
         radioAny.classList.add('search-mode-radio-item', 'custom-radio');
         radioAny.dataset.value = 'any';
-        radioAny.dataset.state = 'false'; // default state is "any" selected
+        radioAny.dataset.state = 'true'; // default state is "any" selected
         // label for radio button | all
         const labelAll = document.createElement('div');
         labelAll.id = 'search-mode-label-all';

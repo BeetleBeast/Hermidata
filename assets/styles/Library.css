@@ -324,23 +324,20 @@ label {
 
 #search-suggestions {
 	position: absolute;
-	top: calc(100% + 15px);
+	top: calc(100%);
 	background-color: rgba(12, 17, 24, 0.71);
 	border: 1px solid var(--Btn);
 	border-top: none;
 	border-radius: 0 0 8px 8px;
-	max-height: 250px;
+	max-height: 300px;
 	z-index: 9999;
 	overflow: hidden;
-	align-items: center;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	gap: 10px;
-	width: 100%;
-	border-left: 0;
-	border-right: 0;
-	border-bottom: 0;
+	left: 20%;
+	width: 60%;
 }
 
 .autocomplete-item {
@@ -926,6 +923,11 @@ body[data-list-mode="false"]
 	gap: 6px;
 	align-items: center;
 	justify-content: left;
+
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
 }
 
 .filter-item-list:has(.filter-item-checkbox[data-disabled='true'] )  {
@@ -943,12 +945,16 @@ body[data-list-mode="false"]
 	height: 18px;
 	border: 1px solid var(--border);
 	border-radius: 6px;
-	cursor: pointer;
-	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
 }
+
+.filter-item-checkbox[data-state="0"]
+.filter-item-checkbox[data-state="1"] {
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
+}
+
 
 .filter-item-checkbox:hover {
     background: var(--Btn_hover);
@@ -1061,7 +1067,6 @@ body[data-list-mode="false"]
     border-color: var(--border-focus);
     color: var(--bg);
     appearance: none;
-    background-color: currentColor; /* this IS the real CSS currentColor */
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 28 28' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg>");
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: contain;
@@ -1073,17 +1078,21 @@ body[data-list-mode="false"]
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
+.filter-item-checkbox[data-state="1"] ~
+.filter-item-label {
+    color: var(--resetFilterBtn_hover);
+}
+
 
 .filter-item-checkbox[data-state="2"] {
     background-color: var(--Btn);
     border-color: var(--border-focus);
     color: var(--bg);
     appearance: none;
-    background-color: currentColor; /* this IS the real CSS currentColor */
-    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>");
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>");
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: contain;
-    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>");
     mask-repeat: no-repeat;
     mask-size: contain;
     background-position: right 0.6em center;
@@ -1091,6 +1100,12 @@ body[data-list-mode="false"]
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
+.filter-item-checkbox[data-state="2"] ~
+.filter-item-label {
+    text-decoration: line-through;
+    color: var(--Text-color);
+    opacity: 0.5;
+}
 
 .search-mode-radio-item[data-state="true"] {
     background-color: var(--resetFilterBtn_hover);
@@ -1182,6 +1197,11 @@ body[data-list-mode="false"]
 #merger-dialog[data-step="secondStep"],
 #merger-dialog[data-step="firstStep"] {
     transition: height 1s ease-in-out, width 1s ease-in-out, transform 1s ease-in-out;
+}
+
+#merger-dialog[data-step="incomplete"]
+.merger-dialog-progression-container {
+    display: none;
 }
 
 #merger-dialog[data-step="firstStep"] {
