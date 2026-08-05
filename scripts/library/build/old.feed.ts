@@ -51,7 +51,7 @@ export class feed extends RSSPageBuilder {
         ViewBtn.className = 'Btn';
         ViewBtn.textContent = 'View';
         ViewBtn.addEventListener('click', () => {
-            this.openDetails(hermidataFeed.id);
+            // this.openDetails(hermidataFeed.id);
         });
 
 

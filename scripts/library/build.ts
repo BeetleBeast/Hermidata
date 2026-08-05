@@ -47,4 +47,37 @@ export abstract class RSSPageBuilder {
     protected setToFrenchDate(date: Date | string | number): string {
         return new Date(date).toLocaleDateString('fr-FR');
     }
+    protected getTimeAgo(date: string): string {
+        
+        const unixTime = new Date(date).getTime();
+        const today = new Date().getTime();
+
+        const hours = Math.floor((today - unixTime) / 1000 / 60 / 60);
+        const isHoursAgo = hours < 24;
+        const days = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24);
+        const isDaysAgo = days < 7;
+        const weeks = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7);
+        const isWeeksAgo = weeks < 4;
+        const months = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4);
+        const isMonthsAgo = months < 12;
+        const years = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12);
+        const isYearsAgo = years < 5;
+        const decades = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12 / 5);
+        const isDecadesAgo = decades < 10;
+        const centuries = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12 / 5 / 10);
+        const isCenturiesAgo = centuries < 100;
+
+        let time: string;
+
+        if (isHoursAgo) time = `${hours}h ago`;
+        else if (isDaysAgo) time = `${days}d ago`;
+        else if (isWeeksAgo) time = `${weeks}w ago`;
+        else if (isMonthsAgo) time = `${months} month${months > 1 ? 's' : ''} ago`;
+        else if (isYearsAgo) time = `${years}y ago`;
+        else if (isDecadesAgo) time = `${decades}d ago`;
+        else if (isCenturiesAgo) time = `${centuries}c ago`;
+        else time = this.setToFrenchDate(unixTime);
+
+        return time;
+    }
 }

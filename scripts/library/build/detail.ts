@@ -138,7 +138,7 @@ export class Detail extends RSSPageBuilder {
         const novelType = document.getElementById('hermidata-novelType');
         if (!novelType) throw new Error("Novel type does not exist");
 
-        novelType.textContent = this.hermidata.novelType;
+        novelType.textContent = this.hermidata.novelType.toUpperCase();
     }
     private populateContentRating() {
         const contentRating = document.getElementById('hermidata-contentRating');
@@ -151,19 +151,19 @@ export class Detail extends RSSPageBuilder {
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Hentai') ? 'Pornographic' : 'Safe';
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Ecchi') ? 'Explicit' : 'Safe';
         
-        contentRating.textContent = temporaryContentRating;
+        contentRating.textContent = temporaryContentRating.toUpperCase();
     }
     private populateReleaseDate() {
         const releaseDate = document.getElementById('hermidata-releaseDate');
         if (!releaseDate) throw new Error("Release date does not exist");
 
-        releaseDate.textContent = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added;
+        releaseDate.textContent = this.setToFrenchDate(this.hermidata.meta.originalRelease ?? this.hermidata.meta.added);
     }
     private populateNovelStatus() {
         const novelStatus = document.getElementById('hermidata-novelStatus');
         if (!novelStatus) throw new Error("Novel status does not exist");
 
-        novelStatus.textContent = this.hermidata.meta.novelStatus;
+        novelStatus.textContent = this.hermidata.meta.novelStatus.toUpperCase();
     }
     private populateStarRating() {
         const starRating = document.getElementById('hermidata-starRating');
@@ -171,7 +171,7 @@ export class Detail extends RSSPageBuilder {
 
         // TODO: add star rating to hermidata
         // TEMP: use default 5 until implemented
-        starRating.textContent = "5"; //String(this.hermidata.meta.starRating);
+        starRating.textContent = "★ 5.0"; //String(this.hermidata.meta.starRating);
     }
     private populateGenres() {
         const genres = document.getElementById('hermidata-genres');
@@ -179,12 +179,10 @@ export class Detail extends RSSPageBuilder {
 
         const allTagsUsed = this.hermidata.meta.tags;
         
-                
-        
         const genresThemes = allTagsUsed.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
-
         const allGenres = genresThemes.join(', ');
-        genres.textContent = allGenres;
+        genres.textContent = allGenres || "--None--";
+        genres.dataset.hasNone = allGenres ? 'false' : 'true';
     }
     private populateDemographics() {
         const demographics = document.getElementById('hermidata-demographics');
@@ -192,14 +190,17 @@ export class Detail extends RSSPageBuilder {
 
         const allTagsUsed = this.hermidata.meta.tags;
         const allDemographics = allTagsUsed.filter(tag => DEMOGRAPHIC_TAGS.includes(tag)).join(', ');
-        demographics.textContent = allDemographics;
+        console.log(allDemographics);
+        demographics.textContent = allDemographics || "--None--";
+        demographics.dataset.hasNone = allDemographics ? 'false' : 'true';
     }
     private populateSources() {
         const sources = document.getElementById('hermidata-sources');
         if (!sources) throw new Error("Sources does not exist");
 
         const allSources = this.hermidata.meta.altSources.join(', ');
-        sources.textContent = allSources;
+        sources.textContent = allSources || "--None--";
+        sources.dataset.hasNone = sources ? 'false' : 'true';
     }
     private populateLatestRelease() {
         const latestRelease = document.getElementById('hermidata-latestRelease');
@@ -208,7 +209,7 @@ export class Detail extends RSSPageBuilder {
         const latestChapter = this.hermidata.GetLatestChapter();
         const SourceOfLatestChapter = this.hermidata.GetSourceOfLatestChapter();
 
-        latestRelease.textContent = `Ch. ${latestChapter} - by ${SourceOfLatestChapter}`
+        latestRelease.textContent = `Ch. ${latestChapter} by ${SourceOfLatestChapter}`
     }
     private populateMarkers() {
         const container = document.getElementById('hermidata-markers-list');
@@ -258,7 +259,7 @@ export class Detail extends RSSPageBuilder {
             // add marker last updated/added
             const markerLastUpdated = document.createElement('div');
             markerLastUpdated.classList.add('hermidata-marker-lastUpdated');
-            markerLastUpdated.textContent = marker.updatedAt ?? marker.createdAt;
+            markerLastUpdated.textContent =  this.getTimeAgo(marker.updatedAt) ?? this.getTimeAgo(marker.createdAt);
             
             // append
             markerElement.append(markerChapter, markerLabel, markerReadStatus, markerLastUpdated);

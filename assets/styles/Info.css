@@ -298,6 +298,12 @@ label {
 	align-items: center;
 }
 
+.cancel-edit-btn[data-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+    display: none;
+}
+
 /* search */
 
 
@@ -418,9 +424,9 @@ label {
 
 #cancel-edit-btn {
 	grid-area: cancel;
+	display: flex;
 	display: none;
 	width: fit-content;
-	display: flex;
 	align-items: center;
 	justify-content: center;
 	justify-self: center;
@@ -495,10 +501,24 @@ label {
 
 #hermidata-readLatest-btn {
 	grid-area: readLatestBtn;
-	width: 100%;
+	width: fit-content;
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	justify-self: center;
+	font-size: 1.2em;
+    background-color: cornflowerblue;
+    color: var(--resetFilterBtn);
+    border-radius: 5px;
+    border: 1px solid #12174f;
+    transition: background 0.2s ease;
+}
+#hermidata-readLatest-btn:hover {
+    background-color: var(--resetFilterBtn_hover);
+    color: #12174f;
+    border-radius: 5px;
+    border: 1px solid #12174f;
+    
 }
 
 #hermidata-info-container {
@@ -639,7 +659,120 @@ label {
 	color: var(--Text-color);
 }
 
+/* metadata */
 
+#hermidata-metadata-container {
+	display: flex;
+	flex-direction: row;
+	white-space: nowrap;
+	flex-wrap: nowrap;
+	width: fit-content;
+	gap: 20px;
+}
+
+#hermidata-starRating-container {
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+    
+}
+
+#hermidata-starRating-edit {
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    border-left: 1px solid var(--border);
+    border-radius: 0;
+    padding-left: 10px;
+}
+
+.hermidata-metadata-group-2[data-has-none="true"] {
+    color: var(--muted);
+}
+
+.hermidata-metadata-group-1 {
+	width: 100%;
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	background-color: var(--table-color);
+	border-radius: 10px;
+	padding: 10px;
+	justify-content: space-between;
+	align-items: center;
+	border: 1px solid var(--border-focus);
+}
+
+.hermidata-metadata-group-2 {
+	width: fit-content;
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	background-color: var(--Input-colorV2);
+	border-radius: 10px;
+	padding: 10px;
+	justify-content: space-between;
+	align-items: center;
+}
+
+/* markers */
+
+.hermidata-marker-container:first-child {
+    margin-top: 15px;
+}
+
+.hermidata-marker-container {
+	display: flex;
+	position: relative;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	width: 100%;
+	border: 1px solid;
+	border-radius: 10px;
+	border-color: var(--focus-ring);
+    cursor: pointer;
+}
+
+.hermidata-marker-container:hover {
+	text-emphasis-color: var(--Btn);
+	accent-color: var(--Text-color);
+	outline: 1px solid var(--focus-ring);
+	transform: scale(1.005);
+	transition: transform 0.2s ease-in-out;
+}
+
+
+.hermidata-marker-color {
+	width: 50px;
+	height: 30px;
+	border-radius: 10px 0 0 10px;
+	z-index: 1;
+	position: absolute;
+	padding-right: 5px;
+	display: block;
+	left: 0;
+	border: none;
+	outline: 1px solid var(--focus-ring);
+}
+.hermidata-marker {
+	display: grid;
+	padding-left: 15px;
+	background-color: var(--Input-colorV2);
+	border-radius: 10px;
+	width: 96%;
+	padding-right: 10px;
+	z-index: 2;
+	border: none;
+	grid-template-columns: 50px auto 100px 200px;
+	grid-gap: 10px;
+	align-items: center;
+	align-content: center;
+	justify-items: center;
+	height: 30px;
+	outline: 1px solid var(--focus-ring);
+}
 
 /* notes */
 

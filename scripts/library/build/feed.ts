@@ -196,41 +196,9 @@ export class feed extends RSSPageBuilder {
         const date = document.createElement('div');
         date.className = "hermidata-item-date";
 
-        const unixTime = entry.rss?.lastFetched ? new Date(entry.rss?.lastFetched).getTime() : new Date(entry.meta.updated).getTime();
-        const today = new Date().getTime();
-
-        const isHoursAgo = Math.floor((today - unixTime) / 1000 / 60 / 60) < 24;
-        const isDaysAgo = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24) < 7;
-        const isWeeksAgo = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7) < 4;
-        const isMonthsAgo = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4) < 12;
-        const isYearsAgo = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12) < 5;
-        const isDecadesAgo = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12 / 5) < 10;
-        const isCenturiesAgo = Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12 / 5 / 10) < 100;
-
-        if (isHoursAgo) {
-            date.textContent = `${Math.floor((today - unixTime) / 1000 / 60 / 60)}h ago`;
-        }
-        else if (isDaysAgo) {
-            date.textContent = `${Math.floor((today - unixTime) / 1000 / 60 / 60 / 24)}d ago`;
-        }
-        else if (isWeeksAgo) {
-            date.textContent = `${Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7)}w ago`;
-        }
-        else if (isMonthsAgo) {
-            date.textContent = `${Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4)}m ago`;
-        }
-        else if (isYearsAgo) {
-            date.textContent = `${Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12)}y ago`;
-        }
-        else if (isDecadesAgo) {
-            date.textContent = `${Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12 / 5)}d ago`;
-        }
-        else if (isCenturiesAgo) {
-            date.textContent = `${Math.floor((today - unixTime) / 1000 / 60 / 60 / 24 / 7 / 4 / 12 / 5 / 10)}c ago`;
-        }
-        else {
-            date.textContent = this.setToFrenchDate(unixTime ?? (entry.rss?.lastFetched || entry.meta.updated));
-        }
+        const timeUsing = entry.rss?.lastFetched ? new Date(entry.rss?.lastFetched).toISOString() : new Date(entry.meta.updated).toISOString();
+        const dateText = this.getTimeAgo(timeUsing);
+        date.textContent = dateText;
 
         return date;
     }
