@@ -1,419 +1,277 @@
-import { getSettings, saveHermidata } from "../../shared/db/Storage";
-import type { Bookmark, Hermidata, Settings } from "../../shared/types";
-import type { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { getElement } from "../../shared/utils/Selection";
-import { returnBookmarkHash } from "../../shared/utils/StringOutput";
+import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
+import { getAllTags } from "../../shared/db/Storage";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { RSSPageBuilder } from "../build";
 
-export class Detail {
+export class Detail extends RSSPageBuilder {
 
 
-    private readonly parentContainer: HTMLElement | null = getElement('.entry-details-container');
-    private readonly mainContentContainer: HTMLElement | null = getElement('.entry-details-mainContent');
-    private readonly bookmarksContainer: HTMLElement | null = getElement('.entry-details-bookmarks');
+    private readonly hermidata: HermidataModel = this.getCurrentHermidata();
 
-    private readonly title: HTMLInputElement | null = getElement('#detail-title');
-    private readonly novelType: HTMLSelectElement | null = getElement('#detail-novelType');
-    private readonly novelStatus: HTMLSelectElement | null = getElement('#detail-novelStatus');
-    private readonly latestChapter: HTMLInputElement | null = getElement('#detail-latestChapter');
-    private readonly notes: HTMLTextAreaElement | null = getElement('#detail-notes');
+    public build(): void {
+        
+        
+        // 1. Build the page
+
+        // 2. populate page
+        this.populateDetails();
+
+    }
+    public reload(): void {
+        throw new Error("Method not implemented.");
+    }
+
+    private addEventListener(): void {
+        throw new Error("Method not implemented.");
+
+        // on clicked Edit button
+    }
+    private jumpToChapter(url: string): void {
+        // TODO: implement
+        window.open(url, '_blank');
+    }
     
-    private readonly tagsContainer: HTMLDivElement | null = getElement('#detail-tags-container');
-    private readonly altSourcesContainer: HTMLDivElement | null = getElement('#detail-altSources-container');
-    private readonly altTitlesContainer: HTMLDivElement | null = getElement('#detail-altTitles-container');
+    private getIdFromUrl(): string | null {
+        const hash = window.location.hash; // "#/id/someID"
+        const match = hash.match(/^#\/id\/(.+)$/);
+        return match ? match[1] : null;
+    }
 
-    private readonly multiAltTitleInput: HTMLTextAreaElement | null = getElement('#detail-altSources-multiAltTitle-input');
-    
-    private readonly saveDetail: HTMLButtonElement | null = getElement('#saveDetail');
-    private readonly closeDetail: HTMLButtonElement | null = getElement('#closeDetail');
+    /** Get the current hermidata from the id parameter inside the url */
+    private getCurrentHermidata(): HermidataModel {
+        const id = this.getIdFromUrl();
+        if (!id) throw new Error("No id found in url");
 
-    private saveDetailHandler = async () => await this.saveDetails();
-    private closeDetailHandler = () => this.close();
+        const hermidata = this.AllHermidata[id];
+        if (!hermidata) throw new Error(`No hermidata found for id ${id}`);
 
-    private settings: Settings | null = null;
-    private editEntry: HermidataModel | null = null;
-
-    private latestExtraInput: Record<string, number> = {};
-
-    constructor(editEntry: HermidataModel) {
+        return new HermidataModel(hermidata);
+    }
+    private populateDetails() {
+        // main
+        this.populateMainDetails();
+        // markers
+        this.populateMarkers();
+        // notes
+        this.populateNotes();
+    }
+    private populateMainDetails() {
+        // image
+        this.populateImage();
+        // read latest chapter button
+        this.populateReadLatestChapterButton();
+        // title
+        this.populateTitle();
+        // alternative titles
+        this.populateAlternativeTitles();
+        // metadata
+        this.populateMetadata();
         
-        this.editEntry = editEntry;
     }
+    private populateImage() {
+        const container = document.getElementById('hermidata-img-container');
+        if (!container) throw new Error("Image container does not exist");
 
+        const img = document.createElement('img');
+        img.id = 'hermidata-img';
+        img.src = this.hermidata.rss?.image ?? '../../../assets/icon/icon48.png'
+        img.alt = `${this.hermidata.rss?.latestItem.title} Image`
 
-
-
-    private async build(): Promise<void> {
-
-        this.settings = await getSettings();
-        // populate
-        this.populateDetails(this.settings);
+        container.appendChild(img);
         
-        // build bookmarks
-        await this.buildBookmarks();
-
-        // add event listeners
-        this.AddEventListener();
     }
-    public open() {
-        this.parentContainer!.style.display = 'flex';
-        this.mainContentContainer!.style.display = 'flex';
-        this.bookmarksContainer!.style.display = 'flex';
-        this.parentContainer!.style.right = '-50%';
-        this.build();
-        setTimeout(() => this.parentContainer!.style.right = '25px', 100);
-    }
-    public close() {
-        this.parentContainer!.style.display = 'none';
-        this.mainContentContainer!.style.display = 'none';
-        this.bookmarksContainer!.style.display = 'none';
-        this.parentContainer!.style.right = '-50%';
-    }
-    protected reload(): void {
-        this.saveDetail!.removeEventListener('click', this.saveDetailHandler);
-        this.build();
-    }
-    private AddEventListener() {
-        // remove event listeners
-        this.saveDetail!.removeEventListener('click', this.saveDetailHandler);
-        this.closeDetail!.removeEventListener('click', this.closeDetailHandler);
-        //  add event listeners
-        this.saveDetail!.addEventListener('click', this.saveDetailHandler);
-        this.closeDetail!.addEventListener('click', this.closeDetailHandler);
+    private populateReadLatestChapterButton() {
+        const button = document.getElementById('hermidata-readLatest-btn');
+        if (!button) throw new Error("Read latest chapter button does not exist");
 
-        // add new latest empty input if needed
-        this.tagsContainer!.addEventListener('input', () => {
-            if ((this.tagsContainer!.children[this.tagsContainer!.children.length - 1] as HTMLInputElement).value?.length > 0) this.buildExtraCase('tags', this.tagsContainer);
-        })
-        this.altSourcesContainer!.addEventListener('input', () => {
-            if ((this.altSourcesContainer!.children[this.altSourcesContainer!.children.length - 1] as HTMLInputElement).value?.length > 0) this.buildExtraCase('altSources', this.altSourcesContainer);
-        })
-        this.altTitlesContainer!.addEventListener('input', () => {
-            if ((this.altTitlesContainer!.children[this.altTitlesContainer!.children.length - 1] as HTMLInputElement).value?.length > 0) this.buildExtraCase('altTitles', this.altTitlesContainer);
-        })
-    }
-    private async buildExtraCase(name: string, container: HTMLDivElement | null) {
-        const extraInput = document.createElement('input');
-        extraInput.classList.add('detail-option', name);
-        this.latestExtraInput[name]++;
-        container!.appendChild(extraInput);
-    }
-    private async saveDetails() {
-        if (!this.editEntry) return;
-        this.editEntry.title = this.title!.value;
-        this.editEntry.novelType = this.novelType!.value;
-        this.editEntry.meta.novelStatus = this.novelStatus!.value;
-        this.editEntry.meta.notes = this.notes!.value;
-
-        this.editEntry.meta.tags = this.getNamesFromContainer(this.tagsContainer);
-        this.editEntry.meta.altSources = this.getNamesFromContainer(this.altSourcesContainer);
-        this.editEntry.meta.altTitles = this.getNamesFromContainer(this.altTitlesContainer);
-
-        this.editEntry.chapter.bookmarks = this.getBookmarks();
-        // make sure the last used bookmark ( id ) still exist else use the first of the list
-        if (!this.editEntry.chapter.bookmarks[this.editEntry.chapter.bookmarkInUse]) {
-            this.editEntry.chapter.bookmarkInUse = Object.keys(this.editEntry.chapter.bookmarks)[0];
-        }
-
-        this.setMultiAltTitles();
-
-        this.editEntry.meta.updated = new Date().toISOString();
-
-        await saveHermidata(this.editEntry.id, this.editEntry);
-
-        this.close()
-    }
-    private setMultiAltTitles(): void {
-        const altTitleInput = this.multiAltTitleInput?.value ?? "";
-        const multiAltTitleRaw = altTitleInput.split('\n');
-        const multiAltTitle = multiAltTitleRaw.map((title) => title.trim()).filter((title) => title.length > 0);
-
-        // early return if no multi alt title exist/left
-        if (multiAltTitle.length === 0) return;
-
-        this.editEntry?.SetMultipleAltTitles(multiAltTitle);
-    }
-    /** Get names from container */
-    private getNamesFromContainer(container: HTMLDivElement | null): string[] {
-        if (!container) return [];
-        const arrayOfElemets = Array.from(container.children) as HTMLInputElement[];
-        const rawValues = arrayOfElemets.map((child) => child.value);
-        // trim and filter out empty values & duplicates
-        const values = Array.from(new Set(rawValues.map((value) => value.trim()).filter((value) => value.length > 0)));
-        return values;
-    }
-    private getBookmarks(): Record<string, Bookmark> {
-        const bookmarks: Map<string, Bookmark> = new Map();
-        for (const bookmarkElement of Array.from(this.bookmarksContainer!.children)) {
-            const bookmarkEl = bookmarkElement as HTMLDivElement;
-            const oldID = bookmarkEl.dataset.bookmarkId;
-            if (!oldID || !this.editEntry) continue;
-            const label = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-label')!.textContent;
-            const url = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-url')!.value;
-            const currentChapter = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-chapter')!.textContent;
-            const allchapterHistory = bookmarkEl.querySelectorAll<HTMLInputElement>('.bookmark-history-chapter');
-            const history = Array.from(allchapterHistory).map((chapter) => Number(chapter.value));
-            const notes = bookmarkEl.querySelector<HTMLTextAreaElement>('.bookmark-note')!.textContent;
-            const colour = bookmarkEl.querySelector<HTMLInputElement>('.bookmark-colour')!.value;
-            const readStatus = bookmarkEl.querySelector<HTMLSelectElement>('.bookmark-readStatus')!.selectedOptions[0].value;
-            const bookmark: Bookmark = {
-                id: returnBookmarkHash(label),
-                label: label,
-                history: history,
-                note: notes,
-                color: colour,
-                current: Number(currentChapter),
-                readStatus: readStatus,
-                isPrimary: this.editEntry.chapter.bookmarks[oldID].isPrimary,
-                createdAt: this.editEntry.chapter.bookmarks[oldID].createdAt,
-                updatedAt: new Date().toISOString(),
-                scrollPosition: this.editEntry.chapter.bookmarks[oldID].scrollPosition,
-                url: url
-            }
-            bookmarks.set(bookmark.id, bookmark);
-        }
-        return Object.fromEntries(bookmarks);
-    }
-
-    private async buildBookmarks() {
-        if (!this.editEntry) return;
-        this.bookmarksContainer!.innerHTML = '';
-        for (const bookmark of Object.values(this.editEntry.chapter.bookmarks)) {
-            const bookmarkEl = this.buildBookmark(bookmark, this.editEntry);
-            this.bookmarksContainer?.appendChild(bookmarkEl);
-        }
-    }
-    private buildBookmark(bookmark: Bookmark, entry: Hermidata): HTMLDivElement {
-        const bookmarkEl = document.createElement('div');
-        bookmarkEl.classList.add('bookmark');
-        bookmarkEl.id = `bookmark-${bookmark.id}`;
-        bookmarkEl.dataset.bookmarkId = bookmark.id;
-
-        // create bookmark label
-        const nameLabel = this.createBookmarkNameLabel(bookmark);
-        const name = this.createBookmarkName(bookmark);
-
-        // create bookmark current chapter
-        const ChapterLabel = this.createBookmarkChapterLabel(bookmark);
-        const chapter = this.createBookmarkChapter(bookmark);
-
-        // create bookmark current chapter url
-        const urlLabel = this.createBookmarkUrlLabel(bookmark);
-        const url = this.createBookmarkUrl(bookmark);
-
-        // create bookmark history chapter
-        const historyChapterLabel = this.createBookmarkChapterHistoryLabel(bookmark);
-        const historyChapter = this.createBookmarkChapterHistory(bookmark);
-
-        // create bookmark Read Status
-        const readStatusLabel = this.createBookmarkReadStatusLabel(bookmark);
-        const readStatus = this.createBookmarkReadStatus(bookmark);
-
-        // create bookmark colour
-        const colourLabel = this.createBookmarkColourLabel(bookmark);
-        const colour = this.createBookmarkColour(bookmark);
-
-        // create bookmark note
-        const noteLabel = this.createBookmarkNoteLabel(bookmark);
-        const note = this.createBookmarkNote(bookmark);
-
-        bookmarkEl.append(
-            nameLabel, name,
-            ChapterLabel, chapter,
-            urlLabel, url,
-            historyChapterLabel, historyChapter,
-            readStatusLabel, readStatus,
-            colourLabel, colour,
-            noteLabel, note
-        )
-
-        return bookmarkEl;
-    }
-    private createBookmarkNameLabel(bookmark: Bookmark): HTMLLabelElement {
-        const bookmarkLabel = document.createElement('label');
-        bookmarkLabel.textContent = 'Label name';
-        bookmarkLabel.setAttribute('for', bookmark.label);
-        return bookmarkLabel;
-    }
-    private createBookmarkName(bookmark: Bookmark): HTMLInputElement {
-        const bookmarkName = document.createElement('input');
-        bookmarkName.value = bookmark.label;
-        bookmarkName.type = 'text';
-        bookmarkName.id = bookmark.label;
-        bookmarkName.classList.add('bookmark-label');
-        bookmarkName.textContent = bookmark.label;
-        return bookmarkName;
-    }
-    private createBookmarkChapterLabel(bookmark: Bookmark): HTMLLabelElement {
-        const bookmarkChapterLabel = document.createElement('label');
-        bookmarkChapterLabel.textContent = 'Chapter';
-        bookmarkChapterLabel.setAttribute('for', `bookmark-chapter-${bookmark.id}`);
-        return bookmarkChapterLabel;
-    }
-    private createBookmarkChapter(bookmark: Bookmark): HTMLInputElement {
-        const bookmarkChapter = document.createElement('input');
-        bookmarkChapter.value = String(bookmark.current);
-        bookmarkChapter.type = 'number';
-        bookmarkChapter.id = `bookmark-chapter-${bookmark.id}`;
-        bookmarkChapter.classList.add('bookmark-chapter');
-        bookmarkChapter.textContent = String(bookmark.current);
-        return bookmarkChapter;
-    }
-    private createBookmarkUrlLabel(bookmark: Bookmark): HTMLLabelElement {
-        const bookmarkChapterLabel = document.createElement('label');
-        bookmarkChapterLabel.textContent = 'Url';
-        bookmarkChapterLabel.setAttribute('for', `bookmark-url-${bookmark.id}`);
-        return bookmarkChapterLabel;
-    }
-    private createBookmarkUrl(bookmark: Bookmark): HTMLInputElement {
-        const bookmarkChapter = document.createElement('input');
-        bookmarkChapter.value = bookmark.url;
-        bookmarkChapter.type = 'url';
-        bookmarkChapter.id = `bookmark-url-${bookmark.id}`;
-        bookmarkChapter.classList.add('bookmark-url');
-        bookmarkChapter.textContent = bookmark.url;
-        return bookmarkChapter;
-    }
-    private createBookmarkChapterHistoryLabel(bookmark: Bookmark): HTMLLabelElement {
-        const bookmarkChapterLabel = document.createElement('label');
-        bookmarkChapterLabel.textContent = 'History';
-        bookmarkChapterLabel.setAttribute('for', `bookmark-history-${bookmark.id}`);
-        return bookmarkChapterLabel;
-    }
-    private createBookmarkChapterHistory(bookmark: Bookmark): HTMLDivElement {
-        const bookmarkChapterContainer = document.createElement('div');
-        for (const chapter of bookmark.history) {
-            const bookmarkChapter = document.createElement('input');
-            bookmarkChapter.value = String(chapter);
-            bookmarkChapter.type = 'text';
-            bookmarkChapter.classList.add('bookmark-history-chapter');
-            bookmarkChapter.textContent = String(chapter);
-            bookmarkChapterContainer.appendChild(bookmarkChapter);
-        }
-        bookmarkChapterContainer.id = `bookmark-history-${bookmark.id}`;
-        bookmarkChapterContainer.classList.add('bookmark-history');
-
-        return bookmarkChapterContainer;
-    }
-
-    private createBookmarkReadStatusLabel(bookmark: Bookmark): HTMLLabelElement {
-        const bookmarkChapterLabel = document.createElement('label');
-        bookmarkChapterLabel.textContent = 'Read Status';
-        bookmarkChapterLabel.setAttribute('for', `bookmark-readStatus-${bookmark.id}`);
-        return bookmarkChapterLabel;
-    }
-    private createBookmarkReadStatus(bookmark: Bookmark): HTMLSelectElement {
-        const bookmarkChapter = document.createElement('select');
-        bookmarkChapter.value = bookmark.readStatus;
-
-        
-        bookmarkChapter.id = `bookmark-readStatus-${bookmark.id}`;
-        bookmarkChapter.classList.add('bookmark-readStatus');
-        
-        for (const option of this.settings!.ContentTypesAndStatuses.STATUS_OPTIONS) {
-            const optionEl = document.createElement('option');
-            optionEl.value = option;
-            optionEl.textContent = option;
-            bookmarkChapter.appendChild(optionEl);
-        }
-        const selected = bookmarkChapter.options.namedItem(bookmark.readStatus);
-        if (selected) bookmarkChapter.selectedIndex = selected.index;
-
-        return bookmarkChapter;
-    }
-    private createBookmarkColourLabel(bookmark: Bookmark): HTMLLabelElement {
-        const bookmarkChapterLabel = document.createElement('label');
-        bookmarkChapterLabel.textContent = 'Colour';
-        bookmarkChapterLabel.setAttribute('for', `bookmark-colour-${bookmark.id}`);
-        return bookmarkChapterLabel;
-    }
-    private createBookmarkColour(bookmark: Bookmark): HTMLInputElement {
-        const bookmarkChapter = document.createElement('input');
-        bookmarkChapter.value = bookmark.color;
-        bookmarkChapter.type = 'color';
-        bookmarkChapter.id = `bookmark-colour-${bookmark.id}`;
-        bookmarkChapter.classList.add('bookmark-colour');
-        return bookmarkChapter;
-    }
-
-    private createBookmarkNoteLabel(bookmark: Bookmark): HTMLLabelElement {
-        const bookmarkChapterLabel = document.createElement('label');
-        bookmarkChapterLabel.textContent = 'Note';
-        bookmarkChapterLabel.setAttribute('for', `bookmark-note-${bookmark.id}`);
-        return bookmarkChapterLabel;
-    }
-    private createBookmarkNote(bookmark: Bookmark): HTMLTextAreaElement {
-        const bookmarkChapter = document.createElement('textarea');
-        bookmarkChapter.value = bookmark.note ?? '';
-        bookmarkChapter.id = `bookmark-note-${bookmark.id}`;
-        bookmarkChapter.classList.add('bookmark-note');
-        return bookmarkChapter;
-    }
-
-
-
-
-
-
-
-    private populateDetails(settings: Settings | null): void {
-
-        if (!this.editEntry || !settings) return;
-
-        this.title!.value = this.editEntry.title;
-        this.novelType!.value = this.editEntry.novelType;
-        this.novelStatus!.value = this.editEntry.meta.novelStatus;
-        this.latestChapter!.value = String(this.editEntry.chapter.latest);
-        this.notes!.value = this.editEntry.meta.notes;
-
-        this.popuplateSelects(settings);
-
-        this.multiAltTitleInput!.value = ""; // empty so that user can add new alt title
-
-        this.buildMultipleCases('tags', this.tagsContainer, this.editEntry.meta.tags, true);
-        this.buildMultipleCases('titles', this.altTitlesContainer, this.editEntry.meta.altTitles, true);
-        this.buildMultipleCases('sources', this.altSourcesContainer, this.editEntry.meta.altSources, true);
-    }
-
-    private buildMultipleCases(name: string, container: HTMLDivElement | null, options: string[], makeExtraInput: boolean) {
-        if (!container) return;
-        container.innerHTML = '';
-        for ( const option of options) {
-            const optionEl = document.createElement('input');
-            optionEl.classList.add('detail-option', name);
-            optionEl.textContent = option;
-            optionEl.value = option;
-            container.appendChild(optionEl);
-        }
-        if (makeExtraInput) {
-            const extraInput = document.createElement('input');
-            extraInput.classList.add('detail-option', name);
-            this.latestExtraInput[name]++;
-            container.appendChild(extraInput);
-        }
-    }
-
-
-    private popuplateSelects(settings: Settings) {
-        try {
-            
-            const { TYPE_OPTIONS: novelTypes, NOVEL_STATUS_OPTIONS: novelStatuses } = settings.ContentTypesAndStatuses;
-
-            this.populateSelect(this.novelType, novelTypes, 'select-novelType');
-            this.populateSelect(this.novelStatus, novelStatuses, 'select-novelStatus');
-        } catch (error) {
-            console.error(error);
-        }
-    }
-    private populateSelect(selectEl: HTMLSelectElement | null, options: string[], customClass: string): HTMLSelectElement {
-        if (!selectEl) throw new Error("Element not found");
-        selectEl.innerHTML = "";
-        options.forEach(value => {
-            const opt = document.createElement("option");
-            opt.classList.add("select-option", customClass);
-            opt.value = value;
-            opt.textContent = value;
-            selectEl.appendChild(opt);
+        button.addEventListener('click', () => {
+            window.open(this.hermidata.rss?.latestItem.link ?? this.hermidata.GetUrl(), '_blank');
         });
-        return selectEl;
     }
+    private populateTitle() {
+        const title = document.getElementById('hermidata-title');
+        if (!title) throw new Error("Title does not exist");
+
+        title.textContent = this.hermidata.title;
+    }
+    private populateAlternativeTitles() {
+        const container = document.getElementById('hermidata-alternative-titles-container');
+        if (!container) throw new Error("Alternative titles does not exist");
+
+        const allAlternativeTitles = this.hermidata.meta.altTitles;
+
+
+        // create multiple titles
+        for (let i = 0; i < allAlternativeTitles.length; i++) {
+            const title = document.createElement('div');
+            title.classList.add('hermidata-alternative-title');
+            title.textContent = allAlternativeTitles[i];
+            container.appendChild(title);
+        }
+
+    }
+    private populateMetadata() {
+        // novel type
+        this.populateNovelType();
+        // content rating
+        this.populateContentRating();
+        // release date
+        this.populateReleaseDate();
+        // novel status
+        this.populateNovelStatus();
+
+        // star rating
+        this.populateStarRating();
+
+        // Genres, demographics, Sources and latest release
+
+        // genres
+        this.populateGenres();
+        // demographics
+        this.populateDemographics();
+        // sources
+        this.populateSources();
+        // latest release
+        this.populateLatestRelease();
+    }
+    private populateNovelType() {
+        const novelType = document.getElementById('hermidata-novelType');
+        if (!novelType) throw new Error("Novel type does not exist");
+
+        novelType.textContent = this.hermidata.novelType;
+    }
+    private populateContentRating() {
+        const contentRating = document.getElementById('hermidata-contentRating');
+        if (!contentRating) throw new Error("Content rating does not exist");
+
+        // TODO: add content rating to hermidata
+        // TEMP: use default temporaryContentRating until implemented
+        let temporaryContentRating: string; 
+        
+        temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Hentai') ? 'Pornographic' : 'Safe';
+        temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Ecchi') ? 'Explicit' : 'Safe';
+        
+        contentRating.textContent = temporaryContentRating;
+    }
+    private populateReleaseDate() {
+        const releaseDate = document.getElementById('hermidata-releaseDate');
+        if (!releaseDate) throw new Error("Release date does not exist");
+
+        releaseDate.textContent = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added;
+    }
+    private populateNovelStatus() {
+        const novelStatus = document.getElementById('hermidata-novelStatus');
+        if (!novelStatus) throw new Error("Novel status does not exist");
+
+        novelStatus.textContent = this.hermidata.meta.novelStatus;
+    }
+    private populateStarRating() {
+        const starRating = document.getElementById('hermidata-starRating');
+        if (!starRating) throw new Error("Star rating does not exist");
+
+        // TODO: add star rating to hermidata
+        // TEMP: use default 5 until implemented
+        starRating.textContent = "5"; //String(this.hermidata.meta.starRating);
+    }
+    private populateGenres() {
+        const genres = document.getElementById('hermidata-genres');
+        if (!genres) throw new Error("Genres does not exist");
+
+        const allTagsUsed = this.hermidata.meta.tags;
+        
+                
+        
+        const genresThemes = allTagsUsed.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
+
+        const allGenres = genresThemes.join(', ');
+        genres.textContent = allGenres;
+    }
+    private populateDemographics() {
+        const demographics = document.getElementById('hermidata-demographics');
+        if (!demographics) throw new Error("Demographics does not exist");
+
+        const allTagsUsed = this.hermidata.meta.tags;
+        const allDemographics = allTagsUsed.filter(tag => DEMOGRAPHIC_TAGS.includes(tag)).join(', ');
+        demographics.textContent = allDemographics;
+    }
+    private populateSources() {
+        const sources = document.getElementById('hermidata-sources');
+        if (!sources) throw new Error("Sources does not exist");
+
+        const allSources = this.hermidata.meta.altSources.join(', ');
+        sources.textContent = allSources;
+    }
+    private populateLatestRelease() {
+        const latestRelease = document.getElementById('hermidata-latestRelease');
+        if (!latestRelease) throw new Error("Latest release does not exist");
+
+        const latestChapter = this.hermidata.GetLatestChapter();
+        const SourceOfLatestChapter = this.hermidata.GetSourceOfLatestChapter();
+
+        latestRelease.textContent = `Ch. ${latestChapter} - by ${SourceOfLatestChapter}`
+    }
+    private populateMarkers() {
+        const container = document.getElementById('hermidata-markers-list');
+        if (!container) throw new Error("Markers does not exist");
+
+        const allMarkers = this.hermidata.chapter.bookmarks;
+
+        for (const [index, marker] of Object.entries(allMarkers)) {
+            const markerElementContainer = document.createElement('div');
+            markerElementContainer.classList.add('hermidata-marker-container');
+            markerElementContainer.id = `hermidata-marker-container-${index}`;
+            
+            // add marker color bookmark
+            const markerColor = document.createElement('div');
+            markerColor.classList.add('hermidata-marker-color');
+            markerColor.style.backgroundColor = marker.color;
+
+            // add marker element
+            const markerElement = document.createElement('div');
+            markerElement.classList.add('hermidata-marker');
+            markerElement.id = `hermidata-marker-${index}`;
+            markerElement.addEventListener('click', () => this.jumpToChapter(marker.url));
+
+            // add marker notes
+            if (marker.note) {
+                const markerNotes = document.createElement('div');
+                markerNotes.classList.add('hermidata-marker-notes');
+                markerNotes.textContent = marker.note;
+                markerElementContainer.append(markerNotes);
+            }
+
+            // add marker chapter
+            const markerChapter = document.createElement('div');
+            markerChapter.classList.add('hermidata-marker-chapter');
+            markerChapter.textContent = `Ch. ${marker.current}`;
+
+            // add marker label
+            const markerLabel = document.createElement('div');
+            markerLabel.classList.add('hermidata-marker-label');
+            markerLabel.textContent = marker.label;
+            
+            // add marker read status
+            const markerReadStatus = document.createElement('div');
+            markerReadStatus.classList.add('hermidata-marker-readStatus');
+            markerReadStatus.textContent = marker.readStatus;
+
+            // add marker last updated/added
+            const markerLastUpdated = document.createElement('div');
+            markerLastUpdated.classList.add('hermidata-marker-lastUpdated');
+            markerLastUpdated.textContent = marker.updatedAt ?? marker.createdAt;
+            
+            // append
+            markerElement.append(markerChapter, markerLabel, markerReadStatus, markerLastUpdated);
+            markerElementContainer.append(markerColor, markerElement);
+            container.appendChild(markerElementContainer);
+            
+        }
+    }
+    private populateNotes() {
+        const notes = document.getElementById('hermidata-notes-content');
+        if (!notes) throw new Error("Notes does not exist");
+
+        notes.textContent = this.hermidata.meta.notes;
+    }
+
 }

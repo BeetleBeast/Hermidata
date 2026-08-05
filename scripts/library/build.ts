@@ -1,7 +1,6 @@
 import { PastHermidata } from "../popup/core/Past";
 import type { Hermidata, Settings } from "../shared/types";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
-import { Detail } from "./build/detail";
 
 export abstract class RSSPageBuilder {
 
@@ -18,11 +17,6 @@ export abstract class RSSPageBuilder {
     protected async init(): Promise<void> {
         this.AllHermidata = await PastHermidata.getAllHermidata();
         
-    }
-
-    protected openDetails(id: string): void {
-        const editEntry = new HermidataModel(this.AllHermidata![id]);
-        new Detail(editEntry).open();
     }
 
     public abstract build(): void;

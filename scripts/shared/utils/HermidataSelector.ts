@@ -99,6 +99,17 @@ export class HermidataModel implements Hermidata {
 
         return latestHistory ?? latestChapterCatch;
     }
+    GetLatestChapter(): number { return this.chapter.latest; }
+    GetSourceOfLatestChapter(): string { 
+        // find the source of the latest chapter
+        const list = Object.values(this.chapter.bookmarks).filter(bookmark => bookmark.current === (this.chapter.latest)).map(bookmark => bookmark.url);
+        // transform list of strings into list of sources ( only the site name )
+        const sourceList = list.map(url => new URL(url).hostname.replace(/^www\./, ""));
+
+        if ((this.rss?.latestItem.chapter === this.chapter.latest ) || (this.rss && this.rss.latestItem.chapter >= this.chapter.latest)) return this.rss.domain;
+
+        return sourceList[0];
+    }
     GetVersion(): number { return this.version; }
     // -- setters --
     SetUrl(url: string): void;
