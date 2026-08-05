@@ -32,9 +32,9 @@ export class Footer extends RssBuild {
         });
     }
     private openRSSPage(): void {
-        const FullpageRSSButton = getElement(".fullpage-RSS-btn");
-        if (!FullpageRSSButton) throw new Error('Element not found');
-        FullpageRSSButton.addEventListener('click', () => open('./Library.html'))
+        const LibraryButton = getElement(".library-btn");
+        if (!LibraryButton) throw new Error('Element not found');
+        LibraryButton.addEventListener('click', () => open('./Library.html'))
     }
     private setVersion(): void {
         setElement("#version", el => el.innerHTML = chrome.runtime.getManifest().version);
