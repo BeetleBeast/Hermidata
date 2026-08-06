@@ -570,7 +570,7 @@ body[data-list-mode="true"]
 	scroll-behavior: auto;
 	align-items: center;
 	height: -moz-available;
-	grid-template-columns: auto auto auto;
+	grid-template-columns: 1fr 1fr 1fr;
 	justify-content: space-evenly;
 	grid-row-gap: 200px;
 	grid-column-gap: 100px;

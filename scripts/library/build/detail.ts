@@ -1,6 +1,6 @@
 import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
-import { getAllTags } from "../../shared/db/Storage";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { findByTitleOrAlt } from "../../shared/utils/StringOutput";
 import { RSSPageBuilder } from "../build";
 
 export class Detail extends RSSPageBuilder {
@@ -12,9 +12,23 @@ export class Detail extends RSSPageBuilder {
 
     private readonly utilityMarkerSortDate = document.querySelector<HTMLDivElement>('#hermidata-markers-utility-sort-date');
 
+    private readonly altTitleContainer = document.querySelector<HTMLDivElement>('#hermidata-alternative-titles-container');
+
+    private readonly altTitleBtn = document.querySelector<HTMLDivElement>('#hermidata-alternative-title-button');
+
+    private readonly searchMarker = document.querySelector<HTMLInputElement>('#search-marker');
+
+    private readonly searchInput = document.querySelector<HTMLInputElement>('#search');
+
+    private readonly autocompleteContainer = document.querySelector<HTMLDivElement>('#search-suggestions');
+
     private viewMode: 'chapter' | 'date' = 'chapter';
 
     private sortMode: 'asc' | 'desc' = 'asc';
+
+    private selectedIndex: number = -1;
+
+    private readonly allSearchableItems = new Set<HTMLDivElement>();
 
     public build(): void {
         
@@ -26,6 +40,8 @@ export class Detail extends RSSPageBuilder {
 
         this.addEventListener();
 
+        this.sort();
+
     }
     public reload(): void {
         throw new Error("Method not implemented.");
@@ -33,19 +49,32 @@ export class Detail extends RSSPageBuilder {
 
     private addEventListener(): void {
         
-        
+        // on clicked Sort button
         this.utilityMarkerSortChapter?.addEventListener('click', () => {
             const nextSortMode = this.sortMode === 'asc' ? 'desc' : 'asc';
             this.setMarkersViewMode('chapter');
-
             this.setMarkersSortMode(nextSortMode);
+            this.sort();
         });
-
         this.utilityMarkerSortDate?.addEventListener('click', () => {
             const nextSortMode = this.sortMode === 'asc' ? 'desc' : 'asc';
             this.setMarkersViewMode('date');
             this.setMarkersSortMode(nextSortMode);
+            this.sort();
         });
+        // on clicked alt titles
+        this.altTitleBtn?.addEventListener('click', () => {
+            this.altTitleContainer!.dataset.closed = this.altTitleContainer!.dataset.closed === 'true' ? 'false' : 'true';
+        });
+        // on marker search
+        this.searchMarker?.addEventListener('input', (e) => {
+            const target = e.target as HTMLInputElement;
+            const value = target.value;
+            this.search(value);
+        })
+        // on global search
+        this.searchInput?.addEventListener('input', (e) => this.handleSearchInput(e, this.autocompleteContainer!));
+        this.searchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!));
 
         // on clicked Edit button
     }
@@ -147,11 +176,15 @@ export class Detail extends RSSPageBuilder {
         title.textContent = this.hermidata.title;
     }
     private populateAlternativeTitles() {
-        const container = document.getElementById('hermidata-alternative-titles-container');
+        const container = document.getElementById('hermidata-alternative-titles-list');
         if (!container) throw new Error("Alternative titles does not exist");
 
         const allAlternativeTitles = this.hermidata.meta.altTitles;
 
+        // button to open alt titles
+        const altTitleButton = document.querySelector<HTMLDivElement>('#hermidata-alternative-title-button');
+        if (!altTitleButton) throw new Error("Alternative title button does not exist");
+        altTitleButton.textContent = this.hermidata.title;
 
         // create multiple titles
         for (let i = 0; i < allAlternativeTitles.length; i++) {
@@ -272,6 +305,7 @@ export class Detail extends RSSPageBuilder {
         for (const [index, marker] of Object.entries(allMarkers)) {
             const markerElementContainer = document.createElement('div');
             markerElementContainer.classList.add('hermidata-marker-container');
+            markerElementContainer.dataset.id = marker.id;
             markerElementContainer.id = `hermidata-marker-container-${index}`;
             
             // add marker color bookmark
@@ -311,7 +345,7 @@ export class Detail extends RSSPageBuilder {
             // add marker last updated/added
             const markerLastUpdated = document.createElement('div');
             markerLastUpdated.classList.add('hermidata-marker-lastUpdated');
-            markerLastUpdated.textContent =  this.getTimeAgo(marker.updatedAt) ?? this.getTimeAgo(marker.createdAt);
+            markerLastUpdated.textContent = this.getTimeAgo(marker.updatedAt) ?? this.getTimeAgo(marker.createdAt);
             
             // append
             markerElement.append(markerChapter, markerLabel, markerReadStatus, markerLastUpdated);
@@ -326,5 +360,170 @@ export class Detail extends RSSPageBuilder {
 
         notes.textContent = this.hermidata.meta.notes;
     }
+    private sort() {
+        const container = document.getElementById('hermidata-markers-list');
+        if (!container) throw new Error("Markers does not exist");
 
+        const allMarkers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
+
+        const newMarkersList: HTMLDivElement[] = Array.from(allMarkers);
+        
+        const sortByDate = (a: HTMLDivElement, b: HTMLDivElement) => {
+            const markerA = this.getMarkerFromID(a.dataset.id!);
+            const markerB = this.getMarkerFromID(b.dataset.id!);
+
+            const dateA = markerA.updatedAt ?? markerA.createdAt;
+            const dateB = markerB.updatedAt ?? markerB.createdAt;
+
+            const asc = new Date(dateA).getTime() - new Date(dateB).getTime();
+            const desc = new Date(dateB).getTime() - new Date(dateA).getTime();
+
+            return this.sortMode === 'asc' ? asc : desc;
+        }
+        const sortByChapter = (a: HTMLDivElement, b: HTMLDivElement) => {
+            const markerA = this.getMarkerFromID(a.dataset.id!);
+            const markerB = this.getMarkerFromID(b.dataset.id!);
+
+            const chapterA = markerA.current;
+            const chapterB = markerB.current;
+
+            const asc = chapterA - chapterB;
+            const desc = chapterB - chapterA;
+
+            return this.sortMode === 'asc' ? asc : desc;
+        }
+
+        const sortMode = this.viewMode === 'date' ? sortByDate : sortByChapter;
+
+        newMarkersList.sort(sortMode);
+
+        container.append(...newMarkersList);
+    }
+
+    private getMarkerFromID(markerID: string) {
+        return this.hermidata.chapter.bookmarks[markerID];
+    }
+    private search(query: string) {
+        const allItems = document.querySelectorAll<HTMLDivElement>(('.hermidata-marker-container'))
+
+        if (!allItems) return
+        // If no query, restore all items to their filter-determined state
+        if (!query) {
+            allItems.forEach(item => {
+                // Restore visibility based on what filters decided
+                
+                item.style.display = 'flex';
+            });
+            return;
+        }
+
+        // With a query: check both filter state AND search match
+        allItems.forEach(parent => {
+            const item = this.getMarkerFromID(parent.dataset.id!);
+            const chapterValue = item.current.toString();
+            const label = item.label;
+
+
+            const queryLower = query.toLocaleLowerCase();
+            // match chapter
+            const chapterLower = chapterValue.toLocaleLowerCase();
+            const matchChapter = chapterLower.includes(queryLower);
+            // match label
+            const labelLower = label.toLocaleLowerCase();
+            const matchLabel = labelLower.includes(queryLower);
+
+            const matchesAny = matchChapter || matchLabel;
+
+            // Show only if it passes BOTH filters AND search
+            parent.style.display = matchesAny ? 'flex' : 'none';
+        });
+    }
+
+    private setupSearchBar(e_: KeyboardEvent, suggestionBox: HTMLDivElement) {
+        const searchInput = document.querySelector<HTMLInputElement>('#search');
+
+        if (!searchInput) throw new Error('Element not found');
+
+        // const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-searchable="true"]`);
+        const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
+        if (!items.length) return;
+
+        if (e_.key === 'ArrowDown') {
+            e_.preventDefault();
+            this.selectedIndex = (this.selectedIndex + 1) % items.length;
+            this.updateHighlightedSuggestion(items, this.selectedIndex);
+        } else if (e_.key === 'ArrowUp') {
+            e_.preventDefault();
+            this.selectedIndex = (this.selectedIndex - 1 + items.length) % items.length;
+            this.updateHighlightedSuggestion(items, this.selectedIndex);
+        } else if (e_.key === 'Enter') {
+            e_.preventDefault();
+            if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
+                // use selected suggestion
+                const chosen = items[this.selectedIndex].textContent;
+                this.applySearchSelection(searchInput, suggestionBox, chosen);
+            } else if (items.length > 0) {
+                // autocomplete to first suggestion
+                const chosen = items[0].textContent;
+                this.applySearchSelection(searchInput, suggestionBox, chosen);
+            }
+        }
+
+        // Hide autocomplete when clicking elsewhere
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLInputElement;
+            if (target !== searchInput && !suggestionBox.contains(target)) {
+                suggestionBox.innerHTML = '';
+            }
+        });
+    }
+    private updateHighlightedSuggestion(items: NodeListOf<HTMLDivElement>, selectedIndex: number) {
+        items.forEach((el, i) => {
+            el.classList.toggle('highlighted', i === selectedIndex);
+        });
+    }
+    private applySearchSelection(input: HTMLInputElement, suggestionBox: HTMLDivElement, value: string) {
+        input.value = value;
+        suggestionBox.innerHTML = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        suggestionBox.innerHTML = '';
+        input.focus();
+        const entry = findByTitleOrAlt(value, this.AllHermidata);
+        if (!entry) return
+        open('./Hermidata.html#/id/' + entry.id);
+    }
+
+    private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {
+        const target = e.target as HTMLInputElement;
+        const query = target.value.trim().toLowerCase();
+        suggestionBox.innerHTML = '';
+
+        if (!query || query == '') {
+            return;
+        }
+
+        const visibleHashes = Array.from(Object.keys(this.AllHermidata)).map(item => item);
+    
+        const filtered = Object.entries(this.AllHermidata).filter(([hash, item]) => {
+            // Only include if item is currently visible
+            if (!visibleHashes.includes(hash)) return false;
+            
+            return [item.title, ...(item.meta?.altTitles || [])].some(t => t.toLowerCase().includes(query));
+        }).map(([, item]) => item);
+
+        // Autocomplete suggestions
+        const suggestions = [...new Set(filtered.flatMap(f => f.meta.altTitles))].slice(0, 7);
+
+        // Build suggestion elements
+        for (const alTitle of suggestions) {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.textContent = alTitle;
+            div.addEventListener('click', () => {
+                const target = e.target as HTMLInputElement;
+            this.applySearchSelection(target, suggestionBox, alTitle);
+            });
+            suggestionBox.appendChild(div);
+        }
+    }
 }

@@ -338,9 +338,13 @@ label {
 }
 
 .autocomplete-item {
-    padding: 6px 10px;
-    cursor: pointer;
-    transition: background 0.2s ease;
+	padding: 6px 10px;
+	cursor: pointer;
+	transition: background 0.2s ease;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 .autocomplete-item:hover {
     background: var(--Btn-hover);
@@ -364,7 +368,10 @@ label {
 	border: 1px solid var(--Btn);
 	border-radius: 0;
     gap: 10px;
-    padding-left: 10px;
+}
+
+.search-icon {
+	padding-left: 10px;
 }
 
 #search-container:has(#search:focus-within) {
@@ -765,6 +772,42 @@ label {
 	align-items: center;
 }
 
+/* alt titles */
+
+.hermidata-alternative-title {
+	height: 25px;
+	width: 100%;
+}
+
+#hermidata-alternative-titles-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: max-height 0.2s cubic-bezier(.07,.48,1,.58), overflow 0.2s allow-discrete;
+}
+
+#hermidata-alternative-titles-container[data-closed="true"] {
+    max-height: 25px;
+    overflow: hidden;
+}
+
+#hermidata-alternative-titles-container[data-closed="false"] {
+    max-height: 500px;
+    overflow: visible;
+}
+
+#hermidata-alternative-title-button {
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+	padding: 5px;
+	border: 1px solid var(--focus-ring);
+	width: fit-content;
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
 /* markers */
 
 .hermidata-marker-container:first-child {
@@ -823,6 +866,10 @@ label {
 	outline: 1px solid var(--focus-ring);
 }
 
+.hermidata-marker-chapter {
+	white-space: nowrap;
+}
+
 /* notes */
 
 
@@ -830,4 +877,23 @@ label {
 	font-size: 1.17em;
     font-weight: bold;
     margin-block: 1em;
+}
+
+.hermidata-marker-notes:hover,
+.hermidata-marker-container:hover > .hermidata-marker-notes {
+	display: flex;
+	position: fixed;
+	left: 50px;
+	top: calc(100% + 5px);
+	width: 94.5%;
+	align-items: center;
+	background-color: var(--Input-colorV2);
+	padding: 5px;
+	padding-left: 10px;
+	border: 1px solid var(--focus-ring);
+	border-radius: 8px;
+}
+.hermidata-marker-notes {
+	display: none;
+    transition: display 0.2s ease-in-out;
 }
