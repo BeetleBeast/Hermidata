@@ -8,6 +8,14 @@ export class Detail extends RSSPageBuilder {
 
     private readonly hermidata: HermidataModel = this.getCurrentHermidata();
 
+    private readonly utilityMarkerSortChapter = document.querySelector<HTMLDivElement>('#hermidata-markers-utility-sort-chapter');
+
+    private readonly utilityMarkerSortDate = document.querySelector<HTMLDivElement>('#hermidata-markers-utility-sort-date');
+
+    private viewMode: 'chapter' | 'date' = 'chapter';
+
+    private sortMode: 'asc' | 'desc' = 'asc';
+
     public build(): void {
         
         
@@ -16,19 +24,63 @@ export class Detail extends RSSPageBuilder {
         // 2. populate page
         this.populateDetails();
 
+        this.addEventListener();
+
     }
     public reload(): void {
         throw new Error("Method not implemented.");
     }
 
     private addEventListener(): void {
-        throw new Error("Method not implemented.");
+        
+        
+        this.utilityMarkerSortChapter?.addEventListener('click', () => {
+            const nextSortMode = this.sortMode === 'asc' ? 'desc' : 'asc';
+            this.setMarkersViewMode('chapter');
+
+            this.setMarkersSortMode(nextSortMode);
+        });
+
+        this.utilityMarkerSortDate?.addEventListener('click', () => {
+            const nextSortMode = this.sortMode === 'asc' ? 'desc' : 'asc';
+            this.setMarkersViewMode('date');
+            this.setMarkersSortMode(nextSortMode);
+        });
 
         // on clicked Edit button
     }
     private jumpToChapter(url: string): void {
         // TODO: implement
         window.open(url, '_blank');
+    }
+    private setMarkersSortMode(newSortMode: 'asc' | 'desc'): void {
+        const currentButtonSelected = document.querySelector<HTMLButtonElement>('.filter-button[data-state="true"]');
+
+        if (!currentButtonSelected) return;
+
+        const newSortArrow = newSortMode === 'asc' ?  '↓': '↑';
+        const text = currentButtonSelected.textContent?.replace('↑', '').replace('↓', '');
+        currentButtonSelected.textContent = `${newSortArrow}  ${text}`;
+
+        currentButtonSelected.dataset.sort = newSortMode;
+
+        this.sortMode = newSortMode;
+
+        document.body.dataset.ascMode = this.sortMode === 'asc' ? 'true' : 'false';
+    }
+
+    public setMarkersViewMode(newViewMode: 'chapter' | 'date'): void {
+        const buttons = document.querySelectorAll<HTMLButtonElement>('.filter-button');
+        const currentButtonSelected = document.querySelector<HTMLButtonElement>(newViewMode === 'chapter' ? "#hermidata-markers-utility-sort-chapter" : "#hermidata-markers-utility-sort-date");
+
+        if (!currentButtonSelected) return;
+
+        // toggle button
+        buttons.forEach(button => button.dataset.state = (button === currentButtonSelected) ? 'true' : 'false' );
+        
+        this.viewMode = newViewMode;
+
+        document.body.dataset.chapterMode = this.viewMode === 'chapter' ? 'true' : 'false';
     }
     
     private getIdFromUrl(): string | null {
