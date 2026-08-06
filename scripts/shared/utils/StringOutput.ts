@@ -1,4 +1,5 @@
 import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
+import type { PickedElementData } from '../types/rss';
 import { HermidataModel } from './HermidataSelector';
 
 export function getChapterFromTitle(title: string | undefined, url: string): number {
@@ -53,6 +54,35 @@ export function normaliseDateToIso(rawDate: string): string {
     return new Date(date)?.toISOString();
 }
 
+function isConcatenationOfOthers(candidate: string, others: string[]): boolean {
+    let remaining = candidate;
+    let matchedCount = 0;
+
+    for (const other of others) {
+        const idx = remaining.indexOf(other);
+        if (idx === -1) continue;
+        remaining = remaining.slice(idx + other.length);
+        matchedCount++;
+    }
+
+    // Only treat as a "summary" if it's stitched together from 2+ other
+    // leaves in order — a single containment match is more likely a
+    // coincidence (like "New" inside "New Arrivals") than a real duplicate.
+    return matchedCount >= 2;
+}
+
+function dedupeContainerTexts(texts: string[]): string[] {
+    return texts.filter((text, i) => {
+        const others = texts.filter((_, j) => j !== i);
+        return !isConcatenationOfOthers(text, others);
+    });
+}
+
+export function getMultipleTitles(data: PickedElementData, separator = '\n'): string[] | null {
+
+    const deduped = dedupeContainerTexts(data.leafTexts);
+    return deduped.length > 0 ? deduped : null;
+}
 
 export function findByTitleOrAlt(title: string, allData: Record<string, Hermidata> ): Hermidata | undefined {
     title = TrimTitle.trimTitle(title, '').title; // force trim title to remove any chapter info or site name
