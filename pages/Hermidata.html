@@ -33,8 +33,14 @@
       <div id="hermidata-info-container">
         <h2 id="hermidata-title"></h2>
         <div id="hermidata-alternative-titles-container">
-          <div id="hermidata-alternative-title-button" title="Alternative titles"></div>
-          <div id="hermidata-alternative-titles-list"></div>
+          <div id="hermidata-alternative-title-button" title="Alternative titles">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <p id="hermidata-alternative-title-button-text"></p>
+            <svg class="hermidata-alternative-title-button-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" data-closed="true" >
+              <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div id="hermidata-alternative-titles-list" data-closed="true"></div>
         </div>
         <div id="hermidata-metadata-container">
           <div id="hermidata-novelType" class="hermidata-metadata-group-1" title="Novel Type"></div>
@@ -88,7 +94,7 @@
     <section id="hermidata-notes">
       <div id="hermidata-notes-container">
         <label for="hermidata-notes-content" id="hermidata-notes-label">Notes</label>
-        <textarea id="hermidata-notes-content"></textarea>
+        <textarea id="hermidata-notes-content" readonly></textarea>
       </div>
     </section>
   </section>

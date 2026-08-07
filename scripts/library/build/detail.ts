@@ -12,9 +12,11 @@ export class Detail extends RSSPageBuilder {
 
     private readonly utilityMarkerSortDate = document.querySelector<HTMLDivElement>('#hermidata-markers-utility-sort-date');
 
-    private readonly altTitleContainer = document.querySelector<HTMLDivElement>('#hermidata-alternative-titles-container');
+    private readonly altTitleContainer = document.querySelector<HTMLDivElement>('#hermidata-alternative-titles-list');
 
     private readonly altTitleBtn = document.querySelector<HTMLDivElement>('#hermidata-alternative-title-button');
+
+    private readonly starRatingEdit = document.querySelector<HTMLDivElement>('#hermidata-starRating-edit');
 
     private readonly searchMarker = document.querySelector<HTMLInputElement>('#search-marker');
 
@@ -27,8 +29,6 @@ export class Detail extends RSSPageBuilder {
     private sortMode: 'asc' | 'desc' = 'asc';
 
     private selectedIndex: number = -1;
-
-    private readonly allSearchableItems = new Set<HTMLDivElement>();
 
     public build(): void {
         
@@ -65,6 +65,7 @@ export class Detail extends RSSPageBuilder {
         // on clicked alt titles
         this.altTitleBtn?.addEventListener('click', () => {
             this.altTitleContainer!.dataset.closed = this.altTitleContainer!.dataset.closed === 'true' ? 'false' : 'true';
+            document.querySelector<SVGElement>('.hermidata-alternative-title-button-arrow')!.dataset.closed = this.altTitleContainer!.dataset.closed;
         });
         // on marker search
         this.searchMarker?.addEventListener('input', (e) => {
@@ -77,6 +78,9 @@ export class Detail extends RSSPageBuilder {
         this.searchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!));
 
         // on clicked Edit button
+
+        // on clicked Edit star button
+        this.starRatingEdit?.addEventListener('click', this.editStarRating);
     }
     private jumpToChapter(url: string): void {
         // TODO: implement
@@ -96,6 +100,70 @@ export class Detail extends RSSPageBuilder {
         this.sortMode = newSortMode;
 
         document.body.dataset.ascMode = this.sortMode === 'asc' ? 'true' : 'false';
+    }
+    private editStarRating = (): void => {
+        const starRatingElement = document.querySelector<HTMLDivElement>('#hermidata-starRating');
+        // TODO: add star rating to hermidata
+        const starRatingValue = /*this.hermidata.meta.starRating ?? */ starRatingElement?.textContent?.split(' ')[1];
+
+        if (!starRatingValue || !starRatingElement) return;
+
+        // change star rating element from div to input
+        starRatingElement.replaceWith(this.createStarRatingInput(starRatingValue));
+
+        // focus on input
+        const input = document.querySelector<HTMLInputElement>('#hermidata-starRating');
+        input?.focus();
+
+        // set edit button to save
+        if (!this.starRatingEdit) return;
+        this.starRatingEdit.textContent = 'Save';
+        this.starRatingEdit.removeEventListener('click', this.editStarRating);
+        this.starRatingEdit.addEventListener('click', this.saveStarRating);
+
+    }
+    private saveStarRating =(): void => {
+        const input = document.querySelector<HTMLInputElement>('#hermidata-starRating');
+        // TODO: add star rating to hermidata
+        /*this.hermidata.meta.starRating = input.value;*/
+        this.restoreStarRating();
+
+        this.starRatingEdit!.removeEventListener('click', this.saveStarRating);
+        this.starRatingEdit!.addEventListener('click', this.editStarRating);
+    }
+    private createStarRatingInput(starRatingValue: string): HTMLInputElement {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = starRatingValue;
+        input.step = '0.1';
+        input.min = '0';
+        input.max = '10';
+        input.classList.add('hermidata-starRating', 'hermidata-starRating-input');
+        input.id = 'hermidata-starRating';
+        input.addEventListener('focusout', () => {
+            // TODO: add star rating to hermidata
+            /*this.hermidata.meta.starRating = input.value;*/
+            this.saveStarRating();
+        });
+        return input;
+    }
+    private createStarRatingDiv(starRatingValue: string): HTMLDivElement {
+        const div = document.createElement('div');
+        div.classList.add('hermidata-starRating');
+        div.id = 'hermidata-starRating';
+        div.textContent = `★ ${starRatingValue}`;
+        return div;
+    }
+    private restoreStarRating(): void {
+        const starRatingElement = document.querySelector<HTMLInputElement>('#hermidata-starRating');
+        const starRatingValue = /*this.hermidata.meta.starRating ?? */ starRatingElement?.value
+        if (!starRatingValue || !starRatingElement) return;
+
+        starRatingElement.replaceWith(this.createStarRatingDiv(starRatingValue));
+
+        // set edit button text back to Edit
+        if (!this.starRatingEdit) return;
+        this.starRatingEdit.textContent = 'Edit';
     }
 
     public setMarkersViewMode(newViewMode: 'chapter' | 'date'): void {
@@ -182,7 +250,7 @@ export class Detail extends RSSPageBuilder {
         const allAlternativeTitles = this.hermidata.meta.altTitles;
 
         // button to open alt titles
-        const altTitleButton = document.querySelector<HTMLDivElement>('#hermidata-alternative-title-button');
+        const altTitleButton = document.querySelector<HTMLDivElement>('#hermidata-alternative-title-button-text');
         if (!altTitleButton) throw new Error("Alternative title button does not exist");
         altTitleButton.textContent = this.hermidata.title;
 
@@ -307,6 +375,10 @@ export class Detail extends RSSPageBuilder {
             markerElementContainer.classList.add('hermidata-marker-container');
             markerElementContainer.dataset.id = marker.id;
             markerElementContainer.id = `hermidata-marker-container-${index}`;
+
+            // add marker row container
+            const markerRowContainer = document.createElement('div');
+            markerRowContainer.classList.add('hermidata-marker-row');
             
             // add marker color bookmark
             const markerColor = document.createElement('div');
@@ -318,14 +390,6 @@ export class Detail extends RSSPageBuilder {
             markerElement.classList.add('hermidata-marker');
             markerElement.id = `hermidata-marker-${index}`;
             markerElement.addEventListener('click', () => this.jumpToChapter(marker.url));
-
-            // add marker notes
-            if (marker.note) {
-                const markerNotes = document.createElement('div');
-                markerNotes.classList.add('hermidata-marker-notes');
-                markerNotes.textContent = marker.note;
-                markerElementContainer.append(markerNotes);
-            }
 
             // add marker chapter
             const markerChapter = document.createElement('div');
@@ -349,7 +413,22 @@ export class Detail extends RSSPageBuilder {
             
             // append
             markerElement.append(markerChapter, markerLabel, markerReadStatus, markerLastUpdated);
-            markerElementContainer.append(markerColor, markerElement);
+            markerRowContainer.append(markerColor, markerElement);
+            markerElementContainer.append(markerRowContainer);
+
+            // add marker notes
+            // NOTE: marker notes are optional AND need to be set under the marker element
+            if (marker.note) {
+                const markerNotesContainer = document.createElement('div');
+                markerNotesContainer.classList.add('hermidata-marker-notes');
+                markerElementContainer.append(markerNotesContainer);
+
+                const markerNotes = document.createElement('div');
+                markerNotes.classList.add('hermidata-marker-notes-inner');
+                markerNotes.textContent = marker.note;
+                markerNotesContainer.append(markerNotes);
+            }
+
             container.appendChild(markerElementContainer);
             
         }
@@ -414,6 +493,7 @@ export class Detail extends RSSPageBuilder {
                 
                 item.style.display = 'flex';
             });
+            this.removeNoResultsMessage();
             return;
         }
 
@@ -437,6 +517,28 @@ export class Detail extends RSSPageBuilder {
             // Show only if it passes BOTH filters AND search
             parent.style.display = matchesAny ? 'flex' : 'none';
         });
+
+        // if all hidden, show no results message
+        if (Array.from(allItems).every(item => item.style.display === 'none')) this.createNoResultsMessage(query);
+        else this.removeNoResultsMessage();
+    }
+    private removeNoResultsMessage() {
+        const oldNoResults = document.querySelector<HTMLDivElement>('.hermidata-no-results');
+        if (oldNoResults) oldNoResults.remove();
+
+    }
+    private createNoResultsMessage(query: string) {
+        // 1. remove all no results messages
+        this.removeNoResultsMessage();
+        // 2. create new no results message
+        const noResults = document.createElement('div');
+        noResults.classList.add('hermidata-no-results');
+        noResults.textContent = `No results for "${query}"`;
+
+        // 3. append
+        const container = document.getElementById('hermidata-markers-list');
+        if (!container) throw new Error("Markers does not exist");
+        container.append(noResults);
     }
 
     private setupSearchBar(e_: KeyboardEvent, suggestionBox: HTMLDivElement) {

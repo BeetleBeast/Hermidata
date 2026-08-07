@@ -741,6 +741,12 @@ label {
     border-left: 1px solid var(--border);
     border-radius: 0;
     padding-left: 10px;
+    display: flex;
+    align-items: center;
+}
+#hermidata-starRating,
+.hermidata-starRating-input {
+	width: fit-content;
 }
 
 .hermidata-metadata-group-2[data-has-none="true"] {
@@ -770,6 +776,7 @@ label {
 	padding: 10px;
 	justify-content: space-between;
 	align-items: center;
+    margin-top: 10px;
 }
 
 /* alt titles */
@@ -777,6 +784,7 @@ label {
 .hermidata-alternative-title {
 	height: 25px;
 	width: 100%;
+    white-space: nowrap;
 }
 
 #hermidata-alternative-titles-container {
@@ -786,13 +794,17 @@ label {
     transition: max-height 0.2s cubic-bezier(.07,.48,1,.58), overflow 0.2s allow-discrete;
 }
 
-#hermidata-alternative-titles-container[data-closed="true"] {
-    max-height: 25px;
+#hermidata-alternative-titles-list {
+	transition: max-height 0.5s ease;
+}
+
+#hermidata-alternative-titles-list[data-closed="true"] {
+    max-height: 0;
     overflow: hidden;
 }
 
-#hermidata-alternative-titles-container[data-closed="false"] {
-    max-height: 500px;
+#hermidata-alternative-titles-list[data-closed="false"] {
+    max-height: 100vh;
     overflow: visible;
 }
 
@@ -806,35 +818,17 @@ label {
 	width: fit-content;
 	padding-left: 20px;
 	padding-right: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+#hermidata-alternative-title-button-text {
+	margin: 0;
 }
 
 /* markers */
-
-.hermidata-marker-container:first-child {
-    margin-top: 15px;
-}
-
-.hermidata-marker-container {
-	display: flex;
-	position: relative;
-	flex-direction: row;
-	align-items: center;
-	justify-content: flex-end;
-	width: 100%;
-	border: 1px solid;
-	border-radius: 10px;
-	border-color: var(--focus-ring);
-    cursor: pointer;
-}
-
-.hermidata-marker-container:hover {
-	text-emphasis-color: var(--Btn);
-	accent-color: var(--Text-color);
-	outline: 1px solid var(--focus-ring);
-	transform: scale(1.005);
-	transition: transform 0.2s ease-in-out;
-}
-
 
 .hermidata-marker-color {
 	width: 50px;
@@ -879,21 +873,81 @@ label {
     margin-block: 1em;
 }
 
-.hermidata-marker-notes:hover,
-.hermidata-marker-container:hover > .hermidata-marker-notes {
-	display: flex;
-	position: fixed;
-	left: 50px;
-	top: calc(100% + 5px);
-	width: 94.5%;
-	align-items: center;
-	background-color: var(--Input-colorV2);
-	padding: 5px;
-	padding-left: 10px;
-	border: 1px solid var(--focus-ring);
-	border-radius: 8px;
+.hermidata-marker-container:first-child {
+    margin-top: 15px;
 }
+
+
+
+.hermidata-marker-container {
+    display: flex;
+    flex-direction: column;   /* was row */
+    position: relative;
+    align-items: stretch;      /* was align-items: center / justify-content: flex-end */
+    width: 100%;
+    
+}
+
+/* new wrapper takes over the old row-layout responsibilities */
+.hermidata-marker-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    position: relative; /* so .hermidata-marker-color's absolute positioning still anchors here */
+    border: 1px solid;
+    border-radius: 10px;
+    border-color: var(--focus-ring);
+    cursor: pointer;
+}
+
+.hermidata-marker-row:hover {
+	text-emphasis-color: var(--Btn);
+	accent-color: var(--Text-color);
+	outline: 1px solid var(--focus-ring);
+	transform: scale(1.005);
+	transition: transform 0.2s ease-in-out;
+}
+
 .hermidata-marker-notes {
-	display: none;
-    transition: display 0.2s ease-in-out;
+	display: grid;
+	grid-template-rows: 0fr;
+	transition: grid-template-rows 0.2s ease-in-out, align-items 0.2s ease-in-out;
+    width: 98%;
+    align-self: end;
+}
+
+.hermidata-marker-notes-inner {
+    overflow: hidden;
+    min-height: 0;
+    padding-left: 10px;
+}
+
+.hermidata-marker-container:hover > .hermidata-marker-notes {
+	grid-template-rows: 1fr;
+	background-color: var(--table-color);
+	border-radius: 5px;
+    align-items: center;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.hermidata-alternative-title-button-arrow {
+    transition: transform 0.2s ease-in-out;
+    color: var(--Text-color); /* or whatever fits */
+
+    display: flex;
+	align-content: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+}
+
+.hermidata-alternative-title-button-arrow[data-closed="true"] {
+    transform: rotate(-90deg);
+}
+
+.hermidata-alternative-title-button-arrow[data-closed="false"] {
+    transform: rotate(90deg);
 }
