@@ -44,7 +44,8 @@ export class Detail extends RSSPageBuilder {
 
     }
     public reload(): void {
-        throw new Error("Method not implemented.");
+        // force page reload
+        window.location.reload();
     }
 
     private addEventListener(): void {
@@ -76,8 +77,6 @@ export class Detail extends RSSPageBuilder {
         // on global search
         this.searchInput?.addEventListener('input', (e) => this.handleSearchInput(e, this.autocompleteContainer!));
         this.searchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!));
-
-        // on clicked Edit button
 
         // on clicked Edit star button
         this.starRatingEdit?.addEventListener('click', this.editStarRating);
@@ -324,7 +323,7 @@ export class Detail extends RSSPageBuilder {
 
         // TODO: add star rating to hermidata
         // TEMP: use default 5 until implemented
-        starRating.textContent = "★ 5.0"; //String(this.hermidata.meta.starRating);
+        starRating.textContent = "5.0"; //String(this.hermidata.meta.starRating);
     }
     private populateGenres() {
         const genres = document.getElementById('hermidata-genres');
@@ -343,7 +342,7 @@ export class Detail extends RSSPageBuilder {
 
         const allTagsUsed = this.hermidata.meta.tags;
         const allDemographics = allTagsUsed.filter(tag => DEMOGRAPHIC_TAGS.includes(tag)).join(', ');
-        console.log(allDemographics);
+        
         demographics.textContent = allDemographics || "--None--";
         demographics.dataset.hasNone = allDemographics ? 'false' : 'true';
     }

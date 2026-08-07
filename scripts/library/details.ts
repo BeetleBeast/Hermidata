@@ -2,6 +2,7 @@ import { getAllHermidata, getSettings } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
 import { Detail } from "./build/detail";
+import { EditDetail } from "./build/edit";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const settings = await getSettings();
@@ -15,6 +16,10 @@ export class Controller {
 
     private readonly detail: Detail;
 
+    protected readonly editDetail: EditDetail;
+
+    private readonly editInfoBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
+
     private readonly reloadData = getElement<HTMLButtonElement>("#reload-info-btn");
 
     private readonly chapterViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-grid");
@@ -22,12 +27,15 @@ export class Controller {
 
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         this.detail = new Detail(allHermidata, settings);
+        this.editDetail = new EditDetail(allHermidata, settings);
     }
 
     public async init() {
     
         // build
         this.detail.build();
+
+        this.editDetail.build();
 
         this.setEventListener();
     }
@@ -39,6 +47,9 @@ export class Controller {
     private setEventListener() {
         this.removeEventListener();
         this.reloadData!.addEventListener('click', () => this.reload());
+
+        // on clicked Edit button
+        this.editInfoBtn?.addEventListener('click', this.editDetail.activate);
 
         // viewMode toggle
         // this.chapterViewMode?.addEventListener('click', () => this.detail.setGridViewMode('chapter'));
