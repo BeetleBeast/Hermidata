@@ -190,6 +190,12 @@ export class EditDetail extends RSSPageBuilder {
         this.changeAltTitleBackToDiv();
 
         // data group 1 | set select back to div
+        this.changeGroup1BackToDiv();
+
+        // data group 2 | set input back to div
+        this.changeGroup2BackToDiv();
+    }
+    private changeGroup1BackToDiv() {
         const group1 = [
             { element: document.querySelector<HTMLSelectElement>('#hermidata-novelType'), switchTo: 'div'}, // novel type
             { element: document.querySelector<HTMLSelectElement>('#hermidata-contentRating'), switchTo: 'div'}, // content Rating
@@ -212,6 +218,32 @@ export class EditDetail extends RSSPageBuilder {
             
             // 4. replace element
             element.replaceWith(newElement);
+        }
+    }
+    private changeGroup2BackToDiv() {
+        const group2: { element: NodeListOf<HTMLInputElement> | null, switchTo: 'div' }[] = [
+            { element: document.querySelectorAll<HTMLInputElement>('.hermidata-genre'), switchTo: 'div'}, // genres
+            { element: document.querySelectorAll<HTMLInputElement>('.hermidata-demographic'), switchTo: 'div'}, // demographics
+        ]
+
+        for (const {element, switchTo} of group2) {
+            // if all elements are null, make a empty div
+            if ( element !== null && Array.from(element).every(el => el.value === '')) {
+                // get parent element
+                const parent = element?.[0].parentElement;
+                if (!parent) return;
+                parent.textContent = '--None--';
+                continue;
+            }
+            if (!element) continue;
+            for (const el of element) {
+                // if input is empty, do not switch but remove
+                if (el.value === '') {
+                    el.remove();
+                    continue;
+                }
+                this.switchElement(el, switchTo, true, 'reset');
+            }
         }
     }
     private changeAltTitleBackToDiv() {
@@ -284,6 +316,55 @@ export class EditDetail extends RSSPageBuilder {
         this.setGroup1ToSelect();
         
         // data group 2 | set div to input
+        this.setGroup2ToInput();
+    }
+    private setGroup2ToInput() {
+        const group2: { element: NodeListOf<HTMLDivElement> | null, switchTo: 'input', inputType: 'text' }[] = [
+            { element: document.querySelectorAll<HTMLDivElement>('.hermidata-genre'), switchTo: 'input', inputType: 'text'}, // genres
+            { element: document.querySelectorAll<HTMLDivElement>('.hermidata-demographic'), switchTo: 'input', inputType: 'text'}, // demographics
+        ];
+
+        for (const {element, switchTo, inputType} of group2) {
+            if (!element) continue;
+            for (const el of element) this.switchElement(el, switchTo, inputType, true, 'set');
+        }
+        // if no genres/demographics remove the container text
+        if (document.querySelectorAll<HTMLDivElement>('.hermidata-genre').length === 0) {
+            const container = document.querySelector<HTMLDivElement>('#hermidata-genres');
+            if (!container) return;
+            container.textContent = '';
+        }
+        if (document.querySelectorAll<HTMLDivElement>('.hermidata-demographic').length === 0) {
+            const container = document.querySelector<HTMLDivElement>('#hermidata-demographics');
+            if (!container) return;
+            container.textContent = '';
+        }
+
+        // auto new input
+        // add new input every time the last empty input is filled
+        const container = document.querySelector<HTMLDivElement>('#hermidata-genres');
+        if (!container) return;
+        this.addNewInput('hermidata-genre', container, 'genre');
+
+        const container2 = document.querySelector<HTMLDivElement>('#hermidata-demographics');
+        if (!container2) return;
+        this.addNewInput('hermidata-demographic', container2, 'demographic');
+    }
+    private addNewInput(className: string, container: HTMLDivElement, type: 'genre' | 'demographic'): void {
+        const newInput = document.createElement('input');
+        newInput.classList.add(className, 'emptyInput', type);
+        newInput.setAttribute('is_empty', '');
+        newInput.setAttribute('data-editing', 'true');
+
+        const handleInput = () => {
+            newInput.removeAttribute('is_empty');
+            newInput.removeEventListener('input', handleInput);
+            this.addNewInput(className, container, type);
+        };
+
+        newInput.addEventListener('input', handleInput);
+
+        container.appendChild(newInput);
     }
     private setGroup1ToSelect() {
         const group1: { element: HTMLDivElement | null, switchTo: 'select', content: AnyNovelType[] | AnyNovelStatus[] | ContentRating[] }[] = [

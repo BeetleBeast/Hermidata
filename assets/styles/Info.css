@@ -545,6 +545,7 @@ label {
 	padding: 4px;
 	border-radius: 5px;
     transition: background 0.2s ease, color 0.2s ease;
+    width: fit-content !important;
 }
 
 .hermidata-demographic:hover,
@@ -553,6 +554,10 @@ label {
 	color: var(--bg-color);
 }
 
+.emptyInput {
+    flex: 0 0 auto;
+    width: 120px; /* or whatever fits your design */
+}
 
 
 /* markers */
@@ -771,6 +776,10 @@ label {
     color: var(--muted);
 }
 
+.hermidata-metadata-group-2:has(.hermidata-genre[data-editing="true"]) {
+    justify-content: flex-start;
+}
+
 .hermidata-metadata-group-1 {
 	width: 100%;
 	display: flex;
@@ -795,6 +804,7 @@ label {
 	justify-content: space-between;
 	align-items: center;
     margin-top: 10px;
+    flex-wrap: wrap;
 }
 
 /* alt titles */
