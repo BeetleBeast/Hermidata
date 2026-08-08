@@ -1,3 +1,5 @@
+import type { AnyNovelStatus, AnyNovelType } from "../../shared/types";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { RSSPageBuilder } from "../build";
 
 
@@ -5,22 +7,80 @@ interface TagMap {
     input: HTMLInputElement;
     div: HTMLDivElement;
     textarea: HTMLTextAreaElement;
-    select: HTMLSelectElement;
     img: HTMLImageElement;
-    button: HTMLButtonElement;
     date: HTMLInputElement;
+    option: HTMLOptionElement;
+    select: HTMLSelectElement;
+    h2: HTMLHeadingElement;
+}
+/** @constant content rating */
+type ContentRating = 'Safe' | 'Pornographic' | 'Explicit';
+
+const CONTENT_RATING_OPTIONS: ContentRating[] = ['Safe', 'Pornographic', 'Explicit'];
+
+type SwitchConfig = MainConfig | InputConfig | divConfig;
+interface MainConfig {
+    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
+    switchTo: Exclude<keyof TagMap, 'input'>
+}
+interface InputConfig {
+    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
+    switchTo: 'input';
+    inputType: 'text' | 'number' | 'image' | 'date';
+}
+interface divConfig {
+    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
+    switchTo: 'div';
+    rules: {
+        allUpperCase: boolean;
+    }
 }
 
-interface SwitchConfig {
-    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLImageElement | HTMLButtonElement | null;
-    switchTo: keyof TagMap;
-    inputType?: 'text' | 'number' | 'image' | 'date';
-}
+type SetMode = 'reset' | 'set';
 
 export class EditDetail extends RSSPageBuilder {
 
-    private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn')
-    private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn')
+    private readonly hermidata: HermidataModel = this.getCurrentHermidata();
+
+    private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn');
+    private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
+
+    private getAllDivToInputs(): SwitchConfig[] {
+        return [
+            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'input', inputType: 'image' }, // image
+
+            { element: document.querySelector<HTMLHeadingElement>('#hermidata-title'), switchTo: 'input', inputType: 'text' }, // main title
+            // alternative titles container | special case handled separately
+
+            { element: document.querySelector<HTMLDivElement>('#hermidata-contentRating'), switchTo: 'input', inputType: 'text' }, // content rating
+            { element: document.querySelector<HTMLDivElement>('#hermidata-releaseDate'), switchTo: 'input', inputType: 'date' }, // release Date
+
+            { element: document.querySelector<HTMLDivElement>('#hermidata-starRating'), switchTo: 'input', inputType: 'number' }, // star Rating
+
+            // genres | special case handled separately
+            // demographics | special case handled separately
+            { element: document.querySelector<HTMLDivElement>('#hermidata-sources'), switchTo: 'input', inputType: 'text' }, // hermidata Sources
+            { element: document.querySelector<HTMLDivElement>('#hermidata-latestRelease'), switchTo: 'input', inputType: 'text' }, // latest Release
+        ];
+    }
+    private getAllInputsBackToDiv(): SwitchConfig[] {
+        return [
+            { element: document.querySelector<HTMLInputElement>('#hermidata-img'), switchTo: 'img'}, // image
+
+            { element: document.querySelector<HTMLInputElement>('#hermidata-title'), switchTo: 'h2'}, // main title
+            // alternative titles container | special case handled separately
+
+            { element: document.querySelector<HTMLInputElement>('#hermidata-contentRating'), switchTo: 'div'}, // // content rating
+            { element: document.querySelector<HTMLInputElement>('#hermidata-releaseDate'), switchTo: 'div'}, // release Date
+
+            { element: document.querySelector<HTMLInputElement>('#hermidata-starRating'), switchTo: 'div'}, // star Rating
+
+            // genres | special case handled separately
+            // demographics | special case handled separately
+            { element: document.querySelector<HTMLInputElement>('#hermidata-sources'), switchTo: 'div'}, // hermidata Sources
+            { element: document.querySelector<HTMLInputElement>('#hermidata-latestRelease'), switchTo: 'div'}, // latest Release
+        ];
+    }
 
     private saveButtonCurrentMode: 'Edit' | 'Save' = 'Edit'
 
@@ -33,10 +93,27 @@ export class EditDetail extends RSSPageBuilder {
         // force page reload
         window.location.reload();
     }
+
+    private getIdFromUrl(): string | null {
+        const hash = window.location.hash; // "#/id/someID"
+        const match = hash.match(/^#\/id\/(.+)$/);
+        return match ? match[1] : null;
+    }
+
+    /** Get the current hermidata from the id parameter inside the url */
+    private getCurrentHermidata(): HermidataModel {
+        const id = this.getIdFromUrl();
+        if (!id) throw new Error("No id found in url");
+
+        const hermidata = this.AllHermidata[id];
+        if (!hermidata) throw new Error(`No hermidata found for id ${id}`);
+
+        return new HermidataModel(hermidata);
+    }
     public activate(): void {
 
         // 1. set cancel button
-        if (!this.cancelBtn) throw new Error('Cancel button not found');
+        if (!this.cancelBtn) return;
         this.cancelBtn.style.display = 'flex';
 
         // 2. set all inputs to editable
@@ -48,15 +125,13 @@ export class EditDetail extends RSSPageBuilder {
 
     public deactivate(mode: 'cancel' | 'save'): void {
         // 1. set cancel button
-        if (!this.cancelBtn) throw new Error('Cancel button not found');
+        if (!this.cancelBtn) return;
         this.cancelBtn.style.display = 'none';
         
         // 2. set all inputs to editable
         this.changeAllInputsBack();
         
         this.showButtons();
-
-        throw new Error("Method not implemented.");
 
     }
     private eventListener(): void {
@@ -99,90 +174,184 @@ export class EditDetail extends RSSPageBuilder {
         starRatingEditButton.style.display = 'none';
     }
     private changeAllInputsBack() {
-        const allInputs = new Map<HTMLElement | null, [keyof TagMap, 'text' | 'number' | 'image' | 'date' | undefined]>([
-            [document.querySelector<HTMLInputElement>('#hermidata-img'), ['img', undefined]], // image
 
-            [document.querySelector<HTMLInputElement>('#hermidata-title'), ['div', undefined]], // main title
-            // [document.querySelector<HTMLTextAreaElement>('#hermidata-alternative-titles-list'), ['div', undefined]], // alternative titles container
-
-            [document.querySelector<HTMLSelectElement>('#hermidata-novelType'), ['div', undefined]], // novel type
-            [document.querySelector<HTMLSelectElement>('#hermidata-contentRating'), ['div', undefined]], // content Rating
-            [document.querySelector<HTMLInputElement>('#hermidata-contentRating'), ['div', undefined]], // hermidata-releaseDate
-            [document.querySelector<HTMLSelectElement>('#hermidata-novelStatus'), ['div', undefined]], // novel Status
-
-            [document.querySelector<HTMLInputElement>('#hermidata-starRating'), ['div', undefined]], // star Rating
-
-            // genres | special case handled separately
-            // demographics | special case handled separately
-            [document.querySelector<HTMLInputElement>('#hermidata-sources'), ['div', undefined]], // hermidata Sources
-            [document.querySelector<HTMLInputElement>('#hermidata-latestRelease'), ['div', undefined]], // latest Release
-
-        ]);
-
-        for (const [element, [switchTo, inputType]] of allInputs) {
-            if (element) {
-                if (inputType && switchTo === 'input') this.switchElement(element, switchTo, inputType, true);
-                else if (switchTo !== 'input') this.switchElement(element, switchTo, true);
-                else throw new Error("Element not found.");
-            }
+        for (const {element, switchTo} of this.getAllInputsBackToDiv()) {
+            if (!element) continue;
+            
+            if (switchTo !== 'input') this.switchElement(element, switchTo, true, 'reset');
+            else throw new Error("Element not found.");
+            
         }
 
-        ///notes Content | set read only
+        // notes Content | set read only
         document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.setAttribute('readonly', '');
+
+        // alt titles
+        this.changeAltTitleBackToDiv();
+
+        // data group 1 | set select back to div
+        const group1 = [
+            { element: document.querySelector<HTMLSelectElement>('#hermidata-novelType'), switchTo: 'div'}, // novel type
+            { element: document.querySelector<HTMLSelectElement>('#hermidata-contentRating'), switchTo: 'div'}, // content Rating
+            { element: document.querySelector<HTMLSelectElement>('#hermidata-novelStatus'), switchTo: 'div'}, // novel Status
+        ];
+
+        for (const {element, switchTo} of group1) {
+            if (!element) continue;
+            
+            // 1. create new element
+            const newElement = document.createElement(switchTo);
+
+            // 2. copy attributes
+            for (const attr of element.attributes) newElement.setAttribute(attr.name, attr.value);
+            newElement.dataset.editing = 'false';
+
+            // 3. transfer content
+            const value = this.getElementContent(element);
+            this.setElementContent(newElement, value.toUpperCase());
+            
+            // 4. replace element
+            element.replaceWith(newElement);
+        }
+    }
+    private changeAltTitleBackToDiv() {
+        const altTitlesContainer = document.querySelector<HTMLTextAreaElement>('#hermidata-alternative-titles-list');
+
+        if (!altTitlesContainer) throw new Error('Alt titles container not found');
+        // get the content
+        const altTitlesContent = this.hermidata.meta.altTitles;
+
+        const altTitles = this.switchElement(altTitlesContainer, 'div', false, 'reset');
+
+        for (const title of altTitlesContent) {
+
+            // 1. create new element
+            const newElement = document.createElement('div');
+            newElement.classList.add('hermidata-alternative-title');
+            // 3. transfer content
+            this.setElementContent(newElement, title);
+            
+            // 4. append element
+            altTitles.appendChild(newElement);
+        }
+
+        // re-Attach event listener of alt titles
+        const altTitleButton = document.querySelector<HTMLDivElement>('#hermidata-alternative-title-button-text');
+        if (!altTitleButton) throw new Error("Alternative title button does not exist");
+        altTitleButton?.addEventListener('click', () => {
+            altTitles!.dataset.closed = altTitles!.dataset.closed === 'true' ? 'false' : 'true';
+            document.querySelector<SVGElement>('.hermidata-alternative-title-button-arrow')!.dataset.closed = altTitles!.dataset.closed;
+        });
+        
+    }
+    private changeAltTitleToInput() {
+        const altTitlesContainer = document.querySelector<HTMLDivElement>('#hermidata-alternative-titles-list');
+        const altTitles = document.querySelectorAll<HTMLDivElement>('.hermidata-alternative-title');
+        if (!altTitlesContainer || !altTitles) throw new Error('Alt titles container not found');
+        // get the content
+        const altTitlesContent = Array.from(altTitles).map(title => title.textContent).join('\n');
+        // 1. create new element
+        const newElement = document.createElement('textarea');
+
+        // 2. copy attributes
+        for (const attr of altTitlesContainer.attributes) newElement.setAttribute(attr.name, attr.value);
+        newElement.dataset.editing = 'true';
+
+        // 3. transfer content
+        this.setElementContent(newElement, altTitlesContent);
+        
+        // 4. replace element
+        altTitlesContainer.replaceWith(newElement);
     }
 
     private changeAllInputsToEditable() {
-        const allInputs: SwitchConfig[] = [
-            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'input', inputType: 'image' }, // image
 
-            { element: document.querySelector<HTMLHeadingElement>('#hermidata-title'), switchTo: 'input', inputType: 'text' }, // main title
-            // [document.querySelector<HTMLDivElement>('#hermidata-alternative-titles-list'), ['textarea', undefined]], // alternative titles container
+        for (const config of this.getAllDivToInputs()) {
+            if (!config.element) continue;
 
-            { element: document.querySelector<HTMLDivElement>('#hermidata-novelType'), switchTo: 'select',inputType:  undefined }, // novel type
-            { element: document.querySelector<HTMLDivElement>('#hermidata-contentRating'), switchTo: 'select', inputType: undefined }, // content Rating
-            { element: document.querySelector<HTMLDivElement>('#hermidata-contentRating'), switchTo: 'input', inputType: 'text' }, // hermidata-releaseDate
-            { element: document.querySelector<HTMLDivElement>('#hermidata-novelStatus'), switchTo: 'select', inputType: undefined }, // novel Status
-
-            { element: document.querySelector<HTMLDivElement>('#hermidata-starRating'), switchTo: 'input', inputType: 'number' }, // star Rating
-
-            // genres | special case handled separately
-            // demographics | special case handled separately
-            { element: document.querySelector<HTMLDivElement>('#hermidata-sources'), switchTo: 'input', inputType: 'text' }, // hermidata Sources
-            { element: document.querySelector<HTMLDivElement>('#hermidata-latestRelease'), switchTo: 'input', inputType: 'text' }, // latest Release
-
-        ];
-
-        for (const { element, switchTo, inputType } of allInputs) {
-            if (element) {
-                if (inputType && switchTo === 'input') this.switchElement(element, switchTo, inputType, true);
-                else if (switchTo !== 'input') this.switchElement(element, switchTo, true);
-                else throw new Error("Element not found.");
-            }
+            if (config.switchTo === 'input') this.switchElement(config.element, config.switchTo, config.inputType, true, 'set');
+            else this.switchElement(config.element, config.switchTo, true, 'set');
         }
 
 
         // notes Content | remove read only
         document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.removeAttribute('readonly');
+
+        // alt titles 
+        this.changeAltTitleToInput();
+
+        // data group 1 | set div to select
+        this.setGroup1ToSelect();
+        
+        // data group 2 | set div to input
+    }
+    private setGroup1ToSelect() {
+        const group1: { element: HTMLDivElement | null, switchTo: 'select', content: AnyNovelType[] | AnyNovelStatus[] | ContentRating[] }[] = [
+            { 
+                element: document.querySelector<HTMLDivElement>('#hermidata-novelType'), 
+                switchTo: 'select', 
+                content: this.settings.ContentTypesAndStatuses.TYPE_OPTIONS
+            }, // novel type
+            { 
+                element: document.querySelector<HTMLDivElement>('#hermidata-contentRating'), 
+                switchTo: 'select', 
+                content: CONTENT_RATING_OPTIONS
+            }, // content Rating
+            { 
+                element: document.querySelector<HTMLDivElement>('#hermidata-novelStatus'), 
+                switchTo: 'select', 
+                content: this.settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS
+            }, // novel Status
+        ]
+
+        for (const {element, switchTo, content} of group1) {
+            if (!element) continue;
+            
+            // 1. create new element
+            const newElement = document.createElement(switchTo);
+
+            // 2. copy attributes
+            for (const attr of element.attributes) newElement.setAttribute(attr.name, attr.value);
+            newElement.dataset.editing = 'false';
+
+            // 3. transfer content
+            const value = this.getElementContent(element);
+            
+            // 3.1 get first option from content
+            const option = this.getOptionFromValue(value, switchTo);
+            // 3.2 get all options from const
+            const options = this.getAllOptions(content);
+
+            // 3.3 add option to select
+            if (option) newElement.append(option, ...options);
+
+            
+            // 4. replace element
+            element.replaceWith(newElement);
+        }
     }
 
     // overload: switching to 'input' — inputType required
-    private switchElement<K extends 'input'>( element: HTMLElement, switchTo: K, inputType: 'text' | 'number' | 'image' | 'date', transferContent?: boolean ): TagMap[K];
+    private switchElement<K extends 'input'>( element: HTMLElement, switchTo: K, inputType: 'text' | 'number' | 'image' | 'date', transferContent?: boolean, set?: 'reset' | 'set' ): TagMap[K];
 
     // overload: switching to anything else — no inputType
-    private switchElement<K extends Exclude<keyof TagMap, 'input'>>( element: HTMLElement, switchTo: K, transferContent?: boolean ): TagMap[K];
+    private switchElement<K extends Exclude<keyof TagMap, 'input'>>( element: HTMLElement, switchTo: K, transferContent?: boolean, set?: 'reset' | 'set' ): TagMap[K];
 
     // implementation signature — must be compatible with BOTH overloads above
-    private switchElement( element: HTMLElement, switchTo: keyof TagMap, inputTypeOrTransferContent?: 'text' | 'number' | 'image' | 'date' | boolean, transferContent = false ): HTMLElement {
+    private switchElement( element: HTMLElement, switchTo: keyof TagMap, arg3?: 'text' | 'number' | 'image' | 'date' | boolean, arg4?: boolean | 'reset' | 'set', arg5?: 'reset' | 'set'): HTMLElement {
 
         // disambiguate which overload was actually called
         let inputType: 'text' | 'number' | 'date' | 'image' = 'text';
-        let doTransfer = transferContent;
+        let transferContent = false;
+        let set: SetMode = 'set';
 
         if (switchTo === 'input') {
-            inputType = (inputTypeOrTransferContent as 'text' | 'number' | 'image' | 'date') ?? 'text';
-            doTransfer = transferContent;
+            inputType = (arg3 as typeof inputType) ?? 'text';
+            transferContent = (arg4 as boolean) ?? false;
+            set = (arg5 as SetMode) ?? 'set';
         } else {
-            doTransfer = (inputTypeOrTransferContent as boolean) ?? false;
+            transferContent = (arg3 as boolean) ?? false;
+            set = (arg4 as SetMode) ?? 'set';
         }
 
         // 1. create new element
@@ -193,12 +362,17 @@ export class EditDetail extends RSSPageBuilder {
 
         // 2. copy attributes
         for (const attr of element.attributes) {
-            newElement.setAttribute(attr.name, attr.value);
+            if (attr.name === 'style' && element instanceof HTMLTextAreaElement && switchTo === 'div') {
+                const strippedStyle = this.removeStyleProperty(attr.value, 'height');
+                if (strippedStyle) newElement.setAttribute('style', strippedStyle);
+                continue;
+            }
+            else newElement.setAttribute(attr.name, attr.value);
         }
-        newElement.dataset.editing = 'true';
+        newElement.dataset.editing = set === 'reset' ? 'false' : 'true';
 
         // 3. transfer content
-        if (doTransfer) {
+        if (transferContent) {
             const value = this.getElementContent(element);
             this.setElementContent(newElement, value);
         }
@@ -214,18 +388,36 @@ export class EditDetail extends RSSPageBuilder {
             || element instanceof HTMLTextAreaElement
             || element instanceof HTMLSelectElement;
     }
+    private removeStyleProperty(styleValue: string, property: string): string {
+        return styleValue
+            .split(';')
+            .map(rule => rule.trim())
+            .filter(rule => rule && !rule.toLowerCase().startsWith(`${property.toLowerCase()}:`))
+            .join('; ');
+    }
 
     private getElementContent(element: HTMLElement): string {
+        if (element instanceof HTMLInputElement && element.type === 'date') return this.isoDateToFrench(element.value)
         return this.isValueElement(element)
             ? element.value
             : (element.textContent ?? '');
     }
 
     private setElementContent(element: HTMLElement, value: string): void {
-        if (this.isValueElement(element)) {
-            element.value = value;
-        } else {
-            element.textContent = value;
+        if (!this.isValueElement(element)) element.textContent = value;
+        else { 
+            if (element instanceof HTMLInputElement && element.type === 'date') element.value = this.frenchDateToISO(value);
+            else element.value = value;
         }
+    }
+    private getOptionFromValue(value: string, element: 'option' | 'select' ): HTMLOptionElement | HTMLSelectElement {
+        const opt = document.createElement(element);
+        opt.classList.add('select-option');
+        opt.value = value;
+        opt.textContent = value;
+        return opt;
+    }
+    private getAllOptions(content: string[]): HTMLOptionElement[] {
+        return content.map(value => this.getOptionFromValue(value, 'option') as HTMLOptionElement);
     }
 }

@@ -103,7 +103,7 @@ export class Detail extends RSSPageBuilder {
     private editStarRating = (): void => {
         const starRatingElement = document.querySelector<HTMLDivElement>('#hermidata-starRating');
         // TODO: add star rating to hermidata
-        const starRatingValue = /*this.hermidata.meta.starRating ?? */ starRatingElement?.textContent?.split(' ')[1];
+        const starRatingValue = /*this.hermidata.meta.starRating ?? */ starRatingElement?.textContent;
 
         if (!starRatingValue || !starRatingElement) return;
 
@@ -150,7 +150,7 @@ export class Detail extends RSSPageBuilder {
         const div = document.createElement('div');
         div.classList.add('hermidata-starRating');
         div.id = 'hermidata-starRating';
-        div.textContent = `★ ${starRatingValue}`;
+        div.textContent = `${starRatingValue}`;
         return div;
     }
     private restoreStarRating(): void {

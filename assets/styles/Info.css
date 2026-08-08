@@ -509,6 +509,7 @@ label {
 #hermidata-readLatest-btn {
 	grid-area: readLatestBtn;
 	width: fit-content;
+    height: fit-content;
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -806,6 +807,13 @@ label {
 #hermidata-alternative-titles-list[data-closed="false"] {
     max-height: 100vh;
     overflow: visible;
+}
+#hermidata-alternative-titles-list[data-editing="false"] {
+	height: fit-content;
+}
+
+#hermidata-alternative-titles-list[data-editing="true"] {
+	max-height: none;
 }
 
 #hermidata-alternative-title-button {

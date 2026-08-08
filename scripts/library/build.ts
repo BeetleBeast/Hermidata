@@ -47,6 +47,20 @@ export abstract class RSSPageBuilder {
     protected setToFrenchDate(date: Date | string | number): string {
         return new Date(date).toLocaleDateString('fr-FR');
     }
+    protected frenchDateToISO(value: string): string {
+        const match = value.trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+        if (!match) return '';
+
+        const [, day, month, year] = match;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    protected isoDateToFrench(value: string): string {
+        const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return '';
+
+        const [, year, month, day] = match;
+        return `${day}/${month}/${year}`;
+    }
     protected getTimeAgo(date: string): string {
         
         const unixTime = new Date(date).getTime();
