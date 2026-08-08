@@ -330,21 +330,34 @@ export class Detail extends RSSPageBuilder {
         if (!genres) throw new Error("Genres does not exist");
 
         const allTagsUsed = this.hermidata.meta.tags;
-        
-        const genresThemes = allTagsUsed.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
-        const allGenres = genresThemes.join(', ');
-        genres.textContent = allGenres || "--None--";
-        genres.dataset.hasNone = allGenres ? 'false' : 'true';
+        const genresTags = allTagsUsed.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
+
+        for (const tag of genresTags) {
+            const genre = document.createElement('div');
+            genre.classList.add('hermidata-genre');
+            genre.textContent = tag;
+            genres.appendChild(genre);
+        }
+        if (genresTags.length === 0) genres.textContent = "--None--";
+
+        genres.dataset.hasNone = String(genresTags.length === 0);
     }
     private populateDemographics() {
         const demographics = document.getElementById('hermidata-demographics');
         if (!demographics) throw new Error("Demographics does not exist");
 
         const allTagsUsed = this.hermidata.meta.tags;
-        const allDemographics = allTagsUsed.filter(tag => DEMOGRAPHIC_TAGS.includes(tag)).join(', ');
-        
-        demographics.textContent = allDemographics || "--None--";
-        demographics.dataset.hasNone = allDemographics ? 'false' : 'true';
+        const allDemographics = allTagsUsed.filter(tag => DEMOGRAPHIC_TAGS.includes(tag));
+
+        for (const tag of allDemographics) {
+            const demographic = document.createElement('div');
+            demographic.classList.add('hermidata-demographic');
+            demographic.textContent = tag;
+            demographics.appendChild(demographic);
+        }
+        if (allDemographics.length === 0) demographics.textContent = "--None--";
+
+        demographics.dataset.hasNone = String(allDemographics.length === 0);
     }
     private populateSources() {
         const sources = document.getElementById('hermidata-sources');

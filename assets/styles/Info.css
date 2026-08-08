@@ -538,6 +538,23 @@ label {
 }
 
 
+/* tags */
+.hermidata-demographic,
+.hermidata-genre {
+	background-color: var(--table-color);
+	padding: 4px;
+	border-radius: 5px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.hermidata-demographic:hover,
+.hermidata-genre:hover {
+	background-color: var(--border-focus);
+	color: var(--bg-color);
+}
+
+
+
 /* markers */
 
 
