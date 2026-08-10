@@ -81,10 +81,6 @@ export class Detail extends RSSPageBuilder {
         // on clicked Edit star button
         this.starRatingEdit?.addEventListener('click', this.editStarRating);
     }
-    private jumpToChapter(url: string): void {
-        // TODO: implement
-        window.open(url, '_blank');
-    }
     private setMarkersSortMode(newSortMode: 'asc' | 'desc'): void {
         const currentButtonSelected = document.querySelector<HTMLButtonElement>('.filter-button[data-state="true"]');
 
@@ -376,6 +372,17 @@ export class Detail extends RSSPageBuilder {
 
         latestRelease.textContent = `Ch. ${latestChapter} by ${SourceOfLatestChapter}`
     }
+    protected onMarkerClick(marker: HTMLElement): void {
+        const hermidataId = marker.dataset.id;
+        const url = marker.dataset.url;
+        if (!hermidataId) return;
+
+        const hermidata = new HermidataModel(this.AllHermidata[hermidataId]);
+
+        if (!hermidata) return;
+
+        hermidata.jumpToUrl(url);
+    }
     private populateMarkers() {
         const container = document.getElementById('hermidata-markers-list');
         if (!container) throw new Error("Markers does not exist");
@@ -386,6 +393,7 @@ export class Detail extends RSSPageBuilder {
             const markerElementContainer = document.createElement('div');
             markerElementContainer.classList.add('hermidata-marker-container');
             markerElementContainer.dataset.id = marker.id;
+            markerElementContainer.dataset.url = marker.url;
             markerElementContainer.id = `hermidata-marker-container-${index}`;
 
             // add marker row container
@@ -402,7 +410,8 @@ export class Detail extends RSSPageBuilder {
             markerElement.classList.add('hermidata-marker');
             markerElement.id = `hermidata-marker-${index}`;
             markerElement.dataset.id = marker.id;
-            markerElement.addEventListener('click', () => this.jumpToChapter(marker.url));
+            
+            markerElement.addEventListener('click', this.handleMarkerClick);
 
             // add marker chapter
             const markerChapter = document.createElement('div');

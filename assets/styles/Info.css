@@ -1057,3 +1057,65 @@ label {
     flex-wrap: wrap;
     gap: 6px;
 }
+
+
+/* marker editing */
+
+
+.hermidata-marker > [data-editing="true"] {
+    background-color: var(--table-color);
+    height: 40px;
+}
+
+.hermidata-marker-chapter[data-editing="true"] {
+	height: 30px;
+	padding: 0;
+	margin: 0;
+	background-color: transparent;
+	border: none;
+	outline: none;
+    -webkit-appearance: textfield;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.hermidata-marker-label[data-editing="true"] {
+	padding: 0;
+	margin: 0;
+	background-color: transparent;
+	border: none;
+}
+
+.hermidata-marker-row[data-editing="true"] {
+    cursor: default;
+}
+
+.hermidata-marker-color[data-editing="true"],
+.hermidata-marker[data-editing="true"] {
+    height: 45px;
+}
+
+.hermidata-marker-readStatus[data-editing="true"] {
+
+	height: 35px;
+}
+
+.hermidata-marker-notes[data-editing="true"] {
+    grid-template-rows: 1fr;
+    background-color: var(--table-color);
+    border-radius: 5px;
+    align-items: center;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.hermidata-marker-notes-inner[data-editing="true"] {
+	display: initial;
+	width: auto;
+	height: auto;
+	background-color: transparent;
+	border: none;
+	padding: 0;
+	padding-left: 20px;
+	font-size: initial;
+}

@@ -495,4 +495,9 @@ export class HermidataModel implements Hermidata {
     public IsLatestVersion(): boolean {
         return this.GetVersion() === this.latestVersion;
     }
+    /** open url and visit site or use default url */
+    public jumpToUrl = (url?: string): void => {
+        // TODO: make it more robust later
+        window.open(url ?? this.GetUrl());
+    }
 }

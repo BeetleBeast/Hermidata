@@ -52,10 +52,6 @@ export class EditDetail extends RSSPageBuilder {
     private genreTags: Tags | null = null
     private demographicTags: Tags | null = null
 
-    private readonly markersColor = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-color');
-    private readonly markersChapter = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-chapter');
-    private readonly markersLabel = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-label');
-    private readonly markersReadStatus = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-readStatus');
 
     private getAllDivToInputs(): SwitchConfig[] {
         return [
@@ -387,19 +383,51 @@ export class EditDetail extends RSSPageBuilder {
         // markers
         this.setMarkersToInput();
     }
+    protected onMarkerClick(marker: HTMLElement): void {
+        const hermidataId = marker.dataset.id;
+        const url = marker.dataset.url;
+        if (!hermidataId) return;
+
+        const hermidata = new HermidataModel(this.AllHermidata[hermidataId]);
+
+        if (!hermidata) return;
+
+        hermidata.jumpToUrl(url);
+    }
+    protected setMarkerColourHandler = (event: MouseEvent) => {
+        const colour = event.target as HTMLDivElement;
+        const defaultColor = colour.style.backgroundColor;
+        const rect = document.body.getBoundingClientRect();
+
+        this.setMarkerColour(colour, defaultColor, rect);
+    };
     private setMarkersToInput() {
+        const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
         const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
-        if (!markers) return;
-        for (const marker of markers) {
+        if (!markers || !markersContainer) return;
+        for (const marker of markersContainer) {
+            // disable event listeners
+            marker.removeEventListener('click', this.handleMarkerClick);
+
+            const row = marker.querySelector<HTMLDivElement>('.hermidata-marker-row');
+            if (!row) continue;
+            row.dataset.editing = 'true';
+
+            const markerElement = marker.querySelector<HTMLDivElement>('.hermidata-marker');
+            markerElement!.dataset.editing = 'true';
+
             // colour
             const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
             if (!colour) continue;
-            const defaultColor = colour.style.backgroundColor;
-            const rect = document.body.getBoundingClientRect();
-            colour.addEventListener('click', () => this.setMarkerColour(colour, defaultColor, rect));
+            
+            colour.dataset.editing = 'true';
+            
+            colour.addEventListener('click', this.setMarkerColourHandler );
             // chapter
             const chapter = marker.querySelector<HTMLDivElement>('.hermidata-marker-chapter');
             if (!chapter) continue;
+            // trim chapter
+            chapter.textContent = chapter.textContent.replace('Ch. ', '');
             this.switchElement(chapter, 'input', 'number', true, 'set');
             // label
             const label = marker.querySelector<HTMLDivElement>('.hermidata-marker-label');
@@ -411,6 +439,13 @@ export class EditDetail extends RSSPageBuilder {
             const select = this.switchElement(readStatus, 'select', true, 'set');
             // set read status options
             this.setReadStatusOptions(select, readStatus.textContent);
+
+            // set notes
+            const notesContainer = marker.querySelector<HTMLDivElement>('.hermidata-marker-notes');
+            const notes = marker.querySelector<HTMLDivElement>('.hermidata-marker-notes-inner');
+            if (!notes || !notesContainer) continue;
+            notesContainer.dataset.editing = 'true';
+            this.switchElement(notes, 'input', 'text', true, 'set');
         }
     }
     private setMarkerColour = (colour: HTMLDivElement, defaultColor: string, rect: DOMRect) => {
@@ -418,32 +453,58 @@ export class EditDetail extends RSSPageBuilder {
             async () => {
                 colour!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
             },
-            { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
+            { x: rect.left + ColorPicker.dimensions.width, y: (rect.bottom / 2) + 50 + ColorPicker.dimensions.height }
         );
-        
     }
-    private changeMarkersBackToDiv() {
+    private changeMarkersBackToDiv(resetInfo = true) {
+        const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
         const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
-        if (!markers) return;
-        for (const marker of markers) {
+        if (!markers || !markersContainer) return;
+        for (const marker of markersContainer) {
+            
+            const markerId = marker.dataset.id;
+            if (!markerId) return;
+
+            const row = marker.querySelector<HTMLDivElement>('.hermidata-marker-row');
+            if (!row) continue;
+            row.dataset.editing = 'false';
+
+            const markerElement = marker.querySelector<HTMLDivElement>('.hermidata-marker');
+            markerElement!.dataset.editing = 'false';
+
+            // enable event listeners
+            markerElement?.addEventListener('click', this.handleMarkerClick);
+
             // colour
             const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
             if (!colour) continue;
-            const defaultColor = colour.style.backgroundColor;
-            const rect = document.body.getBoundingClientRect();
-            colour.removeEventListener('click', () => this.setMarkerColour(colour, defaultColor, rect));
+            const defaultColor = this.hermidata.getBookmark(markerId).color;
+            colour.removeEventListener('click', this.setMarkerColourHandler);
+            colour.dataset.editing = 'false';
+            colour.style.backgroundColor =  resetInfo ? defaultColor : colour.style.backgroundColor;
             // chapter
             const chapter = marker.querySelector<HTMLInputElement>('.hermidata-marker-chapter');
             if (!chapter) continue;
-            this.switchElement(chapter, 'div', false, 'reset');
+            const chapterDiv = this.switchElement(chapter, 'div', false, 'reset');
+            chapterDiv.textContent = 'Ch. ' + resetInfo ? chapter.value : String(this.hermidata.getBookmark(markerId).current);
             // label
             const label = marker.querySelector<HTMLInputElement>('.hermidata-marker-label');
             if (!label) continue;
-            this.switchElement(label, 'div', false, 'reset');
+            const labelDiv = this.switchElement(label, 'div', false, 'reset');
+            labelDiv.textContent = resetInfo ? label.value : this.hermidata.getBookmark(markerId).label;
             // read status
             const readStatus = marker.querySelector<HTMLSelectElement>('.hermidata-marker-readStatus');
             if (!readStatus) continue;
-            this.switchElement(readStatus, 'div', false, 'reset');
+            const readStatusDiv = this.switchElement(readStatus, 'div', false, 'reset');
+            readStatusDiv.textContent = resetInfo ? readStatus.value : this.hermidata.getBookmark(markerId).readStatus;
+            // notes
+            const notesContainer = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes');
+            const notes = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes-inner');
+            if (!notes || !notesContainer) continue;
+            notesContainer.dataset.editing = 'false';
+            const notesDiv = this.switchElement(notes, 'div', false, 'reset');
+            const originalText = this.hermidata.getBookmark(markerId).note;
+            notesDiv.textContent = resetInfo ? notes.value : originalText ?? '';
         }
     }
     private setReadStatusOptions(select: HTMLSelectElement | null, selectedReadStatus: AnyReadStatus) {
@@ -452,6 +513,7 @@ export class EditDetail extends RSSPageBuilder {
         for (const status of readStatuses) {
             const option = document.createElement('option');
             option.value = status;
+            if (status === selectedReadStatus) option.selected = true;
             option.textContent = status;
             select.appendChild(option);
         }

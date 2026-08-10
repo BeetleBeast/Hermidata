@@ -1,6 +1,7 @@
 import { CONTENT_RATINGS, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
 import type { Hermidata, Settings } from "../../shared/types";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement } from "../../shared/utils/Selection";
 import { Sort } from "./filter";
 
@@ -372,6 +373,17 @@ export class filter extends Sort {
             container.appendChild(listItem);
         }
         return container;
+    }
+    protected onMarkerClick(marker: HTMLElement): void {
+        const hermidataId = marker.dataset.hermidata;
+        const url = marker.dataset.url;
+        if (!hermidataId) return;
+
+        const hermidata = new HermidataModel(this.AllHermidata[hermidataId]);
+
+        if (!hermidata) return;
+
+        hermidata.jumpToUrl(url);
     }
     private buildGenresThemesCheckbox(): HTMLDivElement {
         const container = document.createElement('div');
