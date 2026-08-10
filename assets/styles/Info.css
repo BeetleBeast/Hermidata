@@ -546,6 +546,13 @@ label {
 	border-radius: 5px;
     transition: background 0.2s ease, color 0.2s ease;
     width: fit-content !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex-wrap: nowrap;
+    color: var(--Text-color);
 }
 
 .hermidata-demographic:hover,
@@ -985,4 +992,68 @@ label {
 
 .hermidata-alternative-title-button-arrow[data-closed="false"] {
     transform: rotate(90deg);
+}
+
+/* tags in edit mode */
+
+
+.selected-tag-container[data-editing="true"] {
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 6px; 
+    min-height: 28px; 
+    padding: 8px; 
+    border: 0.5px solid var(--border); 
+    margin-bottom: 10px;
+}
+
+.filterInput[data-editing="false"] {
+    display: none;
+}
+
+.tag-pill-removeX {
+	border: medium;
+	background: none;
+	cursor: pointer;
+	color: var(--text-color);
+	padding: 0px;
+	line-height: 1;
+	font-size: 14px;
+
+    display: block;
+	margin-bottom: 8px;
+	cursor: pointer;
+	transition: transform 0.15s ease;
+	transition: color 0.15s ease;
+	padding: 0;
+	width: fit-content;
+	height: fit-content;
+	border-radius: 5px;
+}
+.tag-pill-removeX:hover {
+    background-color: var(--border-focus);
+    transform: scale(1.2);
+	color: red;
+}
+
+.filterInput[data-editing="true"] {
+    border:0.5px solid var(--border);
+    background: var(--fill-field);
+    outline:none; width:100%;
+    font-size:13px;
+    height:32px;
+    padding: 0 10px;
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.filter-allTags-container[data-editing="false"] {
+    display: none;
+}
+
+.filter-allTags-container[data-editing="true"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }

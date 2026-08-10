@@ -1,6 +1,10 @@
-import type { AnyNovelStatus, AnyNovelType } from "../../shared/types";
+import { ColorPicker } from "../../popup/frontend/ColorPicker";
+import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
+import { getAllTags } from "../../shared/db/Storage";
+import type { AnyNovelStatus, AnyNovelType, AnyReadStatus } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { RSSPageBuilder } from "../build";
+import { Tags } from "./tags";
 
 
 interface TagMap {
@@ -44,6 +48,14 @@ export class EditDetail extends RSSPageBuilder {
 
     private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn');
     private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
+
+    private genreTags: Tags | null = null
+    private demographicTags: Tags | null = null
+
+    private readonly markersColor = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-color');
+    private readonly markersChapter = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-chapter');
+    private readonly markersLabel = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-label');
+    private readonly markersReadStatus = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-readStatus');
 
     private getAllDivToInputs(): SwitchConfig[] {
         return [
@@ -129,7 +141,7 @@ export class EditDetail extends RSSPageBuilder {
         this.cancelBtn.style.display = 'none';
         
         // 2. set all inputs to editable
-        this.changeAllInputsBack();
+        this.changeAllInputsBack(mode);
         
         this.showButtons();
 
@@ -173,7 +185,7 @@ export class EditDetail extends RSSPageBuilder {
         if (!starRatingEditButton) throw new Error('Star rating edit button not found');
         starRatingEditButton.style.display = 'none';
     }
-    private changeAllInputsBack() {
+    private changeAllInputsBack(mode: 'cancel' | 'save'): void {
 
         for (const {element, switchTo} of this.getAllInputsBackToDiv()) {
             if (!element) continue;
@@ -193,7 +205,10 @@ export class EditDetail extends RSSPageBuilder {
         this.changeGroup1BackToDiv();
 
         // data group 2 | set input back to div
-        this.changeGroup2BackToDiv();
+        this.changeGroup2BackToDiv(mode === 'save');
+
+        // markers
+        this.changeMarkersBackToDiv();
     }
     private changeGroup1BackToDiv() {
         const group1 = [
@@ -220,31 +235,82 @@ export class EditDetail extends RSSPageBuilder {
             element.replaceWith(newElement);
         }
     }
-    private changeGroup2BackToDiv() {
-        const group2: { element: NodeListOf<HTMLInputElement> | null, switchTo: 'div' }[] = [
-            { element: document.querySelectorAll<HTMLInputElement>('.hermidata-genre'), switchTo: 'div'}, // genres
-            { element: document.querySelectorAll<HTMLInputElement>('.hermidata-demographic'), switchTo: 'div'}, // demographics
-        ]
+    private changeGroup2BackToDiv(keepInfo: boolean) {
+        const allTags = document.querySelectorAll<HTMLDivElement>('.filter-allTags-container');
+        const filterInput = document.querySelectorAll<HTMLInputElement>('.filterInput');
+        const tagsContainer = document.querySelectorAll<HTMLDivElement>('.selected-tag-container');
+        const filterTags = document.querySelectorAll<HTMLDivElement>('.hermidata-genre, .hermidata-demographic');
 
-        for (const {element, switchTo} of group2) {
-            // if all elements are null, make a empty div
-            if ( element !== null && Array.from(element).every(el => el.value === '')) {
-                // get parent element
-                const parent = element?.[0].parentElement;
-                if (!parent) return;
-                parent.textContent = '--None--';
-                continue;
-            }
+        for (const element of allTags) {
             if (!element) continue;
-            for (const el of element) {
-                // if input is empty, do not switch but remove
-                if (el.value === '') {
-                    el.remove();
-                    continue;
-                }
-                this.switchElement(el, switchTo, true, 'reset');
+            element.dataset.editing = 'false';
+        }
+        for (const element of filterInput) {
+            if (!element) continue;
+            element.dataset.editing = 'false';
+        }
+        for (const element of tagsContainer) {
+            if (!element) continue;
+            element.dataset.editing = 'false';
+            // remove x button
+            const removeX = element.querySelectorAll('.tag-pill-removeX')
+            for (const x of removeX) x.remove();
+
+            
+
+            if (element.childElementCount === 1 && (element.children[0] as HTMLDivElement).dataset.empty === "true") {
+                element.children[0].remove();
+                this.setEmptyText(element);
             }
         }
+
+        if (keepInfo) return;
+        // to remove all info except the existing one
+        const tags = new Set<string>();
+
+        const allTagsValues = this.hermidata.meta.tags;
+        const allGenreTags = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
+        const allDemographicTags = allTagsValues.filter(tag => DEMOGRAPHIC_TAGS.includes(tag));
+
+        for (const element of filterTags) {
+            if (!element) continue;
+            const isGenre = element.classList.contains('hermidata-genre');
+            const isDemographic = element.classList.contains('hermidata-demographic');
+
+            const name = element.textContent;
+
+            // remove if not in list
+            if (isGenre && !allGenreTags.includes(name)) {
+                // if container is empty, add empty text
+                if (element.parentElement!.childElementCount === 1) this.setEmptyText(element.parentElement!);
+                element.remove();
+            }
+            else if (isDemographic && !allDemographicTags.includes(name)) {
+                // if container is empty, add empty text
+                if (element.parentElement!.childElementCount === 1) this.setEmptyText(element.parentElement!);
+                element.remove();
+            }
+
+            tags.add(name);
+        }
+
+        // add if not in the list
+        if (tags.size !== this.hermidata.meta.tags.length) {
+            for (const name of this.hermidata.meta.tags) {
+                if (tags.has(name)) continue;
+                const isGenre = !DEMOGRAPHIC_TAGS.includes(name);
+                const isDemographic = DEMOGRAPHIC_TAGS.includes(name);
+
+                if (isGenre && allGenreTags.includes(name)) this.genreTags?.createPill(name, 'WithoutRemoveButton');
+                else if (isDemographic && allDemographicTags.includes(name)) this.demographicTags?.createPill(name, 'WithoutRemoveButton');
+            }
+        }
+    }
+    private setEmptyText(element: HTMLElement) {
+        const emptyText = document.createElement('div');
+        emptyText.classList.add('empty-text');
+        emptyText.textContent = `--None--`;
+        element.appendChild(emptyText);
     }
     private changeAltTitleBackToDiv() {
         const altTitlesContainer = document.querySelector<HTMLTextAreaElement>('#hermidata-alternative-titles-list');
@@ -316,7 +382,123 @@ export class EditDetail extends RSSPageBuilder {
         this.setGroup1ToSelect();
         
         // data group 2 | set div to input
-        this.setGroup2ToInput();
+        this.setGroup2ToCustomPill();
+
+        // markers
+        this.setMarkersToInput();
+    }
+    private setMarkersToInput() {
+        const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
+        if (!markers) return;
+        for (const marker of markers) {
+            // colour
+            const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
+            if (!colour) continue;
+            const defaultColor = colour.style.backgroundColor;
+            const rect = document.body.getBoundingClientRect();
+            colour.addEventListener('click', () => this.setMarkerColour(colour, defaultColor, rect));
+            // chapter
+            const chapter = marker.querySelector<HTMLDivElement>('.hermidata-marker-chapter');
+            if (!chapter) continue;
+            this.switchElement(chapter, 'input', 'number', true, 'set');
+            // label
+            const label = marker.querySelector<HTMLDivElement>('.hermidata-marker-label');
+            if (!label) continue;
+            this.switchElement(label, 'input', 'text', true, 'set');
+            // read status
+            const readStatus = marker.querySelector<HTMLDivElement>('.hermidata-marker-readStatus');
+            if (!readStatus) continue;
+            const select = this.switchElement(readStatus, 'select', true, 'set');
+            // set read status options
+            this.setReadStatusOptions(select, readStatus.textContent);
+        }
+    }
+    private setMarkerColour = (colour: HTMLDivElement, defaultColor: string, rect: DOMRect) => {
+        ColorPicker.show( ColorPicker.getHexColor() ?? defaultColor,
+            async () => {
+                colour!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
+            },
+            { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
+        );
+        
+    }
+    private changeMarkersBackToDiv() {
+        const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
+        if (!markers) return;
+        for (const marker of markers) {
+            // colour
+            const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
+            if (!colour) continue;
+            const defaultColor = colour.style.backgroundColor;
+            const rect = document.body.getBoundingClientRect();
+            colour.removeEventListener('click', () => this.setMarkerColour(colour, defaultColor, rect));
+            // chapter
+            const chapter = marker.querySelector<HTMLInputElement>('.hermidata-marker-chapter');
+            if (!chapter) continue;
+            this.switchElement(chapter, 'div', false, 'reset');
+            // label
+            const label = marker.querySelector<HTMLInputElement>('.hermidata-marker-label');
+            if (!label) continue;
+            this.switchElement(label, 'div', false, 'reset');
+            // read status
+            const readStatus = marker.querySelector<HTMLSelectElement>('.hermidata-marker-readStatus');
+            if (!readStatus) continue;
+            this.switchElement(readStatus, 'div', false, 'reset');
+        }
+    }
+    private setReadStatusOptions(select: HTMLSelectElement | null, selectedReadStatus: AnyReadStatus) {
+        const readStatuses = this.settings.ContentTypesAndStatuses.STATUS_OPTIONS;
+        if (!select) return;
+        for (const status of readStatuses) {
+            const option = document.createElement('option');
+            option.value = status;
+            option.textContent = status;
+            select.appendChild(option);
+        }
+        select.value = selectedReadStatus;
+    }
+    private setGenreTag(): Tags | null {
+        const allTagsValues = Array.from(getAllTags(this.AllHermidata).keys());
+        const genresThemes = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
+
+        const selectedRow = document.querySelector<HTMLDivElement>('#hermidata-genres');
+        const allTags = document.querySelector<HTMLDivElement>('#allTags-genres');
+        const filterInput = document.querySelector<HTMLInputElement>('#filterInput-genres');
+
+        if (!selectedRow || !allTags || !filterInput) return null;
+
+        this.setElementToEditing(selectedRow);
+        this.setElementToEditing(allTags);
+        this.setElementToEditing(filterInput);
+
+        const tagClass = new Tags(genresThemes, true, new HermidataModel(this.hermidata), { selectedRow, allTags, filterInput});
+        return tagClass;
+    }
+    private setDemographicTag(): Tags | null {
+        const allTagsValues = Array.from(getAllTags(this.AllHermidata).keys());
+        const genresDemographics = allTagsValues.filter(tag => DEMOGRAPHIC_TAGS.includes(tag));
+
+        const selectedRow = document.querySelector<HTMLDivElement>('#hermidata-demographics');
+        const allTags = document.querySelector<HTMLDivElement>('#allTags-demographics');
+        const filterInput = document.querySelector<HTMLInputElement>('#filterInput-demographics');
+
+        if (!selectedRow || !allTags || !filterInput) return null;
+
+        this.setElementToEditing(selectedRow);
+        this.setElementToEditing(allTags);
+        this.setElementToEditing(filterInput);
+
+        const tagClass = new Tags(genresDemographics, false, new HermidataModel(this.hermidata), { selectedRow, allTags, filterInput});
+        return tagClass;
+    }
+    private setGroup2ToCustomPill() {
+        // genres
+        this.genreTags = this.setGenreTag();
+        // demographics
+        this.demographicTags = this.setDemographicTag();
+    }
+    private setElementToEditing(element: HTMLElement) { 
+        element.dataset.editing = 'true';
     }
     private setGroup2ToInput() {
         const group2: { element: NodeListOf<HTMLDivElement> | null, switchTo: 'input', inputType: 'text' }[] = [

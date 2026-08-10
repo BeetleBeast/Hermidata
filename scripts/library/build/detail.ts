@@ -401,6 +401,7 @@ export class Detail extends RSSPageBuilder {
             const markerElement = document.createElement('div');
             markerElement.classList.add('hermidata-marker');
             markerElement.id = `hermidata-marker-${index}`;
+            markerElement.dataset.id = marker.id;
             markerElement.addEventListener('click', () => this.jumpToChapter(marker.url));
 
             // add marker chapter
