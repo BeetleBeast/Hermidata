@@ -1,7 +1,8 @@
 import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
+import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { findByTitleOrAlt } from "../../shared/utils/StringOutput";
-import { RSSPageBuilder } from "../build";
+import { PageDetailBuilder, RSSPageBuilder } from "../build";
 
 export class Detail extends RSSPageBuilder {
 
@@ -29,6 +30,12 @@ export class Detail extends RSSPageBuilder {
     private sortMode: 'asc' | 'desc' = 'asc';
 
     private selectedIndex: number = -1;
+
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
+        super(AllHermidata, settings);
+
+        PageDetailBuilder.hermidata = this.hermidata;
+    }
 
     public build(): void {
         
@@ -372,17 +379,6 @@ export class Detail extends RSSPageBuilder {
 
         latestRelease.textContent = `Ch. ${latestChapter} by ${SourceOfLatestChapter}`
     }
-    protected onMarkerClick(marker: HTMLElement): void {
-        const hermidataId = marker.dataset.id;
-        const url = marker.dataset.url;
-        if (!hermidataId) return;
-
-        const hermidata = new HermidataModel(this.AllHermidata[hermidataId]);
-
-        if (!hermidata) return;
-
-        hermidata.jumpToUrl(url);
-    }
     private populateMarkers() {
         const container = document.getElementById('hermidata-markers-list');
         if (!container) throw new Error("Markers does not exist");
@@ -411,7 +407,7 @@ export class Detail extends RSSPageBuilder {
             markerElement.id = `hermidata-marker-${index}`;
             markerElement.dataset.id = marker.id;
             
-            markerElement.addEventListener('click', this.handleMarkerClick);
+            markerElement.addEventListener('click', PageDetailBuilder.handleMarkerClick);
 
             // add marker chapter
             const markerChapter = document.createElement('div');

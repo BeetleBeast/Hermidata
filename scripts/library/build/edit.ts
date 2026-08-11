@@ -1,9 +1,9 @@
 import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
-import type { AnyNovelStatus, AnyNovelType, AnyReadStatus } from "../../shared/types";
+import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { RSSPageBuilder } from "../build";
+import { PageDetailBuilder, RSSPageBuilder } from "../build";
 import { Tags } from "./tags";
 
 
@@ -51,6 +51,12 @@ export class EditDetail extends RSSPageBuilder {
 
     private genreTags: Tags | null = null
     private demographicTags: Tags | null = null
+
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
+            super(AllHermidata, settings);
+    
+            PageDetailBuilder.hermidata = this.hermidata;
+        }
 
 
     private getAllDivToInputs(): SwitchConfig[] {
@@ -383,17 +389,6 @@ export class EditDetail extends RSSPageBuilder {
         // markers
         this.setMarkersToInput();
     }
-    protected onMarkerClick(marker: HTMLElement): void {
-        const hermidataId = marker.dataset.id;
-        const url = marker.dataset.url;
-        if (!hermidataId) return;
-
-        const hermidata = new HermidataModel(this.AllHermidata[hermidataId]);
-
-        if (!hermidata) return;
-
-        hermidata.jumpToUrl(url);
-    }
     protected setMarkerColourHandler = (event: MouseEvent) => {
         const colour = event.target as HTMLDivElement;
         const defaultColor = colour.style.backgroundColor;
@@ -406,15 +401,16 @@ export class EditDetail extends RSSPageBuilder {
         const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
         if (!markers || !markersContainer) return;
         for (const marker of markersContainer) {
-            // disable event listeners
-            marker.removeEventListener('click', this.handleMarkerClick);
-
+            
             const row = marker.querySelector<HTMLDivElement>('.hermidata-marker-row');
             if (!row) continue;
             row.dataset.editing = 'true';
-
+            
             const markerElement = marker.querySelector<HTMLDivElement>('.hermidata-marker');
             markerElement!.dataset.editing = 'true';
+
+            // disable event listeners
+            markerElement?.removeEventListener('click', PageDetailBuilder.handleMarkerClick);
 
             // colour
             const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
@@ -463,7 +459,7 @@ export class EditDetail extends RSSPageBuilder {
         for (const marker of markersContainer) {
             
             const markerId = marker.dataset.id;
-            if (!markerId) return;
+            if (!markerId) continue;
 
             const row = marker.querySelector<HTMLDivElement>('.hermidata-marker-row');
             if (!row) continue;
@@ -473,7 +469,7 @@ export class EditDetail extends RSSPageBuilder {
             markerElement!.dataset.editing = 'false';
 
             // enable event listeners
-            markerElement?.addEventListener('click', this.handleMarkerClick);
+            markerElement?.addEventListener('click', PageDetailBuilder.handleMarkerClick);
 
             // colour
             const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');

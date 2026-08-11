@@ -1090,13 +1090,16 @@ label {
     cursor: default;
 }
 
+.hermidata-marker-color[data-editing="true"] {
+    cursor: pointer;
+}
+
 .hermidata-marker-color[data-editing="true"],
 .hermidata-marker[data-editing="true"] {
     height: 45px;
 }
 
 .hermidata-marker-readStatus[data-editing="true"] {
-
 	height: 35px;
 }
 

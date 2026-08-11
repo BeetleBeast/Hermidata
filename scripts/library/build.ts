@@ -8,16 +8,6 @@ export abstract class RSSPageBuilder {
 
     protected settings: Settings;
 
-    protected abstract onMarkerClick(marker: HTMLElement): void;
-
-    protected handleMarkerClick = (event: MouseEvent) => {
-        // FIXME: this doesn't work
-        const marker = (event.target as HTMLElement).closest<HTMLElement>('.hermidata-marker-container');
-        if (!marker) return;
-
-        this.onMarkerClick(marker);
-    };
-
     constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
         this.settings = settings;
         this.AllHermidata = AllHermidata;
@@ -104,4 +94,24 @@ export abstract class RSSPageBuilder {
 
         return time;
     }
+}
+
+
+export class PageDetailBuilder {
+
+    static hermidata: HermidataModel;
+
+    /** NOTE: when using make sure there is a local hermidata used */
+    static handleMarkerClick = (event: MouseEvent) => {
+        // FIXME: this doesn't work
+        const marker = (event.target as HTMLElement).closest<HTMLElement>('.hermidata-marker-container');
+        if (!marker) return;
+
+        const markerId = marker.dataset.id;
+        if (!markerId) return;
+        
+        const url = this.hermidata.chapter.bookmarks[markerId].url;
+
+        this.hermidata.jumpToUrl(url);
+    };
 }
