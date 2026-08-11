@@ -347,6 +347,7 @@ export class BookmarkController {
         const hash = returnBookmarkHash(labelValue);
 
         this.hermidata.chapter.bookmarks[hash] = {
+            version: this.hermidata.version,
             id: hash,
             label: labelValue,
             current: Number(chapterValue),
@@ -354,7 +355,10 @@ export class BookmarkController {
             color: colorValue,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            history: [],
+            history: [{
+                chapter: Number(chapterValue),
+                at: new Date().toISOString()
+            }],
             isPrimary: false,
             readStatus: 'Viewing',
             scrollPosition: 0,

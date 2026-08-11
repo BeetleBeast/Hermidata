@@ -377,7 +377,7 @@ class HermidataController {
         // max 20 entries in history
         if (this.hermidata.GetHistory()?.length >= 20) this.hermidata.ShiftHistory();
 
-        this.hermidata.PushHistory(this.hermidata.GetChapter());
+        this.hermidata.PushHistory(this.hermidata.GetChapter(), new Date().toISOString());
         // only unique entries in history
         this.hermidata.SetHistory(Array.from( new Set(this.hermidata.GetHistory())));
         

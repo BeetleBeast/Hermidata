@@ -43,7 +43,7 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
     return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
-export function normaliseDateToIso(rawDate: string): string {
+export function normalizeDateToIso(rawDate: string): string {
     
     if (!rawDate) return '';
 

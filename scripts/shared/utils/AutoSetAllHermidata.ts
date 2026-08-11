@@ -1,5 +1,6 @@
 import { findNestedFolder, getBookmarkChildren } from "../../background/bookmarks";
 import type { AnyNovelType, Bookmark, Hermidata } from "../types";
+import { HermidataModel } from "./HermidataSelector";
 import { findByTitleOrAlt, getChapterFromTitle, returnBookmarkHash, returnHashedTitle, TrimTitle } from "./StringOutput";
 
 
@@ -98,9 +99,15 @@ export class AutoSetAllHermidata {
         const BookmarkID = returnBookmarkHash(label);
 
         const bookmarkGuess: Bookmark = {
+            version: 4,
             id: BookmarkID,
             current: chapter,
-            history: [chapter],
+            history: [
+                {
+                    chapter: chapter,
+                    at: date.toISOString()
+                }
+            ],
             label: label,
             color: 'blue',
             createdAt: date.toISOString(),
@@ -113,6 +120,7 @@ export class AutoSetAllHermidata {
         }
 
         const hermidataGuess: Hermidata = {
+            version: 11,
             id: HermidataID,
             title: trimmedTitle,
             novelType: novelType,
@@ -125,6 +133,7 @@ export class AutoSetAllHermidata {
                 latest: chapter,
                 lastChecked: date.toISOString(),
                 bookmarkInUse: BookmarkID,
+                releaseSchedule: HermidataModel.releaseSchedule(bookmarkGuess.history)
             },
             rss: null,
             import: null,
@@ -136,7 +145,15 @@ export class AutoSetAllHermidata {
                 added: date.toISOString(),
                 updated: date.toISOString(),
                 originalRelease: null,
-                novelStatus: 'Ongoing'
+                novelStatus: 'Ongoing',
+
+                contentRating: "Safe",
+                contentWarnings: [],
+                starRating: 5.0,
+                image: '../../../assets/icon/icon48.png',
+
+                readingQueue: false,
+                relations: "None"
             }
         }
         return hermidataGuess;
