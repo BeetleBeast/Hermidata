@@ -225,7 +225,7 @@ export class EditDetail extends RSSPageBuilder {
         this.changeGroup2BackToDiv(mode === 'save');
 
         // markers
-        this.changeMarkersBackToDiv();
+        this.changeMarkersBackToDiv(mode === 'cancel');
     }
     private changeGroup1BackToDiv() {
         const group1 = [
@@ -499,17 +499,17 @@ export class EditDetail extends RSSPageBuilder {
             const chapter = marker.querySelector<HTMLInputElement>('.hermidata-marker-chapter');
             if (!chapter) continue;
             const chapterDiv = this.switchElement(chapter, 'div', false, 'reset');
-            chapterDiv.textContent = 'Ch. ' + resetInfo ? chapter.value : String(this.hermidata.getBookmark(markerId).current);
+            chapterDiv.textContent = 'Ch. ' + resetInfo ? String(this.hermidata.getBookmark(markerId).current): chapter.value;
             // label
             const label = marker.querySelector<HTMLInputElement>('.hermidata-marker-label');
             if (!label) continue;
             const labelDiv = this.switchElement(label, 'div', false, 'reset');
-            labelDiv.textContent = resetInfo ? label.value : this.hermidata.getBookmark(markerId).label;
+            labelDiv.textContent = resetInfo ? this.hermidata.getBookmark(markerId).label : label.value;
             // read status
             const readStatus = marker.querySelector<HTMLSelectElement>('.hermidata-marker-readStatus');
             if (!readStatus) continue;
             const readStatusDiv = this.switchElement(readStatus, 'div', false, 'reset');
-            readStatusDiv.textContent = resetInfo ? readStatus.value : this.hermidata.getBookmark(markerId).readStatus;
+            readStatusDiv.textContent = resetInfo ? this.hermidata.getBookmark(markerId).readStatus: readStatus.value;
             // notes
             const notesContainer = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes');
             const notes = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes-inner');
@@ -517,7 +517,7 @@ export class EditDetail extends RSSPageBuilder {
             notesContainer.dataset.editing = 'false';
             const notesDiv = this.switchElement(notes, 'div', false, 'reset');
             const originalText = this.hermidata.getBookmark(markerId).note;
-            notesDiv.textContent = resetInfo ? notes.value : originalText ?? '';
+            notesDiv.textContent = resetInfo ? originalText ?? '': notes.value;
         }
     }
     private setReadStatusOptions(select: HTMLSelectElement | null, selectedReadStatus: AnyReadStatus) {
