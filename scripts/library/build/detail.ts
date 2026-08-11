@@ -289,6 +289,8 @@ export class Detail extends RSSPageBuilder {
         this.populateDemographics();
         // sources
         this.populateSources();
+        // author
+        this.populateAuthor();
         // latest release
         this.populateLatestRelease();
     }
@@ -372,6 +374,14 @@ export class Detail extends RSSPageBuilder {
         const allSources = this.hermidata.meta.altSources.join(', ');
         sources.textContent = allSources || "--None--";
         sources.dataset.hasNone = sources ? 'false' : 'true';
+    }
+    private populateAuthor() {
+        const author = document.getElementById('hermidata-author');
+        if (!author) throw new Error("Author does not exist");
+        // TODO: add author to hermidata
+        const allAuthors: string | false = /*this.hermidata.meta?.author ?? */ false;
+        author.textContent = /* allAuthors ?? */ "--None--";
+        author.dataset.hasNone = allAuthors ? 'false' : 'true';
     }
     private populateLatestRelease() {
         const latestRelease = document.getElementById('hermidata-latestRelease');

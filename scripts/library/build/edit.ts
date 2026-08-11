@@ -86,6 +86,7 @@ export class EditDetail extends RSSPageBuilder {
             // genres | special case handled separately
             // demographics | special case handled separately
             { element: document.querySelector<HTMLDivElement>('#hermidata-sources'), switchTo: 'input', inputType: 'text' }, // hermidata Sources
+            // { element: document.querySelector<HTMLDivElement>('#hermidata-author'), switchTo: 'input', inputType: 'text' }, // hermidata author
             // { element: document.querySelector<HTMLDivElement>('#hermidata-latestRelease'), switchTo: 'input', inputType: 'text' }, // latest Release
         ];
     }
@@ -104,6 +105,7 @@ export class EditDetail extends RSSPageBuilder {
             // genres | special case handled separately
             // demographics | special case handled separately
             { element: document.querySelector<HTMLInputElement>('#hermidata-sources'), switchTo: 'div'}, // hermidata Sources
+            // { element: document.querySelector<HTMLInputElement>('#hermidata-author'), switchTo: 'div'}, // hermidata author
             // { element: document.querySelector<HTMLInputElement>('#hermidata-latestRelease'), switchTo: 'div'}, // latest Release
         ];
     }
@@ -211,6 +213,9 @@ export class EditDetail extends RSSPageBuilder {
 
         // set image back
         document.querySelector<HTMLImageElement>('#hermidata-img')?.setAttribute('src', this.hermidata.rss?.image ?? '../../../assets/icon/icon48.png');
+
+        // set author text ( if empty to --None-- )
+        //TODO: make it manual changeable
 
         // notes Content | set read only
         document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.setAttribute('readonly', '');
@@ -680,6 +685,7 @@ export class EditDetail extends RSSPageBuilder {
         // 3. transfer content
         if (transferContent) {
             const value = this.getElementContent(element);
+            if (value === '') this.setElementContent(newElement, '--None--');
             this.setElementContent(newElement, value);
         }
 
