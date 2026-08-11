@@ -30,7 +30,7 @@ interface MainConfig {
 interface InputConfig {
     element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
     switchTo: 'input';
-    inputType: 'text' | 'number' | 'image' | 'date';
+    inputType: 'text' | 'number' | 'image' | 'date' | 'file';
 }
 interface divConfig {
     element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
@@ -61,7 +61,7 @@ export class EditDetail extends RSSPageBuilder {
 
     private getAllDivToInputs(): SwitchConfig[] {
         return [
-            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'input', inputType: 'image' }, // image
+            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'input', inputType: 'file' }, // image
 
             { element: document.querySelector<HTMLHeadingElement>('#hermidata-title'), switchTo: 'input', inputType: 'text' }, // main title
             // alternative titles container | special case handled separately
@@ -653,16 +653,16 @@ export class EditDetail extends RSSPageBuilder {
     }
 
     // overload: switching to 'input' — inputType required
-    private switchElement<K extends 'input'>( element: HTMLElement, switchTo: K, inputType: 'text' | 'number' | 'image' | 'date', transferContent?: boolean, set?: 'reset' | 'set' ): TagMap[K];
+    private switchElement<K extends 'input'>( element: HTMLElement, switchTo: K, inputType: 'text' | 'number' | 'image' | 'date' | 'file', transferContent?: boolean, set?: 'reset' | 'set' ): TagMap[K];
 
     // overload: switching to anything else — no inputType
     private switchElement<K extends Exclude<keyof TagMap, 'input'>>( element: HTMLElement, switchTo: K, transferContent?: boolean, set?: 'reset' | 'set' ): TagMap[K];
 
     // implementation signature — must be compatible with BOTH overloads above
-    private switchElement( element: HTMLElement, switchTo: keyof TagMap, arg3?: 'text' | 'number' | 'image' | 'date' | boolean, arg4?: boolean | 'reset' | 'set', arg5?: 'reset' | 'set'): HTMLElement {
+    private switchElement( element: HTMLElement, switchTo: keyof TagMap, arg3?: 'text' | 'number' | 'image' | 'date' | 'file' | boolean, arg4?: boolean | 'reset' | 'set', arg5?: 'reset' | 'set'): HTMLElement {
 
         // disambiguate which overload was actually called
-        let inputType: 'text' | 'number' | 'date' | 'image' = 'text';
+        let inputType: 'text' | 'number' | 'date' | 'image' | 'file' = 'text';
         let transferContent = false;
         let set: SetMode = 'set';
 
