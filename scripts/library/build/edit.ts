@@ -16,15 +16,16 @@ interface TagMap {
     option: HTMLOptionElement;
     select: HTMLSelectElement;
     h2: HTMLHeadingElement;
+    button: HTMLButtonElement;
 }
 /** @constant content rating */
 type ContentRating = 'Safe' | 'Pornographic' | 'Explicit';
 
 const CONTENT_RATING_OPTIONS: ContentRating[] = ['Safe', 'Pornographic', 'Explicit'];
 
-type SwitchConfig = MainConfig | InputConfig | divConfig;
+type SwitchConfig = MainConfig | InputConfig | divConfig | ButtonConfig;
 interface MainConfig {
-    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
+    element: HTMLTextAreaElement | HTMLImageElement | HTMLHeadingElement | HTMLButtonElement | null;
     switchTo: Exclude<keyof TagMap, 'input'>
 }
 interface InputConfig {
@@ -32,8 +33,13 @@ interface InputConfig {
     switchTo: 'input';
     inputType: 'text' | 'number' | 'image' | 'date' | 'file';
 }
+interface ButtonConfig {
+    element: HTMLButtonElement | null;
+    switchTo: 'button';
+    inputType: 'button';
+}
 interface divConfig {
-    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
+    element: HTMLDivElement | null;
     switchTo: 'div';
     rules: {
         allUpperCase: boolean;
@@ -49,6 +55,12 @@ export class EditDetail extends RSSPageBuilder {
     private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn');
     private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
 
+    private readonly imgElement = document.querySelector<HTMLImageElement>('#hermidata-img-container');
+    private readonly popover = document.querySelector<HTMLDivElement>('#imageChanger-dialog');
+    private readonly urlInput = document.querySelector<HTMLInputElement>('#imageChanger-url');
+    private readonly fileInput = document.querySelector<HTMLInputElement>('#imageChanger-file');
+    private readonly urlConfirmBtn = document.querySelector<HTMLButtonElement>('#imageChanger-url-confirm');
+
     private genreTags: Tags | null = null
     private demographicTags: Tags | null = null
 
@@ -61,7 +73,7 @@ export class EditDetail extends RSSPageBuilder {
 
     private getAllDivToInputs(): SwitchConfig[] {
         return [
-            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'input', inputType: 'file' }, // image
+            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'button', inputType: 'button' }, // image
 
             { element: document.querySelector<HTMLHeadingElement>('#hermidata-title'), switchTo: 'input', inputType: 'text' }, // main title
             // alternative titles container | special case handled separately
@@ -74,12 +86,12 @@ export class EditDetail extends RSSPageBuilder {
             // genres | special case handled separately
             // demographics | special case handled separately
             { element: document.querySelector<HTMLDivElement>('#hermidata-sources'), switchTo: 'input', inputType: 'text' }, // hermidata Sources
-            { element: document.querySelector<HTMLDivElement>('#hermidata-latestRelease'), switchTo: 'input', inputType: 'text' }, // latest Release
+            // { element: document.querySelector<HTMLDivElement>('#hermidata-latestRelease'), switchTo: 'input', inputType: 'text' }, // latest Release
         ];
     }
     private getAllInputsBackToDiv(): SwitchConfig[] {
         return [
-            { element: document.querySelector<HTMLInputElement>('#hermidata-img'), switchTo: 'img'}, // image
+            { element: document.querySelector<HTMLButtonElement>('#hermidata-img'), switchTo: 'img'}, // image
 
             { element: document.querySelector<HTMLInputElement>('#hermidata-title'), switchTo: 'h2'}, // main title
             // alternative titles container | special case handled separately
@@ -92,11 +104,11 @@ export class EditDetail extends RSSPageBuilder {
             // genres | special case handled separately
             // demographics | special case handled separately
             { element: document.querySelector<HTMLInputElement>('#hermidata-sources'), switchTo: 'div'}, // hermidata Sources
-            { element: document.querySelector<HTMLInputElement>('#hermidata-latestRelease'), switchTo: 'div'}, // latest Release
+            // { element: document.querySelector<HTMLInputElement>('#hermidata-latestRelease'), switchTo: 'div'}, // latest Release
         ];
     }
 
-    private saveButtonCurrentMode: 'Edit' | 'Save' = 'Edit'
+    private saveButtonCurrentMode: 'Edit' | 'Save' = 'Edit';
 
     public build(): void {
 
@@ -196,6 +208,9 @@ export class EditDetail extends RSSPageBuilder {
             else throw new Error("Element not found.");
             
         }
+
+        // set image back
+        document.querySelector<HTMLImageElement>('#hermidata-img')?.setAttribute('src', this.hermidata.rss?.image ?? '../../../assets/icon/icon48.png');
 
         // notes Content | set read only
         document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.setAttribute('readonly', '');
@@ -372,6 +387,8 @@ export class EditDetail extends RSSPageBuilder {
             if (config.switchTo === 'input') this.switchElement(config.element, config.switchTo, config.inputType, true, 'set');
             else this.switchElement(config.element, config.switchTo, true, 'set');
         }
+
+        this.initImageChanger();
 
 
         // notes Content | remove read only
@@ -558,38 +575,6 @@ export class EditDetail extends RSSPageBuilder {
     private setElementToEditing(element: HTMLElement) { 
         element.dataset.editing = 'true';
     }
-    private setGroup2ToInput() {
-        const group2: { element: NodeListOf<HTMLDivElement> | null, switchTo: 'input', inputType: 'text' }[] = [
-            { element: document.querySelectorAll<HTMLDivElement>('.hermidata-genre'), switchTo: 'input', inputType: 'text'}, // genres
-            { element: document.querySelectorAll<HTMLDivElement>('.hermidata-demographic'), switchTo: 'input', inputType: 'text'}, // demographics
-        ];
-
-        for (const {element, switchTo, inputType} of group2) {
-            if (!element) continue;
-            for (const el of element) this.switchElement(el, switchTo, inputType, true, 'set');
-        }
-        // if no genres/demographics remove the container text
-        if (document.querySelectorAll<HTMLDivElement>('.hermidata-genre').length === 0) {
-            const container = document.querySelector<HTMLDivElement>('#hermidata-genres');
-            if (!container) return;
-            container.textContent = '';
-        }
-        if (document.querySelectorAll<HTMLDivElement>('.hermidata-demographic').length === 0) {
-            const container = document.querySelector<HTMLDivElement>('#hermidata-demographics');
-            if (!container) return;
-            container.textContent = '';
-        }
-
-        // auto new input
-        // add new input every time the last empty input is filled
-        const container = document.querySelector<HTMLDivElement>('#hermidata-genres');
-        if (!container) return;
-        this.addNewInput('hermidata-genre', container, 'genre');
-
-        const container2 = document.querySelector<HTMLDivElement>('#hermidata-demographics');
-        if (!container2) return;
-        this.addNewInput('hermidata-demographic', container2, 'demographic');
-    }
     private addNewInput(className: string, container: HTMLDivElement, type: 'genre' | 'demographic'): void {
         const newInput = document.createElement('input');
         newInput.classList.add(className, 'emptyInput', type);
@@ -740,5 +725,53 @@ export class EditDetail extends RSSPageBuilder {
     }
     private getAllOptions(content: string[]): HTMLOptionElement[] {
         return content.map(value => this.getOptionFromValue(value, 'option') as HTMLOptionElement);
+    }
+    private initImageChanger() {
+        if (!this.popover) return;
+
+        // prefill URL with current image src, if one exists
+        this.popover.addEventListener('toggle', (e: Event) => {
+            const toggleEvent = e as ToggleEvent; // 'toggle' event on popovers is a ToggleEvent
+            if (toggleEvent.newState === 'open' && this.urlInput && this.imgElement?.src) {
+                this.urlInput.value = this.imgElement.src;
+            }
+        });
+
+        // tab switching
+        const tabButtons = this.popover.querySelectorAll<HTMLButtonElement>('.tab-btn');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const mode = btn.dataset.mode;
+                this.popover?.querySelectorAll<HTMLDivElement>('.image-changer-panel').forEach(panel => {
+                    panel.hidden = panel.dataset.panel !== mode;
+                });
+            });
+        });
+
+        // URL confirm
+        this.urlConfirmBtn?.addEventListener('click', () => {
+            if (this.urlInput?.value && this.imgElement) {
+                this.imgElement.src = this.urlInput.value;
+                this.popover?.hidePopover();
+            }
+        });
+
+        // file selected
+        this.fileInput?.addEventListener('change', () => {
+            const file = this.fileInput?.files?.[0];
+            if (!file || !this.imgElement) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result === 'string') {
+                    this.imgElement!.src = reader.result;
+                    this.popover?.hidePopover();
+                }
+            };
+            reader.readAsDataURL(file);
+        });
     }
 }

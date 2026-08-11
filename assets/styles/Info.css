@@ -1122,3 +1122,58 @@ label {
 	padding-left: 20px;
 	font-size: initial;
 }
+
+
+
+
+/* image changer */
+
+.image-changer-popover {
+    border: 1px solid var(--focus-ring);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--Input-colorV2);
+    width: 280px;
+}
+
+#imageChanger-dialog[popover] {
+    position-area: center;
+}
+
+/* popovers are display:none by default until [popover] shown; this is just inner layout */
+.image-changer-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--focus-ring);
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: var(--Btn);
+}
+
+.image-changer-panel {
+    display: flex;
+    gap: 6px;
+}
+
+#imageChanger-url {
+    flex: 1;
+}
+
+[hidden] {
+    display: none;
+}
+
+button#hermidata-img {
+	width: -webkit-fill-available;
+	height: -webkit-fill-available;
+}

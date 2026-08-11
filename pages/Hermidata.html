@@ -28,7 +28,23 @@
 
   <section id="info-container">
     <section id="hermidata-main">
-      <div id="hermidata-img-container" accept="image/*"><!-- Dynamic load image --> </div>
+      <div id="hermidata-img-container"><!-- Dynamic load image --> </div>
+      <div id="imageChanger-dialog" popover class="image-changer-popover">
+        <div class="image-changer-tabs">
+          <button type="button" class="tab-btn active" data-mode="url">URL</button>
+          <button type="button" class="tab-btn" data-mode="file">Upload</button>
+        </div>
+
+        <div class="image-changer-panel" data-panel="url">
+          <input type="text" id="imageChanger-url" placeholder="https://example.com/cover.jpg" />
+          <button type="button" id="imageChanger-url-confirm">Set</button>
+        </div>
+
+        <div class="image-changer-panel" data-panel="file" hidden>
+          <input type="file" id="imageChanger-file" accept="image/*" />
+        </div>
+      </div>
+
       <button id="hermidata-readLatest-btn" type="button" class="Btn" title="Read latest chapter">Read Latest</button>
       <div id="hermidata-info-container">
         <h2 id="hermidata-title"></h2>

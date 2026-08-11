@@ -228,6 +228,9 @@ export class Detail extends RSSPageBuilder {
         img.src = this.hermidata.rss?.image ?? '../../../assets/icon/icon48.png'
         img.alt = `${this.hermidata.rss?.latestItem.title} Image`
 
+        img.setAttribute('popovertarget', 'imageChanger-dialog');
+        img.setAttribute('popovertargetaction', 'toggle');
+
         container.appendChild(img);
         
     }
