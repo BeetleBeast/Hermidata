@@ -22,6 +22,8 @@ export class Controller {
 
     private readonly reloadData = getElement<HTMLButtonElement>("#reload-info-btn");
 
+    private readonly backToLibrary = getElement<HTMLButtonElement>("#back-btn");
+
     private readonly chapterViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-grid");
     private readonly dateViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-list");
 
@@ -50,6 +52,9 @@ export class Controller {
 
         // on clicked Edit button
         this.editInfoBtn?.addEventListener('click', this.editDetail.activate);
+
+        // on clicked Back button
+        this.backToLibrary?.addEventListener('click', () => open('./Library.html'));
 
         // viewMode toggle
         // this.chapterViewMode?.addEventListener('click', () => this.detail.setGridViewMode('chapter'));

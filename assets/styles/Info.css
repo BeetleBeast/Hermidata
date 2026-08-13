@@ -304,6 +304,15 @@ label {
     display: none;
 }
 
+#back-btn {
+	width: fit-content;
+	grid-area: back;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	justify-self: center;
+}
+
 /* search */
 
 
@@ -419,8 +428,8 @@ label {
 	width: 100%;
 	display: grid;
 	align-items: center;
-	grid-template-areas: "cancel search utility";
-	grid-template-columns: 300px auto 300px;
+	grid-template-areas: "back cancel search utility";
+	grid-template-columns: 150px 150px auto 300px;
 	grid-template-rows: 80px;
 	border: 1px solid;
 	border-radius: 25px;
