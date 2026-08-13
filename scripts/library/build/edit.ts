@@ -1,8 +1,9 @@
 import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
-import { getAllTags } from "../../shared/db/Storage";
+import { getAllTags, updateHermidata } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { returnHashedTitle } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, RSSPageBuilder } from "../build";
 import { Tags } from "./tags";
 
@@ -153,7 +154,7 @@ export class EditDetail extends RSSPageBuilder {
     }
 
 
-    public deactivate(mode: 'cancel' | 'save'): void {
+    public async deactivate(mode: 'cancel' | 'save'): Promise<void> {
         // 1. set cancel button
         if (!this.cancelBtn) return;
         this.cancelBtn.style.display = 'none';
@@ -162,7 +163,7 @@ export class EditDetail extends RSSPageBuilder {
         this.changeAllInputsBack(mode);
 
         // 3. reset or save information
-        this.updateInformation(mode);
+        await this.updateInformation(mode);
         
         this.showButtons();
 
@@ -276,7 +277,7 @@ export class EditDetail extends RSSPageBuilder {
             element.replaceWith(newElement);
         }
     }
-    private updateInformation(mode: 'cancel' | 'save') {
+    private async updateInformation(mode: 'cancel' | 'save') {
         const title = document.querySelector<HTMLDivElement>('#hermidata-title');
 
         const novelType = document.querySelector<HTMLDivElement>('#hermidata-novelType');
@@ -307,6 +308,8 @@ export class EditDetail extends RSSPageBuilder {
         // Novel Type
         mode === 'save' ? this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType : novelType.textContent = this.hermidata.novelType;
 
+        await this.forceKeyUpdate();
+
         // Content Rating
         // mode === 'save' ? this.hermidata.contentRating = contentRating?.textContent ?? this.hermidata.contentRating : contentRating.textContent = this.hermidata.contentRating;
 
@@ -333,6 +336,16 @@ export class EditDetail extends RSSPageBuilder {
         // Notes
         mode === 'save' ? this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes : notes.textContent = this.hermidata.meta.notes;
 
+    }
+    /** update key if changes have been made */
+    private async forceKeyUpdate() {
+        const newKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
+        const oldKey = this.hermidata.id;
+        if (newKey === oldKey) return;
+        
+        this.hermidata.id = newKey;
+
+        await updateHermidata(oldKey, newKey, this.hermidata.toJSON());
     }
     private saveMarkers() {
         const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
