@@ -1,4 +1,4 @@
-import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
+import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
 import { ext } from './BrowserCompat';
 
@@ -44,7 +44,7 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
     return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
-export function normaliseDateToIso(rawDate: string): string {
+export function normalizeDateToIso(rawDate: string): string {
     
     if (!rawDate) return '';
 
