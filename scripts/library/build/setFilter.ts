@@ -1,4 +1,4 @@
-import { CONTENT_RATINGS, DEMOGRAPHIC_TAGS } from "../../shared/constants";
+import { CONTENT_RATING_MAP, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
@@ -44,16 +44,6 @@ export class filter extends Sort {
     protected reload(): void {
         throw new Error("Method not implemented.");
     }
-
-    private setEventListener(): void {
-        throw new Error("Method not implemented.");
-    }
-
-
-    setFilter() {
-        // TODO
-    }
-
 
     // set filter content
     private setFilterContent() {
@@ -319,7 +309,7 @@ export class filter extends Sort {
         const container = document.createElement('div');
         container.classList.add('content-rating-checkbox', 'filter-checkbox-container');
 
-        for (const [i, name, defaultCheckConfig] of CONTENT_RATINGS) {
+        for (const [i, name, defaultCheckConfig] of CONTENT_RATING_MAP) {
             // create a generic list item for each dataset entry
             const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${i}`, classes: ['content-rating-item-list']});
 

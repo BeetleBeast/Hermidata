@@ -98,3 +98,39 @@ export interface ScalarConflict<K extends string = string> {
     valueA: unknown;
     valueB: unknown;
 }
+
+export interface TagMap {
+    input: HTMLInputElement;
+    div: HTMLDivElement;
+    textarea: HTMLTextAreaElement;
+    img: HTMLImageElement;
+    date: HTMLInputElement;
+    option: HTMLOptionElement;
+    select: HTMLSelectElement;
+    h2: HTMLHeadingElement;
+    button: HTMLButtonElement;
+}
+
+export type SwitchConfig = MainConfig | InputConfig | divConfig | ButtonConfig;
+
+interface MainConfig {
+    element: HTMLTextAreaElement | HTMLImageElement | HTMLHeadingElement | HTMLButtonElement | null;
+    switchTo: Exclude<keyof TagMap, 'input'>
+}
+interface InputConfig {
+    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
+    switchTo: 'input';
+    inputType: 'text' | 'number' | 'image' | 'date' | 'file';
+}
+interface ButtonConfig {
+    element: HTMLButtonElement | null;
+    switchTo: 'button';
+    inputType: 'button';
+}
+interface divConfig {
+    element: HTMLDivElement | null;
+    switchTo: 'div';
+    rules: {
+        allUpperCase: boolean;
+    }
+}

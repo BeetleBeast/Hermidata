@@ -249,7 +249,7 @@ class HermidataController {
         const hasMergedNovelType = await this.updateNovelType();
         if (!hasMergedNovelType) return; // if merge failed/ declined then exit saving
 
-        // TODO: sheck if it works
+        // TODO: check if it works
         // migrate if duplicate
         const hasMigrated = await this.migrateIfDuplicate();
         if (hasMigrated) console.info('magration plan activated');

@@ -24,6 +24,8 @@ export class FilterLogic extends Sort {
 
     private get tagsSearchInput(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('#tag-search-input'); }
 
+    private get AuthorSearchInput(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('#Author-filter-input'); }
+
     /** Returns true if tags search mode is set to "all" */
     private get tagsSearchModeIsSetToAll(): boolean { return this.tagSearchMode[1]?.dataset.state === 'true'; }
 
@@ -57,10 +59,12 @@ export class FilterLogic extends Sort {
 
         // Hermidata  bar
         this.searchInput.addEventListener('input', (e) => this.handleSearchInput(e, this.autocompleteContainer!));
-        this.searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!));
+        this.searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!, '.autocomplete-item'));
         // tags search bar
         this.tagsSearchInput?.addEventListener('input', (e) => this.handleTagsSearchInput(e));
-
+        // Author search bar
+        this.AuthorSearchInput?.addEventListener('input', (e) => this.handleAuthorSearchInput(e));
+        this.AuthorSearchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!, '#Author-filter-suggestions'));
         // ChapterCompletionFilter
         this.ChapterCompletionFilter?.addEventListener('input', (e) => this.applyChapterCompletionFilter(e));
 
@@ -86,7 +90,6 @@ export class FilterLogic extends Sort {
     /** Count the amount of Elements are visible in the DOM, then write inside the counter and return it */
     private countVisibleEntries(hidden: boolean = false): number {
         // get visible elements
-        // TODO: implement
         const visibleElements = hidden ? 
             Array.from(document?.querySelectorAll<HTMLDivElement>('.hermidata-item')).filter(el => el.style.display !== 'none')
             : document?.querySelectorAll('.hermidata-item[data-searchable="true"]');
@@ -454,7 +457,7 @@ export class FilterLogic extends Sort {
             
             return percentageCompleted >= Number(query);
         }
-        // if (queryType === 'author') return item.author?.toLowerCase().includes(query);
+        if (queryType === 'author') return item.meta.author?.toLowerCase().includes(query) ?? false;
         return false
         
     }
@@ -467,13 +470,13 @@ export class FilterLogic extends Sort {
         input.focus();
     }
 
-    private setupSearchBar(e_: KeyboardEvent, suggestionBox: HTMLDivElement) {
+    private setupSearchBar(e_: KeyboardEvent, suggestionBox: HTMLDivElement, suggestionsClassName: string) {
         const searchInput = getElement<HTMLInputElement>('#search');
 
         if (!searchInput) throw new Error('Element not found');
 
         // const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-searchable="true"]`);
-        const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
+        const items = suggestionBox.querySelectorAll<HTMLDivElement>(`${suggestionsClassName}`);
         if (!items.length) return;
 
         if (e_.key === 'ArrowDown') {
@@ -520,6 +523,11 @@ export class FilterLogic extends Sort {
         const value = target.value;
         this.filterTags(value);
     
+    }
+    private handleAuthorSearchInput(e: Event) {
+        const target = e.target as HTMLInputElement;
+        const value = target.value;
+        this.filterEntries(value, 'author');
     }
     private filterTags(query: string) {
         const allItems = getElement('#Genres-dialog')?.querySelectorAll<HTMLDivElement>(('.genres-themes-demographic-item-list'));

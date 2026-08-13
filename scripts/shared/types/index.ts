@@ -101,6 +101,9 @@ export type {
     RSSDOM,
     RSSData,
 
+    TagMap,
+    SwitchConfig,
+
     FuzzyHermidataMatches,
     FuzzyBookmarkMatches,
     FuzzyMatchResult,

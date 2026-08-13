@@ -59,18 +59,14 @@ export abstract class Sort extends RSSPageBuilder {
             return positionSorterByType || positionSortByTitle;
         };
         const compareAuthor = (a: HTMLDivElement, b: HTMLDivElement, reverse: boolean = false) => {
-            // const authorA = getData(a).meta?.author?.toLowerCase() || '';
-            // const authorB = getData(b).meta?.author?.toLowerCase() || '';
-            // return reverse ? authorB.localeCompare(authorA) : authorA.localeCompare(authorB);
-
-            return 0; // Placeholder implementation, as author data is not available in the current implementation
+            const authorA = getData(a).meta?.author?.toLowerCase() || '';
+            const authorB = getData(b).meta?.author?.toLowerCase() || '';
+            return (reverse ? authorB.localeCompare(authorA) : authorA.localeCompare(authorB)) ?? 0;
         }
         const compareRating = (a: HTMLDivElement, b: HTMLDivElement, reverse: boolean = false) => {
-            // const ratingA = getData(a).meta?.rating || 0;
-            // const ratingB = getData(b).meta?.rating || 0;
-            // return reverse ? ratingB - ratingA : ratingA - ratingB;
-
-            return 0; // Placeholder implementation, as rating data is not available in the current implementation
+            const ratingA = getData(a).meta?.starRating || 0;
+            const ratingB = getData(b).meta?.starRating || 0;
+            return reverse ? ratingB - ratingA : ratingA - ratingB
         }
 
         // Normalize sort type
@@ -91,11 +87,9 @@ export abstract class Sort extends RSSPageBuilder {
                 entries.sort((a, b) => compareDate(a, b, "originalRelease", reverse));
                 break;
             case 'Author':
-                // does nothing for now, as we don't have author data in the current implementation
                 entries.sort((a, b) => compareAuthor(a, b, reverse));
                 break;
             case 'Rating':
-                // does nothing for now, as we don't have rating data in the current implementation
                 entries.sort((a, b) => compareRating(a, b, reverse));
                 break;
             default:

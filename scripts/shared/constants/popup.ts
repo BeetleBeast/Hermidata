@@ -17,7 +17,7 @@ export const DEFAULT_TAGS: string[] = [
 ];
 
 // [ back-end, [front-end, default state] ]
-export const CONTENT_RATINGS: Array<[string, string, boolean]> = new Array(
+export const CONTENT_RATING_MAP: Array<[string, string, boolean]> = new Array(
     ['G', 'Safe', true],
     ['PG', 'Suggestive', true],
     ['R', 'Erotica', false],

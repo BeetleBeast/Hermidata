@@ -113,8 +113,7 @@ export class Detail extends RSSPageBuilder {
     }
     private editStarRating = (): void => {
         const starRatingElement = document.querySelector<HTMLDivElement>('#hermidata-starRating');
-        // TODO: add star rating to hermidata
-        const starRatingValue = /*this.hermidata.meta.starRating ?? */ starRatingElement?.textContent;
+        const starRatingValue = String(this.hermidata.meta.starRating) ?? starRatingElement?.textContent;
 
         if (!starRatingValue || !starRatingElement) return;
 
@@ -134,8 +133,12 @@ export class Detail extends RSSPageBuilder {
     }
     private saveStarRating =(): void => {
         const input = document.querySelector<HTMLInputElement>('#hermidata-starRating');
-        // TODO: add star rating to hermidata
-        /*this.hermidata.meta.starRating = input.value;*/
+        if (!input) return;
+
+        const value = Number(input.value);
+
+        if (value <= 10 && value >= 0) this.hermidata.meta.starRating = value;
+
         this.restoreStarRating();
 
         this.starRatingEdit!.removeEventListener('click', this.saveStarRating);
@@ -151,8 +154,7 @@ export class Detail extends RSSPageBuilder {
         input.classList.add('hermidata-starRating', 'hermidata-starRating-input');
         input.id = 'hermidata-starRating';
         input.addEventListener('focusout', () => {
-            // TODO: add star rating to hermidata
-            /*this.hermidata.meta.starRating = input.value;*/
+            this.hermidata.meta.starRating = Number(input.value);
             this.saveStarRating();
         });
         return input;
@@ -166,7 +168,7 @@ export class Detail extends RSSPageBuilder {
     }
     private restoreStarRating(): void {
         const starRatingElement = document.querySelector<HTMLInputElement>('#hermidata-starRating');
-        const starRatingValue = /*this.hermidata.meta.starRating ?? */ starRatingElement?.value
+        const starRatingValue = String(this.hermidata.meta.starRating);
         if (!starRatingValue || !starRatingElement) return;
 
         starRatingElement.replaceWith(this.createStarRatingDiv(starRatingValue));
@@ -312,14 +314,11 @@ export class Detail extends RSSPageBuilder {
         const contentRating = document.getElementById('hermidata-contentRating');
         if (!contentRating) throw new Error("Content rating does not exist");
 
-        // TODO: add content rating to hermidata
-        // TEMP: use default temporaryContentRating until implemented
         let temporaryContentRating: string; 
-        
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Hentai') ? 'Pornographic' : 'Safe';
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Ecchi') ? 'Explicit' : 'Safe';
         
-        contentRating.textContent = temporaryContentRating.toUpperCase();
+        contentRating.textContent = this.hermidata.meta.contentRating ?? temporaryContentRating.toUpperCase();
     }
     private populateReleaseDate() {
         const releaseDate = document.getElementById('hermidata-releaseDate');
@@ -337,9 +336,7 @@ export class Detail extends RSSPageBuilder {
         const starRating = document.getElementById('hermidata-starRating');
         if (!starRating) throw new Error("Star rating does not exist");
 
-        // TODO: add star rating to hermidata
-        // TEMP: use default 5 until implemented
-        starRating.textContent = "5.0"; //String(this.hermidata.meta.starRating);
+        starRating.textContent = String(this.hermidata.meta.starRating) ?? "5.0";
     }
     private populateGenres() {
         const genres = document.getElementById('hermidata-genres');
@@ -386,9 +383,9 @@ export class Detail extends RSSPageBuilder {
     private populateAuthor() {
         const author = document.getElementById('hermidata-author');
         if (!author) throw new Error("Author does not exist");
-        // TODO: add author to hermidata
-        const allAuthors: string | false = /*this.hermidata.meta?.author ?? */ false;
-        author.textContent = /* allAuthors ?? */ "--None--";
+        
+        const allAuthors: string | null = this.hermidata.meta?.author ?? null;
+        author.textContent =  allAuthors ??  "--None--";
         author.dataset.hasNone = allAuthors ? 'false' : 'true';
     }
     private populateLatestRelease() {

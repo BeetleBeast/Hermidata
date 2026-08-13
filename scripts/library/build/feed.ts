@@ -1,6 +1,5 @@
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { getElement, setElement } from "../../shared/utils/Selection";
 import { RSSPageBuilder } from "../build";
 
 export class feed extends RSSPageBuilder {
@@ -76,7 +75,7 @@ export class feed extends RSSPageBuilder {
 
     private buildFeedAll() {
         // get all entries that are filtered
-        const allEntries = this.AllHermidata; // TODO: implement this when filtering is implemented
+        const allEntries = this.AllHermidata ?? {};
 
         const docFragment = document.createDocumentFragment();
 

@@ -1035,6 +1035,33 @@ body[data-list-mode="false"]
 }
 
 
+#Author-dialog:popover-open {
+    padding-right: 10px;
+}
+#Author-input-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+#Author-filter-suggestions {
+	background-color: rgba(12, 17, 24, 0.71);
+	border: 1px solid var(--Btn);
+	border-top: none;
+	border-radius: 0 0 8px 8px;
+	max-height: 300px;
+	z-index: 9999;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding-top: 0;
+	margin-top: 0;
+}
+
 #Genres-dialog:popover-open {
 	display: grid;
 	grid-row-gap: 10px;

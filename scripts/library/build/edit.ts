@@ -1,53 +1,11 @@
 import { ColorPicker } from "../../popup/frontend/ColorPicker";
-import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
+import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags, updateHermidata } from "../../shared/db/Storage";
-import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Hermidata, Settings } from "../../shared/types";
+import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { returnHashedTitle } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, RSSPageBuilder } from "../build";
 import { Tags } from "./tags";
-
-
-interface TagMap {
-    input: HTMLInputElement;
-    div: HTMLDivElement;
-    textarea: HTMLTextAreaElement;
-    img: HTMLImageElement;
-    date: HTMLInputElement;
-    option: HTMLOptionElement;
-    select: HTMLSelectElement;
-    h2: HTMLHeadingElement;
-    button: HTMLButtonElement;
-}
-/** @constant content rating */
-type ContentRating = 'Safe' | 'Pornographic' | 'Explicit';
-
-const CONTENT_RATING_OPTIONS: ContentRating[] = ['Safe', 'Pornographic', 'Explicit'];
-
-type SwitchConfig = MainConfig | InputConfig | divConfig | ButtonConfig;
-interface MainConfig {
-    element: HTMLTextAreaElement | HTMLImageElement | HTMLHeadingElement | HTMLButtonElement | null;
-    switchTo: Exclude<keyof TagMap, 'input'>
-}
-interface InputConfig {
-    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
-    switchTo: 'input';
-    inputType: 'text' | 'number' | 'image' | 'date' | 'file';
-}
-interface ButtonConfig {
-    element: HTMLButtonElement | null;
-    switchTo: 'button';
-    inputType: 'button';
-}
-interface divConfig {
-    element: HTMLDivElement | null;
-    switchTo: 'div';
-    rules: {
-        allUpperCase: boolean;
-    }
-}
-
-type SetMode = 'reset' | 'set';
 
 export class EditDetail extends RSSPageBuilder {
 
@@ -296,8 +254,6 @@ export class EditDetail extends RSSPageBuilder {
 
         if (!title || !novelType || !contentRating || !releaseDate || !novelStatus || !starRating || !sources || !author || !notes) throw new Error('Information not found');
 
-        // TODO: add author, content rating, star rating
-
         // Title
         mode === 'save' ? this.hermidata.title = title?.textContent ?? this.hermidata.title : title.textContent = this.hermidata.title;
 
@@ -311,7 +267,8 @@ export class EditDetail extends RSSPageBuilder {
         await this.forceKeyUpdate();
 
         // Content Rating
-        // mode === 'save' ? this.hermidata.contentRating = contentRating?.textContent ?? this.hermidata.contentRating : contentRating.textContent = this.hermidata.contentRating;
+        const contentRatingValue = contentRating?.textContent as ContentRating ?? this.hermidata.meta.contentRating;
+        mode === 'save' ? this.hermidata.meta.contentRating = contentRatingValue : contentRating.textContent = this.hermidata.meta.contentRating;
 
         // Release Date
         const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added;
@@ -321,10 +278,10 @@ export class EditDetail extends RSSPageBuilder {
         mode === 'save' ? this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus : novelStatus.textContent = this.hermidata.meta.novelStatus;
 
         // Star Rating
-        // mode === 'save' ? this.hermidata.meta.starRating = starRating?.textContent ?? this.hermidata.meta.starRating : starRating.textContent = this.hermidata.meta.starRating;
+        mode === 'save' ? this.hermidata.meta.starRating = Number(starRating?.textContent) ?? this.hermidata.meta.starRating : starRating.textContent = String(this.hermidata.meta.starRating);
 
         // Author
-        // mode === 'save' ? this.hermidata.meta.author = author?.textContent ?? '' : author.textContent = this.hermidata.meta.author;
+        mode === 'save' ? this.hermidata.meta.author = author?.textContent ?? undefined : author.textContent = this.hermidata.meta.author ?? '--None--';
 
         // Alt. Sources
         const altSourcesSingleString = this.hermidata.GetAltSources().join(', ');
@@ -538,9 +495,8 @@ export class EditDetail extends RSSPageBuilder {
     private removeAuthorEmptyText() {
         const author = document.querySelector<HTMLInputElement>('#hermidata-author');
         if (!author) throw new Error('Author does not exist');
-        // TODO: add author to hermidata
         // if empty text
-        if (author.value === '--None--' /*|| this.hermidata.meta.author === undefined */) {
+        if (author.value === '--None--' || this.hermidata.meta.author === undefined ) {
             author.value = '';
         }
     }
@@ -739,7 +695,7 @@ export class EditDetail extends RSSPageBuilder {
             { 
                 element: document.querySelector<HTMLDivElement>('#hermidata-contentRating'), 
                 switchTo: 'select', 
-                content: CONTENT_RATING_OPTIONS
+                content: CONTENT_RATING
             }, // content Rating
             { 
                 element: document.querySelector<HTMLDivElement>('#hermidata-novelStatus'), 
@@ -787,15 +743,15 @@ export class EditDetail extends RSSPageBuilder {
         // disambiguate which overload was actually called
         let inputType: 'text' | 'number' | 'date' | 'image' | 'file' = 'text';
         let transferContent = false;
-        let set: SetMode = 'set';
+        let set: 'reset' | 'set' = 'set';
 
         if (switchTo === 'input') {
             inputType = (arg3 as typeof inputType) ?? 'text';
             transferContent = (arg4 as boolean) ?? false;
-            set = (arg5 as SetMode) ?? 'set';
+            set = (arg5 as 'reset' | 'set') ?? 'set';
         } else {
             transferContent = (arg3 as boolean) ?? false;
-            set = (arg4 as SetMode) ?? 'set';
+            set = (arg4 as 'reset' | 'set') ?? 'set';
         }
 
         // 1. create new element
