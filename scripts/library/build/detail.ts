@@ -42,6 +42,9 @@ export class Detail extends RSSPageBuilder {
         
         // 1. Build the page
 
+        this.setPageTitle(this.hermidata.title);
+
+
         // 2. populate page
         this.populateDetails();
 
@@ -87,6 +90,11 @@ export class Detail extends RSSPageBuilder {
 
         // on clicked Edit star button
         this.starRatingEdit?.addEventListener('click', this.editStarRating);
+    }
+    private setPageTitle(title: string): void {
+        const hermidata = "Hermidata — ";
+        document.title = hermidata + title;
+
     }
     private setMarkersSortMode(newSortMode: 'asc' | 'desc'): void {
         const currentButtonSelected = document.querySelector<HTMLButtonElement>('.filter-button[data-state="true"]');

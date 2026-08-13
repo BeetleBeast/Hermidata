@@ -1,5 +1,6 @@
 import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
 import { HermidataModel } from './HermidataSelector';
+import { ext } from './BrowserCompat';
 
 export function getChapterFromTitle(title: string | undefined, url: string): number {
     if (!title) return Number.NaN;
@@ -154,6 +155,9 @@ export class TrimTitle {
         return cleanString
     }
     private static extractDomainFromUrl(HermidataUrl: string): string {
+        // Detect our own browser extension and return a constant
+        if (HermidataUrl.startsWith(ext.runtime.getURL(""))) return "Hermidata";
+
         // Extract domain name from url
         const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataUrl);
         const siteName = siteMatch ? siteMatch[1] : "DummySite";
