@@ -402,7 +402,6 @@ export class Detail extends RSSPageBuilder {
             const markerElementContainer = document.createElement('div');
             markerElementContainer.classList.add('hermidata-marker-container');
             markerElementContainer.dataset.id = marker.id;
-            markerElementContainer.dataset.url = marker.url;
             markerElementContainer.id = `hermidata-marker-container-${index}`;
 
             // add marker row container

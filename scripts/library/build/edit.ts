@@ -61,8 +61,10 @@ export class EditDetail extends RSSPageBuilder {
     private readonly fileInput = document.querySelector<HTMLInputElement>('#imageChanger-file');
     private readonly urlConfirmBtn = document.querySelector<HTMLButtonElement>('#imageChanger-url-confirm');
 
-    private genreTags: Tags | null = null
-    private demographicTags: Tags | null = null
+    private genreTags: Tags | null = null;
+    private demographicTags: Tags | null = null;
+
+    private newAltTitles: string[] | null = null;
 
     constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
             super(AllHermidata, settings);
@@ -86,7 +88,7 @@ export class EditDetail extends RSSPageBuilder {
             // genres | special case handled separately
             // demographics | special case handled separately
             { element: document.querySelector<HTMLDivElement>('#hermidata-sources'), switchTo: 'input', inputType: 'text' }, // hermidata Sources
-            // { element: document.querySelector<HTMLDivElement>('#hermidata-author'), switchTo: 'input', inputType: 'text' }, // hermidata author
+            { element: document.querySelector<HTMLDivElement>('#hermidata-author'), switchTo: 'input', inputType: 'text' }, // hermidata author
             // { element: document.querySelector<HTMLDivElement>('#hermidata-latestRelease'), switchTo: 'input', inputType: 'text' }, // latest Release
         ];
     }
@@ -105,7 +107,7 @@ export class EditDetail extends RSSPageBuilder {
             // genres | special case handled separately
             // demographics | special case handled separately
             { element: document.querySelector<HTMLInputElement>('#hermidata-sources'), switchTo: 'div'}, // hermidata Sources
-            // { element: document.querySelector<HTMLInputElement>('#hermidata-author'), switchTo: 'div'}, // hermidata author
+            { element: document.querySelector<HTMLInputElement>('#hermidata-author'), switchTo: 'div'}, // hermidata author
             // { element: document.querySelector<HTMLInputElement>('#hermidata-latestRelease'), switchTo: 'div'}, // latest Release
         ];
     }
@@ -158,6 +160,9 @@ export class EditDetail extends RSSPageBuilder {
         
         // 2. set all inputs to editable
         this.changeAllInputsBack(mode);
+
+        // 3. reset or save information
+        this.updateInformation(mode);
         
         this.showButtons();
 
@@ -214,14 +219,19 @@ export class EditDetail extends RSSPageBuilder {
         // set image back
         document.querySelector<HTMLImageElement>('#hermidata-img')?.setAttribute('src', this.hermidata.rss?.image ?? '../../../assets/icon/icon48.png');
 
-        // set author text ( if empty to --None-- )
-        //TODO: make it manual changeable
+        // set author text
+        const author = document.querySelector<HTMLDivElement>('#hermidata-author');
+        this.setEmptyText(author);
+
+        // set sources text
+        const sources = document.querySelector<HTMLDivElement>('#hermidata-sources');
+        this.setEmptyText(sources);
 
         // notes Content | set read only
         document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.setAttribute('readonly', '');
 
         // alt titles
-        this.changeAltTitleBackToDiv();
+        this.changeAltTitleBackToDiv(mode);
 
         // data group 1 | set select back to div
         this.changeGroup1BackToDiv();
@@ -231,6 +241,15 @@ export class EditDetail extends RSSPageBuilder {
 
         // markers
         this.changeMarkersBackToDiv(mode === 'cancel');
+    }
+    private setEmptyText(element: HTMLElement | null) {
+        const noContent = element?.textContent === '';
+        const hasNone = element?.dataset.hasNone === 'true';
+        if (hasNone || noContent) {
+            // add --None--
+            element.classList.add('empty-text');
+            element.textContent = `--None--`;
+        }
     }
     private changeGroup1BackToDiv() {
         const group1 = [
@@ -257,7 +276,90 @@ export class EditDetail extends RSSPageBuilder {
             element.replaceWith(newElement);
         }
     }
-    private changeGroup2BackToDiv(keepInfo: boolean) {
+    private updateInformation(mode: 'cancel' | 'save') {
+        const title = document.querySelector<HTMLDivElement>('#hermidata-title');
+
+        const novelType = document.querySelector<HTMLDivElement>('#hermidata-novelType');
+        const contentRating = document.querySelector<HTMLDivElement>('#hermidata-contentRating');
+        const releaseDate = document.querySelector<HTMLDivElement>('#hermidata-releaseDate');
+        const novelStatus = document.querySelector<HTMLDivElement>('#hermidata-novelStatus');
+        
+        const starRating = document.querySelector<HTMLDivElement>('#hermidata-starRating');
+
+        // genres + Demographics already handled in changeGroup2BackToDiv()
+
+        const sources = document.querySelector<HTMLDivElement>('#hermidata-sources');
+        const author = document.querySelector<HTMLDivElement>('#hermidata-author');
+
+        const notes = document.querySelector<HTMLDivElement>('#hermidata-notes-content');
+
+        if (!title || !novelType || !contentRating || !releaseDate || !novelStatus || !starRating || !sources || !author || !notes) throw new Error('Information not found');
+
+        // TODO: add author, content rating, star rating
+
+        // Title
+        mode === 'save' ? this.hermidata.title = title?.textContent ?? this.hermidata.title : title.textContent = this.hermidata.title;
+
+        // Alt. Titles
+        if(mode === 'save' && this.newAltTitles) this.hermidata.SetMultipleAltTitles(this.newAltTitles);
+        // cancel content already handled in changeAltTitleBackToDiv()
+
+        // Novel Type
+        mode === 'save' ? this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType : novelType.textContent = this.hermidata.novelType;
+
+        // Content Rating
+        // mode === 'save' ? this.hermidata.contentRating = contentRating?.textContent ?? this.hermidata.contentRating : contentRating.textContent = this.hermidata.contentRating;
+
+        // Release Date
+        const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added;
+        mode === 'save' ? this.hermidata.meta.originalRelease = releaseDate?.textContent ?? releaseDateValue : releaseDate.textContent = this.setToFrenchDate(releaseDateValue);
+
+        // Novel Status
+        mode === 'save' ? this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus : novelStatus.textContent = this.hermidata.meta.novelStatus;
+
+        // Star Rating
+        // mode === 'save' ? this.hermidata.meta.starRating = starRating?.textContent ?? this.hermidata.meta.starRating : starRating.textContent = this.hermidata.meta.starRating;
+
+        // Author
+        // mode === 'save' ? this.hermidata.meta.author = author?.textContent ?? '' : author.textContent = this.hermidata.meta.author;
+
+        // Alt. Sources
+        const altSourcesSingleString = this.hermidata.GetAltSources().join(', ');
+        mode === 'save' ? this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString) : sources.textContent = altSourcesSingleString;
+
+        // markers
+        if (mode === 'save') this.saveMarkers();
+
+        // Notes
+        mode === 'save' ? this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes : notes.textContent = this.hermidata.meta.notes;
+
+    }
+    private saveMarkers() {
+        const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
+        const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
+        if (!markers || !markersContainer) return;
+        for (const marker of markersContainer) {
+            const markerId = marker.dataset.id;
+            if (!markerId) continue;
+
+            const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
+            const chapter = marker.querySelector<HTMLInputElement>('.hermidata-marker-chapter');
+            const label = marker.querySelector<HTMLInputElement>('.hermidata-marker-label');
+            const readStatus = marker.querySelector<HTMLInputElement>('.hermidata-marker-readStatus');
+            const note = marker.querySelector<HTMLInputElement>('.hermidata-marker-note');
+
+            if (!colour || !chapter || !label || !readStatus || !note) continue;
+
+            if (!this.hermidata.chapter.bookmarks[markerId]) throw new Error('Bookmark not found');
+
+            this.hermidata.chapter.bookmarks[markerId].color = colour.style.backgroundColor;
+            this.hermidata.chapter.bookmarks[markerId].current = Number(chapter.value);
+            this.hermidata.chapter.bookmarks[markerId].label = label.value;
+            this.hermidata.chapter.bookmarks[markerId].readStatus = readStatus.value;
+            if (note.value !== '') this.hermidata.chapter.bookmarks[markerId].note = note.value;
+        }
+    }
+    private changeGroup2BackToDiv(saveInfo: boolean) {
         const allTags = document.querySelectorAll<HTMLDivElement>('.filter-allTags-container');
         const filterInput = document.querySelectorAll<HTMLInputElement>('.filterInput');
         const tagsContainer = document.querySelectorAll<HTMLDivElement>('.selected-tag-container');
@@ -282,11 +384,16 @@ export class EditDetail extends RSSPageBuilder {
 
             if (element.childElementCount === 1 && (element.children[0] as HTMLDivElement).dataset.empty === "true") {
                 element.children[0].remove();
-                this.setEmptyText(element);
+                this.setChildEmptyText(element);
             }
         }
 
-        if (keepInfo) return;
+        // keep info
+        if (saveInfo) {
+            const allGenresAndDemographics = Array.from(filterTags.values()).map(el => el.textContent.trim());
+            this.hermidata.SetTags(allGenresAndDemographics);
+            return;
+        }
         // to remove all info except the existing one
         const tags = new Set<string>();
 
@@ -304,12 +411,12 @@ export class EditDetail extends RSSPageBuilder {
             // remove if not in list
             if (isGenre && !allGenreTags.includes(name)) {
                 // if container is empty, add empty text
-                if (element.parentElement!.childElementCount === 1) this.setEmptyText(element.parentElement!);
+                if (element.parentElement!.childElementCount === 1) this.setChildEmptyText(element.parentElement!);
                 element.remove();
             }
             else if (isDemographic && !allDemographicTags.includes(name)) {
                 // if container is empty, add empty text
-                if (element.parentElement!.childElementCount === 1) this.setEmptyText(element.parentElement!);
+                if (element.parentElement!.childElementCount === 1) this.setChildEmptyText(element.parentElement!);
                 element.remove();
             }
 
@@ -328,18 +435,20 @@ export class EditDetail extends RSSPageBuilder {
             }
         }
     }
-    private setEmptyText(element: HTMLElement) {
+    private setChildEmptyText(element: HTMLElement) {
         const emptyText = document.createElement('div');
         emptyText.classList.add('empty-text');
         emptyText.textContent = `--None--`;
         element.appendChild(emptyText);
     }
-    private changeAltTitleBackToDiv() {
+    private changeAltTitleBackToDiv(mode: 'cancel' | 'save') {
         const altTitlesContainer = document.querySelector<HTMLTextAreaElement>('#hermidata-alternative-titles-list');
 
         if (!altTitlesContainer) throw new Error('Alt titles container not found');
         // get the content
         const altTitlesContent = this.hermidata.meta.altTitles;
+
+        this.newAltTitles = mode === 'save' ? altTitlesContainer.value.split('\n') : altTitlesContent;
 
         const altTitles = this.switchElement(altTitlesContainer, 'div', false, 'reset');
 
@@ -395,6 +504,8 @@ export class EditDetail extends RSSPageBuilder {
 
         this.initImageChanger();
 
+        // author | remove --empty content
+        this.removeAuthorEmptyText();
 
         // notes Content | remove read only
         document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.removeAttribute('readonly');
@@ -410,6 +521,15 @@ export class EditDetail extends RSSPageBuilder {
 
         // markers
         this.setMarkersToInput();
+    }
+    private removeAuthorEmptyText() {
+        const author = document.querySelector<HTMLInputElement>('#hermidata-author');
+        if (!author) throw new Error('Author does not exist');
+        // TODO: add author to hermidata
+        // if empty text
+        if (author.value === '--None--' /*|| this.hermidata.meta.author === undefined */) {
+            author.value = '';
+        }
     }
     protected setMarkerColourHandler = (event: MouseEvent) => {
         const colour = event.target as HTMLDivElement;

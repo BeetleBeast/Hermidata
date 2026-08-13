@@ -100,6 +100,9 @@ export class HermidataModel implements Hermidata {
         return latestHistory ?? latestChapterCatch;
     }
     GetLatestChapter(): number { return this.chapter.latest; }
+    GetAltSources(): string[] {
+        return this.meta.altSources;
+    }
     GetSourceOfLatestChapter(): string { 
         // find the source of the latest chapter
         const list = Object.values(this.chapter.bookmarks).filter(bookmark => bookmark.current === (this.chapter.latest)).map(bookmark => bookmark.url);
@@ -156,6 +159,34 @@ export class HermidataModel implements Hermidata {
             if (!altTitles.includes(newTitle)) altTitles.push(newTitle);
         }
         this.meta.altTitles = altTitles;
+    }
+    SetTags(newTags: string[]): void { 
+        // 1. concat tags and new tags
+        const concatTags = this.meta.tags.concat(newTags);
+        // 2. remove duplicates
+        const tags = Array.from(new Set(concatTags));
+        // 3. remove empty strings
+        const filterTags = tags.filter((tag) => tag !== '');
+        // 4. add new tags
+        this.meta.tags = filterTags;
+    }
+    SetAltSources(source: string): void;
+    SetAltSources(sources: string[]): void;
+    SetAltSources(sources: string | string[]): void {
+        const splitStrings = (string: string) => string.split(', ');
+        const sourcesSplit = Array.isArray(sources) ? sources : splitStrings(sources);
+        if (sourcesSplit.length === 1) {
+            this.meta.altSources.push(sourcesSplit[0]);
+        } else { 
+            this.meta.altSources = this.meta.altSources.concat(sourcesSplit);
+        }
+
+        // sort
+        this.meta.altSources.sort((a, b) => a.localeCompare(b));
+        // set first of list the same as source
+        this.meta.altSources.unshift(this.source);
+        // remove duplicates
+        this.meta.altSources = [...new Set(this.meta.altSources)];
     }
     SetScrollPosition(scrollPosition: number): void;
     SetScrollPosition(scrollPosition: number, bookmarkInUseId: string): void;
