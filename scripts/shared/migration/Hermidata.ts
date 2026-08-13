@@ -1,13 +1,13 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { deleteHermidata, getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
+import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
 import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
 import { getChapterFromTitle, normalizeDateToIso, returnBookmarkHash, returnHashedTitle, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, allOlderHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV10, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings } from "../types";
+import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV10, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
-import type { HermidataMigrationConfiguration, ScalarConflict } from "../types/rss";
 import type { BookmarkV4 } from "../types/oldVersions";
+import { AutoSetAllHermidata } from "../utils/AutoSetAllHermidata";
 
 
 interface DuplicationResult {
@@ -573,11 +573,16 @@ export class HermidataMigration {
                 novelStatus: flagOrSkip("meta.novelStatus", keep.meta.novelStatus, discard.meta.novelStatus) as AnyNovelStatus,
 
                 contentRating: keep.meta.contentRating ?? discard.meta.contentRating,
-                contentWarnings: keep.meta.contentWarnings ?? discard.meta.contentWarnings,
+                contentWarnings: this.unionDedupe(keep.meta.contentWarnings,discard.meta.contentWarnings) as ContentWarning[],
                 starRating: keep.meta.starRating ?? discard.meta.starRating,
                 image: keep.meta.image ?? discard.meta.image,
                 readingQueue: keep.meta.readingQueue ?? discard.meta.readingQueue,
                 relations: keep.meta.relations ?? discard.meta.relations,
+                // optional fields
+                author: keep.meta.author ?? discard.meta.author ?? undefined,
+                language: keep.meta.language ?? discard.meta.language ?? undefined,
+                translator: keep.meta.translator ?? discard.meta.translator ?? undefined,
+
             },
         };
         
@@ -1251,7 +1256,7 @@ export class HermidataMigration {
                 latest: Number(data.chapter?.latest) ?? 0,
                 lastChecked: new Date(normalizeDateToIso(data.chapter?.lastChecked)).toISOString() ?? new Date().toISOString(),
                 bookmarkInUse: data.chapter?.bookmarkInUse,
-                releaseSchedule: HermidataModel.releaseSchedule(this.setNewHistoryFromOld(data.chapter.bookmarks[data.chapter.bookmarkInUse].history, data.chapter.bookmarks[data.chapter.bookmarkInUse].createdAt)),
+                releaseSchedule: AutoSetAllHermidata.releaseSchedule(this.setNewHistoryFromOld(data.chapter.bookmarks[data.chapter.bookmarkInUse].history, data.chapter.bookmarks[data.chapter.bookmarkInUse].createdAt)),
             },
             meta: {
                 tags: this.setTagsFromStringToList(data.meta?.tags) ?? [],

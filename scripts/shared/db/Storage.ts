@@ -11,7 +11,7 @@ import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
-import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
 import type { AllSortsType } from '../../library/build/filter';

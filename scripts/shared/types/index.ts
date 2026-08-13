@@ -6,6 +6,9 @@ export type {
     NovelStatus,
     ReadStatus,
 
+    ContentRating,
+    ContentWarning,
+
     migrationReturn,
     
     Hermidata,
@@ -101,6 +104,9 @@ export type {
     FuzzyHermidataMatches,
     FuzzyBookmarkMatches,
     FuzzyMatchResult,
+
+    HermidataMigrationConfiguration,
+    ScalarConflict
 
 } from "./rss";
 

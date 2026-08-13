@@ -2,6 +2,7 @@ import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
+import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
@@ -297,7 +298,8 @@ export class HermidataModel implements Hermidata {
                 revisitingCount: brokenHermidata?.chapter?.revisitingCount ?? 0,
                 latest: brokenHermidata?.chapter?.latest ?? 0,
                 bookmarks: {},
-                releaseSchedule: brokenHermidata?.chapter?.releaseSchedule ?? this.releaseSchedule(brokenHermidata?.chapter?.bookmarkInUse) ?? 'Unknown',
+                releaseSchedule: brokenHermidata?.chapter?.releaseSchedule ?? 
+                    AutoSetAllHermidata.releaseSchedule(brokenHermidata?.chapter?.bookmarks[brokenHermidata?.chapter?.bookmarkInUse].history) ?? 'Unknown',
             }
             const bookmarks: Bookmark[] = [];
             const hasPrimary = false;
@@ -330,7 +332,7 @@ export class HermidataModel implements Hermidata {
             contentRating: brokenHermidata?.meta?.contentRating ?? this.meta.tags.includes('Hentai') ? 'Pornographic' : 'Safe',
             contentWarnings: brokenHermidata?.meta?.contentWarnings ?? [],
             starRating: brokenHermidata?.meta?.starRating ?? 5.0,
-            image: brokenHermidata?.rss?.image ?? '../../../assets/icon/icon48.png',
+            image: brokenHermidata?.meta?.image ?? brokenHermidata?.rss?.image ?? '../../../assets/icon/icon48.png',
 
             readingQueue: brokenHermidata?.meta?.readingQueue ?? false,
             relations: brokenHermidata?.meta?.relations ?? "None",
@@ -510,81 +512,5 @@ export class HermidataModel implements Hermidata {
     public jumpToUrl = (url?: string): void => {
         // TODO: make it more robust later
         window.open(url ?? this.GetUrl());
-    }
-    releaseSchedule(bookmarkInUseId?: string): ReleaseSchedule {
-        // get the timestamps from the history and set in Unix time
-        const time = this.chapter.bookmarks[bookmarkInUseId ?? this.chapter.bookmarkInUse].history.flatMap(history => new Date(history.at).getTime());
-
-        const uniqueTimes = [...new Set(time)];
-
-        // sort the array
-        const sortedTimes = uniqueTimes.sort((a, b) => a - b);
-
-        const getNumberOfDaysBetweenDates = (a: number, b: number) => Math.floor((b - a) / (1000 * 60 * 60 * 24));
-
-        // get the number of days between the dates
-        const listOfDaysBetweenDates: number[] = [];
-        for (let i = 0; i < sortedTimes.length - 1; i++) {
-            listOfDaysBetweenDates.push(getNumberOfDaysBetweenDates(sortedTimes[i], sortedTimes[i + 1]));
-        }
-
-        // get the average number of days between the dates
-        const averageDaysBetweenDates = listOfDaysBetweenDates.reduce((a, b) => a + b, 0) / listOfDaysBetweenDates.length;
-        
-
-        // 1. if the dates are about 1 week apart, return weakly
-        if (averageDaysBetweenDates < 7) return 'Weekly';
-        // 2. if the dates are about 1 month apart, return monthly
-        if (averageDaysBetweenDates < 30) return 'Monthly';
-        // 3. if the dates are about 1 year apart, return yearly
-        if (averageDaysBetweenDates < 365) return 'Yearly';
-        // 5. if the dates are about 1 day apart, return daily
-        if (averageDaysBetweenDates < 2) return 'Daily';
-        // 6. if there is only one date, return 'Once'
-        if (sortedTimes.length === 1) return 'Once';
-        // 4. if the dates are irregular, return 'irregular'
-        if (averageDaysBetweenDates > 365) return 'Irregular';
-        // return unknown
-        return 'Unknown';
-    }
-
-    static releaseSchedule(history: Bookmark["history"]): ReleaseSchedule {
-        // get the timestamps from the history and set in Unix time
-        const time = history.flatMap(history => new Date(history.at).getTime());
-
-        const uniqueTimes = [...new Set(time)];
-
-        // rounding error 
-        const roundedTimes = uniqueTimes.map(time => Math.round(time / 1000));
-
-        // sort the array
-        const sortedTimes = roundedTimes.sort((a, b) => a - b);
-
-        const getNumberOfDaysBetweenDates = (a: number, b: number) => Math.floor((b - a) / (1000 * 60 * 60 * 24));
-
-        // get the number of days between the dates
-        const listOfDaysBetweenDates: number[] = [];
-        for (let i = 0; i < sortedTimes.length - 1; i++) {
-            listOfDaysBetweenDates.push(getNumberOfDaysBetweenDates(sortedTimes[i], sortedTimes[i + 1]));
-        }
-
-        // get the average number of days between the dates
-        const averageDaysBetweenDates = listOfDaysBetweenDates.reduce((a, b) => a + b, 0) / listOfDaysBetweenDates.length;
-        
-
-        // 1. if the dates are about 1 week apart, return weakly
-        if (averageDaysBetweenDates < 7) return 'Weekly';
-        // 2. if the dates are about 1 month apart, return monthly
-        if (averageDaysBetweenDates < 30) return 'Monthly';
-        // 3. if the dates are about 1 year apart, return yearly
-        if (averageDaysBetweenDates < 365) return 'Yearly';
-        // 5. if the dates are about 1 day apart, return daily
-        if (averageDaysBetweenDates < 2) return 'Daily';
-        // 6. if there is only one date, return 'Once'
-        if (sortedTimes.length === 1) return 'Once';
-        // 4. if the dates are irregular, return 'irregular'
-        if (averageDaysBetweenDates > 365) return 'Irregular';
-        // return unknown
-        return 'Unknown';
     }
 }
