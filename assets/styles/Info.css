@@ -798,15 +798,24 @@ label {
 
 .hermidata-metadata-group-1 {
 	width: 100%;
-	display: flex;
+	display: inline-block;
 	flex-direction: row;
 	gap: 10px;
 	background-color: var(--table-color);
 	border-radius: 10px;
-	padding: 10px;
+	/*padding: 10px;*/
 	justify-content: space-between;
 	align-items: center;
 	border: 1px solid var(--border-focus);
+}
+
+.hermidata-metadata-group-1[data-editing="false"] {
+    width: 100%;
+    padding: 10px;
+}
+
+.hermidata-metadata-group-1[data-editing="true"] {
+    width: auto;
 }
 
 .hermidata-metadata-group-2 {
@@ -916,6 +925,11 @@ label {
 }
 
 /* notes */
+
+#hermidata-notes-content {
+    height: 5em;
+    margin-bottom: 3em;
+}
 
 
 #hermidata-notes-label {

@@ -14,7 +14,7 @@ export class EditDetail extends RSSPageBuilder {
     private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn');
     private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
 
-    private readonly imgElement = document.querySelector<HTMLImageElement>('#hermidata-img-container');
+    private get imgElement(): HTMLImageElement | null { return document.querySelector<HTMLImageElement>('#hermidata-img'); }
     private readonly popover = document.querySelector<HTMLDivElement>('#imageChanger-dialog');
     private readonly urlInput = document.querySelector<HTMLInputElement>('#imageChanger-url');
     private readonly fileInput = document.querySelector<HTMLInputElement>('#imageChanger-file');
@@ -34,7 +34,6 @@ export class EditDetail extends RSSPageBuilder {
 
     private getAllDivToInputs(): SwitchConfig[] {
         return [
-            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'button', inputType: 'button' }, // image
 
             { element: document.querySelector<HTMLHeadingElement>('#hermidata-title'), switchTo: 'input', inputType: 'text' }, // main title
             // alternative titles container | special case handled separately
@@ -176,7 +175,7 @@ export class EditDetail extends RSSPageBuilder {
         }
 
         // set image back
-        document.querySelector<HTMLImageElement>('#hermidata-img')?.setAttribute('src', this.hermidata.rss?.image ?? '../../../assets/icon/icon48.png');
+        // document.querySelector<HTMLImageElement>('#hermidata-img')?.setAttribute('src', this.hermidata.meta.image);
 
         // set author text
         const author = document.querySelector<HTMLDivElement>('#hermidata-author');
@@ -254,44 +253,59 @@ export class EditDetail extends RSSPageBuilder {
 
         if (!title || !novelType || !contentRating || !releaseDate || !novelStatus || !starRating || !sources || !author || !notes) throw new Error('Information not found');
 
+        // image
+        // IGNORE: images will be remade in the next pass
+        const imageContent = this.imgElement?.src;
+        if (mode == "save") this.hermidata.meta.image = imageContent ?? this.hermidata.meta.image
+        else this.imgElement?.setAttribute('src', this.hermidata.meta.image);
+
         // Title
-        mode === 'save' ? this.hermidata.title = title?.textContent ?? this.hermidata.title : title.textContent = this.hermidata.title;
+        if (mode === 'save') this.hermidata.title = title?.textContent ?? this.hermidata.title 
+        else title.textContent = this.hermidata.title;
 
         // Alt. Titles
-        if(mode === 'save' && this.newAltTitles) this.hermidata.SetMultipleAltTitles(this.newAltTitles);
+        if (mode === 'save' && this.newAltTitles) this.hermidata.SetMultipleAltTitles(this.newAltTitles);
         // cancel content already handled in changeAltTitleBackToDiv()
 
         // Novel Type
-        mode === 'save' ? this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType : novelType.textContent = this.hermidata.novelType;
+        if (mode === 'save') this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType;
+        else novelType.textContent = this.hermidata.novelType.toLocaleUpperCase();
 
         await this.forceKeyUpdate();
 
         // Content Rating
         const contentRatingValue = contentRating?.textContent as ContentRating ?? this.hermidata.meta.contentRating;
-        mode === 'save' ? this.hermidata.meta.contentRating = contentRatingValue : contentRating.textContent = this.hermidata.meta.contentRating;
+        if (mode === 'save') this.hermidata.meta.contentRating = contentRatingValue;
+        else contentRating.textContent = this.hermidata.meta.contentRating.toLocaleUpperCase();
 
         // Release Date
         const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added;
-        mode === 'save' ? this.hermidata.meta.originalRelease = releaseDate?.textContent ?? releaseDateValue : releaseDate.textContent = this.setToFrenchDate(releaseDateValue);
+        if (mode === 'save') this.hermidata.meta.originalRelease = releaseDate?.textContent ?? releaseDateValue;
+        else releaseDate.textContent = this.setToFrenchDate(releaseDateValue);
 
         // Novel Status
-        mode === 'save' ? this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus : novelStatus.textContent = this.hermidata.meta.novelStatus;
+        if (mode === 'save') this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus;
+        else novelStatus.textContent = this.hermidata.meta.novelStatus.toLocaleUpperCase();
 
         // Star Rating
-        mode === 'save' ? this.hermidata.meta.starRating = Number(starRating?.textContent) ?? this.hermidata.meta.starRating : starRating.textContent = String(this.hermidata.meta.starRating);
+        if (mode === 'save') this.hermidata.meta.starRating = Number(starRating?.textContent) ?? this.hermidata.meta.starRating;
+        else starRating.textContent = String(this.hermidata.meta.starRating);
 
         // Author
-        mode === 'save' ? this.hermidata.meta.author = author?.textContent ?? undefined : author.textContent = this.hermidata.meta.author ?? '--None--';
+        if (mode === 'save') this.hermidata.meta.author = author?.textContent ?? undefined;
+        else author.textContent = this.hermidata.meta.author ?? '--None--';
 
         // Alt. Sources
         const altSourcesSingleString = this.hermidata.GetAltSources().join(', ');
-        mode === 'save' ? this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString) : sources.textContent = altSourcesSingleString;
+        if (mode === 'save') this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString)
+        else sources.textContent = altSourcesSingleString;
 
         // markers
         if (mode === 'save') this.saveMarkers();
 
         // Notes
-        mode === 'save' ? this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes : notes.textContent = this.hermidata.meta.notes;
+        if ( mode === 'save') this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes;
+        else notes.textContent = this.hermidata.meta.notes;
 
     }
     /** update key if changes have been made */
@@ -329,41 +343,43 @@ export class EditDetail extends RSSPageBuilder {
             if (note.value !== '') this.hermidata.chapter.bookmarks[markerId].note = note.value;
         }
     }
+    private removePillRemoveButton(pill: HTMLDivElement) {
+        // remove x button
+        const removeX = pill.querySelectorAll('.tag-pill-removeX')
+        for (const x of removeX) x.remove();
+    }
+    private setChildEmptyTextIfOnlyOneChild(element: HTMLDivElement) {
+        if (element.childElementCount === 1 && (element.children[0] as HTMLDivElement).dataset.empty === "true") {
+            element.children[0].remove();
+            this.setChildEmptyText(element);
+        }
+    }
     private changeGroup2BackToDiv(saveInfo: boolean) {
         const allTags = document.querySelectorAll<HTMLDivElement>('.filter-allTags-container');
         const filterInput = document.querySelectorAll<HTMLInputElement>('.filterInput');
         const tagsContainer = document.querySelectorAll<HTMLDivElement>('.selected-tag-container');
         const filterTags = document.querySelectorAll<HTMLDivElement>('.hermidata-genre, .hermidata-demographic');
 
-        for (const element of allTags) {
-            if (!element) continue;
-            element.dataset.editing = 'false';
-        }
-        for (const element of filterInput) {
-            if (!element) continue;
-            element.dataset.editing = 'false';
-        }
+        for (const element of allTags) element.dataset.editing = 'false';
+        for (const element of filterInput) element.dataset.editing = 'false';
+
         for (const element of tagsContainer) {
             if (!element) continue;
             element.dataset.editing = 'false';
             // remove x button
-            const removeX = element.querySelectorAll('.tag-pill-removeX')
-            for (const x of removeX) x.remove();
+            this.removePillRemoveButton(element);
 
-            
-
-            if (element.childElementCount === 1 && (element.children[0] as HTMLDivElement).dataset.empty === "true") {
-                element.children[0].remove();
-                this.setChildEmptyText(element);
-            }
+            this.setChildEmptyTextIfOnlyOneChild(element);
         }
 
         // keep info
         if (saveInfo) {
             const allGenresAndDemographics = Array.from(filterTags.values()).map(el => el.textContent.trim());
             this.hermidata.SetTags(allGenresAndDemographics);
-            return;
-        }
+        } else this.cancelDataAndSetToDefaultContent(filterTags);
+        // discard info
+    }
+    private cancelDataAndSetToDefaultContent(filterTags: NodeListOf<HTMLDivElement>) {
         // to remove all info except the existing one
         const tags = new Set<string>();
 
@@ -462,6 +478,32 @@ export class EditDetail extends RSSPageBuilder {
         // 4. replace element
         altTitlesContainer.replaceWith(newElement);
     }
+    private setImageChangerToEditable() {
+
+        const image: { element: HTMLImageElement | null, switchTo: 'button', inputType: 'button' }[] = [
+            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'button', inputType: 'button' } // image
+        ]
+
+        for (const {element, switchTo, inputType: content} of image) {
+            if (!element) continue;
+            
+            // 1. create new element
+            const newElement = document.createElement(switchTo);
+
+            // 2. copy attributes
+            for (const attr of element.attributes) newElement.setAttribute(attr.name, attr.value);
+            newElement.dataset.editing = 'true';
+
+            // 3. transfer content
+            const value = this.getElementContent(element);
+
+            // 4. add content
+            newElement.value = value;            
+            
+            // 5. replace element
+            element.replaceWith(newElement);
+        }
+    }
 
     private changeAllInputsToEditable() {
 
@@ -471,6 +513,7 @@ export class EditDetail extends RSSPageBuilder {
             if (config.switchTo === 'input') this.switchElement(config.element, config.switchTo, config.inputType, true, 'set');
             else this.switchElement(config.element, config.switchTo, true, 'set');
         }
+        // this.setImageChangerToEditable();
 
         this.initImageChanger();
 
@@ -604,14 +647,16 @@ export class EditDetail extends RSSPageBuilder {
             if (!readStatus) continue;
             const readStatusDiv = this.switchElement(readStatus, 'div', false, 'reset');
             readStatusDiv.textContent = resetInfo ? this.hermidata.getBookmark(markerId).readStatus: readStatus.value;
-            // notes
+            // notes ( optional )
             const notesContainer = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes');
             const notes = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes-inner');
-            if (!notes || !notesContainer) continue;
-            notesContainer.dataset.editing = 'false';
-            const notesDiv = this.switchElement(notes, 'div', false, 'reset');
-            const originalText = this.hermidata.getBookmark(markerId).note;
-            notesDiv.textContent = resetInfo ? originalText ?? '': notes.value;
+            
+            if (notes && notesContainer) {
+                notesContainer.dataset.editing = 'false';
+                const notesDiv = this.switchElement(notes, 'div', false, 'reset');
+                const originalText = this.hermidata.getBookmark(markerId).note;
+                notesDiv.textContent = resetInfo ? originalText ?? '': notes.value;
+            }
         }
     }
     private setReadStatusOptions(select: HTMLSelectElement | null, selectedReadStatus: AnyReadStatus) {
@@ -712,7 +757,7 @@ export class EditDetail extends RSSPageBuilder {
 
             // 2. copy attributes
             for (const attr of element.attributes) newElement.setAttribute(attr.name, attr.value);
-            newElement.dataset.editing = 'false';
+            newElement.dataset.editing = 'true';
 
             // 3. transfer content
             const value = this.getElementContent(element);
@@ -799,6 +844,7 @@ export class EditDetail extends RSSPageBuilder {
 
     private getElementContent(element: HTMLElement): string {
         if (element instanceof HTMLInputElement && element.type === 'date') return this.isoDateToFrench(element.value)
+        if (element instanceof HTMLImageElement) return element.src;
         return this.isValueElement(element)
             ? element.value
             : (element.textContent ?? '');
@@ -816,6 +862,7 @@ export class EditDetail extends RSSPageBuilder {
         opt.classList.add('select-option');
         opt.value = value;
         opt.textContent = value;
+        if (element === 'select') (opt as HTMLSelectElement ).name = value;
         return opt;
     }
     private getAllOptions(content: string[]): HTMLOptionElement[] {
@@ -827,8 +874,9 @@ export class EditDetail extends RSSPageBuilder {
         // prefill URL with current image src, if one exists
         this.popover.addEventListener('toggle', (e: Event) => {
             const toggleEvent = e as ToggleEvent; // 'toggle' event on popovers is a ToggleEvent
-            if (toggleEvent.newState === 'open' && this.urlInput && this.imgElement?.src) {
-                this.urlInput.value = this.imgElement.src;
+            const image: string | null = this.imgElement!.src.trim();
+            if (toggleEvent.newState === 'open' && this.urlInput && image) {
+                this.urlInput.value = image;
             }
         });
 

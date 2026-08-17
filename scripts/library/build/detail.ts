@@ -318,7 +318,7 @@ export class Detail extends RSSPageBuilder {
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Hentai') ? 'Pornographic' : 'Safe';
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Ecchi') ? 'Explicit' : 'Safe';
         
-        contentRating.textContent = this.hermidata.meta.contentRating ?? temporaryContentRating.toUpperCase();
+        contentRating.textContent = this.hermidata.meta.contentRating.toLocaleUpperCase() ?? temporaryContentRating.toLocaleUpperCase()
     }
     private populateReleaseDate() {
         const releaseDate = document.getElementById('hermidata-releaseDate');

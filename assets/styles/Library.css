@@ -265,6 +265,29 @@ label {
     margin-top: 0.3em;
 }
 
+/* scrollbar */
+
+html {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--focus-ring) transparent; /* Firefox: thumb, track */
+}
+
+html::-webkit-scrollbar {
+    width: 6px;
+}
+html::-webkit-scrollbar-track {
+    background: transparent; /* groove invisible */
+}
+html::-webkit-scrollbar-thumb {
+    background-color: var(--focus-ring);
+    border-radius: 10px;
+}
+
+
+
+
 /* dialogs */
 
 
@@ -629,7 +652,7 @@ body[data-list-mode="true"]
 .hermidata-item-image {
 	grid-area: img;
 	width: fit-content;
-    max-width: 150px;
+    max-width: 120px;
 	height: 180px;
 	object-fit: scale-down;
 	display: flex;

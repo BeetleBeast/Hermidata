@@ -30,7 +30,7 @@ export class HermidataModel implements Hermidata {
         this.meta = data.meta;
 
         this.version = data.version ?? this.CalculateHermidataVersion();
-        if (this.version !== this.latestVersion) console.count("HermidataModel version check");
+        // if (this.version !== this.latestVersion) console.count("HermidataModel version check");
     }
     // -- static methods --
     public static from(novelType: AnyNovelType, readStatus: string, novelStatus: string): HermidataModel {
@@ -89,6 +89,12 @@ export class HermidataModel implements Hermidata {
     GetHistory(bookmarkInUseId?: string): Bookmark["history"] {
         return this.getBookmark(bookmarkInUseId)?.history;
     }
+    GetImage(): string {
+        const imageAttributeLocation = this.meta.image;
+        const rssFeedImage = this.rss?.image;
+
+        return imageAttributeLocation ?? rssFeedImage;
+    }
     GetLatestReadChapter(bookmarkInUseId?: string): number {
         const latestHistory = this.GetHistory(bookmarkInUseId)?.at(-1);
 
@@ -139,6 +145,14 @@ export class HermidataModel implements Hermidata {
     SetHistory(history: Bookmark["history"], bookmarkInUseId?: string): void {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history = history;
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
+    }
+    SetImage(image: string): void {
+        this.meta.image = image;
+    }
+    /** update image with rss feed or given image source */
+    UpdateImage(image?: string): void {
+        const newImage = image ?? this.rss?.image;
+        this.meta.image = newImage ?? this.meta.image;
     }
     SetAltTitle(title: string): void {
         // remove duplicates
