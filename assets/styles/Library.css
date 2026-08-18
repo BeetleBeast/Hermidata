@@ -59,7 +59,7 @@ body {
 
     margin-bottom: 15px;
     margin-right: 5px;
-    overflow: auto;
+    /*overflow: auto;*/
 }
 
 /* generic styles */

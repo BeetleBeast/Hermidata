@@ -91,7 +91,7 @@ export class filter extends Sort {
 
         container.innerHTML = '';
 
-        const starRatingCheckbox = this.buildStarRatingCheckbox(1,5);
+        const starRatingCheckbox = this.buildStarRatingCheckbox(0,10);
 
         container.append(starRatingCheckbox);
     }
@@ -309,21 +309,21 @@ export class filter extends Sort {
         const container = document.createElement('div');
         container.classList.add('content-rating-checkbox', 'filter-checkbox-container');
 
-        for (const [i, name, defaultCheckConfig] of CONTENT_RATING_MAP) {
+        for (const [subName, name, defaultCheckConfig] of CONTENT_RATING_MAP) {
             // create a generic list item for each dataset entry
-            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${i}`, classes: ['content-rating-item-list']});
+            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${subName}`, classes: ['content-rating-item-list']});
 
             // build checkbox
             const checkbox = document.createElement('div');
-            checkbox.id = `content-rating-checkbox-${i}`;
+            checkbox.id = `content-rating-checkbox-${subName}`;
             checkbox.classList.add('content-rating-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
-            checkbox.dataset.value = `${i}`;
+            checkbox.dataset.value = `${name}`;
             checkbox.dataset.state = String(defaultCheckConfig);
             checkbox.dataset.filterType = 'Content Rating';
 
             // build label
             const label = document.createElement('div');
-            label.id = `content-rating-label-${i}`;
+            label.id = `content-rating-label-${subName}`;
             label.classList.add('content-rating-label-item', 'filter-item-label', 'custom-checkbox');
             label.textContent = String(name);
 

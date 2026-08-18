@@ -148,7 +148,7 @@ export class Detail extends RSSPageBuilder {
         const input = document.createElement('input');
         input.type = 'number';
         input.value = starRatingValue;
-        input.step = '0.1';
+        input.step = '1';
         input.min = '0';
         input.max = '10';
         input.classList.add('hermidata-starRating', 'hermidata-starRating-input');

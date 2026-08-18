@@ -11,8 +11,16 @@ export type Filters = {
     exclude: Record<string, string[]>;
     sort: AllSortsType;
 }
-
-
+export type FilterName = {
+    novelType: string;
+    readStatus: string;
+    source: string;
+    novelStatus: string;
+    tags: string[];
+    dateFilter: string;
+    starRating: number;
+    contentRating: string;
+}
 
 export class FilterLogic extends Sort {
 
@@ -123,7 +131,7 @@ export class FilterLogic extends Sort {
         this.autocompleteContainer!.innerHTML = '';
 
         // reset tags search input
-        //this.tagsSearchInput!.value = '';
+        this.tagsSearchInput!.value = '';
 
         // reset chapter completion filter
         this.ChapterCompletionFilter!.value = '';
@@ -174,6 +182,7 @@ export class FilterLogic extends Sort {
             if ( includeSelection.includes(label) ) state = 1;
             else if ( excludeSelection.includes(label) ) state = 2;
             else if ( filters?.sort === label ) state = 1;
+            else if ( filters?.sort === `Reverse-${label}` ) state = 2;
             return state;
         }
         // apply filters from local storage Visually
@@ -212,11 +221,11 @@ export class FilterLogic extends Sort {
         state = (state + 1 ) % 3;
         cb.dataset.state = state.toString();
 
-        // find its label text (filter name)
-        const label = cb.nextElementSibling?.textContent?.trim();
+        // get contents of the checkbox
+        const contentValue = cb.dataset.value?.trim();
         // find which section it belongs to (Type, Status, etc.)
         const section = cb.dataset.filterType?.trim();
-        if (!label || !section) return;
+        if (!section || !contentValue) return;
 
         if (section === "Sort") {
             // Reset all sort checkboxes first
@@ -228,15 +237,15 @@ export class FilterLogic extends Sort {
             // Enable current one
             if (state === 1) {
                 cb.dataset.state = "1" 
-                filters.sort = label as BasicSortsType;
+                filters.sort = contentValue as BasicSortsType;
             } else if (state === 2) {
                 cb.dataset.state = "2";
-                filters.sort = `Reverse-${label as BasicSortsType}`
+                filters.sort = `Reverse-${contentValue as BasicSortsType}`
             } else if (state === 0) {
                 // If the user force the state back to 1, as with sort checkboxes, we will reset the sort to default
                 cb.dataset.state = "1";
                 state = 1;
-                filters.sort = label as BasicSortsType;
+                filters.sort = contentValue as BasicSortsType;
 
             }
 
@@ -253,12 +262,12 @@ export class FilterLogic extends Sort {
         if (!filters.exclude[section]) filters.exclude[section] = [];
 
         // reset previous state
-        filters.include[section] = filters.include[section].filter(v => v !== label);
-        filters.exclude[section] = filters.exclude[section].filter(v => v !== label);
+        filters.include[section] = filters.include[section].filter(v => v !== contentValue);
+        filters.exclude[section] = filters.exclude[section].filter(v => v !== contentValue);
 
         // apply new state
-        if (state === 1) filters.include[section].push(label);
-        else if (state === 2) filters.exclude[section].push(label);
+        if (state === 1) filters.include[section].push(contentValue);
+        else if (state === 2) filters.exclude[section].push(contentValue);
         // trigger filtering logic here
         this.applyFilterToEntries(filters);
         setLastLibraryFilters(filters);
@@ -305,10 +314,20 @@ export class FilterLogic extends Sort {
         const NovelStatus = entryData.meta?.novelStatus
         const Source = entryData.source;
         const Tag = entryData.meta.tags || [];
+        const starRating = entryData.meta.starRating || 5;
+        const contentRating = entryData.meta.contentRating;
         const DateFilter = this.getYearBucket(entryData.meta.added);
 
-        const inputs = [Type, ReadStatus, Source, NovelStatus, Tag, DateFilter];
-
+        const inputs: FilterName = {
+            novelType: Type,
+            readStatus: ReadStatus,
+            source: Source,
+            novelStatus: NovelStatus,
+            tags: Tag,
+            dateFilter: DateFilter,
+            starRating: starRating,
+            contentRating: contentRating
+        }
 
         let visible = true;
 
@@ -324,7 +343,7 @@ export class FilterLogic extends Sort {
         entry.dataset.searchable = visible ? 'true' : 'false';
     };
 
-    private matchingFilter(filters: Filters, inputs: (string | string[])[], filterType: 'include' | 'exclude'): boolean {
+    private matchingFilter(filters: Filters, inputs: FilterName, filterType: 'include' | 'exclude'): boolean {
         const isInclude = filterType === 'include';
         const loopEntries = isInclude ? filters.include : filters.exclude;
 
@@ -335,6 +354,15 @@ export class FilterLogic extends Sort {
 
             const val = this.setState(values, inputs) ?? 'none'; // error here
             
+            if (typeof val === 'number') {
+                
+                const match = values.some(v => Number(v) === val);
+                if ((!match && isInclude) || (match && !isInclude)) {
+                    visible = false;
+                    break;
+                }
+                continue;
+            }
             if (key === 'genres-themes' || key === 'Demographic') {
                 const hasMatchAny = values.some(v => val.includes(v));
                 const hasMatchAll = values.every(v => val.includes(v));
@@ -358,15 +386,20 @@ export class FilterLogic extends Sort {
         }
         return visible
     }
-    private setState(values: string[], input: (string | string[])[] ): string | string[] | void {
+    private setState(values: string[], input: FilterName ): string | string[] | number | void {
         for (const value of values) { // value is the filter value
-            for (const type of input) {
+            for (const [key, type] of Object.entries(input)) {
                 if (value === type) {
                     // if only one value, return it
                     return type
                 } else if (Array.isArray(type) && type.includes(value)) {
                     // if more than one value, return the whole array
                     return type
+                    // TEMP: temporary measure
+                } else if (key === 'starRating') {
+                    const trimmedValue = value.replace('star', '').replace('s', '').trim();
+                    // if a number, return the number
+                    if (type === Number(trimmedValue)) return type
                 }
             }
         }

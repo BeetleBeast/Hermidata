@@ -109,7 +109,9 @@ export type {
     FuzzyMatchResult,
 
     HermidataMigrationConfiguration,
-    ScalarConflict
+    ScalarConflict,
+    MergeAnalysis,
+
 
 } from "./rss";
 

@@ -1,6 +1,5 @@
 import { HermidataMigration } from "../../shared/migration/Hermidata";
-import type { AnyNovelStatus, AnyNovelType, Bookmark, Hermidata, Settings } from "../../shared/types";
-import type { HermidataMigrationConfiguration, MergeAnalysis, ScalarConflict } from "../../shared/types/rss";
+import type { Hermidata, Settings, MergeAnalysis } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { RSSPageBuilder } from "../build";
 

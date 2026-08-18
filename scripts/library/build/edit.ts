@@ -549,6 +549,9 @@ export class EditDetail extends RSSPageBuilder {
 
         // data group 1 | set div to select
         this.setGroup1ToSelect();
+
+        // star rating
+        this.setStarRatingEditLimits()
         
         // data group 2 | set div to input
         this.setGroup2ToCustomPill();
@@ -795,6 +798,14 @@ export class EditDetail extends RSSPageBuilder {
             // 4. replace element
             element.replaceWith(newElement);
         }
+    }
+    private setStarRatingEditLimits() {
+        const starRating = document.querySelector<HTMLInputElement>('#hermidata-starRating');
+        if (!starRating) return;
+        
+        starRating.min = '0';
+        starRating.max = '10';
+        starRating.step = '1';
     }
 
     // overload: switching to 'input' — inputType required
