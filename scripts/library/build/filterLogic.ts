@@ -411,7 +411,7 @@ export class FilterLogic extends Sort {
             suggestionBox.appendChild(div);
         }
     }
-    private filterEntries(query: string, queryType: 'title' | 'chapter' | 'author' = 'title') {
+    private filterEntries(query: string, queryType: 'title' | 'chapter' | 'author' = 'title'): Hermidata[] {
         const allItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item`);
 
         // If no query, restore all items to their filter-determined state
@@ -423,17 +423,17 @@ export class FilterLogic extends Sort {
                 item.dataset.searchable = String(isFilteredIn);
             });
             this.countVisibleEntries(true);
-            return;
+            return Object.values(this.AllHermidata);
         }
 
         // With a query: check both filter state AND search match
-        allItems.forEach(item => {
+        for (const item of allItems) {        
             // First check: Is this item allowed by current filters?
             const isFilteredIn = item.dataset.searchable === 'true';
             if (!isFilteredIn) {
                 // Filters say NO - keep it hidden, don't even check search
                 item.style.display = 'none';
-                return;
+                continue;
             }
 
             // Second check: Item passed filters, now check if it matches search
@@ -441,13 +441,21 @@ export class FilterLogic extends Sort {
             const hashItem = this.GetHashItem(item);
             const hermidata = new HermidataModel(this.AllHermidata[hashItem]);
 
-            const matchFilter = this.getQueryItem(hermidata, query, queryType);
+            const matchFilter = this.getQueryItem(hermidata, query.toLowerCase(), queryType);
 
             // Show only if it passes BOTH filters AND search
             item.style.display = matchFilter ? '' : 'none';
-        });
+        };
 
         this.countVisibleEntries(true);
+
+        const visibleItems = [...allItems].filter(item => item.style.display !== 'none').map(item => {
+            const hashItem = this.GetHashItem(item);
+            const hermidata = this.AllHermidata[hashItem];
+            return hermidata;
+        });
+
+        return visibleItems;
     }
     /** - get all items that match the query */
     private getQueryItem(item: HermidataModel, query: string, queryType: 'title' | 'chapter' | 'author' = 'title'): boolean {
@@ -457,7 +465,12 @@ export class FilterLogic extends Sort {
             
             return percentageCompleted >= Number(query);
         }
-        if (queryType === 'author') return item.meta.author?.toLowerCase().includes(query) ?? false;
+        if (queryType === 'author') {
+            const author = item.meta.author;
+            if (!author) return false;
+            const inclusion = author?.toLowerCase().includes(query);
+            return inclusion ?? false;
+            }
         return false
         
     }
@@ -527,7 +540,27 @@ export class FilterLogic extends Sort {
     private handleAuthorSearchInput(e: Event) {
         const target = e.target as HTMLInputElement;
         const value = target.value;
-        this.filterEntries(value, 'author');
+        const filtered = this.filterEntries(value, 'author');
+        
+        const authorSuggestionBox = document.querySelector<HTMLDivElement>('#Author-filter-suggestions');
+        if (!authorSuggestionBox) return;
+        authorSuggestionBox.innerHTML = '';
+        
+        // Autocomplete suggestions
+        const suggestions = [...new Set(filtered.flatMap(f => f.meta.author))].slice(0, 3);
+
+        // Build suggestion elements
+        for (const author of suggestions) {
+            if (!author) continue;
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.textContent = author;
+            div.addEventListener('click', () => {
+                const target = e.target as HTMLInputElement;
+                this.applySearchSelection(target, authorSuggestionBox, author);
+            });
+            authorSuggestionBox.appendChild(div);
+        }
     }
     private filterTags(query: string) {
         const allItems = getElement('#Genres-dialog')?.querySelectorAll<HTMLDivElement>(('.genres-themes-demographic-item-list'));

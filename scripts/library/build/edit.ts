@@ -1,6 +1,6 @@
 import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
-import { getAllTags, updateHermidata } from "../../shared/db/Storage";
+import { getAllTags, saveHermidata, updateHermidata } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { returnHashedTitle } from "../../shared/utils/StringOutput";
@@ -207,7 +207,7 @@ export class EditDetail extends RSSPageBuilder {
     private setEmptyText(element: HTMLElement | null) {
         const noContent = element?.textContent === '';
         const hasNone = element?.dataset.hasNone === 'true';
-        if (hasNone || noContent) {
+        if (hasNone && noContent) {
             // add --None--
             element.classList.add('empty-text');
             element.textContent = `--None--`;
@@ -324,6 +324,9 @@ export class EditDetail extends RSSPageBuilder {
         // Notes
         if ( mode === 'save') this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes;
         else notes.textContent = this.hermidata.meta.notes;
+
+
+        await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
 
     }
     /** update key if changes have been made */

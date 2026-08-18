@@ -5,7 +5,6 @@ import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
 import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/oldVersions';
-import { HermidataModel } from '../utils/HermidataSelector';
 
 
 // ============================================================
