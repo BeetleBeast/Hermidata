@@ -36,6 +36,13 @@ interface HermidataSchema extends DBSchema {
         key: string;           // single record: 'Settings'
         value: Settings;
     };
+    images: {
+        key: string;
+        value: Blob;
+        indexes: {
+            'by-id': string;
+        }
+    };
 }
 
 // ============================================================
@@ -45,7 +52,7 @@ interface HermidataSchema extends DBSchema {
 const SETTINGS_KEY = 'Settings';
 
 const DB_NAME = 'Hermidata';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let _db: IDBPDatabase<HermidataSchema> | null = null;
 
@@ -74,6 +81,13 @@ export async function getDb(): Promise<IDBPDatabase<HermidataSchema>> {
             // ---- settings store ----
             if (!db.objectStoreNames.contains('settings')) {
                 db.createObjectStore('settings');
+            }
+
+            // ---- images store ----
+            if (!db.objectStoreNames.contains('images')) {
+                const imagesStore = db.createObjectStore('images');
+                imagesStore.createIndex('by-id', 'id', { unique: true });
+
             }
         },
         blocked() {
@@ -356,6 +370,91 @@ export async function removeRawFeeds(urls: string[]): Promise<void> {
         console.error('[DB] removeRawFeeds:', err);
     }
 }
+// ============================================================
+// Images
+// ============================================================
+
+export async function dbSaveImage(id: string, blob: Blob): Promise<void> {
+    try {
+        const db = await getDb();
+        
+        await db.put('images', blob, id);
+    } catch (err) {
+        console.error('[DB] saveImage:', err);
+    }
+}
+/** save multiple images in a single transaction */
+export async function dbSaveAllImages(ids: string[], blobs: Blob[]): Promise<void> {
+    try {
+        const db = await getDb();
+        const tx = db.transaction('images', 'readwrite');
+        await Promise.all([
+            ...ids.map((id, i) => tx.store.put(blobs[i], id)),
+            tx.done,
+        ]);
+    } catch (err) {
+        console.error('[DB] saveAllImages:', err);
+    }
+}
+
+export async function dbGetImage(id: string): Promise<Blob | undefined> {
+    try {
+        const db = await getDb();
+        return await db.get('images', id);
+    } catch (err) {
+        console.error('[DB] getImage:', err);
+        return undefined;
+    }
+}
+/** returns all images or a subset of them if ids are provided */
+export async function dbGetAllImages(ids?: string[]): Promise<Blob[]> {
+    try {
+        const db = await getDb();
+        if (ids === undefined) return await db.getAll('images');
+        const allImages: Promise<Blob | undefined>[] = [];
+        for (const id of ids) {
+            const image = db.get('images', id);
+            allImages.push(image);
+        }
+        const images = await Promise.all(allImages);
+        return images.filter(image => image !== undefined);
+    } catch (err) {
+        console.error('[DB] getAllImages:', err);
+        return [];
+    }
+}
+export async function dbUpdateImageKey(oldId: string, newId: string): Promise<void> {
+    if (oldId === newId) return; // nothing to do
+
+    try {
+        const db = await getDb();
+        
+        const tx = db.transaction('images', 'readwrite');
+        const store = tx.store;
+
+        const blob = await store.get(oldId);
+
+        // nothing stored under the old id — nothing to move
+        if (!blob) return;
+
+        store.put(blob, newId);
+        store.delete(oldId);
+    } catch (err) {
+        console.error('[DB] updateImageKey:', err);
+    }
+    
+    
+}
+
+export async function dbDeleteImage(id: string): Promise<void> {
+    try {
+        const db = await getDb();
+        await db.delete('images', id);
+    } catch (err) {
+        console.error('[DB] deleteImage:', err);
+    }
+}
+
 
 // ============================================================
 // Settings

@@ -94,6 +94,12 @@ export abstract class RSSPageBuilder {
 
         return time;
     }
+    protected calculateImageRatio(imgElement: HTMLImageElement) {
+        const ratio = imgElement.naturalWidth / imgElement.naturalHeight;
+        const targetRatio = 500 / 600;
+        const tolerance = 0.3;
+        imgElement.style.objectFit = Math.abs(ratio - targetRatio) < tolerance ? 'scale-down' : 'cover';
+    }
 }
 
 

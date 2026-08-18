@@ -13,8 +13,8 @@ export class feed extends RSSPageBuilder {
     }
 
 
-    public build(): Promise<void> {
-        this.buildFeedAll();
+    public async build(): Promise<void> {
+        await this.buildFeedAll();
 
         this.setCheckBoxAtCorrectState();
         return Promise.resolve();
@@ -73,20 +73,21 @@ export class feed extends RSSPageBuilder {
         this.setCheckBoxAtCorrectState();
     }
 
-    private buildFeedAll() {
+    private async buildFeedAll() {
         // get all entries that are filtered
         const allEntries = this.AllHermidata ?? {};
 
         const docFragment = document.createDocumentFragment();
 
         for (const entry of Object.values(allEntries)) {
-            docFragment.appendChild(this.buildEntry(new HermidataModel(entry)));
+            const build = await this.buildEntry(new HermidataModel(entry))
+            docFragment.appendChild(build);
         }
 
         this.AllHermidataContainer?.replaceChildren(docFragment);
 
     }
-    private buildEntry(entry: HermidataModel): HTMLDivElement {
+    private async buildEntry(entry: HermidataModel): Promise<HTMLDivElement> {
         // item container
         const container = this.buildEntryContainer(entry);
         
@@ -94,7 +95,7 @@ export class feed extends RSSPageBuilder {
         const site = this.buildSite(entry);
 
         // image
-        const img = this.buildImage(entry);
+        const img = await this.buildImage(entry);
         
         // novel Type
         const novelType = this.buildNovelType(entry);
@@ -149,15 +150,17 @@ export class feed extends RSSPageBuilder {
         checkbox.style.transform = `translateX(${value})`;
     }
 
-    private buildImage(entry: Hermidata): HTMLImageElement {
+    private async buildImage(entry: HermidataModel): Promise<HTMLImageElement> {
         const img = document.createElement('img');
 
         img.className = "hermidata-item-image"
-        img.src = entry?.rss?.image ?? '../../../assets/icon/icon48.png';
+        img.src = await entry.getDisplayImageUrl();
+        
+        this.calculateImageRatio(img);
 
         img.loading = "lazy";
         img.sizes = "150x190";
-        img.alt = `${entry?.rss?.latestItem.title} Image`;
+        img.alt = `${entry.title} Image`;
 
         return img;
     }

@@ -6,7 +6,13 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     putSettings, 
     putAllRawFeeds,
     putAllHermidata,
-    deleteRawFeed} from './db';
+    deleteRawFeed,
+    dbGetAllImages,
+    dbDeleteImage,
+    dbSaveImage,
+    dbGetImage,
+    dbSaveAllImages,
+    dbUpdateImageKey} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
@@ -47,6 +53,8 @@ export async function updateHermidata(oldKey: string, newKey: string, entry: Her
 
         await putHermidata(entry, false)    // write new key to IndexedDB
         await deleteHermidata(oldKey, false) // remove old key from IndexedDB
+
+        await updateImageKey(oldKey, newKey); // move associated images to new key
 
         await pushToSync(entry)             // push new entry to sync
         await removeFromSync(oldKey)        // remove old key from sync
@@ -169,6 +177,68 @@ export async function removeRawFeedByUrl(url: string): Promise<boolean> {
         return false;
     }
 }
+// ============================================================
+// Images
+// ============================================================
+
+export async function saveImage(id: string, blob: Blob): Promise<boolean> {
+    try {
+        await dbSaveImage(id, blob);
+        return true;
+    } catch (err) {
+        console.error('[Storage] saveImage:', err);
+        return false;
+    }
+}
+export async function getImage(id: string): Promise<Blob | null> {
+    try {
+        const image = await dbGetImage(id);
+        return image ?? null;
+    } catch (err) {
+        console.error('[Storage] getImage:', err);
+        return null;
+    }
+}
+export async function saveAllImages(ids: string[], blobs: Blob[]): Promise<boolean> {
+    try {
+        await dbSaveAllImages(ids, blobs);
+        return true;
+    } catch (err) {
+        console.error('[Storage] saveAllImages:', err);
+        return false;
+    }
+}
+
+export async function getAllImages(): Promise<Blob[]> {
+    try {
+        return await dbGetAllImages();
+    } catch (err) {
+        console.error('[Storage] getAllImages:', err);
+        return [];
+    }
+}
+
+export async function removeImage(id: string): Promise<boolean> {
+    try {
+        await dbDeleteImage(id);
+        return true;
+    } catch (err) {
+        console.error('[Storage] removeImage:', err);
+        return false;
+    }
+}
+
+export async function updateImageKey(oldId: string, newId: string): Promise<boolean> {
+    try {
+        await dbUpdateImageKey(oldId, newId);
+        return true;
+    } catch (err) {
+        console.error('[Storage] updateImageKey:', err);
+        return false;
+    }
+}
+
+
 
 // ============================================================
 // Settings — still in storage.sync (small, needs cross-device sync)

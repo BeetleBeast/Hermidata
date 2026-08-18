@@ -14,7 +14,7 @@ export class EditDetail extends RSSPageBuilder {
     private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn');
     private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
 
-    private get imgElement(): HTMLImageElement | null { return document.querySelector<HTMLImageElement>('#hermidata-img'); }
+    private get imgElement(): (HTMLImageElement | HTMLButtonElement) | null { return document.querySelector<HTMLImageElement | HTMLButtonElement>('#hermidata-img'); }
     private readonly popover = document.querySelector<HTMLDivElement>('#imageChanger-dialog');
     private readonly urlInput = document.querySelector<HTMLInputElement>('#imageChanger-url');
     private readonly fileInput = document.querySelector<HTMLInputElement>('#imageChanger-file');
@@ -22,6 +22,10 @@ export class EditDetail extends RSSPageBuilder {
 
     private genreTags: Tags | null = null;
     private demographicTags: Tags | null = null;
+
+    private currentImageUrl: string | null = null;
+
+    private temporaryBlob: Blob | File | null = null;
 
     private newAltTitles: string[] | null = null;
 
@@ -234,6 +238,10 @@ export class EditDetail extends RSSPageBuilder {
             element.replaceWith(newElement);
         }
     }
+    private setImageValue(element: HTMLImageElement | HTMLButtonElement, content: string) { 
+        if (element instanceof HTMLImageElement) element.src = content;
+        else element.value = content;
+    }
     private async updateInformation(mode: 'cancel' | 'save') {
         const title = document.querySelector<HTMLDivElement>('#hermidata-title');
 
@@ -251,13 +259,23 @@ export class EditDetail extends RSSPageBuilder {
 
         const notes = document.querySelector<HTMLDivElement>('#hermidata-notes-content');
 
-        if (!title || !novelType || !contentRating || !releaseDate || !novelStatus || !starRating || !sources || !author || !notes) throw new Error('Information not found');
+        if (!this.imgElement || !title || !novelType || !contentRating || !releaseDate || !novelStatus || !starRating || !sources || !author || !notes) throw new Error('Information not found');
 
         // image
-        // IGNORE: images will be remade in the next pass
-        const imageContent = this.imgElement?.src;
-        if (mode == "save") this.hermidata.meta.image = imageContent ?? this.hermidata.meta.image
-        else this.imgElement?.setAttribute('src', this.hermidata.meta.image);
+        const image = await this.hermidata.getDisplayImageUrl();
+        if (mode == "save" && this.temporaryBlob) {
+            // update back-end
+            await this.hermidata.SetImage(this.temporaryBlob);
+
+            // update front-end
+            // get new image
+            const newImage = await this.hermidata.getDisplayImageUrl();
+            // set new image value
+            this.setImageValue(this.imgElement, newImage);
+            // update image ratio
+            if (this.imgElement instanceof HTMLImageElement) this.calculateImageRatio(this.imgElement);
+        }
+        else if (mode == "cancel") this.setImageValue(this.imgElement, image);
 
         // Title
         if (mode === 'save') this.hermidata.title = title?.textContent ?? this.hermidata.title 
@@ -513,7 +531,7 @@ export class EditDetail extends RSSPageBuilder {
             if (config.switchTo === 'input') this.switchElement(config.element, config.switchTo, config.inputType, true, 'set');
             else this.switchElement(config.element, config.switchTo, true, 'set');
         }
-        // this.setImageChangerToEditable();
+        this.setImageChangerToEditable();
 
         this.initImageChanger();
 
@@ -869,12 +887,12 @@ export class EditDetail extends RSSPageBuilder {
         return content.map(value => this.getOptionFromValue(value, 'option') as HTMLOptionElement);
     }
     private initImageChanger() {
-        if (!this.popover) return;
+        if (!this.popover || !this.imgElement) return;
 
         // prefill URL with current image src, if one exists
         this.popover.addEventListener('toggle', (e: Event) => {
             const toggleEvent = e as ToggleEvent; // 'toggle' event on popovers is a ToggleEvent
-            const image: string | null = this.imgElement!.src.trim();
+            const image: string | null = this.imgElement instanceof HTMLImageElement ? this.imgElement.src : this.imgElement!.value;
             if (toggleEvent.newState === 'open' && this.urlInput && image) {
                 this.urlInput.value = image;
             }
@@ -895,26 +913,36 @@ export class EditDetail extends RSSPageBuilder {
         });
 
         // URL confirm
-        this.urlConfirmBtn?.addEventListener('click', () => {
+        this.urlConfirmBtn?.addEventListener('click', async () => {
             if (this.urlInput?.value && this.imgElement) {
-                this.imgElement.src = this.urlInput.value;
+                
+                const response = await fetch(this.urlInput.value);
+                const blob = await response.blob();
+
+                this.temporaryBlob = blob;
+
+                this.setImage(blob);
                 this.popover?.hidePopover();
             }
         });
 
         // file selected
-        this.fileInput?.addEventListener('change', () => {
+        this.fileInput?.addEventListener('change', async () => {
             const file = this.fileInput?.files?.[0];
             if (!file || !this.imgElement) return;
+            
+            this.temporaryBlob = file;
 
-            const reader = new FileReader();
-            reader.onload = () => {
-                if (typeof reader.result === 'string') {
-                    this.imgElement!.src = reader.result;
-                    this.popover?.hidePopover();
-                }
-            };
-            reader.readAsDataURL(file);
+            this.setImage(file);
+            this.popover?.hidePopover();
+            
         });
     }
+    private setImage(blob: Blob) {
+        if (this.currentImageUrl) URL.revokeObjectURL(this.currentImageUrl);
+        this.currentImageUrl = URL.createObjectURL(blob);
+
+        this.imgElement instanceof HTMLImageElement ? this.imgElement.src = this.currentImageUrl : this.imgElement!.value = this.currentImageUrl;
+    }
+
 }

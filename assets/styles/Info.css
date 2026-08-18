@@ -39,8 +39,7 @@ body {
     color: var(--Text-color);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-    margin-bottom: 15px;
-    margin-right: 5px;
+    margin: 0;
     overflow: auto;
 
 	display: flex;
@@ -431,11 +430,8 @@ label {
 	grid-template-areas: "back cancel search utility";
 	grid-template-columns: 150px 150px auto 300px;
 	grid-template-rows: 80px;
-	border: 1px solid;
-	border-radius: 25px;
-	border-top: none;
-	border-left: none;
-	border-right: none;
+	border: none;
+    background-color: rgb(99 81 127 / 13%);
 }
 
 #cancel-edit-btn {
@@ -513,6 +509,13 @@ label {
 #hermidata-img {
 	border-radius: 25px;
 	object-fit: scale-down;
+    /*object-fit: cover;*/
+    /* height: 600px; */
+    /* width: 400px; */
+    min-width: 200px;
+    max-width: 500px;
+    min-height: 300px;
+    max-height: 600px;
 }
 
 #hermidata-readLatest-btn {

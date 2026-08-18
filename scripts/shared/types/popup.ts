@@ -97,7 +97,7 @@ export interface Hermidata {
         contentRating: ContentRating;
         contentWarnings: ContentWarning[];
         starRating: number;
-        image: string; // image url? or file path? ( unsure )
+        image: (string & {}) | 'inside-indexedDB'; // image url? or file path? ( unsure )
         author?: string; // optional
         language?: string; // optional
         translator?: string; // optional

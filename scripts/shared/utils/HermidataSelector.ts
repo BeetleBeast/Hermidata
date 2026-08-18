@@ -1,6 +1,7 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
+import { getImage, saveImage } from "../db/Storage";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
@@ -89,11 +90,27 @@ export class HermidataModel implements Hermidata {
     GetHistory(bookmarkInUseId?: string): Bookmark["history"] {
         return this.getBookmark(bookmarkInUseId)?.history;
     }
-    GetImage(): string {
+    async getDisplayImageUrl(): Promise<string> {
+    // prefer a stored blob if one exists (covers the upload case)
+    const blob = await getImage(this.id);
+    if (blob) return URL.createObjectURL(blob);
+
+    // fall back to a direct URL
+    const imagePath = this.GetImagePath();
+    if (imagePath) return imagePath;
+    else return this.GetImageDefaultPath();
+}
+    GetImagePath(): string | null {
         const imageAttributeLocation = this.meta.image;
         const rssFeedImage = this.rss?.image;
 
-        return imageAttributeLocation ?? rssFeedImage;
+        // if image is stored in indexedDB, 
+        if (imageAttributeLocation === 'inside-indexedDB') return null;
+
+        return imageAttributeLocation ?? rssFeedImage ?? this.GetImageDefaultPath();
+    }
+    GetImageDefaultPath(): string {
+        return '../../../assets/icon/icon48.png';
     }
     GetLatestReadChapter(bookmarkInUseId?: string): number {
         const latestHistory = this.GetHistory(bookmarkInUseId)?.at(-1);
@@ -146,8 +163,30 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history = history;
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
     }
-    SetImage(image: string): void {
-        this.meta.image = image;
+    /** set image blob inside separate indexedDB and update meta source */
+    async SetImage(imageFile: Blob | File): Promise<void>;
+    /** set image source directly and then call update image */
+    async SetImage(imageUrl: string): Promise<void>;
+    async SetImage(image: string | Blob | File): Promise<void> {
+        if (typeof image === 'string') {
+            const imageUrl = image;
+            // 1. set image path
+
+            this.meta.image = imageUrl;
+
+            // 2. set blob from image path
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            await saveImage(this.id, blob);
+        }
+        else {
+            const imageBlob = image;
+            // 1. set image path
+            this.meta.image = "inside-indexedDB";
+
+            // 2. set blob from image file
+            await saveImage(this.id, imageBlob);
+        }
     }
     /** update image with rss feed or given image source */
     UpdateImage(image?: string): void {

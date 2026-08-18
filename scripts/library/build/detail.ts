@@ -37,7 +37,7 @@ export class Detail extends RSSPageBuilder {
         PageDetailBuilder.hermidata = this.hermidata;
     }
 
-    public build(): void {
+    public async build(): Promise<void> {
         
         
         // 1. Build the page
@@ -46,7 +46,7 @@ export class Detail extends RSSPageBuilder {
 
 
         // 2. populate page
-        this.populateDetails();
+        await this.populateDetails();
 
         this.addEventListener();
 
@@ -208,17 +208,17 @@ export class Detail extends RSSPageBuilder {
 
         return new HermidataModel(hermidata);
     }
-    private populateDetails() {
+    private async populateDetails() {
         // main
-        this.populateMainDetails();
+        await this.populateMainDetails();
         // markers
         this.populateMarkers();
         // notes
         this.populateNotes();
     }
-    private populateMainDetails() {
+    private async populateMainDetails() {
         // image
-        this.populateImage();
+        await this.populateImage();
         // read latest chapter button
         this.populateReadLatestChapterButton();
         // title
@@ -229,14 +229,14 @@ export class Detail extends RSSPageBuilder {
         this.populateMetadata();
         
     }
-    private populateImage() {
+    private async populateImage() {
         const container = document.getElementById('hermidata-img-container');
         if (!container) throw new Error("Image container does not exist");
 
         const img = document.createElement('img');
         img.id = 'hermidata-img';
-        img.src = this.hermidata.rss?.image ?? '../../../assets/icon/icon48.png'
-        img.alt = `${this.hermidata.rss?.latestItem.title} Image`
+        img.src = await this.hermidata.getDisplayImageUrl();
+        img.alt = `${this.hermidata.title} Image`
 
         img.setAttribute('popovertarget', 'imageChanger-dialog');
         img.setAttribute('popovertargetaction', 'toggle');
