@@ -61,7 +61,7 @@ export abstract class Sort extends RSSPageBuilder {
         const compareAuthor = (a: HTMLDivElement, b: HTMLDivElement, reverse: boolean = false) => {
             const authorA = getData(a).meta?.author?.toLowerCase() || '';
             const authorB = getData(b).meta?.author?.toLowerCase() || '';
-            return (reverse ? authorB.localeCompare(authorA) : authorA.localeCompare(authorB)) ?? 0;
+            return (reverse ? authorB.localeCompare(authorA) : authorA.localeCompare(authorB));
         }
         const compareRating = (a: HTMLDivElement, b: HTMLDivElement, reverse: boolean = false) => {
             const ratingA = getData(a).meta?.starRating || 0;

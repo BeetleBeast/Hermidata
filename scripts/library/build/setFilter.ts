@@ -561,7 +561,9 @@ export class filter extends Sort {
             checkbox.dataset.value = `${name}`;
             checkbox.dataset.state = '0';
             checkbox.dataset.filterType = 'Sort';
-            if (name === "Rating" || name === "Author" || name === "Release Date") checkbox.dataset.disabled = 'true'; // TEMP: disable sort options until implemented
+            // comment out this line to disable all sort options
+            // that needs custom attributes added to work
+            //if (name === "Rating" || name === "Author" || name === "Release Date") checkbox.dataset.disabled = 'true'; // TEMP: disable sort options until implemented
 
             // build label
             const label = document.createElement('div');
