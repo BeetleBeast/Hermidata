@@ -426,6 +426,61 @@ export class HermidataMerge extends RSSPageBuilder {
             finalString: `keep record ${letterToKeep}, it has ${amountOfFields} more field${amountOfFields > 1 ? 's' : ''} filled in`
         }
     }
+    private createElementOfRecord(label: string, content: string, className: string, isNumericValue?: boolean): HTMLDivElement {
+        const containerElement = document.createElement('div');
+        containerElement.classList.add(`merger-dialog-record-${className}`, `merger-dialog-record-container`);
+        
+
+
+        const labelElement = document.createElement('p');
+        labelElement.classList.add(`merger-dialog-record-${className}-label`, `merger-dialog-record-label`);
+        labelElement.textContent = label;
+
+        const contentElement = document.createElement('span');
+        contentElement.classList.add(`merger-dialog-record-${className}-content`, `merger-dialog-record-content`);
+        contentElement.textContent = content;
+
+        if (isNumericValue) {
+            contentElement.classList.add('merger-dialog-record-content--numeric');
+            contentElement.dataset.numeric = 'true';
+        }
+
+        containerElement.append(labelElement, contentElement);
+        return containerElement;
+    }
+    private createTagsOfRecord(tags: string[]): HTMLDivElement {
+        // container
+        const container = document.createElement('div');
+        container.classList.add('merger-dialog-record-tags', 'merger-dialog-record-container');
+
+
+        // tag label
+        const tagLabel = document.createElement('p');
+        tagLabel.classList.add('merger-dialog-record-tag-label', 'merger-dialog-record-label');
+        tagLabel.textContent = 'Tags:';
+
+        // tag container
+        const tagContainer = document.createElement('div');
+        tagContainer.classList.add('merger-dialog-record-tags-container');
+        // tags
+        const allTagsUsed = Array.from(new Set(tags));
+        for (const tag of allTagsUsed) {
+            const tags = document.createElement('p');
+            tags.classList.add('merger-dialog-record-tag');
+            tags.textContent = tag ?? 'Unknown';
+
+            tagContainer.appendChild(tags);
+        }
+        if (allTagsUsed.length === 0) {
+            tagContainer.textContent = "--None--";
+            tagContainer.dataset.hasNone = 'true';
+        }
+
+        container.append(tagLabel, tagContainer);
+
+        return container;
+    }
+    
     private buildRecord(record: HermidataModel, recordLetter: 'A' | 'B', suggestedLetterToKeep: 'A' | 'B'): HTMLDivElement {
         const container = document.createElement('div');
         container.classList.add('merger-dialog-record');
@@ -434,61 +489,32 @@ export class HermidataMerge extends RSSPageBuilder {
         container.dataset.hash = record.id;
 
         // record letter
-        const letter = document.createElement('p');
-        letter.classList.add('merger-dialog-record-letter');
-        letter.textContent = `Record ${recordLetter}`;
-        letter.dataset.suggested = recordLetter === suggestedLetterToKeep ? 'true' : 'false';
+        const letterContainer = this.createElementOfRecord('Record:', recordLetter, 'letter');
+        letterContainer.dataset.suggested = recordLetter === suggestedLetterToKeep ? 'true' : 'false';
 
         // record title
-        const title = document.createElement('p');
-        title.classList.add('merger-dialog-record-title');
-        title.textContent = `Title: ${record.title ?? 'Unknown'}`;
+        const titleContainer = this.createElementOfRecord('Title:', record.title ?? 'Unknown', 'title');
 
         // novel Type
-        const novelType = document.createElement('p');
-        novelType.classList.add('merger-dialog-record-novel-type');
-        novelType.textContent = `Novel Type: ${record.novelType ?? 'Unknown'}`;
+        const novelTypeContainer = this.createElementOfRecord('Novel Type:', record.novelType ?? 'Unknown', 'novel-type');
 
         // site
-        const site = document.createElement('p');
-        site.classList.add('merger-dialog-record-site');
-        site.textContent = `Site: ${record.source ?? record.meta.altSources[0] ?? 'Unknown'}`;
+        const siteContainer = this.createElementOfRecord('Site:', record.source ?? record.meta.altSources[0] ?? 'Unknown', 'site');
 
         // latest chapter
-        const latestChapter = document.createElement('p');
-        latestChapter.classList.add('merger-dialog-record-latest-chapter');
-        latestChapter.textContent = `Latest read Chapter: ${String(record.GetChapter()) ?? 'Unknown'}`;
+        const latestChapterContainer = this.createElementOfRecord('Latest Chapter:', String(record.GetChapter()) ?? 'Unknown', 'latest-chapter');
 
         // TODO: think of more attributes to add
         // Other??
 
-        // tag label
-        const tagLabel = document.createElement('p');
-        tagLabel.classList.add('merger-dialog-record-tag-label');
-        tagLabel.textContent = 'Tags:';
-
-        // tag container
-        const tagContainer = document.createElement('div');
-        tagContainer.classList.add('merger-dialog-record-tags-container');
         // tags
-        const allTagsUsed = Array.from(new Set(record.meta.tags));
-        for (const tag of allTagsUsed) {
-            const tags = document.createElement('p');
-            tags.classList.add('merger-dialog-record-tag');
-            tags.textContent = tag ?? 'Unknown';
-
-            tagContainer.appendChild(tags);
-        }
+        const tagsContainer = this.createTagsOfRecord(record.meta.tags);
 
         // last updated
-        const lastUpdated = document.createElement('p');
-        lastUpdated.classList.add('merger-dialog-record-last-updated');
-        lastUpdated.textContent = `Last Updated: ${this.setToFrenchDate(record.meta.updated) ?? 'Unknown'}`;
+        const lastUpdatedContainer = this.createElementOfRecord('Last Updated:', this.setToFrenchDate(record.meta.updated) ?? 'Unknown', 'last-updated');
 
         // first created
-        const firstCreated = document.createElement('p');
-        firstCreated.classList.add('merger-dialog-record-first-created');
-        firstCreated.textContent = `Created at: ${this.setToFrenchDate(record.meta.added) ?? 'Unknown'}`;
+        const firstCreatedContainer = this.createElementOfRecord('Created at:', this.setToFrenchDate(record.meta.added) ?? 'Unknown', 'first-created');
 
         // continuation button
         const continueButton = document.createElement('button');
@@ -500,7 +526,18 @@ export class HermidataMerge extends RSSPageBuilder {
 
 
         // append to container
-        container.append(letter, title, novelType, site, latestChapter, tagLabel, tagContainer, lastUpdated, firstCreated, continueButton);
+        container.append(
+            letterContainer,
+            titleContainer,
+            novelTypeContainer,
+            siteContainer,
+            latestChapterContainer,
+            tagsContainer,
+            lastUpdatedContainer,
+            firstCreatedContainer,
+            continueButton
+        );
+
         return container;
     }
     private mergeRecord(recordToKeep: Hermidata, recordToRemove: Hermidata): MergeAnalysis {

@@ -523,7 +523,10 @@ export class FilterLogic extends Sort {
 
         // const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-searchable="true"]`);
         const items = suggestionBox.querySelectorAll<HTMLDivElement>(`${suggestionsClassName}`);
-        if (!items.length) return;
+        if (!items.length) {
+            suggestionBox.innerHTML = '';
+            return;
+        }
 
         if (e_.key === 'ArrowDown') {
             e_.preventDefault();
@@ -607,6 +610,7 @@ export class FilterLogic extends Sort {
                 
                 item.style.display = 'flex';
             });
+            this.updateFilterLabels(allDemographicCheckboxes, allGenresCheckboxes);
             return;
         }
 
@@ -625,6 +629,9 @@ export class FilterLogic extends Sort {
         });
 
         // if empty
+        this.updateFilterLabels(allDemographicCheckboxes, allGenresCheckboxes);
+    }
+    private updateFilterLabels(allDemographicCheckboxes: NodeListOf<HTMLDivElement>, allGenresCheckboxes: NodeListOf<HTMLDivElement>) {
         const allHidden = (checkboxes: NodeListOf<HTMLDivElement>) => Array.from(checkboxes).every(el => el.style.display === "none");
         
         document.querySelector<HTMLDivElement>('.Demographic-container-label')!.style.display = allHidden(allDemographicCheckboxes)  ? "none" : "flex";

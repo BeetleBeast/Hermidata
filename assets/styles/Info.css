@@ -33,6 +33,11 @@
     --resetFilterBtn_active: #1c2b6b;
 }
 
+* {
+    box-sizing: border-box;
+    font-family: Segoe UI, system-ui, Arial;
+}
+
 
 body {
     background-color: var(--bg-color);
@@ -48,7 +53,31 @@ body {
 	align-items: center;
 }
 
+input[type=number],
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    -moz-appearance: textfield;
+}
+
 /* generic styles */
+
+.Btn {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.Btn:hover {
+    background-color: var(--Btn_hover);
+}
+.Btn:active:not(:disabled) {
+    background-color: var(--Btn_active);
+    transition: none;
+}
 
 button,
 .btn {
@@ -810,6 +839,7 @@ label {
 	justify-content: space-between;
 	align-items: center;
 	border: 1px solid var(--border-focus);
+    text-transform: uppercase;
 }
 
 .hermidata-metadata-group-1[data-editing="false"] {

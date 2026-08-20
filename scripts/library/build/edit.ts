@@ -205,12 +205,18 @@ export class EditDetail extends RSSPageBuilder {
         this.changeMarkersBackToDiv(mode === 'cancel');
     }
     private setEmptyText(element: HTMLElement | null) {
-        const noContent = element?.textContent === '';
-        const hasNone = element?.dataset.hasNone === 'true';
-        if (hasNone && noContent) {
+        if (!element) return;
+
+        const noContent = element.textContent === '';
+        if (noContent) {
             // add --None--
             element.classList.add('empty-text');
+            element.dataset.empty = 'true';
             element.textContent = `--None--`;
+        } else {
+            // remove --None--
+            element.dataset.empty = 'false';
+            element.classList.remove('empty-text');
         }
     }
     private changeGroup1BackToDiv() {
@@ -232,7 +238,7 @@ export class EditDetail extends RSSPageBuilder {
 
             // 3. transfer content
             const value = this.getElementContent(element);
-            this.setElementContent(newElement, value.toUpperCase());
+            this.setElementContent(newElement, value);
             
             // 4. replace element
             element.replaceWith(newElement);
@@ -287,14 +293,14 @@ export class EditDetail extends RSSPageBuilder {
 
         // Novel Type
         if (mode === 'save') this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType;
-        else novelType.textContent = this.hermidata.novelType.toLocaleUpperCase();
+        else novelType.textContent = this.hermidata.novelType;
 
         await this.forceKeyUpdate();
 
         // Content Rating
         const contentRatingValue = contentRating?.textContent as ContentRating ?? this.hermidata.meta.contentRating;
         if (mode === 'save') this.hermidata.meta.contentRating = contentRatingValue;
-        else contentRating.textContent = this.hermidata.meta.contentRating.toLocaleUpperCase();
+        else contentRating.textContent = this.hermidata.meta.contentRating;
 
         // Release Date
         const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added;
@@ -303,14 +309,14 @@ export class EditDetail extends RSSPageBuilder {
 
         // Novel Status
         if (mode === 'save') this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus;
-        else novelStatus.textContent = this.hermidata.meta.novelStatus.toLocaleUpperCase();
+        else novelStatus.textContent = this.hermidata.meta.novelStatus;
 
         // Star Rating
         if (mode === 'save') this.hermidata.meta.starRating = Number(starRating?.textContent) ?? this.hermidata.meta.starRating;
         else starRating.textContent = String(this.hermidata.meta.starRating);
 
         // Author
-        if (mode === 'save') this.hermidata.meta.author = author?.textContent ?? undefined;
+        if (mode === 'save') this.hermidata.meta.author = author.dataset.empty === 'false' ? author.textContent : undefined; // author can be undefined
         else author.textContent = this.hermidata.meta.author ?? '--None--';
 
         // Alt. Sources

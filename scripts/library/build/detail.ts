@@ -308,7 +308,7 @@ export class Detail extends RSSPageBuilder {
         const novelType = document.getElementById('hermidata-novelType');
         if (!novelType) throw new Error("Novel type does not exist");
 
-        novelType.textContent = this.hermidata.novelType.toUpperCase();
+        novelType.textContent = this.hermidata.novelType;
     }
     private populateContentRating() {
         const contentRating = document.getElementById('hermidata-contentRating');
@@ -318,7 +318,7 @@ export class Detail extends RSSPageBuilder {
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Hentai') ? 'Pornographic' : 'Safe';
         temporaryContentRating = this.hermidata.meta.tags.some(tag => tag === 'Ecchi') ? 'Explicit' : 'Safe';
         
-        contentRating.textContent = this.hermidata.meta.contentRating.toLocaleUpperCase() ?? temporaryContentRating.toLocaleUpperCase()
+        contentRating.textContent = this.hermidata.meta.contentRating ?? temporaryContentRating;
     }
     private populateReleaseDate() {
         const releaseDate = document.getElementById('hermidata-releaseDate');
@@ -330,7 +330,7 @@ export class Detail extends RSSPageBuilder {
         const novelStatus = document.getElementById('hermidata-novelStatus');
         if (!novelStatus) throw new Error("Novel status does not exist");
 
-        novelStatus.textContent = this.hermidata.meta.novelStatus.toUpperCase();
+        novelStatus.textContent = this.hermidata.meta.novelStatus;
     }
     private populateStarRating() {
         const starRating = document.getElementById('hermidata-starRating');
