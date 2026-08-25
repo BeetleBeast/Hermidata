@@ -511,10 +511,10 @@ export class HermidataMerge extends RSSPageBuilder {
         const tagsContainer = this.createTagsOfRecord(record.meta.tags);
 
         // last updated
-        const lastUpdatedContainer = this.createElementOfRecord('Last Updated:', this.setToFrenchDate(record.meta.updated) ?? 'Unknown', 'last-updated');
+        const lastUpdatedContainer = this.createElementOfRecord('Last Updated:', this.isoToLocal(record.meta.updated) ?? 'Unknown', 'last-updated');
 
         // first created
-        const firstCreatedContainer = this.createElementOfRecord('Created at:', this.setToFrenchDate(record.meta.added) ?? 'Unknown', 'first-created');
+        const firstCreatedContainer = this.createElementOfRecord('Created at:', this.isoToLocal(record.meta.added) ?? 'Unknown', 'first-created');
 
         // continuation button
         const continueButton = document.createElement('button');

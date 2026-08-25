@@ -91,15 +91,15 @@ export class HermidataModel implements Hermidata {
         return this.getBookmark(bookmarkInUseId)?.history;
     }
     async getDisplayImageUrl(): Promise<string> {
-    // prefer a stored blob if one exists (covers the upload case)
-    const blob = await getImage(this.id);
-    if (blob) return URL.createObjectURL(blob);
+        // prefer a stored blob if one exists (covers the upload case)
+        const blob = await getImage(this.id);
+        if (blob) return URL.createObjectURL(blob);
 
-    // fall back to a direct URL
-    const imagePath = this.GetImagePath();
-    if (imagePath) return imagePath;
-    else return this.GetImageDefaultPath();
-}
+        // fall back to a direct URL
+        const imagePath = this.GetImagePath();
+        if (imagePath) return imagePath;
+        else return this.GetImageDefaultPath();
+    }
     GetImagePath(): string | null {
         const imageAttributeLocation = this.meta.image;
         const rssFeedImage = this.rss?.image;

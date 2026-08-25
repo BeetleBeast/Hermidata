@@ -575,12 +575,18 @@ export class FilterLogic extends Sort {
     }
     private handleAuthorSearchInput(e: Event) {
         const target = e.target as HTMLInputElement;
-        const value = target.value;
-        const filtered = this.filterEntries(value, 'author');
-        
+        const query = target.value.trim().toLowerCase();
         const authorSuggestionBox = document.querySelector<HTMLDivElement>('#Author-filter-suggestions');
         if (!authorSuggestionBox) return;
         authorSuggestionBox.innerHTML = '';
+
+        if (!query || query == '') {
+            this.filterEntries('', 'author');
+            return;
+        }
+        const filtered = this.filterEntries(query, 'author');
+        
+        
         
         // Autocomplete suggestions
         const suggestions = [...new Set(filtered.flatMap(f => f.meta.author))].slice(0, 3);

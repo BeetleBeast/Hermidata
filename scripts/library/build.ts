@@ -19,6 +19,8 @@ export abstract class RSSPageBuilder {
         
     }
 
+    protected readonly locale: string = navigator.language; // e.g. "fr-FR", "en-US", "ja-JP"
+
     public abstract build(): void;
 
     protected abstract reload(): void;
@@ -44,22 +46,49 @@ export abstract class RSSPageBuilder {
 
         return newVersion;
     }
-    protected setToFrenchDate(date: Date | string | number): string {
-        return new Date(date).toLocaleDateString('fr-FR');
-    }
-    protected frenchDateToISO(value: string): string {
-        const match = value.trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-        if (!match) return '';
+    protected isoToLocal(isoDate: string, locale?: string): string {
+        const temp = isoDate.includes('T') ? isoDate : isoDate + 'T00:00:00';
+        if (temp.includes('/')) {
+            console.trace('slash found');
+            const tempWithoutSlash = temp.replaceAll('/', '-');
+            const list = tempWithoutSlash.split('T')[0].split('-').map(String);
+            // reverse order
+            list.reverse();
+            // if second or third is only 1 char long, pad with 0
+            list[1] = String(list[1]).padStart(2, '0');
+            list[2] = String(list[2]).padStart(2, '0');
+            // stich back
 
-        const [, day, month, year] = match;
-        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            const newTemp = list.join('-') + 'T' + tempWithoutSlash.split('T')[1];
+            const d = new Date(newTemp); // avoid TZ shift
+        return new Intl.DateTimeFormat(locale ?? this.locale).format(d);
+        }
+        const d = new Date(temp); // avoid TZ shift
+        return new Intl.DateTimeFormat(locale ?? this.locale).format(d);
     }
-    protected isoDateToFrench(value: string): string {
-        const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!match) return '';
+    private getDateOrder(locale?: string): (keyof Intl.DateTimeFormatPartTypesRegistry)[] {
+        const parts = new Intl.DateTimeFormat(locale ?? this.locale).formatToParts(new Date(2026, 0, 2)); 
+        const result = parts
+            .filter(p => ["day", "month", "year"].includes(p.type))
+            .map(p => p.type);
+        return result
+    }
+    protected localToISO(str: string, locale?: string, withTime = true): string {
+        const order = this.getDateOrder(locale ?? this.locale);
+        const separators = /[\/\-\.]/;
+        const values = str.split(separators).map(Number);
+        const map: Partial<Intl.DateTimeFormatPartTypesRegistry> = {};
 
-        const [, year, month, day] = match;
-        return `${day}/${month}/${year}`;
+        order.forEach((field, i) => map[field] = values[i]);
+        
+        const yyyy = String(map.year).padStart(4, '0');
+        const mm = String(map.month).padStart(2, '0');
+        const dd = String(map.day).padStart(2, '0');
+
+        const date = `${yyyy}-${mm}-${dd}`;
+
+        if(!withTime) return date;
+        else return `${date}T00:00:00`;
     }
     protected getTimeAgo(date: string): string {
         
@@ -90,15 +119,40 @@ export abstract class RSSPageBuilder {
         else if (isYearsAgo) time = `${years}y ago`;
         else if (isDecadesAgo) time = `${decades}d ago`;
         else if (isCenturiesAgo) time = `${centuries}c ago`;
-        else time = this.setToFrenchDate(unixTime);
+        else time = this.isoToLocal(new Date(unixTime).toISOString());
 
         return time;
     }
     protected calculateImageRatio(imgElement: HTMLImageElement) {
         const ratio = imgElement.naturalWidth / imgElement.naturalHeight;
-        const targetRatio = 500 / 600;
+        const usedRation = 250 / 350;
         const tolerance = 0.3;
-        imgElement.style.objectFit = Math.abs(ratio - targetRatio) < tolerance ? 'scale-down' : 'cover';
+        const isWithinMargin = Math.abs(ratio - usedRation) < tolerance;
+
+        // if the ratio is NaN
+        if (isNaN(ratio)) {
+            imgElement.style.objectFit = 'scale-down';
+            console.warn('ratio is NaN');
+            return;
+        }
+
+        // if ration is 1:1 or default image
+        if (ratio === 1 || imgElement.src.endsWith('icon48.png')) {
+            imgElement.style.objectFit = 'scale-down';
+            return;
+        }
+
+        // is fill mode when image is within margin or just outside
+        imgElement.style.objectFit = isWithinMargin ? 'fill' : 'cover';
+
+
+        // if ration is *much* bigger than the allowed tolerance
+        /*
+        if (!isWithinMargin && Math.abs(ratio - usedRation) > 1) {
+            imgElement.style.objectFit = 'cover';
+            return;
+        }
+        */
     }
 }
 

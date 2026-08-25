@@ -324,7 +324,7 @@ export class Detail extends RSSPageBuilder {
         const releaseDate = document.getElementById('hermidata-releaseDate');
         if (!releaseDate) throw new Error("Release date does not exist");
 
-        releaseDate.textContent = this.setToFrenchDate(this.hermidata.meta.originalRelease ?? this.hermidata.meta.added);
+        releaseDate.textContent = this.isoToLocal(this.hermidata.meta.originalRelease ?? this.hermidata.meta.added);
     }
     private populateNovelStatus() {
         const novelStatus = document.getElementById('hermidata-novelStatus');

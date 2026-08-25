@@ -229,6 +229,14 @@ input:invalid:not(:placeholder-shown) {
     border-color: var(--Btn_hover_danger);
 }
 
+input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+
+    color: var(--card);
+    cursor: wait;
+}
+
 
 select {
     display: block;
@@ -429,6 +437,8 @@ html::-webkit-scrollbar-thumb {
     padding: 6px 10px;
     cursor: pointer;
     transition: background 0.2s ease;
+    text-align: center;
+    width: 100%;
 }
 .autocomplete-item:hover {
     background: var(--Btn-hover);
@@ -714,6 +724,9 @@ body[data-list-mode="false"]
 	align-self: center;
 	border-radius: 10px;
 	z-index: 15;
+    border: 1px solid var(--card);
+    box-shadow: inset 1px 15px var(--card);
+    box-shadow: 5px 5px 30px -10px var(--resetFilterBtn);
 }
 
 body[data-list-mode="true"]

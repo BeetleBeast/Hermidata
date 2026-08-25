@@ -285,7 +285,7 @@ export class EditDetail extends RSSPageBuilder {
 
         // Title
         if (mode === 'save') this.hermidata.title = title?.textContent ?? this.hermidata.title 
-        else title.textContent = this.hermidata.title;
+        else this.resetContent(title, this.hermidata.title)
 
         // Alt. Titles
         if (mode === 'save' && this.newAltTitles) this.hermidata.SetMultipleAltTitles(this.newAltTitles);
@@ -293,47 +293,63 @@ export class EditDetail extends RSSPageBuilder {
 
         // Novel Type
         if (mode === 'save') this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType;
-        else novelType.textContent = this.hermidata.novelType;
+        else this.resetContent(novelType, this.hermidata.novelType);
 
         await this.forceKeyUpdate();
 
         // Content Rating
         const contentRatingValue = contentRating?.textContent as ContentRating ?? this.hermidata.meta.contentRating;
         if (mode === 'save') this.hermidata.meta.contentRating = contentRatingValue;
-        else contentRating.textContent = this.hermidata.meta.contentRating;
+        else this.resetContent(contentRating, this.hermidata.meta.contentRating);
 
         // Release Date
-        const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added;
-        if (mode === 'save') this.hermidata.meta.originalRelease = releaseDate?.textContent ?? releaseDateValue;
-        else releaseDate.textContent = this.setToFrenchDate(releaseDateValue);
+        const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added; // both ISO
+        const releaseDateLocale = this.localToISO(releaseDate?.textContent) ?? releaseDateValue; // element content is locale but not the latter
+        if (mode === 'save') this.hermidata.meta.originalRelease = releaseDateLocale;
+        else this.resetContent(releaseDate, this.isoToLocal(releaseDateValue));
 
         // Novel Status
         if (mode === 'save') this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus;
-        else novelStatus.textContent = this.hermidata.meta.novelStatus;
+        else this.resetContent(novelStatus, this.hermidata.meta.novelStatus);
 
         // Star Rating
         if (mode === 'save') this.hermidata.meta.starRating = Number(starRating?.textContent) ?? this.hermidata.meta.starRating;
-        else starRating.textContent = String(this.hermidata.meta.starRating);
+        else this.resetContent(starRating, String(this.hermidata.meta.starRating));
+        const canSaveStarRating = this.saveInput(starRating, String(this.hermidata.meta.starRating), '0');
 
         // Author
         if (mode === 'save') this.hermidata.meta.author = author.dataset.empty === 'false' ? author.textContent : undefined; // author can be undefined
-        else author.textContent = this.hermidata.meta.author ?? '--None--';
+        else this.resetContent(author, this.hermidata.meta.author ?? '--None--');
+        const canSaveAuthor = this.saveInput(author, this.hermidata.meta.author, '--None--');
 
         // Alt. Sources
         const altSourcesSingleString = this.hermidata.GetAltSources().join(', ');
         if (mode === 'save') this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString)
-        else sources.textContent = altSourcesSingleString;
+        else this.resetContent(sources, altSourcesSingleString);
+        const canSaveSources = this.saveInput(sources, altSourcesSingleString, this.hermidata.source);
 
         // markers
         if (mode === 'save') this.saveMarkers();
 
         // Notes
         if ( mode === 'save') this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes;
-        else notes.textContent = this.hermidata.meta.notes;
+        else this.resetContent(notes, this.hermidata.meta.notes);
 
 
         await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
 
+    }
+    private saveInput(element: HTMLElement, content: string | undefined, backup?: string): boolean {
+        // if input is empty, set it to a backup value OR reject submission
+        if (content !== '' || content !== undefined) return true;
+        
+        if (!backup) return false;
+
+        element.textContent = backup;
+        return true;
+    }
+    private resetContent(element: HTMLElement, content: string) {
+        element.textContent = content;
     }
     /** update key if changes have been made */
     private async forceKeyUpdate() {
@@ -525,7 +541,14 @@ export class EditDetail extends RSSPageBuilder {
             const value = this.getElementContent(element);
 
             // 4. add content
-            newElement.value = value;            
+            newElement.value = value;
+
+            // 4.5 add background image
+            newElement.style.backgroundImage = `url(${element.src})`;
+            newElement.style.backgroundSize = 'cover';
+            newElement.style.backgroundRepeat = 'no-repeat';
+            newElement.style.backgroundClip = 'border-box';
+            
             
             // 5. replace element
             element.replaceWith(newElement);
@@ -881,7 +904,7 @@ export class EditDetail extends RSSPageBuilder {
     }
 
     private getElementContent(element: HTMLElement): string {
-        if (element instanceof HTMLInputElement && element.type === 'date') return this.isoDateToFrench(element.value)
+        if (element instanceof HTMLInputElement && element.type === 'date') return this.isoToLocal(element.value, this.locale);
         if (element instanceof HTMLImageElement) return element.src;
         return this.isValueElement(element)
             ? element.value
@@ -891,7 +914,7 @@ export class EditDetail extends RSSPageBuilder {
     private setElementContent(element: HTMLElement, value: string): void {
         if (!this.isValueElement(element)) element.textContent = value;
         else { 
-            if (element instanceof HTMLInputElement && element.type === 'date') element.value = this.frenchDateToISO(value);
+            if (element instanceof HTMLInputElement && element.type === 'date') element.value = this.localToISO(value, this.locale, false);
             else element.value = value;
         }
     }
@@ -963,6 +986,10 @@ export class EditDetail extends RSSPageBuilder {
         this.currentImageUrl = URL.createObjectURL(blob);
 
         this.imgElement instanceof HTMLImageElement ? this.imgElement.src = this.currentImageUrl : this.imgElement!.value = this.currentImageUrl;
+
+        // set as background image
+        this.imgElement!.style.backgroundImage = `url(${this.currentImageUrl})`;
+        
     }
 
 }

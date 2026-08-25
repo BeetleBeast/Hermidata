@@ -154,15 +154,34 @@ export class feed extends RSSPageBuilder {
         const img = document.createElement('img');
 
         img.className = "hermidata-item-image"
-        img.src = await entry.getDisplayImageUrl();
-        
-        this.calculateImageRatio(img);
-
-        img.loading = "lazy";
         img.sizes = "150x190";
         img.alt = `${entry.title} Image`;
+        
+        img.src = await entry.getDisplayImageUrl();
+        
+        await this.waitForImageLoad(img);
+        
+        img.loading = "lazy"; // 
+
+        this.calculateImageRatio(img);
+
+        
 
         return img;
+    }
+    private waitForImageLoad(img: HTMLImageElement, timeoutMs = 5000): Promise<void> {
+        // already loaded (e.g. from cache) — naturalWidth is already available
+        if (img.complete && img.naturalWidth !== 0) return Promise.resolve();
+
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                console.warn('Image load timed out:', img.src);
+                resolve();
+            }, timeoutMs);
+
+            img.addEventListener('load', () => resolve(), { once: true });
+            img.addEventListener('error', () => resolve(), { once: true }); // don't hang forever on broken images
+        });
     }
     private buildTitle(entry: Hermidata): HTMLDivElement {
         const title = document.createElement('div');
