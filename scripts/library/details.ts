@@ -1,16 +1,29 @@
 import { getAllHermidata, getSettings } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
+import { openLink } from "../shared/utils/StringOutput";
 import { Detail } from "./build/detail";
 import { EditDetail } from "./build/edit";
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const settings = await getSettings();
-    const allHermidata = await getAllHermidata();
-    const rssPage = new Controller(allHermidata, settings);
-    await rssPage.init()
-});
+let currentController: Controller | null = null;
 
+document.addEventListener('DOMContentLoaded', handleNavigation);
+
+window.addEventListener('hashchange', handleNavigation);
+
+async function handleNavigation(): Promise<void> {
+
+    if (currentController) currentController.reloadDetails();    
+    else {
+        
+        const settings = await getSettings();
+        const allHermidata = await getAllHermidata();
+
+        currentController = new Controller(allHermidata, settings);
+
+        await currentController.init();
+    }
+}
 
 export class Controller {
 
@@ -42,6 +55,10 @@ export class Controller {
         this.setEventListener();
     }
 
+    public reloadDetails() {
+        this.detail.reload();
+    }
+
     private async reload() {
         this.detail.reload();
     }
@@ -54,7 +71,7 @@ export class Controller {
         this.editInfoBtn?.addEventListener('click', this.editDetail.activate);
 
         // on clicked Back button
-        this.backToLibrary?.addEventListener('click', () => open('./Library.html'));
+        this.backToLibrary?.addEventListener('click', () => openLink('./dist/pages/Library.html', 'sameTab'));
 
         // viewMode toggle
         // this.chapterViewMode?.addEventListener('click', () => this.detail.setGridViewMode('chapter'));

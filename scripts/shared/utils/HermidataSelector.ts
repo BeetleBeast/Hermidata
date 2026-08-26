@@ -4,7 +4,7 @@ import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV
 import { getImage, saveImage } from "../db/Storage";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
-import { returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { openLink, returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -595,6 +595,6 @@ export class HermidataModel implements Hermidata {
     /** open url and visit site or use default url */
     public jumpToUrl = (url?: string): void => {
         // TODO: make it more robust later
-        window.open(url ?? this.GetUrl());
+        openLink(url ?? this.GetUrl(), 'newTab');
     }
 }

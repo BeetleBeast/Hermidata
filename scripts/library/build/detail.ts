@@ -1,7 +1,7 @@
 import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { findByTitleOrAlt } from "../../shared/utils/StringOutput";
+import { findByTitleOrAlt, openLink } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, RSSPageBuilder } from "../build";
 
 export class Detail extends RSSPageBuilder {
@@ -249,7 +249,7 @@ export class Detail extends RSSPageBuilder {
         if (!button) throw new Error("Read latest chapter button does not exist");
 
         button.addEventListener('click', () => {
-            window.open(this.hermidata.rss?.latestItem.link ?? this.hermidata.GetUrl(), '_blank');
+            openLink(this.hermidata.rss?.latestItem.link ?? this.hermidata.GetUrl(), 'newTab');
         });
     }
     private populateTitle() {
@@ -627,7 +627,7 @@ export class Detail extends RSSPageBuilder {
         input.focus();
         const entry = findByTitleOrAlt(value, this.AllHermidata);
         if (!entry) return
-        open('./Hermidata.html#/id/' + entry.id);
+        openLink('./dist/pages/Hermidata.html#/id/' + entry.id, 'sameTab');
     }
 
     private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {

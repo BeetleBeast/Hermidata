@@ -108,6 +108,38 @@ export function simpleHash(str: string) {
     return hash.toString();
 }
 
+/** - open url into another location */
+export async function openLink(url: string, location: 'newTab' | 'newWindow' | 'sameTab'): Promise<void> {
+    const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+
+    if (isFirefox && location === 'newTab') return openInSameContainer(url);
+
+    switch (location) {
+        case 'newTab':
+            await ext.tabs.create({ url });
+            break;
+        case 'newWindow':
+            await ext.windows.create({ url });
+            break;
+        case 'sameTab':
+            await ext.tabs.update({ url, active: true });
+            break;
+        default:
+            await ext.tabs.create({ url });
+    }
+}
+
+/** Get the current tab's `cookieStoreId` and pass it straight to `tabs.create`:*/
+async function openInSameContainer(url: string): Promise<void> {
+    if (!browser) return; // shouldn't happen since caller already checked isFirefox, but keeps TS happy
+
+    const [currentTab] = await browser.tabs.query({ active: true, currentWindow: true });
+    
+    const cookieStoreId = currentTab.cookieStoreId; // inherits the container
+
+    await browser.tabs.create({ url, cookieStoreId });
+}
+
 export function getTitleAndChapterFromUrl(url: string): { title: string | null, chapter: number } {
     if (!url) return { title: null, chapter: Number.NaN };
     if (!url.trim()) return { title: null, chapter: Number.NaN };

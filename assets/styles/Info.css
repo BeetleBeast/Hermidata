@@ -756,7 +756,7 @@ label {
 .filter-button:hover:not([data-state="true"]):active,
 .filter-button:hover:not([data-state="true"]) {
     color: #fff;
-    background-color: inherit;
+    background-color: transparent;
     outline: none;
 }
 
@@ -924,7 +924,7 @@ label {
 /* markers */
 
 .hermidata-marker-color {
-	width: 50px;
+	width: 50%;
 	height: 30px;
 	border-radius: 10px 0 0 10px;
 	z-index: 1;
