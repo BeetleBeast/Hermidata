@@ -1652,6 +1652,10 @@ body[data-list-mode="false"]
     padding-bottom: 10px;
 }
 
+.merger-dialog-record-title-content {
+    white-space: break-spaces;
+}
+
 .merger-dialog-record-letter-content {
     font-weight: 600;
     font-size: 1.2em;
