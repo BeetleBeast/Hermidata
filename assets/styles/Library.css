@@ -1569,6 +1569,8 @@ body[data-list-mode="false"]
 	height: 30px;
 	display: flex;
 	flex-direction: row;
+    justify-content: left;
+    align-items: center;
 	gap: 5px;
     color: var(--resetFilterBtn_hover);
 }

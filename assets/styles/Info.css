@@ -24,6 +24,11 @@
     --Btn_success_fill: rgb(30, 90, 60);
     --Btn_cancel_fill: rgb(120, 100, 20);
 
+    --Btn_danger_fill: rgb(120, 40, 40);
+    --Btn_danger_fill-hover: rgb(140, 48, 48);
+    --Btn_danger_fill-active: rgb(95, 30, 30);
+    --Btn_danger_text: #f5f0f0;
+
     --Text-disabled: var(--muted);
 
     --focus-ring: rgb(120, 150, 210);
@@ -1285,6 +1290,19 @@ button#hermidata-img {
     gap: 10px;
     font-size: large;
     font-weight: 600;
+}
+
+#delete-info-btn {
+    background: var(--Btn_danger_fill);
+    color: var(--Btn_danger_text);
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease-in-out;
+}
+#delete-info-btn:hover {
+    background: var(--Btn_danger_fill-hover);
+}
+#delete-info-btn:active {
+    background: var(--Btn_danger_fill-active);
 }
 
 #customPrompt-button-delete {

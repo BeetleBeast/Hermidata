@@ -604,14 +604,36 @@ export class EditDetail extends RSSPageBuilder {
 
             // 4.5 add background image
             newElement.style.backgroundImage = `url(${element.src})`;
-            newElement.style.backgroundSize = 'cover';
+            // get size
+
+            newElement.style.backgroundSize = this.calculateImageRatioForEdit(element); // or auto
             newElement.style.backgroundRepeat = 'no-repeat';
             newElement.style.backgroundClip = 'border-box';
+
+            newElement.style.backgroundPosition = 'center';
             
             
             // 5. replace element
             element.replaceWith(newElement);
         }
+    }
+    private calculateImageRatioForEdit(imgElement: HTMLImageElement) {
+        const ratio = imgElement.naturalWidth / imgElement.naturalHeight;
+        const usedRation = 250 / 350;
+        const tolerance = 0.3;
+        const isWithinMargin = Math.abs(ratio - usedRation) < tolerance;
+
+        // if the ratio is NaN
+        if (isNaN(ratio)) {
+            console.warn('ratio is NaN');
+            return 'auto';
+        }
+
+        // if ration is 1:1 or default image
+        if (ratio === 1 || imgElement.src.endsWith('icon48.png')) return 'auto';
+
+        // is fill mode when image is within margin or just outside
+        return isWithinMargin ? 'contain' : 'cover';
     }
 
     private changeAllInputsToEditable() {
