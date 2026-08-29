@@ -56,6 +56,11 @@ export class HermidataMerge extends RSSPageBuilder {
         this.getAllCheckboxes?.forEach(checkbox => {
             checkbox.addEventListener('change', () => this.checkProgress())
         })
+
+        // upon click press merge, visualize all checkboxes
+        const mergeButton = document.querySelector<HTMLButtonElement>('#mergeTwoHermidatas');
+        if (!mergeButton) return;
+        mergeButton.addEventListener('click', () => this.visualizeCheckboxes());
     }
     private checkProgress(): void {
         if (!this.getAllItemWithSelectedCheckboxes) throw new Error("No items selected found");
@@ -82,6 +87,29 @@ export class HermidataMerge extends RSSPageBuilder {
                 this.buildIncompleteMerger('tooMany', amountOfSelectedItems);
                 break;
         }
+    }
+    /** upon click press merge, visualize all checkboxes */
+    private visualizeCheckboxes() {
+
+        const allcheckboxes = this.getAllCheckboxes;
+        
+        const setOn = (getAllCheckboxes: NodeListOf<HTMLInputElement> | null) => {
+            if (!getAllCheckboxes) throw new Error("No checkboxes found");
+            for (const checkbox of getAllCheckboxes) {
+                checkbox.dataset.temporaryChecked = 'true';
+            }
+        }
+        const setOff = (getAllCheckboxes: NodeListOf<HTMLInputElement> | null) => {
+            if (!getAllCheckboxes) throw new Error("No checkboxes found");
+            for (const checkbox of getAllCheckboxes) {
+                checkbox.dataset.temporaryChecked = 'false';
+            }
+        }
+
+        setOn(allcheckboxes);
+
+        setTimeout(() => setOff(allcheckboxes), 2000);
+        
     }
 
     private buildIncompleteMerger(completionLevel: 'nothing', amountOfSelectedItems: number): void;
@@ -580,20 +608,43 @@ export class HermidataMerge extends RSSPageBuilder {
             // field
             const fieldElement = document.createElement('p');
             fieldElement.classList.add('merger-dialog-warning-field-title');
-            fieldElement.textContent = field;
+            fieldElement.textContent = this.trimFieldName(field);
 
             // value A container
             const value_A_Container = this.createWarningValue(value.A, field, 'A', suggestedLetterToKeep);
 
             // value B container
-            const valueBContainer = this.createWarningValue(value.B, field, 'B', suggestedLetterToKeep);
+            const value_B_Container = this.createWarningValue(value.B, field, 'B', suggestedLetterToKeep);
+
+            // add event listeners
+            // on click switch the input value
+            value_A_Container.addEventListener('click', () => {
+                this.switchInputValue('A', field);
+            });
+            value_B_Container.addEventListener('click', () => {
+                this.switchInputValue('B', field);
+            });
 
 
 
-            container.append(fieldElement, value_A_Container, valueBContainer);
+            container.append(fieldElement, value_A_Container, value_B_Container);
             parent.appendChild(container);
         }
         return parent;
+    }
+    private trimFieldName(fieldName: string): string {
+        // remove everything before the last dot
+        const trimmed = fieldName.split('.');
+        const individualName = trimmed[trimmed.length - 1];
+        // add spaces before each capital letter
+        return individualName.replace(/([A-Z])/g, ' $1').trim();
+    }
+    private switchInputValue(newInputLetter: 'A' | 'B', field: string) {
+        const inputs = document.querySelectorAll<HTMLInputElement>(`.merger-dialog-warning-field-value-input[data-field="${field}"]`);
+        for (const input of inputs) {
+            if (input.dataset.record === newInputLetter) input.checked = true;
+            else input.checked = false;
+        }
     }
     private createWarningValue(value: any, field: string, recordLetter: 'A' | 'B', suggestedLetterToKeep?: 'A' | 'B'): HTMLDivElement {
         // container

@@ -944,6 +944,8 @@ body[data-list-mode="true"]
     border-radius: 10px 10px 0 0;
     pointer-events: initial;
     z-index: 5;
+    position: relative;
+    isolation: relative;
 }
 
 body[data-list-mode="false"]
@@ -951,20 +953,55 @@ body[data-list-mode="false"]
     position: absolute;
     transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
     z-index: 5;
-    top: 10px;
+
+    position: relative;
+    isolation: relative;
+    
 }
 
 body[data-list-mode="false"]
-.hermidata-item-checkbox-invisible-container:has(.hermidata-item-checkbox:checked) {
+.hermidata-item-checkbox-invisible-container:has(.hermidata-item-checkbox:checked),
+body[data-list-mode="false"]
+.hermidata-item-checkbox-invisible-container:has(.hermidata-item-checkbox[data-temporary-checked="true"]) {
     opacity: 1 !important;
     transform:  translateX(-20px) !important;
 }
 
 body[data-list-mode="true"]
-.hermidata-item-checkbox-invisible-container:has(.hermidata-item-checkbox:checked) {
+.hermidata-item-checkbox-invisible-container:has(.hermidata-item-checkbox:checked),
+body[data-list-mode="true"]
+.hermidata-item-checkbox-invisible-container:has(.hermidata-item-checkbox[data-temporary-checked="true"]) {
     opacity: 1 !important;
     transform:  translateX(0) !important;
 }
+
+
+.hermidata-item-checkbox[data-temporary-checked="true"]:not(:checked)::before {
+    content: '';
+    position: absolute;
+    inset: -2px;                 /* border thickness, sits just outside the real edges */
+    border-radius: inherit;      /* matches the 10px 10px 0 0 rounding automatically */
+    padding: 2px;
+    background: conic-gradient(from var(--angle), transparent 0%, #286eca 15%, #96a9ff 30%, transparent 45%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: rotate 1s linear infinite;
+    pointer-events: none;        /* don't steal clicks from the checkbox */
+    z-index: -1;                 /* sit behind the checkbox's own content/background */
+}
+
+@keyframes rotate {
+    to { --angle: 360deg; }
+}
+
+@property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
 body[data-list-mode="true"]
 .hermidata-item-checkbox-invisible-container {
     position: absolute;
@@ -977,6 +1014,7 @@ body[data-list-mode="true"]
 body[data-list-mode="false"]
 .hermidata-item-checkbox-invisible-container {
     position: absolute;
+    top: 10px;
     width: 200px;
     height: 30px;
     transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
@@ -1672,9 +1710,14 @@ body[data-list-mode="false"]
 }
 .merger-dialog-warning-field {
 	grid-area: warningField;
-	background-color: var(--Btn_cancel_fill);
+	/*background-color: var(--Btn_cancel_fill);*/
 	border-radius: 15px;
 	padding: 15px;
+}
+
+.merger-dialog-warning-field-title {
+    font-style: italic;
+    text-transform: capitalize;
 }
 
 .merger-dialog-button-back {
@@ -1704,6 +1747,8 @@ body[data-list-mode="false"]
     border: 1px solid var(--Btn_hover_Cancel);
     border-radius: 10px;
     margin-bottom: 10px;
+    cursor: pointer;
+    padding-left: 10px;
 }
 
 .merger-dialog-warning-field-value-text {
