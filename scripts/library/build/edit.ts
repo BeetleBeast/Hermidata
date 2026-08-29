@@ -1,9 +1,9 @@
 import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
-import { getAllTags, saveHermidata, updateHermidata } from "../../shared/db/Storage";
+import { getAllTags, removeHermidata, saveHermidata, updateHermidata } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { returnHashedTitle } from "../../shared/utils/StringOutput";
+import { openLink, returnHashedTitle } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, RSSPageBuilder } from "../build";
 import { Tags } from "./tags";
 
@@ -13,6 +13,10 @@ export class EditDetail extends RSSPageBuilder {
 
     private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn');
     private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
+
+    private readonly deleteOpenPanelBtn = document.querySelector<HTMLDivElement>('#delete-info-btn');
+    private readonly deleteConfirmationBtn = document.querySelector<HTMLDivElement>('#customPrompt-button-delete');
+    private readonly deleteCancelBtn = document.querySelector<HTMLDivElement>('#customPrompt-button-cancel');
 
     private get imgElement(): (HTMLImageElement | HTMLButtonElement) | null { return document.querySelector<HTMLImageElement | HTMLButtonElement>('#hermidata-img'); }
     private readonly popover = document.querySelector<HTMLDivElement>('#imageChanger-dialog');
@@ -104,9 +108,10 @@ export class EditDetail extends RSSPageBuilder {
     }
     public activate(): void {
 
-        // 1. set cancel button
-        if (!this.cancelBtn) return;
+        // 1. set cancel & delete button
+        if (!this.cancelBtn || !this.deleteOpenPanelBtn) return;
         this.cancelBtn.style.display = 'flex';
+        this.deleteOpenPanelBtn.style.display = 'flex';
 
         // 2. set all inputs to editable
         this.changeAllInputsToEditable();
@@ -116,9 +121,10 @@ export class EditDetail extends RSSPageBuilder {
 
 
     public async deactivate(mode: 'cancel' | 'save'): Promise<void> {
-        // 1. set cancel button
-        if (!this.cancelBtn) return;
+        // 1. set cancel & delete button
+        if (!this.cancelBtn || !this.deleteOpenPanelBtn) return;
         this.cancelBtn.style.display = 'none';
+        this.deleteOpenPanelBtn.style.display = 'none';
         
         // 2. set all inputs to editable
         this.changeAllInputsBack(mode);
@@ -137,17 +143,70 @@ export class EditDetail extends RSSPageBuilder {
             this.deactivate('cancel');
         })
 
-        // save button
+        // save/edit button
         this.saveBtn?.addEventListener('click', () => {
             if (this.saveButtonCurrentMode === 'Edit') {
                 this.changeEditButton('Save');
+                this.changeDeleteButton('hidden');
                 this.activate();
             } else {
                 this.changeEditButton('Edit');
+                this.changeDeleteButton('visible');
                 this.deactivate('save');
             }
         });
 
+        // delete button
+        // set label on click of delete panel button
+        this.deleteOpenPanelBtn?.addEventListener('click', this.setLabelOfDeletePanel);
+        // delete hermidata on click of delete button
+        this.deleteConfirmationBtn?.addEventListener('click', this.deleteHermidata);
+        // close delete panel on click of cancel button
+        this.deleteCancelBtn?.addEventListener('click', this.closeDeletePanel)
+    }
+    private changeDeleteButton(mode: 'visible' | 'hidden'): void {
+        if (!this.deleteOpenPanelBtn) return;
+
+        if (mode === 'visible') {
+            this.deleteOpenPanelBtn.style.display = 'flex';
+        } else {
+            this.deleteOpenPanelBtn.style.display = 'none';
+        }
+    }
+    private closeDeletePanel() {
+        const mergePanel = document.querySelector<HTMLDivElement>('#delete-dialog');
+        if (!mergePanel) return;
+        
+        if (mergePanel.matches(':popover-open')) {
+            mergePanel.hidePopover();
+        }
+    }
+    private setLabelOfDeletePanel() {
+        // label
+        const label = document.querySelector<HTMLDivElement>('#delete-label');
+        if (!label) return;
+        label.textContent = `Delete ${this.hermidata.title}?`;
+    }
+    private async deleteHermidata(): Promise<void> {
+        // delete hermidata
+        
+        const id = this.hermidata.id;
+        const exist = this.AllHermidata[id];
+        
+        if (!exist) throw new Error(`No hermidata found for id ${id}`);
+
+        console.log(`[Hermidata] %cRemoved Hermidata%c \nDeleted at ${this.isoToLocal(new Date().toISOString())} | id: ${id} | title: ${exist.title} `,
+            'color: red; font-weight: bold;', 'color: inherit; font-weight: normal;'
+        );
+        
+        // 1 remove from all hermidata
+        delete this.AllHermidata[id];
+
+        // 2 remove from indexDB
+        await removeHermidata(id);
+
+        // 3. go back to library
+        openLink('./dist/pages/Library.html', 'sameTab');
     }
     private changeEditButton(changeTo: 'Save' | 'Edit'): void {
         const button = this.saveBtn!;

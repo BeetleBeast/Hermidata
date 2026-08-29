@@ -12,7 +12,6 @@
 
   <section id="header">
     <button id="back-btn" type="button" class="Btn" title="Back">Back To Library</button>
-    <button id="cancel-edit-btn" type="button" class="Btn" title="Cancel" data-disabled="true" hidden>Cancel</button>
     <div id="search-input-container">
       <div id="search-container">
         <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
@@ -21,7 +20,16 @@
       <div id="search-suggestions"></div>
     </div>
     <div id="header-utility-container">
+      <button id="cancel-edit-btn" type="button" class="Btn" title="Cancel" data-disabled="true" hidden>Cancel</button>
       <button id="edit-info-btn" type="button" class="Btn" title="Edit info page">Edit</button>
+      <button id="delete-info-btn" type="button" class="Btn" title="Delete info page" popovertargetaction="toggle" popovertarget="delete-dialog" data-disabled="true" hidden>Delete</button>
+      <div id="delete-dialog" class="delete-dialog" popover>
+        <div id="delete-label" title="delete label"></div>
+        <div class="genericPromptBtns">
+          <button id="customPrompt-button-delete" type="button" class="Btn" title="Delete">Delete</button>
+          <button id="customPrompt-button-cancel" type="button" class="Btn" title="Cancel">Cancel</button>
+        </div>
+      </div>
       <button id="reload-info-btn" type="button" class="Btn" title="reload info page">Reload</button>
     </div>
 

@@ -456,8 +456,8 @@ label {
 	width: 100%;
 	display: grid;
 	align-items: center;
-	grid-template-areas: "back cancel search utility";
-	grid-template-columns: 150px 150px auto 300px;
+	grid-template-areas: "back search utility";
+	grid-template-columns: 400px auto 400px;
 	grid-template-rows: 80px;
 	border: none;
     background-color: rgb(99 81 127 / 13%);
@@ -1232,4 +1232,93 @@ label {
 button#hermidata-img {
 	width: -webkit-fill-available;
 	height: -webkit-fill-available;
+}
+
+
+/* delete section */
+
+
+/* delete dialog */
+
+[popover] {
+    position-area: initial;
+    
+    background-color: var(--Input-colorV2);
+    color: var(--Text-color);
+    outline-color: var(--Btn);
+    text-emphasis-color: var(--Btn);
+    accent-color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 0;
+}
+
+:popover-open {
+    background-color: var(--Input-colorV2);
+    color: var(--Text-color);
+    outline-color: var(--Btn);
+    text-emphasis-color: var(--Btn);
+    accent-color: var(--Text-color);
+    border: 1px solid var(--Btn);
+    border-radius: 0;
+    position: relative;
+    inset: 0;
+    
+}
+
+
+.delete-dialog {
+    /* hidden state */
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+    transition: 
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+#delete-label {
+    align-items: center;
+    justify-content: center;
+    width: 80%;
+    color: var(--Text-color);
+    text-align: center;
+    word-wrap: unset;
+    gap: 10px;
+    font-size: large;
+    font-weight: 600;
+}
+
+#customPrompt-button-delete {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+}
+#customPrompt-button-cancel {
+    background-color: var(--bg-color);
+    color: var(--Text-color);
+}
+
+
+
+.delete-dialog:popover-open {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	justify-content: center;
+	align-items: center;
+    padding: 10px;
+    padding-left: 10px;
+    
+    width: 20%;
+    height: 10%;
+
+    border-radius: 5px;
+    box-shadow: rgba(0, 0, 0, 0.45) 0px 18px 40px -12px, rgba(0, 0, 0, 0.25) 0px 2px 6px;
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+/* starting point for the "open" transition (before it animates in) */
+@starting-style {
+    .delete-dialog:popover-open {
+        opacity: 0;
+        transform: scale(0.95) translateY(-8px);
+    }
 }
