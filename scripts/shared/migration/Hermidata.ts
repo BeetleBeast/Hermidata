@@ -11,12 +11,14 @@ import { AutoSetAllHermidata } from "../utils/AutoSetAllHermidata";
 
 
 interface DuplicationResult {
-    keyA: string;
-    keyB: string;
-    titleA: string;
-    titleB: string;
-    sourceA: string;
-    sourceB: string;
+    key_A: string;
+    key_B: string;
+    title_A: string;
+    title_B: string;
+    novelType_A: string;
+    novelType_B: string;
+    source_A: string;
+    source_B: string;
     score: number;
 }
 
@@ -40,7 +42,7 @@ export class HermidataMigration {
         const entries = Object.entries(data);
         const duplicates = [];
 
-        console.group("[Dupplication] Duplicate Title Scan");
+        console.group("[Duplication] Duplicate Title Scan");
 
         for (let i = 0; i < entries.length; i++) {
             const [keyA, valA] = entries[i];
@@ -53,12 +55,14 @@ export class HermidataMigration {
                 const score = CalcDiff(valA.title, valB.title);
                 if (score >= threshold) {
                     duplicates.push({
-                        keyA,
-                        keyB,
-                        titleA: valA.title,
-                        titleB: valB.title,
-                        sourceA: valA.source,
-                        sourceB: valB.source,
+                        key_A: keyA,
+                        key_B: keyA,
+                        title_A: valA.title,
+                        title_B: valB.title,
+                        novelType_A: valA.novelType,
+                        novelType_B: valB.novelType,
+                        source_A: valA.source,
+                        source_B: valB.source,
                         score
                     });
 
@@ -78,7 +82,7 @@ export class HermidataMigration {
     /**
      * Entry to auto merge duplicates
      * @param threshold - decimal number dictating the threshold of similarity to merge found entries
-     * @returns - merged Keys, titles, sources and levenstein score
+     * @returns - merged Keys, titles, sources and levenshtein score
      */
     public async migrateAndAutoMergeDuplicates(threshold: number = 0.9): Promise<Array<DuplicationResult>> {
         // Step 1: migrate all old hashes first
@@ -86,29 +90,29 @@ export class HermidataMigration {
 
         // Step 2: scan for duplicates
         console.log("Scanning for duplicates after migration...");
-        const dups = await this.findPotentialDuplicates(threshold);
+        const duplicates = await this.findPotentialDuplicates(threshold);
 
-        if (!dups.length) {
+        if (!duplicates.length) {
             console.log("No duplicates found after migration.");
             return [];
         }
 
-        console.warn(`Found ${dups.length} potential duplicates.`);
+        console.warn(`Found ${duplicates.length} potential duplicates.`);
         console.table(
-            dups.map(d => ({
-                TitleA: d.titleA,
-                TitleB: d.titleB,
+            duplicates.map(d => ({
+                Title_A: d.title_A,
+                Title_B: d.title_B,
                 Score: d.score.toFixed(2),
             }))
         );
 
         // Step 3: automatically merge them
-        for (const dup of dups) {
-            await this.autoMergeDuplicate(dup.keyA, dup.keyB);
+        for (const dup of duplicates) {
+            await this.autoMergeDuplicate(dup.key_A, dup.key_B);
         }
 
         console.log("All possible duplicates processed.");
-        return dups;
+        return duplicates;
     }
     /**
      * Automatically merges two entries by picking the one
@@ -207,7 +211,7 @@ export class HermidataMigration {
     
     /**
      * Manual Entry to manually merge duplicates
-     * Select 2 ID's wich the user wants to merge
+     * Select 2 ID's which the user wants to merge
      * @param {String} id1 
      * @param {String} id2 
      */
@@ -230,12 +234,14 @@ export class HermidataMigration {
         const score = CalcDiff(data[id1].title, data[id2].title);
         let output = []
         output.push({
-            keyA: id1,
-            keyB: id2,
-            titleA: data[id1].title,
-            titleB: data[id2].title,
-            sourceA: data[id1].source,
-            sourceB: data[id2].source,
+            key_A: id1,
+            key_B: id2,
+            title_A: data[id1].title,
+            title_B: data[id2].title,
+            source_A: data[id1].source,
+            source_B: data[id2].source,
+            novelType_A: data[id1].novelType,
+            novelType_B: data[id2].novelType,
             RSSA: data[id1]?.rss || null,
             RSSB: data[id2]?.rss || null,
             score: score
@@ -297,20 +303,20 @@ export class HermidataMigration {
     public async migrateAndCheckDuplicates(): Promise<DuplicationResult[]> {
         await this.migrateOldHashes();
         console.log("Now scanning for duplicates...");
-        const dups = await this.findPotentialDuplicates(0.9);
+        const duplicates = await this.findPotentialDuplicates(0.9);
 
-        if (dups.length === 0) {
+        if (duplicates.length === 0) {
             console.log("No duplicates found after migration.");
         } else {
-            console.warn(`Found ${dups.length} potential duplicates.`);
-            console.table(dups.map(d => ({
-                TitleA: d.titleA,
-                TitleB: d.titleB,
+            console.warn(`Found ${duplicates.length} potential duplicates.`);
+            console.table(duplicates.map(d => ({
+                TitleA: d.title_A,
+                TitleB: d.title_B,
                 Score: d.score.toFixed(2)
             })));
         }
 
-        return dups;
+        return duplicates;
     }
 
 
