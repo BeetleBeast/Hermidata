@@ -6,14 +6,23 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     putSettings, 
     putAllRawFeeds,
     putAllHermidata,
-    deleteRawFeed} from './db';
+    deleteRawFeed,
+    dbGetAllImages,
+    dbDeleteImage,
+    dbSaveImage,
+    dbGetImage,
+    dbSaveAllImages,
+    dbUpdateImageKey} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
-import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
+import type { AllSortsType } from '../../library/build/filter';
+import type { Filters as LibraryFilters } from '../../library/build/filterLogic';
+
 
 // ============================================================
 // Hermidata
@@ -44,6 +53,8 @@ export async function updateHermidata(oldKey: string, newKey: string, entry: Her
 
         await putHermidata(entry, false)    // write new key to IndexedDB
         await deleteHermidata(oldKey, false) // remove old key from IndexedDB
+
+        await updateImageKey(oldKey, newKey); // move associated images to new key
 
         await pushToSync(entry)             // push new entry to sync
         await removeFromSync(oldKey)        // remove old key from sync
@@ -166,6 +177,68 @@ export async function removeRawFeedByUrl(url: string): Promise<boolean> {
         return false;
     }
 }
+// ============================================================
+// Images
+// ============================================================
+
+export async function saveImage(id: string, blob: Blob): Promise<boolean> {
+    try {
+        await dbSaveImage(id, blob);
+        return true;
+    } catch (err) {
+        console.error('[Storage] saveImage:', err);
+        return false;
+    }
+}
+export async function getImage(id: string): Promise<Blob | null> {
+    try {
+        const image = await dbGetImage(id);
+        return image ?? null;
+    } catch (err) {
+        console.error('[Storage] getImage:', err);
+        return null;
+    }
+}
+export async function saveAllImages(blobs: Record<string, Blob>): Promise<boolean> {
+    try {
+        await dbSaveAllImages(blobs);
+        return true;
+    } catch (err) {
+        console.error('[Storage] saveAllImages:', err);
+        return false;
+    }
+}
+
+export async function getAllImages(): Promise<Blob[]> {
+    try {
+        return await dbGetAllImages();
+    } catch (err) {
+        console.error('[Storage] getAllImages:', err);
+        return [];
+    }
+}
+
+export async function removeImage(id: string): Promise<boolean> {
+    try {
+        await dbDeleteImage(id);
+        return true;
+    } catch (err) {
+        console.error('[Storage] removeImage:', err);
+        return false;
+    }
+}
+
+export async function updateImageKey(oldId: string, newId: string): Promise<boolean> {
+    try {
+        await dbUpdateImageKey(oldId, newId);
+        return true;
+    } catch (err) {
+        console.error('[Storage] updateImageKey:', err);
+        return false;
+    }
+}
+
+
 
 // ============================================================
 // Settings — still in storage.sync (small, needs cross-device sync)
@@ -378,6 +451,34 @@ export async function setLastFilter(lastFilter: Filters): Promise<boolean> {
     }
 }
 
+export async function getLastLibraryFilters(): Promise<LibraryFilters | undefined> {
+    try {
+        return await new Promise<LibraryFilters | undefined>((resolve, reject) => {
+            ext.storage.local.get('lastLibraryFilter', (result: { lastLibraryFilter: LibraryFilters }) => {
+                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+                resolve(result?.lastLibraryFilter ?? undefined);
+            });
+        });
+    } catch (err) {
+        console.error('[Storage] getLastLibraryFilters:', err);
+        return undefined;
+    }
+}
+
+export async function setLastLibraryFilters(lastFilter: LibraryFilters): Promise<boolean> {
+    try {
+        return await new Promise<boolean>((resolve, reject) => {
+            ext.storage.local.set({ lastLibraryFilter: lastFilter }, () => {
+                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+                resolve(true);
+            });
+        });
+    } catch (err) {
+        console.error('[Storage] setLastLibraryFilters:', err);
+        return false;
+    }
+}
+
 export async function getLastSortOption(): Promise<AllsortsType | undefined> {
     try {
         const filter = await getLastFilter();
@@ -398,6 +499,30 @@ export async function setLastSortOption(lastSortOption: AllsortsType): Promise<b
         });
     } catch (err) {
         console.error('[Storage] setLastSortOption:', err);
+        return false;
+    }
+}
+
+export async function getLastLibrarySortOption(): Promise<AllSortsType | undefined> {
+    try {
+        const filter = await getLastLibraryFilters();
+        return filter?.sort ?? undefined;
+    } catch (err) {
+        console.error('[Storage] getLastLibrarySortOption:', err);
+        return undefined;
+    }
+}
+
+export async function setLastLibrarySortOption(lastSortOption: AllSortsType): Promise<boolean> {
+    try {
+        const lastFilter = await getLastLibraryFilters();
+        return setLastLibraryFilters({
+            include: lastFilter?.include ?? {},
+            exclude: lastFilter?.exclude ?? {},
+            sort: lastSortOption,
+        });
+    } catch (err) {
+        console.error('[Storage] setLastLibrarySortOption:', err);
         return false;
     }
 }

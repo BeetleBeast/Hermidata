@@ -1,6 +1,8 @@
 import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
 import type { PickedElementData } from '../types/rss';
+import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
+import { ext } from './BrowserCompat';
 
 export function getChapterFromTitle(title: string | undefined, url: string): number {
     if (!title) return Number.NaN;
@@ -44,7 +46,7 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
     return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
-export function normaliseDateToIso(rawDate: string): string {
+export function normalizeDateToIso(rawDate: string): string {
     
     if (!rawDate) return '';
 
@@ -137,6 +139,38 @@ export function simpleHash(str: string) {
     return hash.toString();
 }
 
+/** - open url into another location */
+export async function openLink(url: string, location: 'newTab' | 'newWindow' | 'sameTab'): Promise<void> {
+    const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+
+    if (isFirefox && location === 'newTab') return openInSameContainer(url);
+
+    switch (location) {
+        case 'newTab':
+            await ext.tabs.create({ url });
+            break;
+        case 'newWindow':
+            await ext.windows.create({ url });
+            break;
+        case 'sameTab':
+            await ext.tabs.update({ url, active: true });
+            break;
+        default:
+            await ext.tabs.create({ url });
+    }
+}
+
+/** Get the current tab's `cookieStoreId` and pass it straight to `tabs.create`:*/
+async function openInSameContainer(url: string): Promise<void> {
+    if (!browser) return; // shouldn't happen since caller already checked isFirefox, but keeps TS happy
+
+    const [currentTab] = await browser.tabs.query({ active: true, currentWindow: true });
+    
+    const cookieStoreId = currentTab.cookieStoreId; // inherits the container
+
+    await browser.tabs.create({ url, cookieStoreId });
+}
+
 export function getTitleAndChapterFromUrl(url: string): { title: string | null, chapter: number } {
     if (!url) return { title: null, chapter: Number.NaN };
     if (!url.trim()) return { title: null, chapter: Number.NaN };
@@ -184,6 +218,9 @@ export class TrimTitle {
         return cleanString
     }
     private static extractDomainFromUrl(HermidataUrl: string): string {
+        // Detect our own browser extension and return a constant
+        if (HermidataUrl.startsWith(ext.runtime.getURL(""))) return "Hermidata";
+
         // Extract domain name from url
         const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataUrl);
         const siteName = siteMatch ? siteMatch[1] : "DummySite";

@@ -1,3 +1,5 @@
+import type { allOlderHermidata } from "./oldVersions";
+
 /**
  * @fileoverview Types
  * - RegexConfig is a oject definition for regex patterns used in the TrimTitle class
@@ -34,12 +36,34 @@ export type AnyNovelType = NovelType  | (string & {});
 export type AnyReadStatus = ReadStatus | (string & {});
 export type AnyNovelStatus = NovelStatus | (string & {});
 
+export type ContentRating = 'Safe' | 'Suggestive' | 'Erotica' | 'Pornographic';
 
+export type ContentWarning = 'Nudity' | 'Violence' | 'Sex' | 'Language' | 'Mild Violence' | 'Mild Language' | 'Gore'
+    | 'SA' | 'Abuse' | 'Incest' | 'Kidnapping' | 'Abortion' | 'Suicide' | 'Pregnancy' | 'Mental Illness' | 'Classism' | 'Racism' | 'Sexism'
+    | 'Hateful Language' | 'Transphobia' | 'Homophobia' | 'Swears' | 'Murder' | 'Animal cruelty' | 'Self-harm' | 'Death' | 'childbirth'
+    | 'Miscarriages' | 'Blood' | 'Ableism' | 'Racism' | 'misogyny' | 'Sexism' | 'pedophilia' | 'Child abuse' | 'heterosexism' | (string & {}); // Custom content warning
+
+export type ReleaseSchedule = 'Once' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly' | 'Irregular' | 'Unknown';
+
+export type Relation = {
+    series: {
+        seriesId: string;
+        position: number;
+    },
+    relatedWorks: {
+        type: 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary';
+        id: string;
+    }[]
+} 
 
 export interface Bookmark { // new
+    version: number;
 	id: string;
 	current: number;
-	history: number[];
+	history: {
+        chapter: number;
+        at: string;  // timestamp (ISO 8601)
+    }[];
     readStatus: AnyReadStatus;
 	label: string; // "favorite scene", "reread from here", "primary"
 	note?: string; // Optional note about why you bookmarked createdAt: string;
@@ -53,6 +77,7 @@ export interface Bookmark { // new
 
 
 export interface Hermidata {
+    version: number;
     id: string;
     title: string;
     novelType: AnyNovelType;
@@ -63,24 +88,54 @@ export interface Hermidata {
         bookmarks: Record<string, Bookmark>; // Multiple saved positions
         revisitingCount: number; // How many times you've re-read
         bookmarkInUse: string;
+        releaseSchedule: ReleaseSchedule; // calculated from chapter history
     };
     rss: Feed | null;
     import: string | null;
     meta: {
-        tags: string[]; // old versions might have string, but we will convert them to array
+        tags: string[];
+
+        contentRating: ContentRating;
+        contentWarnings: ContentWarning[];
+        starRating: number;
+        image: (string & {}) | 'inside-indexedDB'; // image url? or file path? ( unsure )
+        author?: string; // optional
+        language?: string; // optional
+        translator?: string; // optional
+
+        readingQueue: {
+            readNext: boolean; // true if it is the first in the queue
+            priority: number; // 1-10
+            queueIndex: number;
+        } | false; // false if not in queue
+
+        relations: Relation | 'None';
+
         notes: string;
         added: string;
         updated: string;
-        altSources: string[]; // for multiple souces ( with the first one the same as above )
+        altSources: string[];
         altTitles: string[];
-        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
+        originalRelease: string | null;
         novelStatus: AnyNovelStatus;
     };
 }
 
-// FIXME: make sure oginalRelease is there
+/*
+need to add:
 
-export type HermidataDateType = 'added' | 'updated';
+image [x]
+version [x]
+starRating [x]
+contentRating [x]
+author [x]
+language [x]
+
+*/
+
+// FIXME: make sure originalRelease is there
+
+export type HermidataDateType = 'added' | 'updated' | 'originalRelease';
 export type HermidataSortType = 'pubDate';
 
 
@@ -239,298 +294,12 @@ export type ValueAtPath<TRoot, TPath extends readonly PropertyKey[]> = TPath ext
 
 /* old versions */
 
-/* old Feed & RawFeed */
-
-export type FeedV1 = {
-    title: string,
-    url: string,
-    image: null | string,
-    domain: string,
-    lastFetched: null | string, // Date when last fetched
-    latestItem: FeedItemV1
-    lastBuildDate?: null | Date,
-}
-// raw feed has multiple items
-export type RawFeedV1 = {
-    title: string,
-    url: string,
-    domain: string,
-    lastFetched: string,
-    lastBuildDate: Date,
-    image: string,
-    items: FeedItemV1[],
-    lastToken: string | null
-}
-
-export type FeedItemV1 = {
-    title: string,
-    link: string,
-    pubDate: Date,
-    guid: string
-}
-
-/* old Bookmarks */
-
-export interface BookmarkV3 { // new
-    id: string;
-    current: number;
-    history: number[];
-    readStatus: AnyReadStatus;
-    label: string; // "favorite scene", "reread from here", "primary"
-    note?: string; // Optional note about why you bookmarked createdAt: string;
-    color: string; // hex rgb for visual distinction
-    createdAt: string;
-    updatedAt: string;
-    isPrimary: boolean; // only one can be primary
-    scrollPosition: number;
-}
-export interface BookmarkV2 { // new
-	id: string;
-	current: number;
-	history: number[];
-    readStatus: AnyReadStatus;
-	label: string; // "favorite scene", "reread from here", "primary"
-	note?: string; // Optional note about why you bookmarked createdAt: string;
-	color: string; // hex rgb for visual distinction
-	createdAt: string;
-	updatedAt: string;
-	isPrimary: boolean; // only one can be primary
-}
-
-export interface BookmarkV1 { // new
-	id: string;
-	current: number;
-	history: number[];
-	label: string; // "favorite scene", "reread from here", "primary"
-	note?: string; // Optional note about why you bookmarked createdAt: string;
-	color: string; // hex rgb for visual distinction
-	createdAt: string;
-	updatedAt: string;
-	isPrimary: boolean; // only one can be primary
-}
-
-/* old Hermidata */
-
-
 export type migrationReturn = {
-    result: allolderHermidata,
+    result: allOlderHermidata,
     isMigratedSuccessfully: false
 } | {
     result: Hermidata,
     isMigratedSuccessfully: true
 }
 
-
-export type allolderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9;
-
-export type AnyHermidataVersion = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | Hermidata;
-
-export interface HermidataV9 {
-    id: string;
-    title: string;
-    novelType: AnyNovelType;
-    url: string;
-    source: string;
-    chapter: {
-        latest: number;
-        lastChecked: string;
-        bookmarks: Record<string, BookmarkV3>; // Multiple saved positions
-        revisitingCount: number; // How many times you've re-read
-        bookmarkInUse: string;
-    };
-    rss: Feed | null;
-    import: string | null;
-    meta: {
-        tags: string[]; // old versions might have string, but we will convert them to array
-        notes: string;
-        added: string;
-        updated: string;
-        altSources: string[]; // for multiple souces ( with the first one the same as above )
-        altTitles: string[];
-        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
-        novelStatus: AnyNovelStatus;
-    };
-}
-
-export interface HermidataV8 {
-    id: string;
-    title: string;
-    novelType: AnyNovelType;
-    url: string;
-    source: string;
-    chapter: {
-        latest: number;
-        lastChecked: string;
-        bookmarks: Record<string, BookmarkV2>; // Multiple saved positions
-        revisitingCount: number; // How many times you've re-read
-        bookmarkInUse: string;
-    };
-    rss: Feed | null;
-    import: string | null;
-    meta: {
-        tags: string[]; // old versions might have string, but we will convert them to array
-        notes: string;
-        added: string;
-        updated: string;
-        altSources: string[]; // for multiple souces ( with the first one the same as above )
-        altTitles: string[];
-        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
-        novelStatus: AnyNovelStatus;
-    };
-}
-
-
-export interface HermidataV7 {
-    id: string;
-    title: string;
-    type: AnyNovelType;
-    url: string;
-    source: string;
-    status: AnyReadStatus;
-    chapter: {
-        latest: number;
-        lastChecked: string;
-        bookmarks: Record<string, BookmarkV1>; // Multiple saved positions
-        revisitingCount: number; // How many times you've re-read
-        bookmarkInUse: string;
-    };
-    rss: Feed | null;
-    import: string | null;
-    meta: {
-        tags: string[]; // old versions might have string, but we will convert them to array
-        notes: string;
-        added: string;
-        updated: string;
-        altSources: string[]; // for multiple souces ( with the first one the same as above )
-        altTitles: string[];
-        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
-        novelStatus: AnyNovelStatus;
-    };
-}
-export interface HermidataV6 {
-    id: string;
-    title: string;
-    type: AnyNovelType;
-    url: string;
-    source: string;
-    status: AnyReadStatus;
-    chapter: {
-        latest: number;
-        lastChecked: string;
-        bookmarks: Record<string, BookmarkV1>; // Multiple saved positions
-        revisitingCount: number; // How many times you've re-read
-    };
-    rss: Feed | null;
-    import: string | null;
-    meta: {
-        tags: string[]; // old versions might have string, but we will convert them to array
-        notes: string;
-        added: string;
-        updated: string;
-        altSources: string[]; // for multiple souces ( with the first one the same as above )
-        altTitles: string[];
-        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
-        novelStatus: AnyNovelStatus;
-        bookmarkInUse: string;
-    };
-}
-export interface HermidataV5 {
-    id: string;
-    title: string;
-    type: AnyNovelType;
-    url: string;
-    source: string;
-    status: AnyReadStatus;
-    chapter: {
-        current: number;
-        latest: number;
-        history: number[];
-        lastChecked: string;
-    };
-    rss: Feed | null;
-    import: string | null;
-    meta: {
-        tags: string[]; // old versions might have string, but we will convert them to array
-        notes: string;
-        added: string;
-        updated: string;
-        altTitles: string[];
-        originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
-        novelStatus: AnyNovelStatus;
-    };
-}
-
-export interface HermidataV4 {
-    id: string;
-    title: string;
-    type: AnyNovelType;
-    url: string;
-    source: string;
-    status: AnyReadStatus;
-    chapter: {
-        current: number;
-        latest: number;
-        history: number[];
-        lastChecked: string;
-    };
-    rss: Feed | null;
-    import: string | null;
-    meta: {
-        tags: string;
-        notes: string;
-        added: string;
-        updated: string;
-        altTitles: string[];
-    };
-}
-
-export interface HermidataV3 {
-    id: string,
-    title: string,
-    type: NovelType,
-    url: string,
-    source: string,
-    status: ReadStatus,
-    chapter: {
-        current: string,
-        latest: null,
-        history: (number | string)[],
-        lastChecked: string
-    },
-    rss: null,
-    import: null,
-    meta: {
-        tags: string,
-        notes: string,
-        added: string,
-        updated: string,
-        altTitles: string[]
-    }
-}
-export interface HermidataV2 {
-    Page_Title: string,
-    Title: string,
-    Type: NovelType,
-    Chapter: string,
-    Url: string,
-    Status: ReadStatus,
-    Date: string,
-    Tag: string,
-    Notes: string,
-    GoogleSheetURL: string,
-    Past: {},
-    Hash: string // added hash
-}
-export interface HermidataV1 {
-    Page_Title: string,
-    Title: string,
-    Type: NovelType,
-    Chapter: string,
-    Url: string,
-    Status: ReadStatus,
-    Date: string,
-    Tag: string,
-    Notes: string,
-    GoogleSheetURL: string,
-    Past: {}
-}
+export type Migration = (data: any) => any;

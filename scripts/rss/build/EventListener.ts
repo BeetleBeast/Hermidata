@@ -2,6 +2,8 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
 import type {  Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
+import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
+import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { saveHermidata, updateHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -470,7 +472,7 @@ export class EventListener extends RssBuild {
             console.warn("No data found for this item");
             return;
         }
-        const newTitle = await customPrompt(`Renaming to:`, oldData.title);
+        const newTitle = await customPrompt(`Renaming to:`, {defaultValue: oldData.title});
         if (!newTitle || newTitle.trim() === oldData.title.trim()) {
             console.log("Rename canceled or unchanged");
             return;

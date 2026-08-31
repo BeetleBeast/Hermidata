@@ -249,7 +249,7 @@ class HermidataController {
         const hasMergedNovelType = await this.updateNovelType();
         if (!hasMergedNovelType) return; // if merge failed/ declined then exit saving
 
-        // TODO: sheck if it works
+        // TODO: check if it works
         // migrate if duplicate
         const hasMigrated = await this.migrateIfDuplicate();
         if (hasMigrated) console.info('magration plan activated');
@@ -377,7 +377,7 @@ class HermidataController {
         // max 20 entries in history
         if (this.hermidata.GetHistory()?.length >= 20) this.hermidata.ShiftHistory();
 
-        this.hermidata.PushHistory(this.hermidata.GetChapter());
+        this.hermidata.PushHistory(this.hermidata.GetChapter(), new Date().toISOString());
         // only unique entries in history
         this.hermidata.SetHistory(Array.from( new Set(this.hermidata.GetHistory())));
         

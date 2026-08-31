@@ -1,6 +1,7 @@
 import { setAllHermidata } from "../../shared/db/Storage";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getElement, setElement } from "../../shared/utils/Selection";
+import { openLink } from "../../shared/utils/StringOutput";
 import { RssBuild } from "../build";
 import { getHermidataNotification } from "../load";
 
@@ -32,9 +33,9 @@ export class Footer extends RssBuild {
         });
     }
     private openRSSPage(): void {
-        const FullpageRSSButton = getElement(".fullpage-RSS-btn");
-        if (!FullpageRSSButton) throw new Error('Element not found');
-        FullpageRSSButton.addEventListener('click', () => open('./RSSFullpage.html'))
+        const LibraryButton = getElement(".library-btn");
+        if (!LibraryButton) throw new Error('Element not found');
+        LibraryButton.addEventListener('click', () => openLink('./dist/pages/Library.html', 'newTab'))
     }
     private setVersion(): void {
         setElement("#version", el => el.innerHTML = chrome.runtime.getManifest().version);

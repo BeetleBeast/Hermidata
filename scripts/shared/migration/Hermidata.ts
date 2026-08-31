@@ -1,20 +1,24 @@
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
-import { getAllRawFeeds, getHermidataViaKey, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
-import { getChapterFromTitle, normaliseDateToIso, returnBookmarkHash, returnHashedTitle, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, allolderHermidata, AnyHermidataVersion, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings } from "../types";
+import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
+import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
+import { getChapterFromTitle, normalizeDateToIso, returnBookmarkHash, returnHashedTitle, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
+import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV10, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
+import type { BookmarkV4 } from "../types/oldVersions";
+import { AutoSetAllHermidata } from "../utils/AutoSetAllHermidata";
 
 
 interface DuplicationResult {
-    keyA: string;
-    keyB: string;
-    titleA: string;
-    titleB: string;
-    sourceA: string;
-    sourceB: string;
+    key_A: string;
+    key_B: string;
+    title_A: string;
+    title_B: string;
+    novelType_A: string;
+    novelType_B: string;
+    source_A: string;
+    source_B: string;
     score: number;
 }
 
@@ -38,7 +42,7 @@ export class HermidataMigration {
         const entries = Object.entries(data);
         const duplicates = [];
 
-        console.group("[Dupplication] Duplicate Title Scan");
+        console.group("[Duplication] Duplicate Title Scan");
 
         for (let i = 0; i < entries.length; i++) {
             const [keyA, valA] = entries[i];
@@ -51,12 +55,14 @@ export class HermidataMigration {
                 const score = CalcDiff(valA.title, valB.title);
                 if (score >= threshold) {
                     duplicates.push({
-                        keyA,
-                        keyB,
-                        titleA: valA.title,
-                        titleB: valB.title,
-                        sourceA: valA.source,
-                        sourceB: valB.source,
+                        key_A: keyA,
+                        key_B: keyA,
+                        title_A: valA.title,
+                        title_B: valB.title,
+                        novelType_A: valA.novelType,
+                        novelType_B: valB.novelType,
+                        source_A: valA.source,
+                        source_B: valB.source,
                         score
                     });
 
@@ -76,7 +82,7 @@ export class HermidataMigration {
     /**
      * Entry to auto merge duplicates
      * @param threshold - decimal number dictating the threshold of similarity to merge found entries
-     * @returns - merged Keys, titles, sources and levenstein score
+     * @returns - merged Keys, titles, sources and levenshtein score
      */
     public async migrateAndAutoMergeDuplicates(threshold: number = 0.9): Promise<Array<DuplicationResult>> {
         // Step 1: migrate all old hashes first
@@ -84,29 +90,29 @@ export class HermidataMigration {
 
         // Step 2: scan for duplicates
         console.log("Scanning for duplicates after migration...");
-        const dups = await this.findPotentialDuplicates(threshold);
+        const duplicates = await this.findPotentialDuplicates(threshold);
 
-        if (!dups.length) {
+        if (!duplicates.length) {
             console.log("No duplicates found after migration.");
             return [];
         }
 
-        console.warn(`Found ${dups.length} potential duplicates.`);
+        console.warn(`Found ${duplicates.length} potential duplicates.`);
         console.table(
-            dups.map(d => ({
-                TitleA: d.titleA,
-                TitleB: d.titleB,
+            duplicates.map(d => ({
+                Title_A: d.title_A,
+                Title_B: d.title_B,
                 Score: d.score.toFixed(2),
             }))
         );
 
         // Step 3: automatically merge them
-        for (const dup of dups) {
-            await this.autoMergeDuplicate(dup.keyA, dup.keyB);
+        for (const dup of duplicates) {
+            await this.autoMergeDuplicate(dup.key_A, dup.key_B);
         }
 
         console.log("All possible duplicates processed.");
-        return dups;
+        return duplicates;
     }
     /**
      * Automatically merges two entries by picking the one
@@ -205,7 +211,7 @@ export class HermidataMigration {
     
     /**
      * Manual Entry to manually merge duplicates
-     * Select 2 ID's wich the user wants to merge
+     * Select 2 ID's which the user wants to merge
      * @param {String} id1 
      * @param {String} id2 
      */
@@ -228,12 +234,14 @@ export class HermidataMigration {
         const score = CalcDiff(data[id1].title, data[id2].title);
         let output = []
         output.push({
-            keyA: id1,
-            keyB: id2,
-            titleA: data[id1].title,
-            titleB: data[id2].title,
-            sourceA: data[id1].source,
-            sourceB: data[id2].source,
+            key_A: id1,
+            key_B: id2,
+            title_A: data[id1].title,
+            title_B: data[id2].title,
+            source_A: data[id1].source,
+            source_B: data[id2].source,
+            novelType_A: data[id1].novelType,
+            novelType_B: data[id2].novelType,
             RSSA: data[id1]?.rss || null,
             RSSB: data[id2]?.rss || null,
             score: score
@@ -295,20 +303,20 @@ export class HermidataMigration {
     public async migrateAndCheckDuplicates(): Promise<DuplicationResult[]> {
         await this.migrateOldHashes();
         console.log("Now scanning for duplicates...");
-        const dups = await this.findPotentialDuplicates(0.9);
+        const duplicates = await this.findPotentialDuplicates(0.9);
 
-        if (dups.length === 0) {
+        if (duplicates.length === 0) {
             console.log("No duplicates found after migration.");
         } else {
-            console.warn(`Found ${dups.length} potential duplicates.`);
-            console.table(dups.map(d => ({
-                TitleA: d.titleA,
-                TitleB: d.titleB,
+            console.warn(`Found ${duplicates.length} potential duplicates.`);
+            console.table(duplicates.map(d => ({
+                TitleA: d.title_A,
+                TitleB: d.title_B,
                 Score: d.score.toFixed(2)
             })));
         }
 
-        return dups;
+        return duplicates;
     }
 
 
@@ -448,7 +456,8 @@ export class HermidataMigration {
                 latest: newer.chapter?.latest ?? older.chapter?.latest ?? null,
                 lastChecked: newer.chapter?.lastChecked || older.chapter?.lastChecked || new Date().toISOString(),
                 revisitingCount: newer.chapter?.revisitingCount || older.chapter?.revisitingCount || 0,
-                bookmarkInUse: newer.chapter?.bookmarkInUse || older.chapter?.bookmarkInUse || this.NEW_simpleHash('Primary')
+                bookmarkInUse: newer.chapter?.bookmarkInUse || older.chapter?.bookmarkInUse || this.NEW_simpleHash('Primary'),
+                releaseSchedule: newer.chapter?.releaseSchedule || older.chapter?.releaseSchedule
 
             },
             rss: newer.rss || older.rss || null,
@@ -476,15 +485,213 @@ export class HermidataMigration {
                 added: older.meta?.added || base.meta.added,
                 updated: new Date().toISOString(),
                 originalRelease: older.meta?.originalRelease || newer.meta?.originalRelease || null, // TODO: do something with it
-                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus
+                novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus,
+
+                contentRating: newer.meta.contentRating ?? older.meta.contentRating,
+                contentWarnings: newer.meta.contentWarnings ?? older.meta.contentWarnings,
+                starRating: newer.meta.starRating ?? older.meta.starRating,
+                image: newer.meta.image ?? older.meta.image,
+                readingQueue: newer.meta.readingQueue ?? older.meta.readingQueue,
+                relations: newer.meta.relations ?? older.meta.relations,
             }
         }
         // step 3. save & remove key
         updateHermidata(oldKey, newKey, merged);
 
         return merged;
+    
     }
-    public static async mergeTwoHermidataWithConfirmation(newer: Hermidata, older: Hermidata): Promise<boolean> { 
+    private static newer(a: string, b: string): string {
+        return new Date(a).getTime() >= new Date(b).getTime() ? a : b;
+    }
+    private static unionDedupe(a: string[], b: string[]): string[] {
+        return Array.from(new Set([...a, ...b]));
+    }
+    private static reconcileBookmarkKeys(bookmarks: Record<string, Bookmark>): Record<string, Bookmark> {
+        const reconciled: Record<string, Bookmark> = {};
+
+        for (const bookmark of Object.values(bookmarks)) {
+            reconciled[returnBookmarkHash(bookmark.label)] = bookmark;
+        }
+        return reconciled;
+    }
+    private static recomputeHermidataId(record: Hermidata): string {
+        return returnHashedTitle(record.title, record.novelType, record.source);
+    }
+
+    private static resolveBookmarkInUse( keep: Hermidata, discard: Hermidata, mergedBookmarks: Record<string, Bookmark> ): string {
+        const keepInUse = keep.chapter.bookmarks[keep.chapter.bookmarkInUse];
+
+        if (keepInUse) {
+            const key = returnBookmarkHash(keepInUse.label);
+            if (mergedBookmarks[key]) return key;
+        }
+
+        const discardInUse = discard.chapter.bookmarks[discard.chapter.bookmarkInUse];
+        
+        if (discardInUse) {
+            const key = returnBookmarkHash(discardInUse.label);
+            if (mergedBookmarks[key]) return key;
+        }
+
+        return Object.keys(mergedBookmarks)[0] ?? "";
+    }
+
+    public static mergeHermidata(keep: Hermidata, discard: Hermidata): { merged: Hermidata; conflicts: ScalarConflict[]; autoResolved: string[]; } {
+        const conflicts: ScalarConflict[] = [];
+        const autoResolved: string[] = [];
+        
+        const flagOrSkip = (path: string, a: unknown, b: unknown) => {
+            if (a === b) return a;
+            if (a === "" || a == null) { autoResolved.push(path); return b; }
+            if (b === "" || b == null) { autoResolved.push(path); return a; }
+            conflicts.push({ field: path, path, valueA: a, valueB: b });
+            return a; // placeholder until user resolves it
+        };
+        
+        const { merged: bookmarks } = this.mergeBookmarks(keep.chapter.bookmarks, discard.chapter.bookmarks);
+        autoResolved.push("chapter.bookmarks");
+        
+        const merged: Hermidata = {
+            version: keep.version ?? discard.version ?? 11,
+            id: keep.id,
+            title: flagOrSkip("title", keep.title, discard.title) as string,
+            novelType: flagOrSkip("novelType", keep.novelType, discard.novelType) as AnyNovelType,
+            source: flagOrSkip("source", keep.source, discard.source) as string,
+            chapter: {
+                latest: Math.max(keep.chapter.latest, discard.chapter.latest),
+                lastChecked: this.newer(keep.chapter.lastChecked, discard.chapter.lastChecked),
+                bookmarks,
+                revisitingCount: keep.chapter.revisitingCount + discard.chapter.revisitingCount,
+                bookmarkInUse: this.resolveBookmarkInUse(keep, discard, bookmarks),
+                releaseSchedule: keep.chapter.releaseSchedule ?? discard.chapter.releaseSchedule
+            },
+            rss: keep.rss ?? discard.rss,
+            import: keep.import ?? discard.import,
+            meta: {
+                tags: this.unionDedupe(keep.meta.tags, discard.meta.tags),
+                notes: flagOrSkip("meta.notes", keep.meta.notes, discard.meta.notes) as string,
+                added: keep.meta.added < discard.meta.added ? keep.meta.added : discard.meta.added, // earliest
+                updated: this.newer(keep.meta.updated, discard.meta.updated),
+                altSources: this.unionDedupe(keep.meta.altSources, discard.meta.altSources),
+                altTitles: this.unionDedupe(keep.meta.altTitles, discard.meta.altTitles),
+                originalRelease: keep.meta.originalRelease ?? discard.meta.originalRelease,
+                novelStatus: flagOrSkip("meta.novelStatus", keep.meta.novelStatus, discard.meta.novelStatus) as AnyNovelStatus,
+
+                contentRating: keep.meta.contentRating ?? discard.meta.contentRating,
+                contentWarnings: this.unionDedupe(keep.meta.contentWarnings,discard.meta.contentWarnings) as ContentWarning[],
+                starRating: keep.meta.starRating ?? discard.meta.starRating,
+                image: keep.meta.image ?? discard.meta.image,
+                readingQueue: keep.meta.readingQueue ?? discard.meta.readingQueue,
+                relations: keep.meta.relations ?? discard.meta.relations,
+                // optional fields
+                author: keep.meta.author ?? discard.meta.author ?? undefined,
+                language: keep.meta.language ?? discard.meta.language ?? undefined,
+                translator: keep.meta.translator ?? discard.meta.translator ?? undefined,
+
+            },
+        };
+        
+        autoResolved.push(
+            "meta.tags", "meta.altSources", "meta.altTitles",
+            "chapter.latest", "chapter.lastChecked", "meta.updated", "meta.added"
+        );
+        
+        return { merged, conflicts, autoResolved };
+    }
+    private static mergeBookmarks( aRaw: Record<string, Bookmark>, bRaw: Record<string, Bookmark> ): { merged: Record<string, Bookmark>; conflicts: ScalarConflict[] } {
+        const a = this.reconcileBookmarkKeys(aRaw);
+        const b = this.reconcileBookmarkKeys(bRaw);
+
+        const merged: Record<string, Bookmark> = { ...a };
+        const conflicts: ScalarConflict[] = [];
+        
+        for (const [id, bBookmark] of Object.entries(b)) {
+            const aBookmark = merged[id];
+            if (!aBookmark) {
+            merged[id] = bBookmark; // new bookmark, just add it
+            continue;
+            }
+            // same id exists in both — only a real conflict if content actually differs
+            if (JSON.stringify(aBookmark) !== JSON.stringify(bBookmark)) {
+            // usually safe to auto-keep whichever was updated more recently
+            merged[id] = new Date(aBookmark.updatedAt) >= new Date(bBookmark.updatedAt)
+                ? aBookmark
+                : bBookmark;
+            }
+        }
+        
+        // ensure only one isPrimary survives
+        const primaries = Object.values(merged).filter(bm => bm.isPrimary);
+        if (primaries.length > 1) {
+            primaries.slice(1).forEach(bm => { bm.isPrimary = false; });
+        }
+        
+        return { merged, conflicts };
+    }
+    
+    private static applyConflictResolution(merged: Hermidata, path: string, value: unknown): void {
+        // Only the fields that can ever end up in `conflicts` need a setter here —
+        // this list should stay in sync with the flagOrSkip(...) calls in mergeHermidata().
+        const CONFLICT_FIELD_SETTERS: Record<string, (target: Hermidata, value: unknown) => void> = {
+        title: (target, value) => { target.title = value as string; },
+        novelType: (target, value) => { target.novelType = value as AnyNovelType; },
+        source: (target, value) => { target.source = value as string; },
+        "meta.notes": (target, value) => { target.meta.notes = value as string; },
+        "meta.novelStatus": (target, value) => { target.meta.novelStatus = value as AnyNovelStatus; },
+        };
+        const setter = CONFLICT_FIELD_SETTERS[path];
+        if (!setter) throw new Error(`No setter registered for conflict field "${path}"`);
+        setter(merged, value);
+    }
+
+    public static async mergeTwoHermidataWithConfiguration(recordToKeep: Hermidata, recordToRemove: Hermidata, config: HermidataMigrationConfiguration): Promise<boolean> { 
+        try {
+            if (config.keepId !== recordToKeep.id || config.removeId !== recordToRemove.id) {
+                throw new Error("Configuration does not match the provided records");
+            }
+        
+            const { merged, conflicts } = this.mergeHermidata(recordToKeep, recordToRemove);
+        
+            for (const conflict of conflicts) {
+                const chosen = config.resolutions[conflict.path];
+                if (!chosen) throw new Error(`Missing resolution for field "${conflict.path}"`);
+                const value = chosen === "A" ? conflict.valueA : conflict.valueB;
+                this.applyConflictResolution(merged, conflict.path, value);
+
+            }
+
+            merged.id = this.recomputeHermidataId(merged);
+            
+            const hermidataModel = new HermidataModel(merged);
+            if (merged.id !== recordToKeep.id) {
+                // identity shifted — neither original key is valid for the merged record
+                await updateHermidata(recordToRemove.id, hermidataModel.id, hermidataModel.toJSON());
+                await removeHermidata(recordToKeep.id);
+            } else {
+                await updateHermidata(recordToRemove.id, merged.id, hermidataModel.toJSON());
+            }
+
+
+            await updateHermidata(recordToRemove.id, recordToKeep.id, hermidataModel.toJSON());
+        
+            return true;
+        } catch (err) {
+            console.error("Failed to merge Hermidata:", err);
+            return false;
+        }
+    }
+    private static setByPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+        const keys = path.split(".");
+
+        let target: Record<string, unknown> = obj;
+        for (let i = 0; i < keys.length - 1; i++) {
+            target = target[keys[i]] as Record<string, unknown>;
+        }
+        target[keys[keys.length - 1]] = value;
+    }
+
+    public static async mergeTwoHermidataWithConfirmation(newer: Hermidata, older: Hermidata): Promise<boolean> {
         const msg = `
             Are you sure you want to merge "${older.title}" with "${newer.title}".
 
@@ -668,9 +875,9 @@ export class HermidataMigration {
         return this.OLD_simpleHash(`${Obj.novelType}:${TrimTitle.trimTitle(Obj.title, Obj.chapter.bookmarks[Obj.chapter.bookmarkInUse].url).title.toLowerCase()}`);
     }
     /** - force a array of strings or a string to be an array */
-    private static setTagsFromstringToList(list: string[]): string[];
-    private static setTagsFromstringToList(str: string): string[];
-    private static setTagsFromstringToList(input: string | string[]): string[] {
+    private static setTagsFromStringToList(list: string[]): string[];
+    private static setTagsFromStringToList(str: string): string[];
+    private static setTagsFromStringToList(input: string | string[]): string[] {
         const list = typeof input === 'string' ? input.split(',') : input;
         const trim = list.map(t => t.trim())
         // remove duplicates
@@ -678,43 +885,60 @@ export class HermidataMigration {
         
     }
     /** force a list of strings to be a list of numbers */
-    private static setNumbersFromstringToList(combination: (string | number)[]): number[];
-    private static setNumbersFromstringToList(list: string[]): number[];
-    private static setNumbersFromstringToList(list: number[]): number[];
-    private static setNumbersFromstringToList(input: string[] | number[] | (number | string)[]): number[] {
+    private static setNumbersFromStringToList(combination: (string | number)[]): number[];
+    private static setNumbersFromStringToList(list: string[]): number[];
+    private static setNumbersFromStringToList(list: number[]): number[];
+    private static setNumbersFromStringToList(input: string[] | number[] | (number | string)[]): number[] {
         const list = input.map(t => Number(t));
         // remove duplicates
         return Array.from(new Set(list));
     }
+    public static readonly MIGRATIONS: Record<number, Migration> = {
+        1: (data) => this.migrateHermidataV1ToV2(data),
+        2: (data) => this.migrateHermidataV2ToV3(data),
+        3: (data) => this.migrateHermidataV3OrV4ToV5(data),
+        4: (data) => this.migrateHermidataV3OrV4ToV5(data),
+        5: (data) => this.migrateHermidataV5ToV6(data),
+        6: (data) => this.migrateHermidataV6ToV7(data),
+        7: (data) => this.migrateHermidataV7ToV8(data),
+        8: (data) => this.migrateHermidataV8ToV9(data),
+        9: (data) => this.migrateHermidataV9ToV10(data),
+        10: (data) => this.migrateHermidataV10ToV11(data),
+    };
+    public static migrateAllHermidataToLatest(older: AnyHermidataVersion): migrationReturn {
+        
+        let current: any = older;
+        let version = this.detectLegacyVersion(current);
 
-    public static migrateAllHermidataToLatest(older: allolderHermidata | Hermidata): migrationReturn {
-        let current = older;
-
-        // early return if already latest
-        if (isHermidataV10(current)) return {result: current, isMigratedSuccessfully: true};
-
-        const migrations: Array<[(d: AnyHermidataVersion) => boolean, (d: any) => AnyHermidataVersion]> = [
-            [isHermidataV1, this.migrateHermidataV1ToV2.bind(this)],
-            [isHermidataV2, this.migrateHermidataV2ToV3.bind(this)],
-            [isHermidataV3, this.migrateHermidataV3OrV4ToV5.bind(this)],
-            [isHermidataV4, this.migrateHermidataV3OrV4ToV5.bind(this)],
-            [isHermidataV5, this.migrateHermidataV5ToV6.bind(this)],
-            [isHermidataV6, this.migrateHermidataV6ToV7.bind(this)],
-            [isHermidataV7, this.migrateHermidataV7ToV8.bind(this)],
-            [isHermidataV8, this.migrateHermidataV8ToV9.bind(this)],
-            [isHermidataV9, this.migrateHermidataV9ToV10.bind(this)],
-        ];
-
-        for (const [check, migrate] of migrations) {
-            if (check(current)) current = migrate(current);
+        while (this.MIGRATIONS[version]) {
+            current = this.MIGRATIONS[version](current);
+            version = current.version ?? version + 1;
         }
 
-        if (!isHermidataV10(current)) {
-            console.warn('[Migration] Failed to reach V10:', current);
-            return { result: current, isMigratedSuccessfully: false };
-        }
+        if (!isHermidataV11(current)) { // <-- bump this check to whatever "latest" is
+        console.warn('[Migration] Failed to reach latest version:', current);
+        return { result: current, isMigratedSuccessfully: false };
+    }
 
-        return { result: current, isMigratedSuccessfully: true };
+    return { result: current, isMigratedSuccessfully: true };
+    }
+    private static isHermidataV11OrMore(older: AnyHermidataVersion): older is Hermidata {
+        const hasVersion = "version" in older;
+        return hasVersion;
+    }
+    private static detectLegacyVersion(older: AnyHermidataVersion): number {
+        if (this.isHermidataV11OrMore(older)) return older.version;
+        else if (isHermidataV10(older)) return 10;
+        else if (isHermidataV9(older)) return 9;
+        else if (isHermidataV8(older)) return 8;
+        else if (isHermidataV7(older)) return 7;
+        else if (isHermidataV6(older)) return 6;
+        else if (isHermidataV5(older)) return 5;
+        else if (isHermidataV4(older)) return 4;
+        else if (isHermidataV3(older)) return 3;
+        else if (isHermidataV2(older)) return 2;
+        else if (isHermidataV1(older)) return 1;
+        else return 0;
     }
     private static migrateHermidataV1ToV2(older: HermidataV1): HermidataV2 {
         return {
@@ -747,7 +971,7 @@ export class HermidataMigration {
             import: null,
             chapter: {
                 current: older?.Chapter ?? 0,
-                history: this.setNumbersFromstringToList([older.Chapter]) ?? [],
+                history: this.setNumbersFromStringToList([older.Chapter]) ?? [],
                 latest: null,
                 lastChecked: older.Date ?? new Date().toISOString()
             },
@@ -773,12 +997,12 @@ export class HermidataMigration {
             import: older.import,
             chapter: {
                 current: Number(older?.chapter?.current) ?? 0,
-                history: this.setNumbersFromstringToList(older.chapter?.history) ?? [],
+                history: this.setNumbersFromStringToList(older.chapter?.history) ?? [],
                 latest: Number(older.chapter?.latest) ?? 0,
                 lastChecked: older.chapter?.lastChecked ?? new Date().toISOString()
             },
             meta: {
-                tags: this.setTagsFromstringToList(older.meta?.tags) ?? [],
+                tags: this.setTagsFromStringToList(older.meta?.tags) ?? [],
                 notes: older.meta?.notes ?? "",
                 altTitles: older.meta?.altTitles ?? [older.title],
                 added: older.meta?.added ?? new Date().toISOString(),
@@ -797,7 +1021,7 @@ export class HermidataMigration {
         const bookmark: BookmarkV1 = {
             id: returnBookmarkHash(defaultBookmarkLabel),
             current: Number(data?.chapter?.current) ?? 0,
-            history: this.setNumbersFromstringToList(data.chapter.history) ?? [],
+            history: this.setNumbersFromStringToList(data.chapter.history) ?? [],
             label: defaultBookmarkLabel,
             color: 'blue',
             createdAt: new Date().toISOString(),
@@ -823,7 +1047,7 @@ export class HermidataMigration {
                 lastChecked: data.chapter?.lastChecked ?? new Date().toISOString()
             },
             meta: {
-                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                tags: this.setTagsFromStringToList(data.meta?.tags) ?? [],
                 notes: data.meta?.notes ?? "",
                 altTitles:  data.meta?.altTitles ?? [data.title],
                 altSources: [data.source],
@@ -857,7 +1081,7 @@ export class HermidataMigration {
                 bookmarkInUse: data.meta?.bookmarkInUse
             },
             meta: {
-                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                tags: this.setTagsFromStringToList(data.meta?.tags) ?? [],
                 notes: data.meta?.notes ?? "",
                 altTitles:  data.meta?.altTitles ?? [data.title],
                 altSources: data.meta?.altSources ?? [data.source],
@@ -874,7 +1098,7 @@ export class HermidataMigration {
             allBookmarks[id] = {
                 id: bookmark.id,
                 current: Number(bookmark.current),
-                history: this.setNumbersFromstringToList(bookmark.history),
+                history: this.setNumbersFromStringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
                 createdAt: bookmark.createdAt,
@@ -900,7 +1124,7 @@ export class HermidataMigration {
                 bookmarkInUse: data.chapter?.bookmarkInUse
             },
             meta: {
-                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                tags: this.setTagsFromStringToList(data.meta?.tags) ?? [],
                 notes: data.meta?.notes ?? "",
                 altTitles:  data.meta?.altTitles ?? [data.title],
                 altSources: data.meta?.altSources ?? [data.source],
@@ -918,7 +1142,7 @@ export class HermidataMigration {
             newBookmarks[id] = {
                 id: bookmark.id,
                 current: Number(bookmark.current),
-                history: this.setNumbersFromstringToList(bookmark.history),
+                history: this.setNumbersFromStringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
                 createdAt: bookmark.createdAt,
@@ -939,18 +1163,18 @@ export class HermidataMigration {
             }
         };
     }
-    private static migrateHermidataV9ToV10(data: HermidataV9): Hermidata {
-        const newBookmarks: Record<string, Bookmark> = {};
+    private static migrateHermidataV9ToV10(data: HermidataV9): HermidataV10 {
+        const newBookmarks: Record<string, BookmarkV4> = {};
 
         for (const [id, bookmark] of Object.entries(data.chapter.bookmarks)) {
             newBookmarks[id] = {
                 id: bookmark.id,
                 current: Number(bookmark.current),
-                history: this.setNumbersFromstringToList(bookmark.history),
+                history: this.setNumbersFromStringToList(bookmark.history),
                 label: bookmark.label,
                 color: bookmark.color,
-                createdAt: new Date(normaliseDateToIso(bookmark.createdAt)).toISOString(),
-                updatedAt: new Date(normaliseDateToIso(bookmark.updatedAt)).toISOString(),
+                createdAt: new Date(normalizeDateToIso(bookmark.createdAt)).toISOString(),
+                updatedAt: new Date(normalizeDateToIso(bookmark.updatedAt)).toISOString(),
                 note: bookmark.note,
                 isPrimary: bookmark.isPrimary,
                 readStatus: bookmark.readStatus,
@@ -969,19 +1193,99 @@ export class HermidataMigration {
                 bookmarks: newBookmarks,
                 revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
                 latest: Number(data.chapter?.latest) ?? 0,
-                lastChecked: new Date(normaliseDateToIso(data.chapter?.lastChecked)).toISOString() ?? new Date().toISOString(),
+                lastChecked: new Date(normalizeDateToIso(data.chapter?.lastChecked)).toISOString() ?? new Date().toISOString(),
                 bookmarkInUse: data.chapter?.bookmarkInUse
             },
             meta: {
-                tags: this.setTagsFromstringToList(data.meta?.tags) ?? [],
+                tags: this.setTagsFromStringToList(data.meta?.tags) ?? [],
                 notes: data.meta?.notes ?? "",
                 altTitles: data.meta?.altTitles ?? [data.title],
                 altSources: data.meta?.altSources ?? [data.source],
-                added: new Date(normaliseDateToIso(data.meta?.added)).toISOString() ?? new Date().toISOString(),
+                added: new Date(normalizeDateToIso(data.meta?.added)).toISOString() ?? new Date().toISOString(),
                 updated: new Date(data.meta?.updated).toISOString() ?? new Date().toISOString(),
                 originalRelease: data.meta?.originalRelease ?? null,
                 novelStatus: data.meta?.novelStatus
             }
         }
+    }
+    private static setNewHistoryFromOld(historyStrings: number[], createdAt: string): { chapter: number, at: string }[] {
+        const oldHistory = this.setNumbersFromStringToList(historyStrings);
+        const newHistory: { chapter: number, at: string }[] = [];
+        for (const chapter of oldHistory) {
+            newHistory.push({
+                chapter: chapter,
+                at: new Date(normalizeDateToIso(createdAt)).toISOString()
+            })
+        }
+        return newHistory
+    }
+    private static setNewBookmarkV4ToV5(bookmarks: Record<string, BookmarkV4>): Record<string, Bookmark> {
+        const newBookmarks: Bookmark[] = [];
+
+        for (const [id, bookmark] of Object.entries(bookmarks)) {
+
+            const newBookmark: Bookmark = {
+                version: 5,
+                id: bookmark.id,
+                current: Number(bookmark.current),
+                history: this.setNewHistoryFromOld(bookmark.history, bookmark.createdAt),
+                label: bookmark.label,
+                color: bookmark.color,
+                createdAt: new Date(normalizeDateToIso(bookmark.createdAt)).toISOString(),
+                updatedAt: new Date(normalizeDateToIso(bookmark.updatedAt)).toISOString(),
+                note: bookmark.note,
+                isPrimary: bookmark.isPrimary,
+                readStatus: bookmark.readStatus,
+                scrollPosition: bookmark.scrollPosition ?? 0,
+                url: bookmark.url
+            }
+            
+            newBookmarks.push(newBookmark);
+        }
+        const record: Record<string, Bookmark> = Object.fromEntries(newBookmarks.map(bookmark => [bookmark.id, bookmark]));
+        return record
+    }
+    private static migrateHermidataV10ToV11(data: HermidataV10): Hermidata {
+        
+        const hermidata: Hermidata = {
+            ...data,
+            version: 11,
+            id: data.id,
+            title: data.title,
+            novelType: data.novelType,
+            source: data.source,
+            rss: data.rss ?? null,
+            import: data.import ?? null,
+            chapter: {
+                bookmarks: this.setNewBookmarkV4ToV5(data.chapter.bookmarks),
+                revisitingCount: Number(data.chapter?.revisitingCount) ?? 0,
+                latest: Number(data.chapter?.latest) ?? 0,
+                lastChecked: new Date(normalizeDateToIso(data.chapter?.lastChecked)).toISOString() ?? new Date().toISOString(),
+                bookmarkInUse: data.chapter?.bookmarkInUse,
+                releaseSchedule: AutoSetAllHermidata.releaseSchedule(this.setNewHistoryFromOld(data.chapter.bookmarks[data.chapter.bookmarkInUse].history, data.chapter.bookmarks[data.chapter.bookmarkInUse].createdAt)),
+            },
+            meta: {
+                tags: this.setTagsFromStringToList(data.meta?.tags) ?? [],
+                notes: data.meta?.notes ?? "",
+                altTitles: data.meta?.altTitles ?? [data.title],
+                altSources: data.meta?.altSources ?? [data.source],
+                added: new Date(normalizeDateToIso(data.meta?.added)).toISOString() ?? new Date().toISOString(),
+                updated: new Date(data.meta?.updated).toISOString() ?? new Date().toISOString(),
+
+                originalRelease: data.meta?.originalRelease ?? null,
+                novelStatus: data.meta?.novelStatus ?? 'Ongoing',
+
+                
+                contentRating: data.meta.tags.includes('Hentai') ? 'Pornographic' : 'Safe',
+                contentWarnings: [],
+                starRating: 5.0,
+                image: data?.rss?.image ?? '../../../assets/icon/icon48.png',
+
+                readingQueue: false,
+                relations: 'None',
+            }
+        }
+
+        return hermidata
     }
 }

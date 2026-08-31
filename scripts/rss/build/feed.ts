@@ -305,7 +305,7 @@ export class FeedItem {
         ElInfo.className = "hermidata-item-info"
 
         // image
-        const itemImage = this.createItemImage(item);
+        const itemImage = await this.createItemImage(item);
 
         // top row
         const itemTitle = this.createItemTitle(itemInfo.title);
@@ -326,10 +326,10 @@ export class FeedItem {
 
         return ElInfo
     }
-    private createItemImage(item: Hermidata): HTMLImageElement {
+    private async createItemImage(item: HermidataModel): Promise<HTMLImageElement> {
         const ElImage = document.createElement("img");
         ElImage.className = "hermidata-item-image"
-        ElImage.src = item?.rss?.image ?? '../../../assets/icon/icon48.png';
+        ElImage.src = await item.getDisplayImageUrl();
 
         ElImage.sizes = "40x60";
         ElImage.style.width = "40px";
