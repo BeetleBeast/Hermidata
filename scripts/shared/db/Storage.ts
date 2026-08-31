@@ -199,9 +199,9 @@ export async function getImage(id: string): Promise<Blob | null> {
         return null;
     }
 }
-export async function saveAllImages(ids: string[], blobs: Blob[]): Promise<boolean> {
+export async function saveAllImages(blobs: Record<string, Blob>): Promise<boolean> {
     try {
-        await dbSaveAllImages(ids, blobs);
+        await dbSaveAllImages(blobs);
         return true;
     } catch (err) {
         console.error('[Storage] saveAllImages:', err);

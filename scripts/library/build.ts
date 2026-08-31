@@ -46,12 +46,12 @@ export abstract class RSSPageBuilder {
 
         return newVersion;
     }
-    protected isoToLocal(isoDate: string, locale?: string): string {
-        const temp = isoDate.includes('T') ? isoDate : isoDate + 'T00:00:00';
-        if (temp.includes('/')) {
+    protected isoToLocal(rawDate: string, locale?: string): string {
+        const isoDate = rawDate.includes('T') ? rawDate : rawDate + 'T00:00:00';
+        if (isoDate.includes('/')) {
             console.trace('slash found');
-            const tempWithoutSlash = temp.replaceAll('/', '-');
-            const list = tempWithoutSlash.split('T')[0].split('-').map(String);
+            const isoDateWithoutSlash = isoDate.replaceAll('/', '-');
+            const list = isoDateWithoutSlash.split('T')[0].split('-').map(String);
             // reverse order
             list.reverse();
             // if second or third is only 1 char long, pad with 0
@@ -59,11 +59,11 @@ export abstract class RSSPageBuilder {
             list[2] = String(list[2]).padStart(2, '0');
             // stich back
 
-            const newTemp = list.join('-') + 'T' + tempWithoutSlash.split('T')[1];
-            const d = new Date(newTemp); // avoid TZ shift
-        return new Intl.DateTimeFormat(locale ?? this.locale).format(d);
+            const trueIsoDate = list.join('-') + 'T' + isoDateWithoutSlash.split('T')[1];
+            const d = new Date(trueIsoDate); // avoid TZ shift
+            return new Intl.DateTimeFormat(locale ?? this.locale).format(d);
         }
-        const d = new Date(temp); // avoid TZ shift
+        const d = new Date(isoDate); // avoid TZ shift
         return new Intl.DateTimeFormat(locale ?? this.locale).format(d);
     }
     private getDateOrder(locale?: string): (keyof Intl.DateTimeFormatPartTypesRegistry)[] {

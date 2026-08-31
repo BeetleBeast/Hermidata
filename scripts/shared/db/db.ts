@@ -383,7 +383,8 @@ export async function dbSaveImage(id: string, blob: Blob): Promise<void> {
     }
 }
 /** save multiple images in a single transaction */
-export async function dbSaveAllImages(ids: string[], blobs: Blob[]): Promise<void> {
+export async function dbSaveAllImages(blobs: Record<string, Blob>): Promise<void> {
+    const ids = Object.keys(blobs);
     try {
         const db = await getDb();
         const tx = db.transaction('images', 'readwrite');

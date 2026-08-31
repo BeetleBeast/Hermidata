@@ -97,7 +97,8 @@ export class Tags {
             const chip = document.createElement('button');
             chip.type = 'button';
             chip.textContent = tag;
-            chip.style.cssText = 'padding:4px 10px;border-radius:999px;font-size:13px;cursor:pointer;border:0.5px solid ' + (isSelected ? 'var(--border-accent)' : 'var(--border)') + ';background:' + (isSelected ? 'var(--bg-accent)' : 'var(--surface-1)') + ';color:' + (isSelected ? 'var(--text-accent)' : 'var(--text-primary)') + ';';
+            chip.classList.add('hermidata-tag-pill');
+            chip.dataset.isSelected = String(isSelected);
 
             chip.addEventListener('click', () => {
                 if (this._selected.has(tag)) this._selected.delete(tag);

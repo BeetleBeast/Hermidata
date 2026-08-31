@@ -1057,6 +1057,23 @@ label {
 
 /* tags in edit mode */
 
+.hermidata-tag-pill {
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:13px;
+    cursor:pointer;
+}
+.hermidata-tag-pill[data-is-selected="false"] {
+    border:0.5px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+}
+
+.hermidata-tag-pill[data-is-selected="true"] {
+    border:0.5px solid var(--border-accent);
+    background: var(--bg-accent);
+    color: var(--text-accent);
+}
 
 .selected-tag-container[data-editing="true"] {
     display: flex; 
@@ -1162,6 +1179,7 @@ label {
 
 .hermidata-marker-readStatus[data-editing="true"] {
 	height: 35px;
+    width: auto;
 }
 
 .hermidata-marker-notes[data-editing="true"] {

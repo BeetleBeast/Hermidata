@@ -47,6 +47,7 @@
     "web_accessible_resources": [{
         "resources": [
             "dist/pages/Library.html",
+            "dist/pages/Hermidata.html",
             "dist/scripts/RSS.js",
             "dist/assets/*"
     ],

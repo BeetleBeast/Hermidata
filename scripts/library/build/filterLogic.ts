@@ -136,7 +136,8 @@ export class FilterLogic extends Sort {
         // reset chapter completion filter
         this.ChapterCompletionFilter!.value = '';
 
-        // 
+        // reset author search input
+        this.AuthorSearchInput!.value = '';
 
         // set sort to default
         const sortCheckboxAlphabetical = getElement<HTMLDivElement>('#sort-checkbox-Alphabetical');
