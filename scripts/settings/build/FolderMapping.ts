@@ -604,7 +604,7 @@ export class FolderMapping extends Build {
     }
     private async removeFolderMappingRule( type: AnyNovelType | undefined, status: AnyReadStatus | undefined ): Promise<void> {
         try {
-            const settings = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null })
+            const settings = await this.getSettings();
             const mapping = settings.FolderMapping;
 
             const before = mapping.overrides?.length ?? 0

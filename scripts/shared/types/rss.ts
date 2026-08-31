@@ -1,4 +1,5 @@
-import type { AllHermidata } from "./popup";
+import type { AllHermidata, Hermidata, RawFeed } from "./popup";
+import type { Settings } from "./settings";
 
 export type NormalSortsType = 'Alphabet' | 'Novel-Type' | 'Recently-Added' | 'Latest-Updates';
 export type ExeptionSortsType = '';
@@ -178,3 +179,57 @@ interface divConfig {
         allUpperCase: boolean;
     }
 }
+
+export type DbStore = 'hermidata' | 'feeds' | 'settings' | 'images';
+export type SyncCall = PushToSync | RemoveFromSync;
+export type DbCall = NoPayload | IdPayloadOnly | PutAll | Update | Put | UpdateImageKey;
+
+// syncCall
+type PushToSync =  {
+    operation: 'pushToSync';
+    payload: {
+        data: Hermidata;
+    }
+}
+type RemoveFromSync = {
+    operation: 'removeFromSync';
+    payload: {
+        id: string;
+    }
+}
+// dbCall
+type NoPayload = {
+    operation: 'getAll' | 'clear';
+};
+type IdPayloadOnly = {
+    operation: 'get' | 'delete';
+    payload: {
+        id: string;
+    }
+};
+type PutAll = {
+    operation: 'putAll';
+    payload: {
+        data: Record<string, Hermidata> | RawFeed[];
+    }
+};
+type Update = {
+    operation: 'update';
+    payload: {
+        data: Hermidata | Settings | RawFeed | Blob;
+    }
+};
+type Put = {
+    operation: 'put';
+    payload: {
+        id: string;
+        data: Hermidata | Settings | RawFeed | Blob;
+    }
+};
+type UpdateImageKey = {
+    operation: 'updateImageKey';
+    payload: {
+        oldId: string;
+        newId: string;
+    }
+};

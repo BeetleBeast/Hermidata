@@ -112,6 +112,10 @@ export type {
     ScalarConflict,
     MergeAnalysis,
 
+    DbStore,
+    DbCall,
+
+    SyncCall
 
 } from "./rss";
 

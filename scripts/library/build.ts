@@ -1,4 +1,5 @@
 import { PastHermidata } from "../popup/core/Past";
+import { dbAccess } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 
@@ -7,6 +8,19 @@ export abstract class RSSPageBuilder {
     protected AllHermidata: Record<string, Hermidata>;
 
     protected settings: Settings;
+
+    private dbAccess = new dbAccess();
+
+    protected saveHermidata(id: string, data: Hermidata): Promise<void> {
+        return this.dbAccess.setHermidata(id, data);
+    }
+    /**@implements `updateHermidata` instead of `changeHermidata` for backwards compatibility */
+    protected updateHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+        return this.dbAccess.changeHermidata(oldKey, newKey, entry);
+    }
+    protected removeHermidata(id: string): Promise<void> {
+        return this.dbAccess.deleteHermidata(id);
+    }
 
     constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
         this.settings = settings;
@@ -26,20 +40,6 @@ export abstract class RSSPageBuilder {
     protected abstract reload(): void;
 
 
-    protected async dbRequest<T>(store: string, operation: string, payload?: { id: string, data: any}): Promise<T> {
-        try {
-            return new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (!response) reject(new Error('No response from background script'));
-                    if (!response?.success) reject(new Error(response.error));
-                    resolve(await response.result as T);
-                });
-            });
-        } catch (error) {
-            console.error(error);
-            throw error;
-        }
-    }
     protected GetHashItem(item: HTMLElement): string {
         const newVersion = item.dataset.id;
         if(!newVersion) throw new Error('hash not found');
@@ -174,39 +174,5 @@ export class PageDetailBuilder {
 
         this.hermidata.jumpToUrl(url);
     };
-}
-
-export class dbAcsess {
-
-    public getSettings(): Promise<Settings> {
-        return this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null });
-    }
-    public setSettings(data: Settings): Promise<void> {
-        return this.dbRequest<void>('settings', 'put', { id: 'Settings', data });
-    }
-    public setHermidata(data: Hermidata): Promise<void> {
-        return this.dbRequest<void>('hermidata', 'update', { id: data.id, data });
-    }
-    public async getAllHermidata(): Promise<Record<string, Hermidata>> {
-        const existingDataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-        const existingData = Object.fromEntries(existingDataList.map(h => [h.id, h]));
-
-        return existingData;
-    }
-
-    public dbRequest<T>(store: string, operation: string, payload?: { id: string, data: any}): Promise<T> {
-        try {
-            return new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (!response) reject(new Error('No response from background script'));
-                    if (!response?.success) reject(new Error(response.error));
-                    resolve(await response.result as T);
-                });
-            });
-        } catch (error) {
-            console.error(error);
-            throw error;
-        }
-    }
 }
 

@@ -2,7 +2,7 @@ import { ext } from "../shared/utils/BrowserCompat"
 import { getSettings } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
-import { handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSaveRawFeeds } from "./rssCache"
+import { handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSaveRawFeeds, handleSyncOperation } from "./rssCache"
 
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -14,7 +14,8 @@ export function initMessaging() {
             case 'INVALIDATE_RSS': return handleInvalidateRSS(sendResponse)
             case 'SAVE_RAW_FEEDS': return handleSaveRawFeeds(msg.data, sendResponse);
             case 'GET_ALL_POSSIBLE_PATHS': handleGetAllPossiblePaths(sendResponse, msg.data); return true;
-            case 'DB_OPERATION' : handleDbOperation(msg.store, msg.operation, sendResponse, msg.payload); return true;
+            case 'DB_OPERATION' : handleDbOperation(msg.store, msg.call, sendResponse); return true;
+            case 'SYNC_OPERATION': handleSyncOperation(msg.call, sendResponse); return true;
             case 'RESET_LOCAL_FILTERS': handleLocalFilterReset(sendResponse); return true;
         }
         return true

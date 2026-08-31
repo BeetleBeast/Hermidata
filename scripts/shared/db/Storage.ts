@@ -17,7 +17,7 @@ import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
-import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types';
+import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
 import type { AllSortsType } from '../../library/build/filter';
@@ -524,5 +524,99 @@ export async function setLastLibrarySortOption(lastSortOption: AllSortsType): Pr
     } catch (err) {
         console.error('[Storage] setLastLibrarySortOption:', err);
         return false;
+    }
+}
+// ============================================================
+// db Access
+// ============================================================
+
+/** Access to IndexedDB and storage.sync data from different sources */
+export class dbAccess {
+
+    public getSettings(): Promise<Settings> {
+        return this.dbRequest<Settings>('settings', { operation: 'get', payload: { id: 'Settings' } });
+    }
+    public setSettings(data: Settings): Promise<void> {
+        return this.dbRequest<void>('settings', { operation: 'put', payload: { id: 'Settings', data } });
+    }
+    public updateHermidata(data: Hermidata): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'update', payload: { data } });
+    }
+    public setHermidata(id: string, data: Hermidata): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'put', payload: { id, data } });
+    }
+    public async getAllHermidata(): Promise<Record<string, Hermidata>> {
+        const existingDataList = await this.dbRequest<Hermidata[]>('hermidata', { operation: 'getAll' });
+        return Object.fromEntries(existingDataList.map(h => [h.id, h]));
+    }
+    public async getAllFeeds(): Promise<RawFeed[]> {
+        return this.dbRequest<RawFeed[]>('feeds', { operation: 'getAll' });
+    }
+    public async putAllHermidata(hermidata: Record<string, Hermidata>): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'putAll', payload: { data: hermidata } });
+    }
+    public async putAllFeeds(feeds: RawFeed[]): Promise<void> {
+        return this.dbRequest<void>('feeds', { operation: 'putAll', payload: { data: feeds } });
+    }
+    public async deleteHermidata(key: string): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'delete', payload: {id: key} });
+    }
+    public async updateImageKey(oldId: string, newId: string): Promise<void> {
+        return this.dbRequest<void>('images', { operation: 'updateImageKey', payload: { oldId, newId } });
+    }
+    public async pushToSync(data: Hermidata): Promise<void> {
+        return this.syncRequest<void>({ operation: 'pushToSync', payload: { data } });
+    }
+    public async removeFromSync(id: string): Promise<void> {
+        return this.syncRequest<void>({ operation: 'removeFromSync', payload: { id } });
+    }
+    public async changeHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+        try {
+            entry.id = newKey;
+            entry.meta.updated = new Date().toISOString();
+    
+            await this.setHermidata(entry.id, entry)    // write new key to IndexedDB
+            await this.deleteHermidata(oldKey) // remove old key from IndexedDB
+    
+            await this.updateImageKey(oldKey, newKey); // move associated images to new key
+    
+            await this.pushToSync(entry); // push new entry to sync
+            await this.removeFromSync(oldKey); // remove old key from sync
+    
+            PastHermidata.invalidateCache();
+            console.log(`Migrated from ${oldKey} → ${newKey}`);
+            console.log(`[Hermidata] Updated ${entry.title}`);
+        } catch (err) {
+            console.error('[Storage -|- db Access] updateHermidata:', err);
+        }
+    }
+
+    public dbRequest<T>(store: DbStore, call: DbCall): Promise<T> {
+        try {
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, call }, async (response: { success: boolean, error?: string, result?: any }) => {
+                    if (!response) reject(new Error('No response from background script'));
+                    if (!response?.success) reject(new Error(response.error));
+                    resolve(await response.result as T);
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+    public syncRequest<T>(call: SyncCall): Promise<T> {
+        try {
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ type: 'SYNC_OPERATION', call }, async (response: { success: boolean, error?: string, result?: any }) => {
+                    if (!response) reject(new Error('No response from background script'));
+                    if (!response?.success) reject(new Error(response.error));
+                    resolve(await response.result as T);
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
     }
 }

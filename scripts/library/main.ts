@@ -1,10 +1,10 @@
-import { dbAcsess } from "./build";
+import { dbAccess } from "../shared/db/Storage";
 import { Controller } from "./controller";
 
 document.addEventListener('DOMContentLoaded', async () => {
 
 
-    const getDb = new dbAcsess();
+    const getDb = new dbAccess();
 
     const settings = await getDb.getSettings();
     const allHermidata = await getDb.getAllHermidata();

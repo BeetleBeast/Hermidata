@@ -1,6 +1,6 @@
 import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
-import { getAllTags, removeHermidata, saveHermidata, updateHermidata } from "../../shared/db/Storage";
+import { getAllTags } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { openLink, returnHashedTitle } from "../../shared/utils/StringOutput";
@@ -203,7 +203,7 @@ export class EditDetail extends RSSPageBuilder {
         delete this.AllHermidata[id];
 
         // 2 remove from indexDB
-        await removeHermidata(id);
+        await this.removeHermidata(id);
 
         // 3. go back to library
         openLink('./dist/pages/Library.html', 'sameTab');
@@ -395,7 +395,7 @@ export class EditDetail extends RSSPageBuilder {
         else this.resetContent(notes, this.hermidata.meta.notes);
 
 
-        await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
+        await this.saveHermidata(this.hermidata.id, this.hermidata.toJSON());
 
     }
     private saveInput(element: HTMLElement, content: string | undefined, backup?: string): boolean {
@@ -418,7 +418,7 @@ export class EditDetail extends RSSPageBuilder {
         
         this.hermidata.id = newKey;
 
-        await updateHermidata(oldKey, newKey, this.hermidata.toJSON());
+        await this.updateHermidata(oldKey, newKey, this.hermidata.toJSON());
     }
     private saveMarkers() {
         const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
