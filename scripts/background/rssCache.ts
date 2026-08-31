@@ -37,13 +37,14 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export function handleSaveNovel(data: HermidataModel | Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): true {
+export async function handleSaveNovel(data: HermidataModel | Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): Promise<true> {
     try {
         const hermidata = new HermidataModel(data);
-        getToken((token: number) => {
-            if (args.allowedSendSHeet) writeToSheet(token, hermidata);
-            if (args.allowedSendBookmark) writeToBookmarks(hermidata);
-        });
+        const token = await getToken();
+
+        if (args.allowedSendSHeet) writeToSheet(token, hermidata);
+        if (args.allowedSendBookmark) writeToBookmarks(hermidata);
+        
         updateCurrentBookmarkAndIcon(hermidata.GetUrl());
         console.log('[Background] SAVE_NOVEL complete');
         sendResponse(true);

@@ -10,7 +10,7 @@ import { shouldReplaceOrBlock } from "./bookmarks";
 // U = Update | updateRow()
 // D = Delete | N/A
 
-export async function writeToSheet(token: number, hermidata: HermidataModel) {
+export async function writeToSheet(token: string, hermidata: HermidataModel) {
     const dataArray = hermidata.toInputArraySheetRow();
     await readSheet(token, (rows: InputArraySheetType[]) => {
         const decision = shouldReplaceOrBlock(dataArray, rows, true);
@@ -32,10 +32,10 @@ export async function writeToSheet(token: number, hermidata: HermidataModel) {
 }
 /**
  * This function reads the google sheet and throws it back inside callback.
- * @param {number} token - The parameter for the authorization 
+ * @param {string} token - The parameter for the authorization 
  * @returns {number} The callback for the result
  */
-async function readSheet(token: number, callback: Function): Promise<void> {
+async function readSheet(token: string, callback: Function): Promise<void> {
     const spreadsheetUrl = await getGoogleSheetURL();
     const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
     const range = "Sheet1!A2:H"; // Adjust if more columns are added
@@ -54,7 +54,7 @@ async function readSheet(token: number, callback: Function): Promise<void> {
     })
     .catch(err => console.error("Error reading sheet:", err));
 }
-async function appendRow(token: number, dataArray: InputArraySheetType): Promise<void> {
+async function appendRow(token: string, dataArray: InputArraySheetType): Promise<void> {
     const spreadsheetUrl = await getGoogleSheetURL();
     const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
     const range = "Sheet1!A2";
@@ -71,7 +71,7 @@ async function appendRow(token: number, dataArray: InputArraySheetType): Promise
     .catch(err => console.error("Append error:", err));
 }
 
-async function updateRow(token: number, rowIndex: number, dataArray: InputArraySheetType): Promise<void> {
+async function updateRow(token: string, rowIndex: number, dataArray: InputArraySheetType): Promise<void> {
     const spreadsheetUrl = await getGoogleSheetURL();
     const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
     const range = `Sheet1!A${rowIndex}:H${rowIndex}`; // assumes 8 columns
