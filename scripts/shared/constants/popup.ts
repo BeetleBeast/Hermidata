@@ -15,6 +15,21 @@ export const DEFAULT_TAGS: string[] = [
     'Seinen', 'Shoujo', 'Shoujoai', 'Shounen', 'Shounenai', 'Josei', 'Yaoi', 'Yuri',
     'Isekai', 'Mecha', 'Demons', 'Ghosts', 'Vampire', 'Psychological', 'Super Power', 
 ];
+
+// [ back-end, [front-end, default state] ]
+export const CONTENT_RATING_MAP: Array<[string, string, boolean]> = new Array(
+    ['G', 'Safe', true],
+    ['PG', 'Suggestive', true],
+    ['R', 'Erotica', false],
+    ['NR', 'Pornographic', false],
+);
+
+export const CONTENT_RATING = ['Safe', 'Suggestive', 'Erotica', 'Pornographic'];
+
+export const DEMOGRAPHIC_TAGS: string[] = [
+    'Seinen', 'Josei', 'Shoujo', 'Yaoi', 'Shounen', 'Shoujoai', 'Shounenai'
+];
+
 // hardcoded default tag colours in hex | <tag, hex colour>
 // hardcoded default tag colours in hex | <tag, hex colour>
 export const DEFAULT_TAG_COLOURS: Record<string, string> = {
@@ -79,18 +94,20 @@ export const filterName: FilterName = {
 
 
 export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
+    version: 11,
     id: '',
     title: '',
     novelType: type,
     source: '',
-    chapter: { 
+    chapter: {
         bookmarks: {
             [returnBookmarkHash('Primary')]: makeDefaultBookmark(status)
         },
         latest: 0,
         lastChecked: new Date().toISOString(),
         revisitingCount: 0,
-        bookmarkInUse: returnBookmarkHash('Primary')
+        bookmarkInUse: returnBookmarkHash('Primary'),
+        releaseSchedule: "Unknown",
     },
     rss: null,
     import: null,
@@ -102,10 +119,17 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         altSources: [],
         altTitles: [],
         originalRelease: null,
-        novelStatus: novelStatus
+        novelStatus: novelStatus,
+        contentRating: "Safe",
+        contentWarnings: [],
+        starRating: 5.0,
+        image: '../../../assets/icon/icon48.png',
+        readingQueue: false,
+        relations: "None",
     }
 });
-export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', currentChapter: number = 0, history: number[] = [], notes: string = ''): Bookmark => ({
+export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', currentChapter: number = 0, history: { chapter: number, at: string }[] = [], notes: string = ''): Bookmark => ({
+    version: 4,
     id: returnBookmarkHash('Primary'),
     current: currentChapter,
     history: history,

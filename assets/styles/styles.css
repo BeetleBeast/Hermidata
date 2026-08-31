@@ -37,6 +37,9 @@
 
     --focus-ring: rgb(120, 150, 210);
     
+
+    --card: rgb(18, 31, 49);
+    --borderLibrary: rgb(63, 76, 96);
 }
 
 body {

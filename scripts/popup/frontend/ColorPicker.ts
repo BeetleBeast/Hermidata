@@ -7,6 +7,8 @@ export class ColorPicker {
     private static currentCallback: ((color: string) => void) | null = null;
     private static isVisible: boolean = false;
 
+    public static readonly dimensions = { width: 240, height: 240 };
+
     /**
      * Converts any CSS color format to hex
      * Supports: named colors, rgb(), rgba(), hsl(), hsla(), hex

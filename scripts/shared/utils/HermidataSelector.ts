@@ -1,8 +1,10 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath } from "../types";
-import { returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { getImage, saveImage } from "../db/Storage";
+import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
+import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
+import { openLink, returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -14,9 +16,9 @@ export class HermidataModel implements Hermidata {
     import: string | null;
     chapter: Hermidata["chapter"];
     meta: Hermidata["meta"];
+    version: number;
 
-    private version: number;
-    private latestVersion = 10;
+    private latestVersion = 11;
 
     constructor(data: Hermidata) {
         this.id = data.id;
@@ -28,8 +30,8 @@ export class HermidataModel implements Hermidata {
         this.chapter = data.chapter;
         this.meta = data.meta;
 
-        this.version = this.CalculateHermidataVersion();
-        if (this.version !== this.latestVersion) console.count("HermidataModel version check");
+        this.version = data.version ?? this.CalculateHermidataVersion();
+        // if (this.version !== this.latestVersion) console.count("HermidataModel version check");
     }
     // -- static methods --
     public static from(novelType: AnyNovelType, readStatus: string, novelStatus: string): HermidataModel {
@@ -88,6 +90,28 @@ export class HermidataModel implements Hermidata {
     GetHistory(bookmarkInUseId?: string): Bookmark["history"] {
         return this.getBookmark(bookmarkInUseId)?.history;
     }
+    async getDisplayImageUrl(): Promise<string> {
+        // prefer a stored blob if one exists (covers the upload case)
+        const blob = await getImage(this.id);
+        if (blob) return URL.createObjectURL(blob);
+
+        // fall back to a direct URL
+        const imagePath = this.GetImagePath();
+        if (imagePath) return imagePath;
+        else return this.GetImageDefaultPath();
+    }
+    GetImagePath(): string | null {
+        const imageAttributeLocation = this.meta.image;
+        const rssFeedImage = this.rss?.image;
+
+        // if image is stored in indexedDB, 
+        if (imageAttributeLocation === 'inside-indexedDB') return null;
+
+        return imageAttributeLocation ?? rssFeedImage ?? this.GetImageDefaultPath();
+    }
+    GetImageDefaultPath(): string {
+        return '../../../assets/icon/icon48.png';
+    }
     GetLatestReadChapter(bookmarkInUseId?: string): number {
         const latestHistory = this.GetHistory(bookmarkInUseId)?.at(-1);
 
@@ -97,7 +121,21 @@ export class HermidataModel implements Hermidata {
         
         const latestChapterCatch = allowedTakeLatestChapter ? latestChapter : currentChapter;
 
-        return latestHistory ?? latestChapterCatch;
+        return latestHistory?.chapter ?? latestChapterCatch;
+    }
+    GetLatestChapter(): number { return this.chapter.latest; }
+    GetAltSources(): string[] {
+        return this.meta.altSources;
+    }
+    GetSourceOfLatestChapter(): string { 
+        // find the source of the latest chapter
+        const list = Object.values(this.chapter.bookmarks).filter(bookmark => bookmark.current === (this.chapter.latest)).map(bookmark => bookmark.url);
+        // transform list of strings into list of sources ( only the site name )
+        const sourceList = list.map(url => new URL(url).hostname.replace(/^www\./, ""));
+
+        if ((this.rss?.latestItem.chapter === this.chapter.latest ) || (this.rss && this.rss.latestItem.chapter >= this.chapter.latest)) return this.rss.domain;
+
+        return sourceList[0];
     }
     GetVersion(): number { return this.version; }
     // -- setters --
@@ -125,6 +163,36 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history = history;
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
     }
+    /** set image blob inside separate indexedDB and update meta source */
+    async SetImage(imageFile: Blob | File): Promise<void>;
+    /** set image source directly and then call update image */
+    async SetImage(imageUrl: string): Promise<void>;
+    async SetImage(image: string | Blob | File): Promise<void> {
+        if (typeof image === 'string') {
+            const imageUrl = image;
+            // 1. set image path
+
+            this.meta.image = imageUrl;
+
+            // 2. set blob from image path
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            await saveImage(this.id, blob);
+        }
+        else {
+            const imageBlob = image;
+            // 1. set image path
+            this.meta.image = "inside-indexedDB";
+
+            // 2. set blob from image file
+            await saveImage(this.id, imageBlob);
+        }
+    }
+    /** update image with rss feed or given image source */
+    UpdateImage(image?: string): void {
+        const newImage = image ?? this.rss?.image;
+        this.meta.image = newImage ?? this.meta.image;
+    }
     SetAltTitle(title: string): void {
         // remove duplicates
         let altTitles = Array.from(new Set(this.meta.altTitles));
@@ -145,6 +213,34 @@ export class HermidataModel implements Hermidata {
             if (!altTitles.includes(newTitle)) altTitles.push(newTitle);
         }
         this.meta.altTitles = altTitles;
+    }
+    SetTags(newTags: string[]): void { 
+        // 1. concat tags and new tags
+        const concatTags = this.meta.tags.concat(newTags);
+        // 2. remove duplicates
+        const tags = Array.from(new Set(concatTags));
+        // 3. remove empty strings
+        const filterTags = tags.filter((tag) => tag !== '');
+        // 4. add new tags
+        this.meta.tags = filterTags;
+    }
+    SetAltSources(source: string): void;
+    SetAltSources(sources: string[]): void;
+    SetAltSources(sources: string | string[]): void {
+        const splitStrings = (string: string) => string.split(', ');
+        const sourcesSplit = Array.isArray(sources) ? sources : splitStrings(sources);
+        if (sourcesSplit.length === 1) {
+            this.meta.altSources.push(sourcesSplit[0]);
+        } else { 
+            this.meta.altSources = this.meta.altSources.concat(sourcesSplit);
+        }
+
+        // sort
+        this.meta.altSources.sort((a, b) => a.localeCompare(b));
+        // set first of list the same as source
+        this.meta.altSources.unshift(this.source);
+        // remove duplicates
+        this.meta.altSources = [...new Set(this.meta.altSources)];
     }
     SetScrollPosition(scrollPosition: number): void;
     SetScrollPosition(scrollPosition: number, bookmarkInUseId: string): void;
@@ -170,20 +266,20 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history?.shift();
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].history?.shift();
     }
-    PushHistory(chapter: number): void;
-    PushHistory(chapter: number, bookmarkInUseId: string): void;
-    PushHistory(chapter: number, bookmarkInUseId?: string): void {
-        if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history?.push(chapter);
-        else this.chapter.bookmarks[this.chapter.bookmarkInUse].history?.push(chapter);
+    PushHistory(chapter: number, timeStamp: string): void;
+    PushHistory(chapter: number, timeStamp: string, bookmarkInUseId: string): void;
+    PushHistory(chapter: number, timeStamp: string, bookmarkInUseId?: string): void {
+        if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history?.push({ chapter, at: timeStamp });
+        else this.chapter.bookmarks[this.chapter.bookmarkInUse].history?.push({ chapter, at: timeStamp });
     }
-    PushUniqueHistory(chapter: number): void;
-    PushUniqueHistory(chapter: number, bookmarkInUseId: string): void;
-    PushUniqueHistory(newChapter: number, bookmarkInUseId?: string): void {
+    PushUniqueHistory(chapter: number, timeStamp: string): void;
+    PushUniqueHistory(chapter: number, timeStamp: string, bookmarkInUseId: string): void;
+    PushUniqueHistory(newChapter: number, timeStamp: string, bookmarkInUseId?: string): void {
         if (bookmarkInUseId) {
-            if (!this.GetHistory(bookmarkInUseId).some(chapter => chapter === newChapter)) this.PushHistory(newChapter, bookmarkInUseId)
+            if (!this.GetHistory(bookmarkInUseId).some(history => history.chapter === newChapter)) this.PushHistory(newChapter, timeStamp, bookmarkInUseId)
         }
         else {
-            if (!this.GetHistory().some(chapter => chapter === newChapter)) this.PushHistory(newChapter)
+            if (!this.GetHistory().some(history => history.chapter === newChapter)) this.PushHistory(newChapter, timeStamp);
         }
     }
     /* updates */
@@ -274,6 +370,7 @@ export class HermidataModel implements Hermidata {
                 url: alternativeRequired.url,
                 scrollPosition: 0,
                 note: '',
+                version: 5
             }
             this.chapter.bookmarks = {
                 [returnBookmarkHash('Primary')]: newBookmark
@@ -284,7 +381,9 @@ export class HermidataModel implements Hermidata {
                 lastChecked: brokenHermidata?.chapter?.lastChecked ?? new Date().toISOString(),
                 revisitingCount: brokenHermidata?.chapter?.revisitingCount ?? 0,
                 latest: brokenHermidata?.chapter?.latest ?? 0,
-                bookmarks: {}
+                bookmarks: {},
+                releaseSchedule: brokenHermidata?.chapter?.releaseSchedule ?? 
+                    AutoSetAllHermidata.releaseSchedule(brokenHermidata?.chapter?.bookmarks[brokenHermidata?.chapter?.bookmarkInUse].history) ?? 'Unknown',
             }
             const bookmarks: Bookmark[] = [];
             const hasPrimary = false;
@@ -292,6 +391,7 @@ export class HermidataModel implements Hermidata {
                 const marker: Partial<Bookmark> = markerBookmark;
                 if (hasPrimary && marker.label == undefined) continue;
                 const newBookmark: Bookmark = {
+                    version: 5,
                     id: returnBookmarkHash(marker?.label ?? 'Primary'),
                     current: marker.current ?? 0,
                     history: marker.history ?? [],
@@ -313,6 +413,14 @@ export class HermidataModel implements Hermidata {
 
         this.rss = brokenHermidata?.rss ?? null;
         this.meta = {
+            contentRating: brokenHermidata?.meta?.contentRating ?? this.meta.tags.includes('Hentai') ? 'Pornographic' : 'Safe',
+            contentWarnings: brokenHermidata?.meta?.contentWarnings ?? [],
+            starRating: brokenHermidata?.meta?.starRating ?? 5.0,
+            image: brokenHermidata?.meta?.image ?? brokenHermidata?.rss?.image ?? '../../../assets/icon/icon48.png',
+
+            readingQueue: brokenHermidata?.meta?.readingQueue ?? false,
+            relations: brokenHermidata?.meta?.relations ?? "None",
+
             added: brokenHermidata?.meta?.added ?? new Date().toISOString(),
             updated: brokenHermidata?.meta?.updated ?? new Date().toISOString(),
             tags: brokenHermidata?.meta?.tags ?? [],
@@ -391,7 +499,7 @@ export class HermidataModel implements Hermidata {
         this.AddItemToList(hermidata, ["meta", "tags"]);
 
         if (hermidata.GetLatestReadChapter() > this.GetLatestReadChapter() ) {
-            this.chapter.bookmarks[this.chapter.bookmarkInUse].history.push(hermidata.GetLatestReadChapter());
+            this.chapter.bookmarks[this.chapter.bookmarkInUse].history.push({chapter: hermidata.GetLatestReadChapter(), at: new Date().toISOString()});
         }
     }
     public AddItemToList<TPath extends StringListFieldPath<Hermidata>>( hermidata: Hermidata, path: readonly [...TPath] ): void {
@@ -455,8 +563,8 @@ export class HermidataModel implements Hermidata {
     }
     // -- serialization --
     toJSON(): Hermidata {
-        const { id, title, novelType, source, chapter, rss, import: imp, meta } = this;
-        return { id, title, novelType, source, chapter, rss, import: imp, meta };
+        const { id, title, novelType, source, chapter, rss, import: imp, meta, version } = this;
+        return { id, title, novelType, source, chapter, rss, import: imp, meta, version };
     }
 
     private normalizeTagsForSheet(dataArray: InputArrayType | InputArraySheetType): InputArraySheetType {
@@ -483,5 +591,10 @@ export class HermidataModel implements Hermidata {
     }
     public IsLatestVersion(): boolean {
         return this.GetVersion() === this.latestVersion;
+    }
+    /** open url and visit site or use default url */
+    public jumpToUrl = (url?: string): void => {
+        // TODO: make it more robust later
+        openLink(url ?? this.GetUrl(), 'newTab');
     }
 }

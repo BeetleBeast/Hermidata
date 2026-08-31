@@ -83,6 +83,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
 
     const label = 'Primary';
     const newBoomark: Bookmark = {
+        version: 4,
         id: returnBookmarkHash(label),
         current: 0,
         history: [],
@@ -98,6 +99,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
     }
 
     return {
+        version: 11,
         id: hash,
         title: Title.title,
         novelType,
@@ -109,7 +111,8 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
             },
             revisitingCount: 0,
             lastChecked: new Date().toISOString(),
-            bookmarkInUse: returnBookmarkHash(label)
+            bookmarkInUse: returnBookmarkHash(label),
+            releaseSchedule: "Unknown"
         },
         rss: null,
         import: null,
@@ -121,7 +124,14 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
             added: new Date().toISOString(),
             updated: new Date().toISOString(),
             originalRelease: null,
-            novelStatus: 'Ongoing'
+            novelStatus: 'Ongoing',
+            contentRating: "Safe",
+            contentWarnings: [],
+            starRating: 5.0,
+            image: '../../../assets/icon/icon48.png',
+            readingQueue: false,
+            relations: "None",
+            
         }
     };
 }

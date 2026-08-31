@@ -1,11 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { type Hermidata, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
 import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
-import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/popup';
-import { HermidataModel } from '../utils/HermidataSelector';
+import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/oldVersions';
 
 
 // ============================================================
@@ -36,6 +35,13 @@ interface HermidataSchema extends DBSchema {
         key: string;           // single record: 'Settings'
         value: Settings;
     };
+    images: {
+        key: string;
+        value: Blob;
+        indexes: {
+            'by-id': string;
+        }
+    };
 }
 
 // ============================================================
@@ -45,7 +51,7 @@ interface HermidataSchema extends DBSchema {
 const SETTINGS_KEY = 'Settings';
 
 const DB_NAME = 'Hermidata';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let _db: IDBPDatabase<HermidataSchema> | null = null;
 
@@ -74,6 +80,13 @@ export async function getDb(): Promise<IDBPDatabase<HermidataSchema>> {
             // ---- settings store ----
             if (!db.objectStoreNames.contains('settings')) {
                 db.createObjectStore('settings');
+            }
+
+            // ---- images store ----
+            if (!db.objectStoreNames.contains('images')) {
+                const imagesStore = db.createObjectStore('images');
+                imagesStore.createIndex('by-id', 'id', { unique: true });
+
             }
         },
         blocked() {
@@ -356,6 +369,92 @@ export async function removeRawFeeds(urls: string[]): Promise<void> {
         console.error('[DB] removeRawFeeds:', err);
     }
 }
+// ============================================================
+// Images
+// ============================================================
+
+export async function dbSaveImage(id: string, blob: Blob): Promise<void> {
+    try {
+        const db = await getDb();
+        
+        await db.put('images', blob, id);
+    } catch (err) {
+        console.error('[DB] saveImage:', err);
+    }
+}
+/** save multiple images in a single transaction */
+export async function dbSaveAllImages(blobs: Record<string, Blob>): Promise<void> {
+    const ids = Object.keys(blobs);
+    try {
+        const db = await getDb();
+        const tx = db.transaction('images', 'readwrite');
+        await Promise.all([
+            ...ids.map((id, i) => tx.store.put(blobs[i], id)),
+            tx.done,
+        ]);
+    } catch (err) {
+        console.error('[DB] saveAllImages:', err);
+    }
+}
+
+export async function dbGetImage(id: string): Promise<Blob | undefined> {
+    try {
+        const db = await getDb();
+        return await db.get('images', id);
+    } catch (err) {
+        console.error('[DB] getImage:', err);
+        return undefined;
+    }
+}
+/** returns all images or a subset of them if ids are provided */
+export async function dbGetAllImages(ids?: string[]): Promise<Blob[]> {
+    try {
+        const db = await getDb();
+        if (ids === undefined) return await db.getAll('images');
+        const allImages: Promise<Blob | undefined>[] = [];
+        for (const id of ids) {
+            const image = db.get('images', id);
+            allImages.push(image);
+        }
+        const images = await Promise.all(allImages);
+        return images.filter(image => image !== undefined);
+    } catch (err) {
+        console.error('[DB] getAllImages:', err);
+        return [];
+    }
+}
+export async function dbUpdateImageKey(oldId: string, newId: string): Promise<void> {
+    if (oldId === newId) return; // nothing to do
+
+    try {
+        const db = await getDb();
+        
+        const tx = db.transaction('images', 'readwrite');
+        const store = tx.store;
+
+        const blob = await store.get(oldId);
+
+        // nothing stored under the old id — nothing to move
+        if (!blob) return;
+
+        store.put(blob, newId);
+        store.delete(oldId);
+    } catch (err) {
+        console.error('[DB] updateImageKey:', err);
+    }
+    
+    
+}
+
+export async function dbDeleteImage(id: string): Promise<void> {
+    try {
+        const db = await getDb();
+        await db.delete('images', id);
+    } catch (err) {
+        console.error('[DB] deleteImage:', err);
+    }
+}
+
 
 // ============================================================
 // Settings
@@ -423,10 +522,10 @@ export async function migrateFromChromeStorage(): Promise<void> {
  */
 export async function migrateHermidataToLatest(_allHermidata?: Record<string, Hermidata>): Promise<void> {
     const db = await getDb();
-    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v10');
+    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v11');
     if (alreadyMigrated) return;
 
-    console.log('[DB] Starting migration of Hermidata to latest (V10)...');
+    console.log('[DB] Starting migration of Hermidata to latest (V11)...');
 
     
     const allHermidata = _allHermidata ?? await getAllHermidata();
@@ -435,7 +534,7 @@ export async function migrateHermidataToLatest(_allHermidata?: Record<string, He
 
     for (const value of Object.values(allHermidata)) {
         
-        if (isHermidataV10(value)) continue;
+        if (isHermidataV11(value)) continue;
         
         const { result: hermidata, isMigratedSuccessfully} = HermidataMigration.migrateAllHermidataToLatest(value);
         if (isMigratedSuccessfully) entries.push(hermidata);
@@ -445,8 +544,8 @@ export async function migrateHermidataToLatest(_allHermidata?: Record<string, He
     if (entries.length) await putAllHermidata(entries);
 
     // Mark as done
-    await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v10');
-    console.log(`[DB] Migrated ${entries.length} Hermidata entries to V10`);
+    await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v11');
+    console.log(`[DB] Migrated ${entries.length} Hermidata entries to V11`);
     console.log(`[DB] ${failCount} Hermidata entries could not be migrated`);
     
     console.log('[DB] Migration complete');
@@ -578,6 +677,7 @@ export function isHermidataV9( data: AnyHermidataVersion ): data is HermidataV9 
 export function isHermidataV10( data: AnyHermidataVersion ): data is Hermidata {
     if (!("chapter" in data)) return false;
     if (!("bookmarkInUse" in data.chapter)) return false;
+    if ((data as Hermidata)?.version === 10) return true;
     
     const hasBookmarks = "bookmarks" in data.chapter;
     const hasType = "novelType" in data;
@@ -589,15 +689,26 @@ export function isHermidataV10( data: AnyHermidataVersion ): data is Hermidata {
         && !isNaN(bookmark.scrollPosition) && bookmark.scrollPosition >= 0;
     const hasUrlInBookmark = bookmark != undefined 
         && "url" in bookmark && bookmark.url != undefined
-        && typeof  bookmark.url === "string"
+        && typeof  bookmark.url === "string";
+    const hasNotContentRating = !("contentRating" in data.meta);
     return (
         hasBookmarks &&
         hasType &&
         hasNotStatus &&
         hasScrollPosition &&
-        hasUrlInBookmark
+        hasUrlInBookmark &&
+        hasNotContentRating
     )
 }
+export function isHermidataV11( data: AnyHermidataVersion ): data is Hermidata {
+    const hasCorrectVersion = (data as Hermidata)?.version === 11;
+    
+    return (
+        hasCorrectVersion
+    )
+
+}
+
 
 // ============================================================
 // Export / Import (for backup & cross-browser restore)
