@@ -1,7 +1,7 @@
-import { getAllHermidata, getSettings } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
 import { openLink } from "../shared/utils/StringOutput";
+import { dbAcsess } from "./build";
 import { Detail } from "./build/detail";
 import { EditDetail } from "./build/edit";
 
@@ -15,9 +15,11 @@ async function handleNavigation(): Promise<void> {
 
     if (currentController) currentController.reloadDetails();    
     else {
+
+        const getDb = new dbAcsess();
         
-        const settings = await getSettings();
-        const allHermidata = await getAllHermidata();
+        const settings = await getDb.getSettings();
+        const allHermidata = await getDb.getAllHermidata();
 
         currentController = new Controller(allHermidata, settings);
 

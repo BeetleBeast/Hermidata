@@ -1,8 +1,6 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
-import type {  Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
-import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { saveHermidata, updateHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";

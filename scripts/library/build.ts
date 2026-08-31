@@ -175,3 +175,38 @@ export class PageDetailBuilder {
         this.hermidata.jumpToUrl(url);
     };
 }
+
+export class dbAcsess {
+
+    public getSettings(): Promise<Settings> {
+        return this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null });
+    }
+    public setSettings(data: Settings): Promise<void> {
+        return this.dbRequest<void>('settings', 'put', { id: 'Settings', data });
+    }
+    public setHermidata(data: Hermidata): Promise<void> {
+        return this.dbRequest<void>('hermidata', 'update', { id: data.id, data });
+    }
+    public async getAllHermidata(): Promise<Record<string, Hermidata>> {
+        const existingDataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
+        const existingData = Object.fromEntries(existingDataList.map(h => [h.id, h]));
+
+        return existingData;
+    }
+
+    public dbRequest<T>(store: string, operation: string, payload?: { id: string, data: any}): Promise<T> {
+        try {
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
+                    if (!response) reject(new Error('No response from background script'));
+                    if (!response?.success) reject(new Error(response.error));
+                    resolve(await response.result as T);
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+}
+

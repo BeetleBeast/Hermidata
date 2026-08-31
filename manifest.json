@@ -12,7 +12,8 @@
         "storage",
         "tabs",
         "scripting",
-        "notifications"
+        "notifications",
+        "cookies"
     ],
     "host_permissions": [ "https://*.googleapis.com/*", "*://*/*" ],
     "browser_specific_settings": {

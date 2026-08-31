@@ -1,4 +1,3 @@
-import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
 import type { PickedElementData } from '../types/rss';
 import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
