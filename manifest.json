@@ -19,7 +19,7 @@
     "browser_specific_settings": {
         "gecko": {
             "id": "{8cc11236-9806-4fa0-a3fa-8bf55309a1d0}",
-            "strict_min_version": "109.0"
+            "strict_min_version": "121.0"
         }
     },
     "oauth2": {
