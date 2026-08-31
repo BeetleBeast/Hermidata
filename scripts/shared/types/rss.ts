@@ -80,6 +80,50 @@ export type FuzzyMatchResult =
     | { type: 'hermidata'; match: FuzzyHermidataMatches; sameChapter: boolean }
     | { type: 'none' };
 
+
+/* Element Picker */
+export interface ElementAttribute {
+    name: string;
+    value: string;
+}
+
+export interface ChildInfo {
+    tag: string;
+    text: string;
+}
+
+export interface PickedElementData {
+    tag: string;
+    id: string;
+    classes: string[];
+    /** Direct text content, trimmed */
+    text: string;
+    /** innerHTML, trimmed */
+    html: string;
+    attributes: ElementAttribute[];
+    /** Direct children only (not full descendant tree) */
+    children: ChildInfo[];
+    /** Best-effort unique-ish CSS selector for re-selecting this element later */
+    selector: string;
+    /** one entry per lowest-level text-bearing element, in DOM order */
+    leafTexts: string[];
+}
+
+
+export interface ElementPickedMessage {
+    action: "elementPicked";
+    data: PickedElementData;
+}
+
+export interface PickingCancelledMessage {
+    action: "pickingCancelled";
+}
+
+export interface StartPickingMessage { action: "startPicking"; }
+
+export interface CancelPickingMessage { action: "cancelPicking"; }
+
+export type RuntimeMessage = ElementPickedMessage | PickingCancelledMessage | StartPickingMessage | CancelPickingMessage;
 export interface HermidataMigrationConfiguration {
     keepId: string;
     removeId: string;
