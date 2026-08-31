@@ -38,20 +38,35 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
 }
 
 export async function handleSaveNovel(data: HermidataModel | Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): Promise<true> {
-    try {
-        const hermidata = new HermidataModel(data);
-        const token = await getToken();
-
-        if (args.allowedSendSHeet) writeToSheet(token, hermidata);
-        if (args.allowedSendBookmark) writeToBookmarks(hermidata);
-        
-        updateCurrentBookmarkAndIcon(hermidata.GetUrl());
-        console.log('[Background] SAVE_NOVEL complete');
-        sendResponse(true);
-    } catch (error) {
-        console.error('[Background] SAVE_NOVEL error:', error);
-        sendResponse(false);
+    const hermidata = new HermidataModel(data);
+    const errors: string[] = [];
+    
+    if (args.allowedSendSHeet) {
+        try {
+            const token = await getToken();
+            await writeToSheet(token, hermidata);
+        } catch (err) {
+            console.error('[Background] Sheet write failed:', err);
+            errors.push(`Sheet sync failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
     }
+    if (args.allowedSendBookmark) {
+        try {
+            writeToBookmarks(hermidata);
+        } catch (err) {
+            console.error('[Background] Bookmark write failed:', err);
+            errors.push(`Bookmark save failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+    try {
+        updateCurrentBookmarkAndIcon(hermidata.GetUrl());
+    } catch (err) {
+        console.error('[Background] Icon update failed:', err);
+    }
+
+    console.log('[Background] SAVE_NOVEL complete', errors.length ? { errors } : '');
+    sendResponse(errors.length === 0 ? true : { success: false, errors });
+
     return true
 }
 

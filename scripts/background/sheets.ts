@@ -6,86 +6,92 @@ import { shouldReplaceOrBlock } from "./bookmarks";
 
 // CRUD
 // C = Create | appendRow()
-// R = Read | readSheet()
+// R = Read   | readSheet()
 // U = Update | updateRow()
 // D = Delete | N/A
 
+async function apiFetch(url: string, token: string, options: RequestInit = {}): Promise<any> {
+    let res: Response;
+    try {
+        res = await fetch(url, {
+            ...options,
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                ...options.headers,
+            },
+        });
+    } catch (err) {
+        // network failure
+        throw new Error(`Network error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        if (res.status === 401) {
+            throw new Error("Token expired or invalid — re-authentication required.");
+        }
+        throw new Error(`Sheets API error (${res.status}): ${errorBody?.error?.message ?? res.statusText}`);
+    }
+
+    return res.json();
+}
+
 export async function writeToSheet(token: string, hermidata: HermidataModel) {
     const dataArray = hermidata.toInputArraySheetRow();
-    await readSheet(token, (rows: InputArraySheetType[]) => {
-        const decision = shouldReplaceOrBlock(dataArray, rows, true);
+    const rows = await readSheet(token);
+    
+    const decision = shouldReplaceOrBlock(dataArray, rows, true);
 
-        // make sure tags is NOT an list and is instead a string
+    // make sure tags is NOT an list and is instead a string
 
 
-        if (decision.action === "append") {
-            appendRow(token, dataArray);
-            console.log("Added new entry.", dataArray);
-        } else if (decision.action === "replace") {
-            if (!decision.rowIndex) throw new Error("Row index not found.");
-            updateRow(token, decision.rowIndex, dataArray);
-            console.log("Replaced/updated entry.", dataArray);
-        } else {
-            console.log("Skipping entry.");
-        }
-    });
+    if (decision.action === "append") {
+        await appendRow(token, dataArray);
+        console.log("Added new entry.", dataArray);
+    } else if (decision.action === "replace") {
+        if (!decision.rowIndex) throw new Error("Row index not found.");
+        await updateRow(token, decision.rowIndex, dataArray);
+        console.log("Replaced/updated entry.", dataArray);
+    } else {
+        console.log("Skipping entry.");
+    }
+    
 }
-/**
- * This function reads the google sheet and throws it back inside callback.
- * @param {string} token - The parameter for the authorization 
- * @returns {number} The callback for the result
- */
-async function readSheet(token: string, callback: Function): Promise<void> {
+
+async function readSheet(token: string): Promise<InputArraySheetType[]> {
     const spreadsheetUrl = await getGoogleSheetURL();
     const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
+    if (!spreadsheetId) throw new Error("Spreadsheet ID not found.");
+
     const range = "Sheet1!A2:H"; // Adjust if more columns are added
 
-    fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`, {
-        method: "GET",
-        headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        const rows = data.values || [];
-        callback(rows);
-    })
-    .catch(err => console.error("Error reading sheet:", err));
+    const data = await apiFetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`, token, { method: "GET" });
+
+    return data.values ?? [];
 }
 async function appendRow(token: string, dataArray: InputArraySheetType): Promise<void> {
     const spreadsheetUrl = await getGoogleSheetURL();
     const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
-    const range = "Sheet1!A2";
-    fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=RAW`, {
-        method: "POST",
-        headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ values: [dataArray] })
-    })
-    .then(res => res.json())
-    .then(data => console.log("Row appended:", data))
-    .catch(err => console.error("Append error:", err));
-}
+    if (!spreadsheetId) throw new Error("Spreadsheet ID not found.");
 
+    const range = "Sheet1!A2";
+    await apiFetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=RAW`, token, {
+        method: "POST",
+        body: JSON.stringify({ values: [dataArray] })
+    });
+}
 async function updateRow(token: string, rowIndex: number, dataArray: InputArraySheetType): Promise<void> {
     const spreadsheetUrl = await getGoogleSheetURL();
     const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
+    if (!spreadsheetId) throw new Error("Spreadsheet ID not found.");
+
     const range = `Sheet1!A${rowIndex}:H${rowIndex}`; // assumes 8 columns
-    fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=RAW`, {
+
+    await apiFetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=RAW`, token, {
         method: "PUT",
-        headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-        },
         body: JSON.stringify({ values: [dataArray] })
-    })
-    .then(res => res.json())
-    .then(data => console.log("Row updated:", data))
-    .catch(err => console.error("Update error:", err));
+    });
 }
 
 function extractSpreadsheetId(url: string) {
