@@ -14,6 +14,10 @@ export abstract class RSSPageBuilder {
     protected saveHermidata(id: string, data: Hermidata): Promise<void> {
         return this.dbAccess.setHermidata(id, data);
     }
+    /** @implements `changeHermidata` instead of `updateHermidata` for backwards compatibility */
+    protected changeHermidata(entry: Hermidata): Promise<void> {
+        return this.dbAccess.updateHermidata(entry);
+    }
     /**@implements `updateHermidata` instead of `changeHermidata` for backwards compatibility */
     protected updateHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
         return this.dbAccess.changeHermidata(oldKey, newKey, entry);

@@ -395,7 +395,7 @@ export class EditDetail extends RSSPageBuilder {
         else this.resetContent(notes, this.hermidata.meta.notes);
 
 
-        await this.saveHermidata(this.hermidata.id, this.hermidata.toJSON());
+        await this.changeHermidata(this.hermidata.toJSON());
 
     }
     private saveInput(element: HTMLElement, content: string | undefined, backup?: string): boolean {
