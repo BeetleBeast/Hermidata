@@ -663,17 +663,13 @@ export class HermidataMigration {
 
             merged.id = this.recomputeHermidataId(merged);
             
-            const hermidataModel = new HermidataModel(merged);
             if (merged.id !== recordToKeep.id) {
                 // identity shifted — neither original key is valid for the merged record
-                await updateHermidata(recordToRemove.id, hermidataModel.id, hermidataModel.toJSON());
+                await updateHermidata(recordToRemove.id, merged.id, merged);
                 await removeHermidata(recordToKeep.id);
             } else {
-                await updateHermidata(recordToRemove.id, merged.id, hermidataModel.toJSON());
+                await updateHermidata(recordToRemove.id, merged.id, merged);
             }
-
-
-            await updateHermidata(recordToRemove.id, recordToKeep.id, hermidataModel.toJSON());
         
             return true;
         } catch (err) {

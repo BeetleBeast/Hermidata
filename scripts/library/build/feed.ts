@@ -317,6 +317,8 @@ export class feed extends RSSPageBuilder {
 
         invisibleContainer.style.transform = `translateX(${value})`;
 
+        checkbox.addEventListener('click', (e) => e.stopPropagation());
+
         invisibleContainer.appendChild(checkbox);
         checkboxContainer.appendChild(invisibleContainer);
 

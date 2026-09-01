@@ -1581,6 +1581,8 @@ body[data-list-mode="false"]
 }
 .merger-dialog-record {
     position: relative;
+    display: flex;
+    flex-direction: column;
     width: 400px;
 	background-color: var(--card);
 	border-radius: 25px;
@@ -1690,6 +1692,7 @@ body[data-list-mode="false"]
     display: flex;
     margin-top: 1rem;
     justify-self: center;
+    align-self: center;
 }
 
 

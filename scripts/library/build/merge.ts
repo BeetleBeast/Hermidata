@@ -334,6 +334,9 @@ export class HermidataMerge extends RSSPageBuilder {
 
         const merged = await HermidataMigration.mergeTwoHermidataWithConfiguration(recordToKeep, recordToRemove, merging.configuration);
 
+        // remove stail cache
+        delete this.AllHermidata[recordToRemove.id];
+
         console.log("merged", merged);
 
         this.closeMergePanel();
