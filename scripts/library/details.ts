@@ -73,7 +73,7 @@ export class Controller {
         this.editInfoBtn?.addEventListener('click', this.editDetail.activate);
 
         // on clicked Back button
-        this.backToLibrary?.addEventListener('click', () => openLink('./dist/pages/Library.html', 'sameTab'));
+        this.backToLibrary?.addEventListener('click', () => openLink('./Library.html', 'sameTab'));
 
         // viewMode toggle
         // this.chapterViewMode?.addEventListener('click', () => this.detail.setGridViewMode('chapter'));

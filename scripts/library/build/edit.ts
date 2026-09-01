@@ -206,7 +206,7 @@ export class EditDetail extends RSSPageBuilder {
         await this.removeHermidata(id);
 
         // 3. go back to library
-        openLink('./dist/pages/Library.html', 'sameTab');
+        openLink('./Library.html', 'sameTab');
     }
     private changeEditButton(changeTo: 'Save' | 'Edit'): void {
         const button = this.saveBtn!;

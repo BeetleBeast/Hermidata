@@ -627,7 +627,7 @@ export class Detail extends RSSPageBuilder {
         input.focus();
         const entry = findByTitleOrAlt(value, this.AllHermidata);
         if (!entry) return
-        openLink('./dist/pages/Hermidata.html#/id/' + entry.id, 'sameTab');
+        openLink('./Hermidata.html#/id/' + entry.id, 'sameTab');
     }
 
     private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {
