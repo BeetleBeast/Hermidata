@@ -119,12 +119,20 @@ export interface ElementPickedMessage {
 export interface PickingCancelledMessage {
     action: "pickingCancelled";
 }
+export interface UserFeedbackResult { 
+    action: 'UserFeedbackGiven';
+    data: UserFeedbackData;
+}
+
+export type UserFeedbackData = 'accepted' | 'cancelled';
 
 export interface StartPickingMessage { action: "startPicking"; }
 
 export interface CancelPickingMessage { action: "cancelPicking"; }
 
-export type RuntimeMessage = ElementPickedMessage | PickingCancelledMessage | StartPickingMessage | CancelPickingMessage;
+export interface UserFeedbackMessage { action: 'getUserFeedback'; }
+
+export type RuntimeMessage = ElementPickedMessage | PickingCancelledMessage | UserFeedbackResult | StartPickingMessage | CancelPickingMessage | UserFeedbackMessage;
 export interface HermidataMigrationConfiguration {
     keepId: string;
     removeId: string;

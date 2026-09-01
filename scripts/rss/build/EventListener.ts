@@ -8,11 +8,13 @@ import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
 import { deleteHermidata } from "../../shared/db/db";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import type { PickedElementData } from "../../shared/types/rss";
+import type { PickedElementData, RuntimeMessage } from "../../shared/types/rss";
 
 export class EventListener extends RssBuild {
     
     private activeSubMenu: HTMLDivElement | null = null;
+
+    private currentTabId: number | null = null;
 
     public async attachEventListeners(): Promise<void> {
         // parents
@@ -387,11 +389,37 @@ export class EventListener extends RssBuild {
             );
         }
 
+        // give feedback to user
+        if (!this.currentTabId) {
+            console.warn("No current tab ID found.");
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab.id) {
+                console.warn("No active tab found.");
+                return null;
+            }
+            this.currentTabId = tab.id;
+        }
+
+        
+        await chrome.tabs.sendMessage<RuntimeMessage>(this.currentTabId, { action: 'getUserFeedback' });
+
+        const result = await new Promise<boolean>((resolve) => this.pendingPick = resolve);
+        /*
+        const result = await customConfirm(`
+            Added ${newTitle.length} alternate title(s) for ${entry.title}\n
+            \n
+            ${newTitle.join('\n')}\n
+            \n
+            Accept?
+            `, { accept: 'OK', reject: 'Cancel' }
+        );
+        */
+
+        if (!result) return;
+
         // Save to storage
         await saveHermidata(hashItem, entry);
     }
-
-    private currentTabId: number | null = null;
 
     private async getPickerElement(): Promise<PickedElementData | null> {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

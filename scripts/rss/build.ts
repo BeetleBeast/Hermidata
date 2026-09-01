@@ -5,7 +5,7 @@ import { FeedItem } from "./build/feed";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
-import type { PickedElementData, RuntimeMessage } from "../shared/types/rss";
+import type { PickedElementData, RuntimeMessage, UserFeedbackData, UserFeedbackResult } from "../shared/types/rss";
 
 export abstract class RssBuild {
     protected readonly hermidata: HermidataModel;
@@ -13,6 +13,8 @@ export abstract class RssBuild {
     protected AllHermidata: Record<string, Hermidata>;
 
     protected pendingPick: ((data: PickedElementData | null) => void) | null = null;
+
+    protected pendingFeedback: ((data: UserFeedbackData | null) => void) | null = null;
 
     constructor(hermidata: HermidataModel, AllHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;
@@ -23,6 +25,8 @@ export abstract class RssBuild {
             if (!this.pendingPick) return;
             if (msg.action === "elementPicked") this.pendingPick(msg.data); 
             else if (msg.action === "pickingCancelled") this.pendingPick(null);
+            else if (msg.action === "UserFeedbackGiven") this.pendingFeedback(msg.data);
+            this.pendingFeedback = null;
             this.pendingPick = null;
         });
     }
