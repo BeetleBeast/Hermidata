@@ -1,7 +1,7 @@
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/utils/BrowserCompat"
-import { getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
-import type { Filters, Hermidata, RawFeed, RawScrappedFeed } from "../shared/types/index"
+import { dbUpdateImageKey, getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
+import type { DbCall, DbStore, Filters, Hermidata, RawFeed, RawScrappedFeed, SyncCall } from "../shared/types/index"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
@@ -9,6 +9,7 @@ import { writeToSheet } from "./sheets"
 import { lastAutoFeedCkeck, lastFeedCkeck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
 import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput"
+import { pushToSync, removeFromSync } from "../shared/db/sync"
 
 let rssCache: Record<string, Hermidata> | null = null
 let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
@@ -36,20 +37,36 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export function handleSaveNovel(data: HermidataModel | Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): true {
-    try {
-        const hermidata = new HermidataModel(data);
-        getToken((token: number) => {
-            if (args.allowedSendSHeet) writeToSheet(token, hermidata);
-            if (args.allowedSendBookmark) writeToBookmarks(hermidata);
-        });
-        updateCurrentBookmarkAndIcon(hermidata.GetUrl());
-        console.log('[Background] SAVE_NOVEL complete');
-        sendResponse(true);
-    } catch (error) {
-        console.error('[Background] SAVE_NOVEL error:', error);
-        sendResponse(false);
+export async function handleSaveNovel(data: HermidataModel | Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): Promise<true> {
+    const hermidata = new HermidataModel(data);
+    const errors: string[] = [];
+    
+    if (args.allowedSendSHeet) {
+        try {
+            const token = await getToken();
+            await writeToSheet(token, hermidata);
+        } catch (err) {
+            console.error('[Background] Sheet write failed:', err);
+            errors.push(`Sheet sync failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
     }
+    if (args.allowedSendBookmark) {
+        try {
+            writeToBookmarks(hermidata);
+        } catch (err) {
+            console.error('[Background] Bookmark write failed:', err);
+            errors.push(`Bookmark save failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+    try {
+        updateCurrentBookmarkAndIcon(hermidata.GetUrl());
+    } catch (err) {
+        console.error('[Background] Icon update failed:', err);
+    }
+
+    console.log('[Background] SAVE_NOVEL complete', errors.length ? { errors } : '');
+    sendResponse(errors.length === 0 ? true : { success: false, errors });
+
     return true
 }
 
@@ -115,22 +132,39 @@ function buildFeedItem(raw: RawScrappedFeed): RawFeed {
     };
 }
 
-export async function handleDbOperation( store: 'hermidata' | 'feeds' | 'settings', 
-    operation: string, sendResponse: (r: unknown) => void, payload?: { id: string, data: any} ): Promise<true> {
+export async function handleDbOperation( store: DbStore, call: DbCall, sendResponse: (r: unknown) => void): Promise<true> {
     try {
         const db = await getDb();
         let result: any;
 
-        switch (operation) {
-            case 'getAll':  result = await db.getAll(store); break;
-            case 'putAll':  result = await putAll(store, payload!.data); break;
-            case 'update':  result = await db.put(store, payload!.data); break;
-            case 'get':     result = await db.get(store, payload!.id); break;
-            case 'put':     result = await db.put(store, payload!.data, payload!.id); break;
-            case 'delete':  result = await db.delete(store, payload!.id); break;
-            case 'clear':   result = await db.clear(store); break;
+        switch (call.operation) {
+            case 'getAll':
+                result = await db.getAll(store);
+                break;
+            case 'putAll':
+                result = await putAll(store, call.payload.data);
+                break;
+            case 'update':
+                result = await db.put(store, call.payload.data);
+                break;
+            case 'get':
+                result = await db.get(store, call.payload.id); 
+                break;
+            case 'put':
+                result = await db.put(store, call.payload.data, call.payload.id);
+                break;
+            case 'updateImageKey':
+                result = await dbUpdateImageKey(call.payload.oldId, call.payload.newId);
+                break;
+            case 'delete':
+                result = await db.delete(store, call.payload.id);
+                break;
+            case 'clear':
+                result = await db.clear(store);
+                break;
             default:
-                sendResponse({ success: false, error: `Unknown operation: ${operation}` }); break;
+                sendResponse({ success: false, error: `Unknown operation: ${call}` });
+                break;
         }
         sendResponse({ success: true, result });
     } catch (err) {
@@ -138,7 +172,24 @@ export async function handleDbOperation( store: 'hermidata' | 'feeds' | 'setting
     }
     return true;
 }
-async function putAll(store: 'hermidata' | 'feeds' | 'settings', data: Record<string, Hermidata> | RawFeed[]) {
+export async function handleSyncOperation(call: SyncCall, sendResponse: (r: unknown) => void): Promise<true> {
+    try {
+        switch (call.operation) {
+            case 'pushToSync':
+                await pushToSync(call.payload.data);
+                break;
+            case 'removeFromSync':
+                await removeFromSync(call.payload.id);
+                break;
+        }
+        sendResponse({ success: true });
+    } catch (err) {
+        sendResponse({ success: false, error: String(err) });
+    }
+    return true;
+}
+
+async function putAll(store: DbStore, data: Record<string, Hermidata> | RawFeed[]) {
     try {
         const db = await getDb();
         const tx = db.transaction(store, 'readwrite');

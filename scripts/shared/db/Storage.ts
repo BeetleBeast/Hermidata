@@ -6,14 +6,23 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     putSettings, 
     putAllRawFeeds,
     putAllHermidata,
-    deleteRawFeed} from './db';
+    deleteRawFeed,
+    dbGetAllImages,
+    dbDeleteImage,
+    dbSaveImage,
+    dbGetImage,
+    dbSaveAllImages,
+    dbUpdateImageKey} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
-import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters } from '../types/index';
+import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
+import type { AllSortsType } from '../../library/build/filter';
+import type { Filters as LibraryFilters } from '../../library/build/filterLogic';
+
 
 // ============================================================
 // Hermidata
@@ -44,6 +53,8 @@ export async function updateHermidata(oldKey: string, newKey: string, entry: Her
 
         await putHermidata(entry, false)    // write new key to IndexedDB
         await deleteHermidata(oldKey, false) // remove old key from IndexedDB
+
+        await updateImageKey(oldKey, newKey); // move associated images to new key
 
         await pushToSync(entry)             // push new entry to sync
         await removeFromSync(oldKey)        // remove old key from sync
@@ -166,6 +177,68 @@ export async function removeRawFeedByUrl(url: string): Promise<boolean> {
         return false;
     }
 }
+// ============================================================
+// Images
+// ============================================================
+
+export async function saveImage(id: string, blob: Blob): Promise<boolean> {
+    try {
+        await dbSaveImage(id, blob);
+        return true;
+    } catch (err) {
+        console.error('[Storage] saveImage:', err);
+        return false;
+    }
+}
+export async function getImage(id: string): Promise<Blob | null> {
+    try {
+        const image = await dbGetImage(id);
+        return image ?? null;
+    } catch (err) {
+        console.error('[Storage] getImage:', err);
+        return null;
+    }
+}
+export async function saveAllImages(blobs: Record<string, Blob>): Promise<boolean> {
+    try {
+        await dbSaveAllImages(blobs);
+        return true;
+    } catch (err) {
+        console.error('[Storage] saveAllImages:', err);
+        return false;
+    }
+}
+
+export async function getAllImages(): Promise<Blob[]> {
+    try {
+        return await dbGetAllImages();
+    } catch (err) {
+        console.error('[Storage] getAllImages:', err);
+        return [];
+    }
+}
+
+export async function removeImage(id: string): Promise<boolean> {
+    try {
+        await dbDeleteImage(id);
+        return true;
+    } catch (err) {
+        console.error('[Storage] removeImage:', err);
+        return false;
+    }
+}
+
+export async function updateImageKey(oldId: string, newId: string): Promise<boolean> {
+    try {
+        await dbUpdateImageKey(oldId, newId);
+        return true;
+    } catch (err) {
+        console.error('[Storage] updateImageKey:', err);
+        return false;
+    }
+}
+
+
 
 // ============================================================
 // Settings — still in storage.sync (small, needs cross-device sync)
@@ -378,6 +451,34 @@ export async function setLastFilter(lastFilter: Filters): Promise<boolean> {
     }
 }
 
+export async function getLastLibraryFilters(): Promise<LibraryFilters | undefined> {
+    try {
+        return await new Promise<LibraryFilters | undefined>((resolve, reject) => {
+            ext.storage.local.get('lastLibraryFilter', (result: { lastLibraryFilter: LibraryFilters }) => {
+                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+                resolve(result?.lastLibraryFilter ?? undefined);
+            });
+        });
+    } catch (err) {
+        console.error('[Storage] getLastLibraryFilters:', err);
+        return undefined;
+    }
+}
+
+export async function setLastLibraryFilters(lastFilter: LibraryFilters): Promise<boolean> {
+    try {
+        return await new Promise<boolean>((resolve, reject) => {
+            ext.storage.local.set({ lastLibraryFilter: lastFilter }, () => {
+                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
+                resolve(true);
+            });
+        });
+    } catch (err) {
+        console.error('[Storage] setLastLibraryFilters:', err);
+        return false;
+    }
+}
+
 export async function getLastSortOption(): Promise<AllsortsType | undefined> {
     try {
         const filter = await getLastFilter();
@@ -399,5 +500,125 @@ export async function setLastSortOption(lastSortOption: AllsortsType): Promise<b
     } catch (err) {
         console.error('[Storage] setLastSortOption:', err);
         return false;
+    }
+}
+
+export async function getLastLibrarySortOption(): Promise<AllSortsType | undefined> {
+    try {
+        const filter = await getLastLibraryFilters();
+        return filter?.sort ?? undefined;
+    } catch (err) {
+        console.error('[Storage] getLastLibrarySortOption:', err);
+        return undefined;
+    }
+}
+
+export async function setLastLibrarySortOption(lastSortOption: AllSortsType): Promise<boolean> {
+    try {
+        const lastFilter = await getLastLibraryFilters();
+        return setLastLibraryFilters({
+            include: lastFilter?.include ?? {},
+            exclude: lastFilter?.exclude ?? {},
+            sort: lastSortOption,
+        });
+    } catch (err) {
+        console.error('[Storage] setLastLibrarySortOption:', err);
+        return false;
+    }
+}
+// ============================================================
+// db Access
+// ============================================================
+
+/** Access to IndexedDB and storage.sync data from different sources */
+export class dbAccess {
+
+    public getSettings(): Promise<Settings> {
+        return this.dbRequest<Settings>('settings', { operation: 'get', payload: { id: 'Settings' } });
+    }
+    public setSettings(data: Settings): Promise<void> {
+        return this.dbRequest<void>('settings', { operation: 'put', payload: { id: 'Settings', data } });
+    }
+    public updateHermidata(data: Hermidata): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'update', payload: { data } });
+    }
+    public setHermidata(id: string, data: Hermidata): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'put', payload: { id, data } });
+    }
+    public async getAllHermidata(): Promise<Record<string, Hermidata>> {
+        const existingDataList = await this.dbRequest<Hermidata[]>('hermidata', { operation: 'getAll' });
+        return Object.fromEntries(existingDataList.map(h => [h.id, h]));
+    }
+    public async getAllFeeds(): Promise<RawFeed[]> {
+        return this.dbRequest<RawFeed[]>('feeds', { operation: 'getAll' });
+    }
+    public async putAllHermidata(hermidata: Record<string, Hermidata>): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'putAll', payload: { data: hermidata } });
+    }
+    public async putAllFeeds(feeds: RawFeed[]): Promise<void> {
+        return this.dbRequest<void>('feeds', { operation: 'putAll', payload: { data: feeds } });
+    }
+    public async deleteHermidata(key: string): Promise<void> {
+        return this.dbRequest<void>('hermidata', { operation: 'delete', payload: {id: key} });
+    }
+    public async updateImageKey(oldId: string, newId: string): Promise<void> {
+        return this.dbRequest<void>('images', { operation: 'updateImageKey', payload: { oldId, newId } });
+    }
+    public async pushToSync(data: Hermidata): Promise<void> {
+        return this.syncRequest<void>({ operation: 'pushToSync', payload: { data } });
+    }
+    public async removeFromSync(id: string): Promise<void> {
+        return this.syncRequest<void>({ operation: 'removeFromSync', payload: { id } });
+    }
+    public async changeHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+        try {
+            entry.id = newKey;
+            entry.meta.updated = new Date().toISOString();
+    
+            await this.setHermidata(entry.id, entry)    // write new key to IndexedDB
+            await this.deleteHermidata(oldKey) // remove old key from IndexedDB
+    
+            await this.updateImageKey(oldKey, newKey); // move associated images to new key
+    
+            await this.pushToSync(entry); // push new entry to sync
+            await this.removeFromSync(oldKey); // remove old key from sync
+    
+            PastHermidata.invalidateCache();
+            console.log(`Migrated from ${oldKey} → ${newKey}`);
+            console.log(`[Hermidata] Updated ${entry.title}`);
+        } catch (err) {
+            console.error('[Storage -|- db Access] updateHermidata:', err);
+        }
+    }
+
+    public dbRequest<T>(store: DbStore, call: DbCall): Promise<T> {
+        try {
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, call }, async (response: { success: boolean, error?: string, result?: any }) => {
+                    if (!response) reject(new Error('No response from background script'));
+                    if (response.error?.includes('DataError')) reject(new Error(response.error + `\n Store: ${store} Call: ${ JSON.stringify(call)}`));
+                    if (!response?.success) reject(new Error(response.error));
+                    resolve(await response.result as T);
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
+    public syncRequest<T>(call: SyncCall): Promise<T> {
+        try {
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ type: 'SYNC_OPERATION', call }, async (response: { success: boolean, error?: string, result?: any }) => {
+                    if (!response) reject(new Error('No response from background script'));
+                    if (response.error?.includes('DataError')) reject(new Error(response.error + `\n Call: ${ JSON.stringify(call)}`));
+                    if (!response?.success) reject(new Error(response.error));
+                    resolve(await response.result as T);
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
     }
 }

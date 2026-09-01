@@ -1,4 +1,5 @@
-import type { AllHermidata } from "./popup";
+import type { AllHermidata, Hermidata, RawFeed } from "./popup";
+import type { Settings } from "./settings";
 
 export type NormalSortsType = 'Alphabet' | 'Novel-Type' | 'Recently-Added' | 'Latest-Updates';
 export type ExeptionSortsType = '';
@@ -79,3 +80,156 @@ export type FuzzyMatchResult =
     | { type: 'bookmark'; match: FuzzyBookmarkMatches; sameChapter: boolean }
     | { type: 'hermidata'; match: FuzzyHermidataMatches; sameChapter: boolean }
     | { type: 'none' };
+
+
+/* Element Picker */
+export interface ElementAttribute {
+    name: string;
+    value: string;
+}
+
+export interface ChildInfo {
+    tag: string;
+    text: string;
+}
+
+export interface PickedElementData {
+    tag: string;
+    id: string;
+    classes: string[];
+    /** Direct text content, trimmed */
+    text: string;
+    /** innerHTML, trimmed */
+    html: string;
+    attributes: ElementAttribute[];
+    /** Direct children only (not full descendant tree) */
+    children: ChildInfo[];
+    /** Best-effort unique-ish CSS selector for re-selecting this element later */
+    selector: string;
+    /** one entry per lowest-level text-bearing element, in DOM order */
+    leafTexts: string[];
+}
+
+
+export interface ElementPickedMessage {
+    action: "elementPicked";
+    data: PickedElementData;
+}
+
+export interface PickingCancelledMessage {
+    action: "pickingCancelled";
+}
+
+export interface StartPickingMessage { action: "startPicking"; }
+
+export interface CancelPickingMessage { action: "cancelPicking"; }
+
+export type RuntimeMessage = ElementPickedMessage | PickingCancelledMessage | StartPickingMessage | CancelPickingMessage;
+export interface HermidataMigrationConfiguration {
+    keepId: string;
+    removeId: string;
+    resolutions: Record<string, "A" | "B">; // only for fields that need a manual pick
+}
+export interface MergeAnalysis {
+    automaticallyMergedFields: string[];
+    automaticallyMergedFieldsAmount: number;
+    manuallyMergedFieldsAmount: number;
+    manuallyMergedFields: Record<string, { A: unknown; B: unknown }>;
+    configuration: HermidataMigrationConfiguration;
+}
+export interface ScalarConflict<K extends string = string> {
+    field: K;
+    path: string;        // e.g. "meta.novelStatus"
+    valueA: unknown;
+    valueB: unknown;
+}
+
+export interface TagMap {
+    input: HTMLInputElement;
+    div: HTMLDivElement;
+    textarea: HTMLTextAreaElement;
+    img: HTMLImageElement;
+    date: HTMLInputElement;
+    option: HTMLOptionElement;
+    select: HTMLSelectElement;
+    h2: HTMLHeadingElement;
+    button: HTMLButtonElement;
+}
+
+export type SwitchConfig = MainConfig | InputConfig | divConfig | ButtonConfig;
+
+interface MainConfig {
+    element: HTMLTextAreaElement | HTMLImageElement | HTMLHeadingElement | HTMLButtonElement | null;
+    switchTo: Exclude<keyof TagMap, 'input'>
+}
+interface InputConfig {
+    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
+    switchTo: 'input';
+    inputType: 'text' | 'number' | 'image' | 'date' | 'file';
+}
+interface ButtonConfig {
+    element: HTMLButtonElement | null;
+    switchTo: 'button';
+    inputType: 'button';
+}
+interface divConfig {
+    element: HTMLDivElement | null;
+    switchTo: 'div';
+    rules: {
+        allUpperCase: boolean;
+    }
+}
+
+export type DbStore = 'hermidata' | 'feeds' | 'settings' | 'images';
+export type SyncCall = PushToSync | RemoveFromSync;
+export type DbCall = NoPayload | IdPayloadOnly | PutAll | Update | Put | UpdateImageKey;
+
+// syncCall
+type PushToSync =  {
+    operation: 'pushToSync';
+    payload: {
+        data: Hermidata;
+    }
+}
+type RemoveFromSync = {
+    operation: 'removeFromSync';
+    payload: {
+        id: string;
+    }
+}
+// dbCall
+type NoPayload = {
+    operation: 'getAll' | 'clear';
+};
+type IdPayloadOnly = {
+    operation: 'get' | 'delete';
+    payload: {
+        id: string;
+    }
+};
+type PutAll = {
+    operation: 'putAll';
+    payload: {
+        data: Record<string, Hermidata> | RawFeed[];
+    }
+};
+type Update = {
+    operation: 'update';
+    payload: {
+        data: Hermidata | Settings | RawFeed | Blob;
+    }
+};
+type Put = {
+    operation: 'put';
+    payload: {
+        id: string;
+        data: Hermidata | Settings | RawFeed | Blob;
+    }
+};
+type UpdateImageKey = {
+    operation: 'updateImageKey';
+    payload: {
+        oldId: string;
+        newId: string;
+    }
+};

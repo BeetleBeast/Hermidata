@@ -6,28 +6,13 @@ export type {
     NovelStatus,
     ReadStatus,
 
-    Hermidata,
+    ContentRating,
+    ContentWarning,
 
-    HermidataV1,
-    HermidataV2,
-    HermidataV3,
-    HermidataV4,
-    HermidataV5,
-    HermidataV6,
-    HermidataV7,
-    HermidataV8,
-    HermidataV9,
-
-    AnyHermidataVersion,
-
-    allolderHermidata,
     migrationReturn,
-
+    
+    Hermidata,
     Bookmark,
-
-    BookmarkV1,
-    BookmarkV2,
-    BookmarkV3,
 
     HermidataDateType,
     HermidataSortType,
@@ -43,10 +28,6 @@ export type {
     Feed,
     RawFeed,
     FeedItem,
-
-    FeedV1,
-    RawFeedV1,
-    FeedItemV1,
 
     AnyNovelType,
     AnyNovelStatus,
@@ -67,8 +48,37 @@ export type {
     RawScrapedItem,
     RawScrappedFeed,
     
+    Migration,
+
+    ReleaseSchedule,
 
 } from "./popup";
+
+export type {
+
+    FeedV1,
+    RawFeedV1,
+    FeedItemV1,
+
+    BookmarkV1,
+    BookmarkV2,
+    BookmarkV3,
+
+    HermidataV1,
+    HermidataV2,
+    HermidataV3,
+    HermidataV4,
+    HermidataV5,
+    HermidataV6,
+    HermidataV7,
+    HermidataV8,
+    HermidataV9,
+    HermidataV10,
+
+    AnyHermidataVersion,
+    allOlderHermidata,
+
+} from "./oldVersions";
 
 export type {
     NormalSortsType,
@@ -91,9 +101,21 @@ export type {
     RSSDOM,
     RSSData,
 
+    TagMap,
+    SwitchConfig,
+
     FuzzyHermidataMatches,
     FuzzyBookmarkMatches,
     FuzzyMatchResult,
+
+    HermidataMigrationConfiguration,
+    ScalarConflict,
+    MergeAnalysis,
+
+    DbStore,
+    DbCall,
+
+    SyncCall
 
 } from "./rss";
 

@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermidata</title>
+  <link rel="stylesheet" href="../assets/styles/info.css">
+  <link rel="stylesheet" href="../assets/styles/styles.css">
+</head>
+<body>
+
+  <section id="header">
+    <button id="back-btn" type="button" class="Btn" title="Back">Back To Library</button>
+    <div id="search-input-container">
+      <div id="search-container">
+        <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+        <input id="search" placeholder="Search..." type="search" />
+      </div>
+      <div id="search-suggestions"></div>
+    </div>
+    <div id="header-utility-container">
+      <button id="cancel-edit-btn" type="button" class="Btn" title="Cancel" data-disabled="true" hidden>Cancel</button>
+      <button id="edit-info-btn" type="button" class="Btn" title="Edit info page">Edit</button>
+      <button id="delete-info-btn" type="button" class="Btn" title="Delete info page" popovertargetaction="toggle" popovertarget="delete-dialog" data-disabled="true" hidden>Delete</button>
+      <div id="delete-dialog" class="delete-dialog" popover>
+        <div id="delete-label" title="delete label"></div>
+        <div class="genericPromptBtns">
+          <button id="customPrompt-button-delete" type="button" class="Btn" title="Delete">Delete</button>
+          <button id="customPrompt-button-cancel" type="button" class="Btn" title="Cancel">Cancel</button>
+        </div>
+      </div>
+      <button id="reload-info-btn" type="button" class="Btn" title="reload info page">Reload</button>
+    </div>
+
+  </section>
+
+  <section id="info-container">
+    <section id="hermidata-main">
+      <div id="hermidata-img-container"><!-- Dynamic load image --> </div>
+      <div id="imageChanger-dialog" popover class="image-changer-popover">
+        <div class="image-changer-tabs">
+          <button type="button" class="tab-btn active" data-mode="url">URL</button>
+          <button type="button" class="tab-btn" data-mode="file">Upload</button>
+        </div>
+
+        <div class="image-changer-panel" data-panel="url">
+          <input type="text" id="imageChanger-url" placeholder="https://example.com/cover.jpg" />
+          <button type="button" id="imageChanger-url-confirm">Set</button>
+        </div>
+
+        <div class="image-changer-panel" data-panel="file" hidden>
+          <input type="file" id="imageChanger-file" accept="image/*" />
+        </div>
+      </div>
+
+      <button id="hermidata-readLatest-btn" type="button" class="Btn" title="Read latest chapter">Read Latest</button>
+      <div id="hermidata-info-container">
+        <h2 id="hermidata-title"></h2>
+        <div id="hermidata-alternative-titles-container">
+          <div id="hermidata-alternative-title-button" title="Alternative titles">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <p id="hermidata-alternative-title-button-text"></p>
+            <svg class="hermidata-alternative-title-button-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" data-closed="true" >
+              <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div id="hermidata-alternative-titles-list" data-closed="true"></div>
+        </div>
+        <div id="hermidata-metadata-container">
+          <div id="hermidata-novelType" class="hermidata-metadata-group-1" title="Novel Type" data-editing="false"></div>
+          <div id="hermidata-contentRating" class="hermidata-metadata-group-1" title="Content Rating" data-editing="false"></div>
+          <div id="hermidata-releaseDate" class="hermidata-metadata-group-1" title="Release Date" data-editing="false"></div>
+          <div id="hermidata-novelStatus" class="hermidata-metadata-group-1" title="Novel Type" data-editing="false"></div>
+        </div>
+        <div id="hermidata-starRating-container">
+          <span id="hermidata-starRating-star">★ </span><div id="hermidata-starRating" title="Star Rating"></div>
+          <div id="hermidata-starRating-edit" title="Edit star rating">Edit</div>
+        </div>
+        <div id="hermidata-genres-container">
+          <div id="hermidata-genres-label" title="Genres">Genres</div>
+          <div id="hermidata-genres" class="hermidata-metadata-group-2 selected-tag-container" data-editing="false"></div>
+          <input id="filterInput-genres" class="filterInput" placeholder="Filter list..." data-editing="false"/>
+          <div id="allTags-genres" class="filter-allTags-container" data-editing="false"></div>
+        </div>
+        <div id="hermidata-demographics-container">
+          <div id="hermidata-demographics-label" title="Demographics">Demographics</div>
+          <div id="hermidata-demographics" class="hermidata-metadata-group-2 selected-tag-container"></div>
+          <input id="filterInput-demographics" class="filterInput" placeholder="Filter list..." data-editing="false"/>
+          <div id="allTags-demographics" class="filter-allTags-container" data-editing="false"></div>
+        </div>
+        <div id="hermidata-sources-container">
+          <div id="hermidata-sources-label" title="Source(s)">Source(s)</div>
+          <div id="hermidata-sources" class="hermidata-metadata-group-2"></div>
+        </div>
+        <div id="hermidata-author-container">
+          <div id="hermidata-author-label" title="Author" data-editing="false">Author</div>
+          <div id="hermidata-author" class="hermidata-metadata-group-2"></div>
+        </div>
+        <div id="hermidata-latestRelease-container">
+          <div id="hermidata-latestRelease-label" title="Latest chapter Release">Latest Release</div>
+          <div id="hermidata-latestRelease" class="hermidata-metadata-group-2"></div>
+        </div>
+      </div>
+
+    </section>
+    <section id="hermidata-markers">
+      <div id="hermidata-markers-container">
+        <h3 id="hermidata-markers-label">Markers</h3>
+        <div id="hermidata-markers-utility-container" class="search-container-parent">
+          <div id="hermidata-markers-utility-search-container" class="search-container">
+            <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+            <input id="search-marker" placeholder="Search chapter or marker label..." type="search" />
+          </div>
+          <div id="hermidata-markers-utility-sort-container">
+            <div id="hermidata-markers-utility-sort-chapter" class="filter-button" title="Sort by latest chapter" data-state="true" data-sort="asc">↓  Chapter</div>
+            <div id="hermidata-markers-utility-sort-date" class="filter-button" title="Sort by date" data-state="false" data-sort="asc">↓  Date</div>
+            <div class="pill-indicator"></div>
+          </div>
+        </div>
+        <div id="hermidata-markers-list">
+          <!-- markers go here -->
+        </div>
+      </div>
+
+    </section>
+    <section id="hermidata-notes">
+      <div id="hermidata-notes-container">
+        <label for="hermidata-notes-content" id="hermidata-notes-label">Notes</label>
+        <textarea id="hermidata-notes-content" readonly></textarea>
+      </div>
+    </section>
+  </section>
+
+</body>
+  <script src="../scripts/library/details.ts" type="module"></script>
+</html>

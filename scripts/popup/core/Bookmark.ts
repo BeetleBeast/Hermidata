@@ -1,10 +1,10 @@
 import { saveHermidata } from "../../shared/db/Storage";
 import { returnBookmarkHash } from "../../shared/utils/StringOutput";
-import type { Bookmark, Hermidata } from "../../shared/types";
+import type { Bookmark } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
-import { activateother, customConfirm, deactivateother } from "../frontend/confirm";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { activateOther, customConfirm, deactivateOther } from "../frontend/confirm";
 
 export class BookmarkController {
 
@@ -117,7 +117,7 @@ export class BookmarkController {
         this.closeBookmarkMenu();
         this.closeBookmarkMenuManager();
         if (!this.AddNewBookmarkContainer) return;
-        deactivateother(this.AddNewBookmarkContainer);
+        deactivateOther(this.AddNewBookmarkContainer);
         this.AddNewBookmarkContainer.style.display = 'block';
         this.setAddNewBookmarkFormData();
     }
@@ -125,7 +125,7 @@ export class BookmarkController {
     private openBookmarkMenuManager(): void {
         if (!this.bookmarkMenuManagerContainer) return;
         this.closeBookmarkMenu();
-        deactivateother(this.bookmarkMenuManagerContainer);
+        deactivateOther(this.bookmarkMenuManagerContainer);
         this.bookmarkMenuManagerContainer.style.display = 'block';
         this.bookmarkMenuManager!.innerHTML = '';
 
@@ -143,7 +143,7 @@ export class BookmarkController {
         if (!this.bookmarkMenuContainer) return;
         this.bookmarkMenuContainer.style.display = 'none';
         this.bookmarkMenuContainerVisible = false;
-        activateother();
+        activateOther();
         // Remove the listener when menu closes
         getElement('.HDClassic')?.removeEventListener('click', this.closeBookmarkMenu );
         document.removeEventListener('click', this.handleOutsideClick);
@@ -153,14 +153,14 @@ export class BookmarkController {
         if (!this.AddNewBookmarkContainer) return;
         this.AddNewBookmarkContainer.style.display = 'none';
         ColorPicker.destroy();
-        activateother();
+        activateOther();
     }
     /** close bookmark menu manager */
     private closeBookmarkMenuManager(): void {
         if (!this.bookmarkMenuManagerContainer) return;
         this.bookmarkMenuManagerContainer.style.display = 'none';
         ColorPicker.destroy();
-        activateother();
+        activateOther();
     }
     /** create bookmark menu */
     private async createBookmarkMenu(key: string, bookmark: Bookmark): Promise<void> {
@@ -347,6 +347,7 @@ export class BookmarkController {
         const hash = returnBookmarkHash(labelValue);
 
         this.hermidata.chapter.bookmarks[hash] = {
+            version: this.hermidata.version,
             id: hash,
             label: labelValue,
             current: Number(chapterValue),
@@ -354,7 +355,10 @@ export class BookmarkController {
             color: colorValue,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            history: [],
+            history: [{
+                chapter: Number(chapterValue),
+                at: new Date().toISOString()
+            }],
             isPrimary: false,
             readStatus: 'Viewing',
             scrollPosition: 0,
