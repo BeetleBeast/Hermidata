@@ -22,10 +22,14 @@ export abstract class RssBuild {
 
         // Register exactly once, for the lifetime of the popup.
         chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
-            if (!this.pendingPick) return;
+            // Handle messages related to element picking and user feedback
+            if (!this.pendingPick || !this.pendingFeedback) return;
+
             if (msg.action === "elementPicked") this.pendingPick(msg.data); 
             else if (msg.action === "pickingCancelled") this.pendingPick(null);
             else if (msg.action === "UserFeedbackGiven") this.pendingFeedback(msg.data);
+
+            // Clear the pending callbacks after handling the message
             this.pendingFeedback = null;
             this.pendingPick = null;
         });

@@ -3,6 +3,12 @@
 // while a picking session is already active on this page.
 const w = window as unknown as { __elementPickerActive?: boolean };
 
+export interface ElementPickerCallbacks {
+    onHover?: (el: HTMLElement) => void;
+    onPick?: (data: PickedElementData) => void;
+    onCancel?: () => void;
+}
+
 interface ElementAttribute {
     name: string;
     value: string;
@@ -39,13 +45,33 @@ interface PickingCancelledMessage {
     action: "pickingCancelled";
 }
 
-interface StartPickingMessage { action: "startPicking"; }
+interface UserFeedbackResult { 
+    action: 'UserFeedbackGiven';
+    data: UserFeedbackData;
+}
 
-interface CancelPickingMessage { action: "cancelPicking"; }
+export type UserFeedbackData = 'accepted' | 'cancelled';
 
-export type RuntimeMessage = ElementPickedMessage | PickingCancelledMessage | StartPickingMessage | CancelPickingMessage;
+export interface StartPickingMessage { action: "startPicking"; }
+
+export interface CancelPickingMessage { action: "cancelPicking"; }
+
+export interface UserFeedbackMessage { action: 'getUserFeedback'; }
+
+export type RuntimeMessage = ElementPickedMessage | PickingCancelledMessage | UserFeedbackResult | StartPickingMessage | CancelPickingMessage | UserFeedbackMessage;
 
 export class ElementPicker {
+
+    private callbacks: ElementPickerCallbacks;
+
+    constructor(callbacks: ElementPickerCallbacks = {}) {
+        this.callbacks = callbacks;
+    }
+
+    /** Attach/replace callbacks on an already-running picker instance. */
+    public setCallbacks(callbacks: ElementPickerCallbacks): void {
+        this.callbacks = { ...this.callbacks, ...callbacks };
+    }
 
     public initPicker(): void {
         if (w.__elementPickerActive) return;
@@ -172,6 +198,7 @@ export class ElementPicker {
         if (this.hovered) this.clearOutline(this.hovered);
         this.hovered = target;
         this.setOutline(this.hovered);
+        this.callbacks.onHover?.(target);
     };
 
     private onClick = (e: MouseEvent): void => {
@@ -183,6 +210,7 @@ export class ElementPicker {
         const data = this.extractData(target);
         this.cleanup();
 
+        this.callbacks.onPick?.(data);
         const msg: ElementPickedMessage = { action: "elementPicked", data };
         chrome.runtime.sendMessage(msg);
     };
@@ -193,6 +221,7 @@ export class ElementPicker {
         e.stopImmediatePropagation();
         if (e.key === "Escape") {
             this.cleanup();
+            this.callbacks.onCancel?.();
             const msg: PickingCancelledMessage = { action: "pickingCancelled" };
             chrome.runtime.sendMessage(msg);
         }
