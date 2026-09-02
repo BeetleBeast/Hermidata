@@ -904,6 +904,9 @@ export class EditDetail extends RSSPageBuilder {
             // 3.3 add option to select
             if (option) newElement.append(option, ...options);
 
+            // 3.4 set original value as selected
+            // TODO: check if it works
+            newElement.selectedIndex = Array.from(newElement.options).findIndex(opt => opt.value === value);
             
             // 4. replace element
             element.replaceWith(newElement);

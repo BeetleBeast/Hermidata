@@ -160,17 +160,15 @@ export class feed extends RSSPageBuilder {
         
         img.src = await entry.getDisplayImageUrl();
         
-        await this.waitForImageLoad(img);
+        if (!img.complete || img.naturalWidth === 0) await this.waitForImageLoad(img);
         
-        img.loading = "lazy"; // 
+        img.loading = "lazy";
 
         this.calculateImageRatio(img);
 
-        
-
         return img;
     }
-    private waitForImageLoad(img: HTMLImageElement, timeoutMs = 5000): Promise<void> {
+    private waitForImageLoad(img: HTMLImageElement, timeoutMs = 500): Promise<void> {
         // already loaded (e.g. from cache) — naturalWidth is already available
         if (img.complete && img.naturalWidth !== 0) return Promise.resolve();
 
