@@ -15,8 +15,14 @@ let rssCache: Record<string, Hermidata> | null = null
 let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
 
 export function initRssCache() {
-    rssCachePromise = getHermidataWithRss().then(result => {
+    console.time('getHermidataWithRss duration');
+    rssCachePromise = getHermidataWithRss();
+    console.timeEnd('getHermidataWithRss duration');
+
+    rssCachePromise.then(result => {
+        console.time('structuredClone duration');
         rssCache = structuredClone(result); // deep copy into cache
+        console.timeEnd('structuredClone duration');
         return result;
     });
 }
@@ -25,7 +31,9 @@ export function handleGetRSS(sendResponse: (r: unknown) => void): true {
     if (rssCache) {
         sendResponse({ status: 'ready', data: rssCache })
     } else {
-        rssCachePromise?.then(data => sendResponse({ status: 'ready', data }))
+        console.time('rssCachePromise duration');
+        rssCachePromise?.then(data => sendResponse({ status: 'ready', data }));
+        console.timeEnd('rssCachePromise duration');
     }
     return true
 }

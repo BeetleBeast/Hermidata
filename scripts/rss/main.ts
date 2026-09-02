@@ -49,7 +49,23 @@ export class RSS {
 
             if (!sortSection || !notification || !allSec) throw new Error('Element not found');
 
+
+            // If already built in DOM, skip heavy rebuild and just run deferred layout updates
+            if (notification.childElementCount > 0 || allSec.childElementCount > 0) { 
+                // defer heavy layout-dependent work so browser can paint
+                requestAnimationFrame(async () => {
+                    await this.BuildRSS.makeSortSection(sortSection);
+                    await this.BuildRSS.attachEventListeners();
+                    await this.BuildRSS.makeFooterSection();
+                    await this.BuildRSS.activateAutoSubscribe();
+                    this.hideLoadingAnimation(); 
+                }); 
+                
+                return; 
+            }
+
             this.showLoadingAnimation();
+            const t0 = performance.now();
 
             // If preloaded, use it instantly
             const dom = await (rssPreloadPromise ?? this.preloadRSS());
@@ -62,16 +78,19 @@ export class RSS {
             await this.BuildRSS.makeFeedHeader(notification);
             
             this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
+
+            requestAnimationFrame(async () => {
             
-            await this.BuildRSS.makeSortSection(sortSection);
+                await this.BuildRSS.makeSortSection(sortSection);
 
-            await this.BuildRSS.attachEventListeners()
+                await this.BuildRSS.attachEventListeners()
 
-            await this.BuildRSS.makeFooterSection();
+                await this.BuildRSS.makeFooterSection();
 
-            await this.BuildRSS.activateAutoSubscribe();
+                await this.BuildRSS.activateAutoSubscribe();
+            });
 
-            setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
+            setTimeout(() => this.hideLoadingAnimation(t0), 100); // slight delay so that any async calls have a chance to finish
         } catch (error) {
             console.error(error);
         }
@@ -107,13 +126,18 @@ export class RSS {
         };
 
         // Build notification items
+        console.time('Build notification items');
         rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makefeedItem(feeds, false, true));
+        console.timeEnd('Build notification items');
 
         // Build all items header
+        console.time('Build all items header');
         rssDomPackage.allItems.header.appendChild(await this.BuildRSS.makeItemHeader());
-
+        console.timeEnd('Build all items header');
         // Build full items list
+        console.time('Build all items list');
         rssDomPackage.allItems.items.appendChild(await this.BuildRSS.makefeedItem(hermidata, true));
+        console.timeEnd('Build all items list');
 
         return rssDomPackage;
     }
@@ -121,12 +145,15 @@ export class RSS {
         try {
             if (rssPreloadPromise) return rssPreloadPromise;
 
-
+            console.time('get data');
             const data = await this.loadRSSData();
+            console.timeEnd('get data');
+            console.time('build dom');
             rssDOMCache = await this.buildRSSDom(data);
-
+            console.timeEnd('build dom');
+            console.time('RSS DOM preloaded and cached');
             rssPreloadPromise = Promise.resolve(rssDOMCache);
-
+            console.timeEnd('RSS DOM preloaded and cached');
             return rssPreloadPromise;
         }
         catch (error) {
@@ -190,7 +217,7 @@ export class RSS {
         });
         setElement('.material-symbols-outlinedContainer', el => el.style.display = 'flex');
     }
-    private hideLoadingAnimation() {
+    private hideLoadingAnimation(timer?: number) {
         setElement(".HDClassic", el => {
             el.style.opacity = '0';
             el.style.overflow = 'hidden';
@@ -205,6 +232,8 @@ export class RSS {
             el.style.pointerEvents = 'auto';
         });
         setElement('.material-symbols-outlinedContainer', el => el.style.display = 'none');
+
+        if (timer) console.log('RSS page loaded in', performance.now() - timer, 'ms');
     }
 
 }

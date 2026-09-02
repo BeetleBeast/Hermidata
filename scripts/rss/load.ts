@@ -114,8 +114,10 @@ export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> 
 }
 // whenever we need to get hermidata with RSS may be called everywhere
 export async function getHermidataWithRssFromBackground(): Promise<Record<string, Hermidata>> {
+    const t0 = performance.now();
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ type: 'GET_RSS' }, (response) => {
+            console.log('msg RTT', performance.now()-t0);
             if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
             else resolve(response.data);
         });

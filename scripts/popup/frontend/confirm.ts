@@ -166,7 +166,7 @@ function getDefaultElements(): DialogElements {
     };
 }
 
-type DialogOptionsInput<T> = Partial<Omit<DialogOptions<T>, 'onResolve'>> & Pick<DialogOptions<T>, 'onResolve'>
+export type DialogOptionsInput<T> = Partial<Omit<DialogOptions<T>, 'onResolve'>> & Pick<DialogOptions<T>, 'onResolve'>
 
 
 export function createDialog<T>(opts: DialogOptionsInput<T>): Promise<T> {
