@@ -1,6 +1,6 @@
 
 import { ext } from '../../shared/utils/BrowserCompat';
-import { getChapterFromTitle } from '../../shared/utils/StringOutput';
+import { getChapterFromTitle, returnHashedTitle } from '../../shared/utils/StringOutput';
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
@@ -272,8 +272,18 @@ class HermidataController {
     }
     /** merge novel type if changed */
     private async updateNovelType(): Promise<boolean> {
-        const newNovelType = this.pastHermidata ? this.pastHermidata?.novelType !== this.hermidata.novelType : false;
-        const newHermidata = newNovelType && this.past.pastHermidata ? await this.mergeNovelType(this.hermidata, this.past.pastHermidata) : this.hermidata;
+        // 0. check if the novel type has changed
+        const novelTypeChanged = this.past.pastHermidata ? this.past.pastHermidata?.novelType !== this.hermidata.novelType : false;
+
+        // 1. If the novel type has changed, prompt the user to confirm the merge
+        if (!novelTypeChanged || !this.past.pastHermidata) return true;
+        
+        // 2. If the user confirms the merge, merge the two hermidatas
+        const newId = returnHashedTitle(this.hermidata.title, this.hermidata.novelType);
+        this.hermidata.id = newId;
+
+        const newHermidata = await this.mergeNovelType(this.hermidata, this.past.pastHermidata)
+
         if (!newHermidata) {
             console.error('new Hermidata has different novel type and user declined to merge');
             return false;

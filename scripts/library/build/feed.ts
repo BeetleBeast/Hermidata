@@ -76,7 +76,7 @@ export class feed extends RSSPageBuilder {
 
     private async buildFeedAll() {
         // get all entries that are filtered
-        const allEntries = this.AllHermidata ?? {};
+        const allEntries = this.AllHermidata;
 
         const docFragment = document.createDocumentFragment();
 
