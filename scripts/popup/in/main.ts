@@ -13,6 +13,7 @@ import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
+import type { OnlyPlainHermidata } from '../../shared/types/popup';
 
 
 const stateConfig = {
@@ -305,15 +306,15 @@ class HermidataController {
         console.log(`Merged "${older.title}" with "${newer.title}"`);
         return merged;
     }
-    private async saveBookmarkOrAndSheet(allowenced: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }): Promise<boolean> {
+    private async saveBookmarkOrAndSheet(allowed: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }): Promise<boolean> {
         // save to google sheet & bookmark/replace bookmark
-        if (allowenced.allowedSendBookmark || allowenced.allowedSendSHeet || (allowenced.allowedSendBookmark && allowenced.allowedSendSHeet)) {
-            const saved = await ext.runtime.sendMessage({
+        if (allowed.allowedSendBookmark || allowed.allowedSendSHeet || (allowed.allowedSendBookmark && allowed.allowedSendSHeet)) {
+            const saved = await ext.runtime.sendMessage<{type: "SAVE_NOVEL", data: OnlyPlainHermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }}>({
                 type: "SAVE_NOVEL",
-                data: this.hermidata,
+                data: this.hermidata.toJSON(),
                 args: { 
-                    allowedSendSHeet: allowenced.allowedSendSHeet, 
-                    allowedSendBookmark: allowenced.allowedSendBookmark
+                    allowedSendSHeet: allowed.allowedSendSHeet, 
+                    allowedSendBookmark: allowed.allowedSendBookmark
                 },
             }) as boolean;
             return saved
