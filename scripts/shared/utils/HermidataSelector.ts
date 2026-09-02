@@ -1,7 +1,7 @@
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
-import { getSettings, isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import { getImage, saveImage } from "../db/Storage";
+import { isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
+import { getImage, saveImage, getSettings } from "../db/Storage";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { openLink, returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";

@@ -1,5 +1,5 @@
 import { defaultSettings } from "../constants";
-import { putSettings } from "../db/db";
+import { setSettings } from "../db/Storage";
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping, type FolderRule, type NotificationTypes, type SaveTargets, type DefaultChoice } from "../types";
 
 type FolderEntry = { path: string }
@@ -104,7 +104,7 @@ export class SettingsMigration {
         if (version <= 5) current = this.migrateV5toV6(current as oldSettingsV5);
         if (version <= 6) current = this.migrateV6toV7(current as oldSettingsV6);
 
-        await putSettings(current as Settings);
+        await setSettings(current as Settings);
     }
 
     private static migrateV4toV5(data: oldSettingsV4): oldSettingsV5 {

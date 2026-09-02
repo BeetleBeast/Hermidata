@@ -5,6 +5,7 @@ import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings } from '../constants';
 import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/oldVersions';
+import type { OnlyPlainHermidata } from '../types/popup';
 
 
 // ============================================================
@@ -277,7 +278,7 @@ export async function getHermidataBySource(source: string): Promise<Hermidata[]>
 }
 
 /** Get all entries that have an RSS feed linked */
-export async function getAllHermidataWithRss(preAll: Record<string, Hermidata> | null = null): Promise<Record<string, Hermidata>> {
+export async function getAllHermidataWithRss(preAll: Record<string, OnlyPlainHermidata> | null = null): Promise<Record<string, Hermidata>> {
     try {
         const all = preAll ?? await getAllHermidata();
         return Object.fromEntries(

@@ -39,7 +39,7 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         if (newChapterNumber >= oldChapterNumber) {
 
             entry.Update(key, hermidata, newChapterNumber);
-            await saveHermidata(key, entry);
+            await saveHermidata(key, entry.toJSON());
             console.log(`[HermidataV3] Updated ${hermidata.title} to chapter ${newChapterNumber}`);
         }
         if (needsToMigrate) {
@@ -147,6 +147,6 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
 
     const entryKey = hermidata.id || returnHashedTitle(hermidata.title, hermidata.novelType);
 
-    await saveHermidata(entryKey, hermidata);
+    await saveHermidata(entryKey, hermidata.toJSON());
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${hermidata.title}`);
 }

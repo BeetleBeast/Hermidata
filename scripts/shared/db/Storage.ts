@@ -17,19 +17,20 @@ import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
-import { type Hermidata, type RawFeed, type Settings, type AllsortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
+import { type RawFeed, type Settings, type AllsortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
 import type { AllSortsType } from '../../library/build/filter';
 import type { Filters as LibraryFilters } from '../../library/build/filterLogic';
+import type { OnlyPlainHermidata } from '../types/popup';
 
 
 // ============================================================
 // Hermidata
 // ============================================================
-export function getHermidataViaKey(key: string): Promise<Hermidata | null> { return getHermidataByKey(key); }
+export function getHermidataViaKey(key: string): Promise<OnlyPlainHermidata | null> { return getHermidataByKey(key); }
 
-export async function saveHermidata(key: string, entry: Hermidata): Promise<void> {
+export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Promise<void> {
     try {
         const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
         entry.id = Key;
@@ -46,7 +47,7 @@ export async function saveHermidata(key: string, entry: Hermidata): Promise<void
     }
 }
 
-export async function updateHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+export async function updateHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
     try {
         entry.id = newKey;
         entry.meta.updated = new Date().toISOString();
@@ -79,7 +80,7 @@ export async function removeHermidata(id: string): Promise<void> {
     }
 }
 
-export async function getAllHermidata(): Promise<Record<string, Hermidata>> {
+export async function getAllHermidata(): Promise<Record<string, OnlyPlainHermidata>> {
     try {
         const all = await dbGetAllHermidata();
         const count = Object.keys(all).length;
@@ -91,7 +92,7 @@ export async function getAllHermidata(): Promise<Record<string, Hermidata>> {
         return {};
     }
 }
-export async function setAllHermidata(hermidata: Hermidata[]): Promise<void> {
+export async function setAllHermidata(hermidata: OnlyPlainHermidata[]): Promise<void> {
     try {
         await putAllHermidata(hermidata);
         const count = Object.keys(hermidata).length;
@@ -104,7 +105,7 @@ export async function setAllHermidata(hermidata: Hermidata[]): Promise<void> {
 // Tags
 // ============================================================
 
-export function getAllTags(allHermidata: Record<string, Hermidata>): Map<string, number> {
+export function getAllTags(allHermidata: Record<string, OnlyPlainHermidata>): Map<string, number> {
     const tagCount = new Map<string, number>();
     for (const entry of Object.values(allHermidata)) {
 
@@ -539,20 +540,20 @@ export class dbAccess {
     public setSettings(data: Settings): Promise<void> {
         return this.dbRequest<void>('settings', { operation: 'put', payload: { id: 'Settings', data } });
     }
-    public updateHermidata(data: Hermidata): Promise<void> {
+    public updateHermidata(data: OnlyPlainHermidata): Promise<void> {
         return this.dbRequest<void>('hermidata', { operation: 'update', payload: { data } });
     }
-    public setHermidata(id: string, data: Hermidata): Promise<void> {
+    public setHermidata(id: string, data: OnlyPlainHermidata): Promise<void> {
         return this.dbRequest<void>('hermidata', { operation: 'put', payload: { id, data } });
     }
-    public async getAllHermidata(): Promise<Record<string, Hermidata>> {
-        const existingDataList = await this.dbRequest<Hermidata[]>('hermidata', { operation: 'getAll' });
+    public async getAllHermidata(): Promise<Record<string, OnlyPlainHermidata>> {
+        const existingDataList = await this.dbRequest<OnlyPlainHermidata[]>('hermidata', { operation: 'getAll' });
         return Object.fromEntries(existingDataList.map(h => [h.id, h]));
     }
     public async getAllFeeds(): Promise<RawFeed[]> {
         return this.dbRequest<RawFeed[]>('feeds', { operation: 'getAll' });
     }
-    public async putAllHermidata(hermidata: Record<string, Hermidata>): Promise<void> {
+    public async putAllHermidata(hermidata: Record<string, OnlyPlainHermidata>): Promise<void> {
         return this.dbRequest<void>('hermidata', { operation: 'putAll', payload: { data: hermidata } });
     }
     public async putAllFeeds(feeds: RawFeed[]): Promise<void> {
@@ -564,13 +565,13 @@ export class dbAccess {
     public async updateImageKey(oldId: string, newId: string): Promise<void> {
         return this.dbRequest<void>('images', { operation: 'updateImageKey', payload: { oldId, newId } });
     }
-    public async pushToSync(data: Hermidata): Promise<void> {
+    public async pushToSync(data: OnlyPlainHermidata): Promise<void> {
         return this.syncRequest<void>({ operation: 'pushToSync', payload: { data } });
     }
     public async removeFromSync(id: string): Promise<void> {
         return this.syncRequest<void>({ operation: 'removeFromSync', payload: { id } });
     }
-    public async changeHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+    public async changeHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
         try {
             entry.id = newKey;
             entry.meta.updated = new Date().toISOString();

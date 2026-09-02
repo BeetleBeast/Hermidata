@@ -1,3 +1,4 @@
+import type { HermidataModel } from "../utils/HermidataSelector";
 import type { allOlderHermidata } from "./oldVersions";
 
 /**
@@ -303,3 +304,9 @@ export type migrationReturn = {
 }
 
 export type Migration = (data: any) => any;
+
+type Only<T, U> = T & {
+    [K in Exclude<keyof U, keyof T>]?: never;
+};
+
+export type OnlyPlainHermidata = Only<Hermidata, HermidataModel>;

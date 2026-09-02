@@ -1,4 +1,4 @@
-import type { AllHermidata, Hermidata, RawFeed } from "./popup";
+import type { AllHermidata, OnlyPlainHermidata, RawFeed } from "./popup";
 import type { Settings } from "./settings";
 
 export type NormalSortsType = 'Alphabet' | 'Novel-Type' | 'Recently-Added' | 'Latest-Updates';
@@ -188,7 +188,7 @@ export type DbCall = NoPayload | IdPayloadOnly | PutAll | Update | Put | UpdateI
 type PushToSync =  {
     operation: 'pushToSync';
     payload: {
-        data: Hermidata;
+        data: OnlyPlainHermidata;
     }
 }
 type RemoveFromSync = {
@@ -210,20 +210,20 @@ type IdPayloadOnly = {
 type PutAll = {
     operation: 'putAll';
     payload: {
-        data: Record<string, Hermidata> | RawFeed[];
+        data: Record<string, OnlyPlainHermidata> | RawFeed[];
     }
 };
 type Update = {
     operation: 'update';
     payload: {
-        data: Hermidata | Settings | RawFeed | Blob;
+        data: OnlyPlainHermidata | Settings | RawFeed | Blob;
     }
 };
 type Put = {
     operation: 'put';
     payload: {
         id: string;
-        data: Hermidata | Settings | RawFeed | Blob;
+        data: OnlyPlainHermidata | Settings | RawFeed | Blob;
     }
 };
 type UpdateImageKey = {

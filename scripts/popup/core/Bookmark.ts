@@ -220,8 +220,8 @@ export class BookmarkController {
         bookmarkLabel.className = 'bookmarkLabel';
         bookmarkLabel.value = value.label;
 
-        bookmarkLabel.addEventListener('focusout', () => {
-            this.saveBookmarkLabel(key, bookmarkLabel.value);
+        bookmarkLabel.addEventListener('focusout', async () => {
+            await this.saveBookmarkLabel(key, bookmarkLabel.value);
         })
 
         const bookmarkLastUpdated = document.createElement('div');
@@ -308,7 +308,7 @@ export class BookmarkController {
                     if (this.hermidata.chapter.bookmarkInUse === key) this.imgBookmark!.style.fill = newColor;
                     this.hermidata.chapter.bookmarks[key].color = newColor;
                     try {
-                        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata);
+                        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
                     } catch (error) {
                         console.error('Failed to save bookmark color:', error);
                     }
@@ -332,7 +332,7 @@ export class BookmarkController {
         // remove bookmark
         delete this.hermidata.chapter.bookmarks[key];
 
-        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata);
+        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
         this.openBookmarkMenuManager(); // refresh
         return true;
     }
@@ -368,18 +368,18 @@ export class BookmarkController {
         // if re-reading, update revisiting count
         if (this.hermidata.chapter.latest === this.hermidata.chapter.bookmarks[hash].current) this.hermidata.chapter.revisitingCount++;
 
-        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata);
+        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
         this.switchBookmarkMenu(hash);
         this.closeAddBookmark();
     }
-    private saveBookmarkLabel(key: string, label: string): void {
+    private async saveBookmarkLabel(key: string, label: string): Promise<void> {
         if (!this.hermidata.chapter.bookmarks[key]) return;
         if (label === this.hermidata.chapter.bookmarks[key].label) return;
 
         this.hermidata.chapter.bookmarks[key].label = label;
         this.hermidata.chapter.bookmarks[key].updatedAt = new Date().toISOString();
 
-        if (!this.isNewHermidata) saveHermidata(this.hermidata.id, this.hermidata);
+        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
     }
 
     private switchBookmarkMenu(key: string): void {

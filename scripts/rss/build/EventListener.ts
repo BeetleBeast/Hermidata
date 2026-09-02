@@ -2,11 +2,10 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
-import { saveHermidata, updateHermidata } from "../../shared/db/Storage";
+import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
-import { deleteHermidata } from "../../shared/db/db";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import type { PickedElementData } from "../../shared/types/rss";
 
@@ -388,7 +387,7 @@ export class EventListener extends RssBuild {
         }
 
         // Save to storage
-        await saveHermidata(hashItem, entry);
+        await saveHermidata(hashItem, entry.toJSON());
     }
 
     private currentTabId: number | null = null;
@@ -453,7 +452,7 @@ export class EventListener extends RssBuild {
         );
     
         // Save to storage
-        await saveHermidata(hashItem, entry);
+        await saveHermidata(hashItem, entry.toJSON());
     
         console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
     }
@@ -477,15 +476,18 @@ export class EventListener extends RssBuild {
         }
         // Generate new key and object
         const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.GetUrl(), false);
-        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title
-        const newData = { ...oldData, title: newTitle, id: newKey };
+        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title;
+
+        const newData: HermidataModel = oldData.Copy();
+        newData.title = newTitle;
+        newData.id = newKey;
     
         // Add the old title as an altTitle
         if (TrimmedTitle === newTitle) newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), TrimmedTitle]) );
         else newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), oldData.title, TrimmedTitle]) );
     
         // Save and clean up
-        await updateHermidata(oldKey, newKey, newData);
+        await updateHermidata(oldKey, newKey, newData.toJSON());
     
         //  update your in-memory list
         delete this.AllHermidata[oldKey];
@@ -513,7 +515,7 @@ export class EventListener extends RssBuild {
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
             delete this.AllHermidata[hashItem]
-            deleteHermidata(hashItem)
+            removeHermidata(hashItem)
         }
         await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
     }
@@ -544,7 +546,7 @@ export class EventListener extends RssBuild {
 
         entry.rss = null;
 
-        await saveHermidata(entry.id, entry);
+        await saveHermidata(entry.id, entry.toJSON());
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined
