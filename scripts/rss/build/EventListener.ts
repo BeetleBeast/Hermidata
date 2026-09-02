@@ -7,7 +7,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import type { PickedElementData, RuntimeMessage } from "../../shared/types/rss";
+import type { PickedElementData, RuntimeMessage, UserFeedbackData, UserFeedbackResult } from "../../shared/types/rss";
 
 export class EventListener extends RssBuild {
     
@@ -402,17 +402,7 @@ export class EventListener extends RssBuild {
         
         await chrome.tabs.sendMessage<RuntimeMessage>(this.currentTabId, { action: 'getUserFeedback' });
 
-        const result = await new Promise<boolean>((resolve) => this.pendingPick = resolve);
-        /*
-        const result = await customConfirm(`
-            Added ${newTitle.length} alternate title(s) for ${entry.title}\n
-            \n
-            ${newTitle.join('\n')}\n
-            \n
-            Accept?
-            `, { accept: 'OK', reject: 'Cancel' }
-        );
-        */
+        const result = await new Promise<UserFeedbackData | null>((resolve) => this.pendingFeedback = resolve);
 
         if (!result) return;
 
