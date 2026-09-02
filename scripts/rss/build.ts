@@ -5,7 +5,7 @@ import { FeedItem } from "./build/feed";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
-import type { PickedElementData, RuntimeMessage, UserFeedbackData, UserFeedbackResult } from "../shared/types/rss";
+import type { PickedElementData, RuntimeMessage } from "../shared/types/rss";
 
 export abstract class RssBuild {
     protected readonly hermidata: HermidataModel;
@@ -14,8 +14,6 @@ export abstract class RssBuild {
 
     protected pendingPick: ((data: PickedElementData | null) => void) | null = null;
 
-    protected pendingFeedback: ((data: UserFeedbackData | null) => void) | null = null;
-
     constructor(hermidata: HermidataModel, AllHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;
         this.AllHermidata = AllHermidata;
@@ -23,14 +21,12 @@ export abstract class RssBuild {
         // Register exactly once, for the lifetime of the popup.
         chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
             // Handle messages related to element picking and user feedback
-            if (!this.pendingPick || !this.pendingFeedback) return;
+            if (!this.pendingPick) return;
 
             if (msg.action === "elementPicked") this.pendingPick(msg.data); 
             else if (msg.action === "pickingCancelled") this.pendingPick(null);
-            else if (msg.action === "UserFeedbackGiven") this.pendingFeedback(msg.data);
 
             // Clear the pending callbacks after handling the message
-            this.pendingFeedback = null;
             this.pendingPick = null;
         });
     }

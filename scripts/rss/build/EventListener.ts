@@ -7,7 +7,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import type { PickedElementData, RuntimeMessage, UserFeedbackData, UserFeedbackResult } from "../../shared/types/rss";
+import type { PickedElementData } from "../../shared/types/rss";
 
 export class EventListener extends RssBuild {
     
@@ -398,13 +398,6 @@ export class EventListener extends RssBuild {
             }
             this.currentTabId = tab.id;
         }
-
-        
-        await chrome.tabs.sendMessage<RuntimeMessage>(this.currentTabId, { action: 'getUserFeedback' });
-
-        const result = await new Promise<UserFeedbackData | null>((resolve) => this.pendingFeedback = resolve);
-
-        if (!result) return;
 
         // Save to storage
         await saveHermidata(hashItem, entry.toJSON());

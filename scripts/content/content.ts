@@ -14,26 +14,19 @@ feedDetector.addFeedToGlobalMain();
 
 
 let activePicker: ElementPicker | null = null;
+let activeFeedback: PickerFeedbackController | null = null;
 
 chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
     if (msg.action === "startPicking") {
-        // Fresh instance each time — avoids any stale `hovered` state
-        // from a previous pick/cancel leaking into the next one.
-        new PickerFeedbackController()
-        .run(activePicker)
-        .then((result) => {
-            activePicker = null; // controller has already cleaned it up
-            chrome.runtime.sendMessage({ action: "UserFeedbackGiven", data: result ?? "cancelled" });
-        });
+
+        activePicker = new ElementPicker();
+        activePicker.initPicker();
+        activeFeedback = new PickerFeedbackController(activePicker)
+
     }else if (msg.action === "cancelPicking") {
-        activePicker?.forceCancel(); // just calls this.cleanup()
+        activePicker?.forceCancel();
+        activeFeedback?.forceDestroy();
         activePicker = null;
-    } else if (msg.action === "getUserFeedback") {
-        new PickerFeedbackController()
-        .run(activePicker)
-        .then((result) => {
-            activePicker = null; // controller has already cleaned it up
-            chrome.runtime.sendMessage({ action: "UserFeedbackGiven", data: result ?? "cancelled" });
-        });
+        activeFeedback = null;
     }
 });

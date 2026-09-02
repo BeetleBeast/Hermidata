@@ -1,7 +1,7 @@
-import { ElementPicker } from "./picker";
-import type { ElementPickerCallbacks, UserFeedbackData, UserFeedbackMessage as _unused } from "./picker";
+import { ElementPicker, type PickedElementData } from "./picker";
 
-interface PickerFeedbackCallbacks {
+
+export interface PickerFeedbackCallbacks {
     onConfirm: () => void;
     onCancel: () => void;
     onRepick: () => void;
@@ -106,19 +106,15 @@ export class PickerFeedbackView  {
      * @param isFinal true once the user has clicked an element — locks the
      *        text visually and enables Confirm
      */
-    public updateFeedbackWindow(newDynamicText: string, isFinal = false): void {
-        console.log("updateFeedbackWindow", { newDynamicText, isFinal });
+    public updateFeedbackWindow(leadText: PickedElementData["leafTexts"], isFinal = false): void {
         if (!this.textEl || !this.confirmBtn) return;
-        console.log("updateFeedbackWindow", { newDynamicText, isFinal, textEl: this.textEl, confirmBtn: this.confirmBtn });
 
-        this.textEl.textContent = newDynamicText || (isFinal ? "(empty text)" : HOVER_PROMPT);
+        this.textEl.textContent = getMultipleTitles(leadText)?.join("\n") || (isFinal ? "(empty text)" : HOVER_PROMPT);
 
         this.textEl.style.border = isFinal ? "1px solid #2f7d3f" : "1px solid transparent";
-        if (isFinal) {
-            this.textEl.title = "Element selected — text can no longer be changed";
-        } else {
-            this.textEl.removeAttribute("title");
-        }
+
+        if (isFinal) this.textEl.title = "Element selected: text can no longer be changed";
+        else this.textEl.removeAttribute("title");
 
         this.confirmBtn.disabled = !isFinal;
         this.confirmBtn.style.opacity = isFinal ? "1" : "0.5";
@@ -132,96 +128,77 @@ export class PickerFeedbackView  {
         this.confirmBtn = null;
     }
 }
-
-export class PickerFeedback {
-    private readonly view = new PickerFeedbackView();
-    private resolveFn: ((result: UserFeedbackData | null) => void) | null = null;
-
-
-    private readonly onRepick: () => void
-
-    constructor(onRepick: () => void) {
-        this.onRepick = onRepick;
-    }
-
-    public getUserFeedback(): Promise<UserFeedbackData | null> {
-        return new Promise((resolve) => {
-            this.resolveFn = resolve;
-            this.view.createFeedbackWindow({
-                onConfirm: () => this.settle("accepted"),
-                onCancel: () => this.settle("cancelled"),
-                onRepick: () => this.onRepick(),
-            });
-        });
-    }
-
-    public showLiveText(text: string): void {
-        this.view.updateFeedbackWindow(text, false);
-    }
-
-    public showFinalText(text: string): void {
-        this.view.updateFeedbackWindow(text, true);
-    }
-
-    /** Called when picking itself is aborted (e.g. Escape before any click). */
-    public cancel(): void {
-        this.settle("cancelled");
-    }
-
-    private settle(result: UserFeedbackData): void {
-        this.view.destroyFeedbackWindow();
-        const resolve = this.resolveFn;
-        this.resolveFn = null;
-        resolve?.(result);
-    }
-}
-
+/**
+ * Attaches the confirm/cancel/repick UI onto an already-running ElementPicker.
+ * Owns no messaging itself — Confirm/Cancel/Escape all flow through the
+ * picker's own confirmPick()/cancelPick(), which send "elementPicked" /
+ * "pickingCancelled" exactly as before.
+ */
 export class PickerFeedbackController {
-    private picker: ElementPicker | null = null;
-    private feedback: PickerFeedback | null = null;
-    private ownsPicker = false;
+    private readonly view = new PickerFeedbackView();
+    private picker: ElementPicker;
 
-    /**
-     * @param existingPicker the picker already started by a prior
-     *        "startPicking" message, if one is live. If null/undefined,
-     *        a fresh backup instance is created and started here.
-     */
-    public async run(existingPicker?: ElementPicker | null): Promise<UserFeedbackData | null> {
-        this.feedback = new PickerFeedback(() => this.repick());
-        this.attachTo(existingPicker ?? null);
+    constructor(picker: ElementPicker) {
+        this.picker = picker;
+        this.attach();
+    }
 
-        return this.feedback.getUserFeedback().then((result) => {
-            this.picker?.forceCancel();
-            this.picker = null;
-            return result;
+    private attach(): void {
+        this.view.createFeedbackWindow({
+            onConfirm: () => this.picker.confirmPick(),
+            onCancel: () => this.picker.cancelPick(),
+            onRepick: () => this.repick(),
         });
-    }
 
-    private attachTo(existingPicker: ElementPicker | null): void {
-        if (existingPicker) {
-            this.picker = existingPicker;
-            this.ownsPicker = false;
-            this.picker.setCallbacks(this.callbacksFor());
-            // already running — do not call initPicker() again
-        } else {
-            this.picker = new ElementPicker(this.callbacksFor());
-            this.ownsPicker = true;
-            this.picker.initPicker();
-        }
-    }
-
-    private callbacksFor(): ElementPickerCallbacks {
-        return {
-            onHover: (el) => this.feedback?.showLiveText((el.textContent ?? "").trim()),
-            onPick: (data) => this.feedback?.showFinalText(data.text),
-            onCancel: () => this.feedback?.cancel(),
-        };
+        this.picker.setCallbacks({
+            onHover: (el) => this.view.updateFeedbackWindow(this.picker.extractLeafTexts(el), false),
+            onPick: (data) => this.onPick(data),
+            onCancel: () => this.view.destroyFeedbackWindow(), // confirmPick/cancelPick both end here
+        });
     }
 
     private repick(): void {
-        this.feedback?.showLiveText(HOVER_PROMPT);
-        this.picker = new ElementPicker(this.callbacksFor());
-        this.ownsPicker = true;
-        this.picker.initPicker();
+        this.picker.repick();
+        this.view.updateFeedbackWindow([], false); // back to hover-prompt state
     }
+    private onPick(data: PickedElementData): void {
+        this.view.updateFeedbackWindow(data.leafTexts, true);
+        this.picker.setCursor("default");
+    }
+
+    /** For the background's "cancelPicking" teardown path — no messages sent. */
+    public forceDestroy(): void {
+        this.view.destroyFeedbackWindow();
+    }
+}
+
+
+function isConcatenationOfOthers(candidate: string, others: string[]): boolean {
+    let remaining = candidate;
+    let matchedCount = 0;
+
+    for (const other of others) {
+        const idx = remaining.indexOf(other);
+        if (idx === -1) continue;
+        remaining = remaining.slice(idx + other.length);
+        matchedCount++;
+    }
+
+    // Only treat as a "summary" if it's stitched together from 2+ other
+    // leaves in order — a single containment match is more likely a
+    // coincidence (like "New" inside "New Arrivals") than a real duplicate.
+    return matchedCount >= 2;
+}
+
+function dedupeContainerTexts(texts: string[]): string[] {
+    return texts.filter((text, i) => {
+        const others = texts.filter((_, j) => j !== i);
+        return !isConcatenationOfOthers(text, others);
+    });
+}
+
+export function getMultipleTitles(data: PickedElementData["leafTexts"], separator = '\n'): string[] | null {
+
+    const deduped = dedupeContainerTexts(data);
+    return deduped.length > 0 ? deduped : null;
 }
