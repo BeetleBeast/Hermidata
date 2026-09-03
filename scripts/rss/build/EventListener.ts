@@ -13,6 +13,8 @@ export class EventListener extends RssBuild {
     
     private activeSubMenu: HTMLDivElement | null = null;
 
+    private currentTabId: number | null = null;
+
     public async attachEventListeners(): Promise<void> {
         // parents
         const notificationFeed = document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="true"]');
@@ -386,11 +388,20 @@ export class EventListener extends RssBuild {
             );
         }
 
+        // give feedback to user
+        if (!this.currentTabId) {
+            console.warn("No current tab ID found.");
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab.id) {
+                console.warn("No active tab found.");
+                return null;
+            }
+            this.currentTabId = tab.id;
+        }
+
         // Save to storage
         await saveHermidata(hashItem, entry.toJSON());
     }
-
-    private currentTabId: number | null = null;
 
     private async getPickerElement(): Promise<PickedElementData | null> {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

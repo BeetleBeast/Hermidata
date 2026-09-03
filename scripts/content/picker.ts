@@ -3,6 +3,14 @@
 // while a picking session is already active on this page.
 const w = window as unknown as { __elementPickerActive?: boolean };
 
+export interface ElementPickerCallbacks {
+    onHover?: (el: HTMLElement) => void;
+    /** fired once an element is clicked and locked in, awaiting Confirm */
+    onPick?: (data: PickedElementData) => void;
+    /** fired on Escape or Cancel — picker is already cleaned up when this fires */
+    onCancel?: () => void;
+}
+
 interface ElementAttribute {
     name: string;
     value: string;
@@ -13,7 +21,7 @@ interface ChildInfo {
     text: string;
 }
 
-interface PickedElementData {
+export interface PickedElementData {
     tag: string;
     id: string;
     classes: string[];
@@ -39,13 +47,26 @@ interface PickingCancelledMessage {
     action: "pickingCancelled";
 }
 
-interface StartPickingMessage { action: "startPicking"; }
+export interface StartPickingMessage { action: "startPicking"; }
 
-interface CancelPickingMessage { action: "cancelPicking"; }
+export interface CancelPickingMessage { action: "cancelPicking"; }
 
 export type RuntimeMessage = ElementPickedMessage | PickingCancelledMessage | StartPickingMessage | CancelPickingMessage;
 
 export class ElementPicker {
+
+    private callbacks: ElementPickerCallbacks;
+    private locked = false;
+    private lockedData: PickedElementData | null = null;
+
+    constructor(callbacks: ElementPickerCallbacks = {}) {
+        this.callbacks = callbacks;
+    }
+
+    /** Attach/replace callbacks on an already-running picker instance. */
+    public setCallbacks(callbacks: ElementPickerCallbacks): void {
+        this.callbacks = { ...this.callbacks, ...callbacks };
+    }
 
     public initPicker(): void {
         if (w.__elementPickerActive) return;
@@ -53,12 +74,16 @@ export class ElementPicker {
         w.__elementPickerActive = true;
 
 
-        document.body.style.cursor = "crosshair";
+        this.setCursor("crosshair");
         // Capture phase so we intercept before the page's own handlers
         // (stops link navigation, button actions, etc. from firing on pick).
         document.addEventListener("mouseover", this.onMouseOver, true);
         document.addEventListener("click", this.onClick, true);
         document.addEventListener("keydown", this.onKeyDown, true);
+    }
+
+    public setCursor(cursorStyle: string = 'crosshair'): void {
+        document.body.style.cursor = cursorStyle;
     }
 
 
@@ -68,6 +93,34 @@ export class ElementPicker {
 
     public forceCancel(): void {
         this.cleanup();
+    }
+
+    /** Called by the feedback window's Confirm button. */
+    public confirmPick(): void {
+        if (!this.lockedData) return;
+        const data = this.lockedData;
+        this.cleanup();
+        const msg: ElementPickedMessage = { action: "elementPicked", data };
+        chrome.runtime.sendMessage(msg);
+        this.callbacks.onCancel?.(); // reuse as "session over" signal? — see note below
+    }
+
+    /** Called by the feedback window's Cancel button, or internally on Escape. */
+    public cancelPick(): void {
+        this.cleanup();
+        const msg: PickingCancelledMessage = { action: "pickingCancelled" };
+        chrome.runtime.sendMessage(msg);
+        this.callbacks.onCancel?.();
+    }
+
+    /** Called by the feedback window's Repick button. */
+    public repick(): void {
+        if (this.hovered) this.clearOutline(this.hovered);
+        this.hovered = null;
+        this.locked = false;
+        this.lockedData = null;
+        // mouseover/click/keydown listeners are still attached — locked=false
+        // just lets onMouseOver/onClick respond again.
     }
 
     private setOutline(el: HTMLElement): void {
@@ -116,7 +169,7 @@ export class ElementPicker {
         return parts.join(" > ");
     }
 
-    private extractLeafTexts(el: HTMLElement): string[] {
+    public extractLeafTexts(el: HTMLElement): string[] {
         const results: string[] = [];
 
         function walk(node: Element): void {
@@ -167,34 +220,34 @@ export class ElementPicker {
     }
 
     private onMouseOver = (e: MouseEvent): void => {
+        if (this.locked) return;
+
         const target = e.target as HTMLElement;
         if (target === this.hovered) return;
         if (this.hovered) this.clearOutline(this.hovered);
         this.hovered = target;
         this.setOutline(this.hovered);
+        this.callbacks.onHover?.(target);
     };
 
     private onClick = (e: MouseEvent): void => {
+        if (this.locked) return; // ignore clicks after the first one until repick is called
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
 
         const target = e.target as HTMLElement;
-        const data = this.extractData(target);
-        this.cleanup();
-
-        const msg: ElementPickedMessage = { action: "elementPicked", data };
-        chrome.runtime.sendMessage(msg);
+        this.lockedData = this.extractData(target);
+        this.locked = true;
+        
+        this.callbacks.onPick?.(this.lockedData);
     };
 
     private onKeyDown = (e: KeyboardEvent): void => {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        if (e.key === "Escape") {
-            this.cleanup();
-            const msg: PickingCancelledMessage = { action: "pickingCancelled" };
-            chrome.runtime.sendMessage(msg);
-        }
+
+        if (e.key === "Escape") this.cancelPick();
     };
 }
