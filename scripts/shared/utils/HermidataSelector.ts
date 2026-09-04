@@ -264,7 +264,17 @@ export class HermidataModel implements Hermidata {
     removeAltSources(source: string): void;
     removeAltSources(source: string | string[]): void {
         const sourcesToRemove = Array.isArray(source) ? source : [source];
-        this.meta.altSources = this.meta.altSources.filter(src => !sourcesToRemove.includes(src));
+        const sourcesToRemoveSet = Array.from(new Set(sourcesToRemove));
+
+        this.meta.altSources = this.meta.altSources.filter(src => !sourcesToRemoveSet.includes(src));
+    }
+    removeAltTitles(titles: string[]): void;
+    removeAltTitles(title: string): void;
+    removeAltTitles(title: string | string[]): void {
+        const titlesToRemove = Array.isArray(title) ? title : [title];
+        const titlesToRemoveSet = Array.from(new Set(titlesToRemove));
+        
+        this.meta.altTitles = this.meta.altTitles.filter(title => !titlesToRemoveSet.includes(title));
     }
     // --actions --
     ShiftHistory(): void;

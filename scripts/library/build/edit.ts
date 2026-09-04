@@ -309,24 +309,60 @@ export class EditDetail extends LibraryBuilder {
     }
     private async updateInformation(mode: 'cancel' | 'save') {
         const title = document.querySelector<HTMLDivElement>('#hermidata-title');
-
         const novelType = document.querySelector<HTMLDivElement>('#hermidata-novelType');
         const contentRating = document.querySelector<HTMLDivElement>('#hermidata-contentRating');
         const releaseDate = document.querySelector<HTMLDivElement>('#hermidata-releaseDate');
         const novelStatus = document.querySelector<HTMLDivElement>('#hermidata-novelStatus');
-        
         const starRating = document.querySelector<HTMLDivElement>('#hermidata-starRating');
-
         // genres + Demographics already handled in changeGroup2BackToDiv()
-
         const sources = document.querySelector<HTMLDivElement>('#hermidata-sources');
         const author = document.querySelector<HTMLDivElement>('#hermidata-author');
-
         const notes = document.querySelector<HTMLDivElement>('#hermidata-notes-content');
 
-        if (!this.imgElement || !title || !novelType || !contentRating || !releaseDate || !novelStatus || !starRating || !sources || !author || !notes) throw new Error('Information not found');
-
         // image
+        await this.updateImage(mode);
+
+        // Title
+        this.updateTitle(mode, title);
+
+        // Alt. Titles
+        this.updateAltTitles(mode);
+
+        // Novel Type
+        this.updateNovelType(mode, novelType);
+
+        await this.forceKeyUpdate();
+
+        // Content Rating
+        this.updateContentRating(mode, contentRating);
+
+        // Release Date
+        this.updateReleaseDate(mode, releaseDate);
+
+        // Novel Status
+        this.updateNovelStatus(mode, novelStatus);
+
+        // Star Rating
+        const canSaveStarRating = this.updateStarRating(mode, starRating);
+
+        // Author
+        const canSaveAuthor = this.updateAuthor(mode, author);
+
+        // Alt. Sources
+        const canSaveSources = this.updateAltSources(mode, sources);
+
+        // markers
+        if (mode === 'save') this.saveMarkers();
+
+        // Notes
+        this.updateNotes(mode, notes);
+
+        // update hermidata
+        await this.changeHermidata(this.hermidata.toJSON());
+    }
+    private async updateImage(mode: 'cancel' | 'save'): Promise<void> {
+        if (!this.imgElement) return;
+
         const image = await this.hermidata.getDisplayImageUrl();
         if (mode == "save" && this.temporaryBlob) {
             // update back-end
@@ -341,65 +377,89 @@ export class EditDetail extends LibraryBuilder {
             if (this.imgElement instanceof HTMLImageElement) this.calculateImageRatio(this.imgElement);
         }
         else if (mode == "cancel") this.setImageValue(this.imgElement, image);
+    }
+    private updateTitle(mode: 'cancel' | 'save', title: HTMLElement | null | undefined): void {
+        if (!title) return;
 
-        // Title
         if (mode === 'save') this.hermidata.title = title?.textContent ?? this.hermidata.title 
-        else this.resetContent(title, this.hermidata.title)
-
-        // Alt. Titles
-        if (mode === 'save' && this.newAltTitles) this.hermidata.SetMultipleAltTitles(this.newAltTitles);
+        else this.resetContent(title, this.hermidata.title);
+    }
+    private updateAltTitles(mode: 'cancel' | 'save'): void {
+        if (mode === 'save' && this.newAltTitles) {
+            this.hermidata.SetMultipleAltTitles(this.newAltTitles); // add new alt titles to hermidata
+            this.removeAltTitlesNotInInput(this.newAltTitles); // remove alt titles that are not in the input
+        }
         // cancel content already handled in changeAltTitleBackToDiv()
+    }
+    private updateNovelType(mode: 'cancel' | 'save', novelType: HTMLElement | null | undefined): void {
+        if (!novelType) return;
 
-        // Novel Type
         if (mode === 'save') this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType;
         else this.resetContent(novelType, this.hermidata.novelType);
+    }
+    private updateContentRating(mode: 'cancel' | 'save', contentRating: HTMLElement | null | undefined): void {
+        if (!contentRating) return;
 
-        await this.forceKeyUpdate();
-
-        // Content Rating
         const contentRatingValue = contentRating?.textContent as ContentRating ?? this.hermidata.meta.contentRating;
+
         if (mode === 'save') this.hermidata.meta.contentRating = contentRatingValue;
         else this.resetContent(contentRating, this.hermidata.meta.contentRating);
+    }
+    private updateReleaseDate(mode: 'cancel' | 'save', releaseDate: HTMLElement | null | undefined): void {
+        if (!releaseDate) return;
 
-        // Release Date
         const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added; // both ISO
         const releaseDateLocale = this.localToISO(releaseDate?.textContent) ?? releaseDateValue; // element content is locale but not the latter
+
         if (mode === 'save') this.hermidata.meta.originalRelease = releaseDateLocale;
         else this.resetContent(releaseDate, this.isoToLocal(releaseDateValue));
+    }
+    private updateNovelStatus(mode: 'cancel' | 'save', novelStatus: HTMLElement | null | undefined): void {
+        if (!novelStatus) return;
 
-        // Novel Status
         if (mode === 'save') this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus;
         else this.resetContent(novelStatus, this.hermidata.meta.novelStatus);
+    }
+    private updateStarRating(mode: 'cancel' | 'save', starRating: HTMLElement | null | undefined): boolean {
+        if (!starRating) return false;
 
-        // Star Rating
         if (mode === 'save') this.hermidata.meta.starRating = Number(starRating?.textContent) ?? this.hermidata.meta.starRating;
         else this.resetContent(starRating, String(this.hermidata.meta.starRating));
-        const canSaveStarRating = this.saveInput(starRating, String(this.hermidata.meta.starRating), '0');
 
-        // Author
+        return this.saveInput(starRating, String(this.hermidata.meta.starRating), '0');
+    }
+    private updateAuthor(mode: 'cancel' | 'save', author: HTMLElement | null | undefined): boolean {
+        if (!author) return false;
+
         if (mode === 'save') this.hermidata.meta.author = author.dataset.empty === 'false' ? author.textContent : undefined; // author can be undefined
         else this.resetContent(author, this.hermidata.meta.author ?? '--None--');
-        const canSaveAuthor = this.saveInput(author, this.hermidata.meta.author, '--None--');
 
-        // Alt. Sources
+        return this.saveInput(author, this.hermidata.meta.author, '--None--');
+    }
+    private updateAltSources(mode: 'cancel' | 'save', sources: HTMLElement | null | undefined): boolean {
+        if (!sources) return false;
+
         const altSourcesSingleString = this.hermidata.GetAltSources().join(', ');
         if (mode === 'save') {
-            // add new alt sources to hermidata
-            this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString)
-            // remove alt sources that are not in the input
-            this.removeAltSourcesNotInInput(sources?.textContent);
+            this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString) // add new alt sources to hermidata
+            this.removeAltSourcesNotInInput(sources?.textContent); // remove alt sources that are not in the input
         } else this.resetContent(sources, altSourcesSingleString);
-        const canSaveSources = this.saveInput(sources, altSourcesSingleString, this.hermidata.source);
 
-        // markers
-        if (mode === 'save') this.saveMarkers();
+        return this.saveInput(sources, altSourcesSingleString, this.hermidata.source);
+    }
+    private updateNotes(mode: 'cancel' | 'save', notes: HTMLElement | null | undefined): void {
+        if (!notes) return;
 
-        // Notes
         if ( mode === 'save') this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes;
         else this.resetContent(notes, this.hermidata.meta.notes);
+    }
 
+    private removeAltTitlesNotInInput(inputTextContent: string[]) {
+        const currentAltTitles = this.hermidata.meta.altTitles ?? [];
 
-        await this.changeHermidata(this.hermidata.toJSON());
+        const titlesToRemove = currentAltTitles.filter(title => !inputTextContent.includes(title));
+
+        this.hermidata.removeAltTitles(titlesToRemove);
 
     }
     private removeAltSourcesNotInInput(inputTextContent: string | null | undefined) {
