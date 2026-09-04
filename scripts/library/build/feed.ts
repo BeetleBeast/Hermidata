@@ -1,9 +1,9 @@
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { openLink } from "../../shared/utils/StringOutput";
-import { RSSPageBuilder } from "../build";
+import { LibraryBuilder } from "../build";
 
-export class feed extends RSSPageBuilder {
+export class feed extends LibraryBuilder {
 
     private readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('#library-entries-container');
 

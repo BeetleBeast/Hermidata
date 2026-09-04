@@ -1,9 +1,9 @@
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import type { Hermidata, Settings, MergeAnalysis } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { RSSPageBuilder } from "../build";
+import { LibraryBuilder } from "../build";
 
-export class HermidataMerge extends RSSPageBuilder {
+export class HermidataMerge extends LibraryBuilder {
 
     
 

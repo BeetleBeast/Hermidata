@@ -4,10 +4,10 @@ import { getAllTags } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { openLink, returnHashedTitle } from "../../shared/utils/StringOutput";
-import { PageDetailBuilder, RSSPageBuilder } from "../build";
+import { PageDetailBuilder, LibraryBuilder } from "../build";
 import { Tags } from "./tags";
 
-export class EditDetail extends RSSPageBuilder {
+export class EditDetail extends LibraryBuilder {
 
     private readonly hermidata: HermidataModel = this.getCurrentHermidata();
 

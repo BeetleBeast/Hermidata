@@ -4,7 +4,7 @@ import type { Hermidata, Settings } from "../shared/types";
 import type { OnlyPlainHermidata } from "../shared/types/popup";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 
-export abstract class RSSPageBuilder {
+export abstract class LibraryBuilder {
 
     protected AllHermidata: Record<string, Hermidata>;
 
