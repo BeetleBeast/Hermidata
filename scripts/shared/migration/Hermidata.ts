@@ -516,7 +516,7 @@ export class HermidataMigration {
         return reconciled;
     }
     private static recomputeHermidataId(record: Hermidata): string {
-        return returnHashedTitle(record.title, record.novelType, record.source);
+        return returnHashedTitle(record.title, record.novelType, record?.chapter?.bookmarks?.[record.chapter?.bookmarkInUse]?.url);
     }
 
     private static resolveBookmarkInUse( keep: Hermidata, discard: Hermidata, mergedBookmarks: Record<string, Bookmark> ): string {

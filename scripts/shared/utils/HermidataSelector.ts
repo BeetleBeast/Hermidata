@@ -259,6 +259,13 @@ export class HermidataModel implements Hermidata {
         const value = (Array.isArray(tags)) ? tags : tags.split(',').map(tag => tag.trim()).filter(Boolean);
         this.meta.tags = value;
     }
+    // -- remove --
+    removeAltSources(sources: string[]): void;
+    removeAltSources(source: string): void;
+    removeAltSources(source: string | string[]): void {
+        const sourcesToRemove = Array.isArray(source) ? source : [source];
+        this.meta.altSources = this.meta.altSources.filter(src => !sourcesToRemove.includes(src));
+    }
     // --actions --
     ShiftHistory(): void;
     ShiftHistory(bookmarkInUseId: string): void;

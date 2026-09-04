@@ -158,9 +158,9 @@ export class EditDetail extends LibraryBuilder {
 
         // delete button
         // set label on click of delete panel button
-        this.deleteOpenPanelBtn?.addEventListener('click', this.setLabelOfDeletePanel);
+        this.setLabelOfDeletePanel();
         // delete hermidata on click of delete button
-        this.deleteConfirmationBtn?.addEventListener('click', this.deleteHermidata);
+        this.deleteConfirmationBtn?.addEventListener('click', async () => await this.deleteHermidata());
         // close delete panel on click of cancel button
         this.deleteCancelBtn?.addEventListener('click', this.closeDeletePanel)
     }
@@ -173,7 +173,7 @@ export class EditDetail extends LibraryBuilder {
             this.deleteOpenPanelBtn.style.display = 'none';
         }
     }
-    private closeDeletePanel() {
+    private closeDeletePanel = () => {
         const mergePanel = document.querySelector<HTMLDivElement>('#delete-dialog');
         if (!mergePanel) return;
         
@@ -383,8 +383,12 @@ export class EditDetail extends LibraryBuilder {
 
         // Alt. Sources
         const altSourcesSingleString = this.hermidata.GetAltSources().join(', ');
-        if (mode === 'save') this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString)
-        else this.resetContent(sources, altSourcesSingleString);
+        if (mode === 'save') {
+            // add new alt sources to hermidata
+            this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString)
+            // remove alt sources that are not in the input
+            this.removeAltSourcesNotInInput(sources?.textContent);
+        } else this.resetContent(sources, altSourcesSingleString);
         const canSaveSources = this.saveInput(sources, altSourcesSingleString, this.hermidata.source);
 
         // markers
@@ -397,6 +401,15 @@ export class EditDetail extends LibraryBuilder {
 
         await this.changeHermidata(this.hermidata.toJSON());
 
+    }
+    private removeAltSourcesNotInInput(inputTextContent: string | null | undefined) {
+        if (!inputTextContent) return;
+
+        const inputSources = inputTextContent?.split(',').map(s => s.trim()) ?? [];
+        const currentSources = this.hermidata.GetAltSources();
+        const sourcesToRemove = currentSources.filter(s => !inputSources.includes(s));
+
+        this.hermidata.removeAltSources(sourcesToRemove);
     }
     private saveInput(element: HTMLElement, content: string | undefined, backup?: string): boolean {
         // if input is empty, set it to a backup value OR reject submission
