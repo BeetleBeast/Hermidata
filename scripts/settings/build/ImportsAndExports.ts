@@ -702,7 +702,7 @@ export class ImportsAndExports extends Build {
             const value: [AnyNovelType, Hermidata] = [(NovelTypeChanger.value as AnyNovelType), this.finalAllHermidatas[hermidata.id]];
             // save immediately and remove from list to review
             const newHermidataList = await AutoSetAllHermidata.setHermidataType(value);
-            await this.setHermidata(newHermidataList);
+            await this.setHermidata(newHermidataList.id, newHermidataList);
 
             // remove from list to review
             this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);

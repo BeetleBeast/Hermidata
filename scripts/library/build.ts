@@ -15,12 +15,10 @@ export abstract class LibraryBuilder {
     protected saveHermidata(id: string, data: OnlyPlainHermidata): Promise<void> {
         return this.dbAccess.setHermidata(id, data);
     }
-    /** @implements `changeHermidata` instead of `updateHermidata` for backwards compatibility */
-    protected changeHermidata(entry: OnlyPlainHermidata): Promise<void> {
+    protected updateHermidata(entry: OnlyPlainHermidata): Promise<void> {
         return this.dbAccess.updateHermidata(entry);
     }
-    /**@implements `updateHermidata` instead of `changeHermidata` for backwards compatibility */
-    protected updateHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
+    protected changeHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
         return this.dbAccess.changeHermidata(oldKey, newKey, entry);
     }
     protected removeHermidata(id: string): Promise<void> {

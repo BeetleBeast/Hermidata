@@ -358,7 +358,7 @@ export class EditDetail extends LibraryBuilder {
         this.updateNotes(mode, notes);
 
         // update hermidata
-        await this.changeHermidata(this.hermidata.toJSON());
+        await this.updateHermidata(this.hermidata.toJSON());
     }
     private async updateImage(mode: 'cancel' | 'save'): Promise<void> {
         if (!this.imgElement) return;
@@ -491,7 +491,7 @@ export class EditDetail extends LibraryBuilder {
         
         this.hermidata.id = newKey;
 
-        await this.updateHermidata(oldKey, newKey, this.hermidata.toJSON());
+        await this.changeHermidata(oldKey, newKey, this.hermidata.toJSON());
     }
     private saveMarkers() {
         const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
