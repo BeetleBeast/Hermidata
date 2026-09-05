@@ -273,22 +273,21 @@ class HermidataController {
     }
     /** merge novel type if changed */
     private async updateNovelType(): Promise<boolean> {
-        // 0. check if the novel type has changed
+        // 1. check if the novel type has changed
         const novelTypeChanged = this.past.pastHermidata ? this.past.pastHermidata?.novelType !== this.hermidata.novelType : false;
 
-        // 1. If the novel type has changed, prompt the user to confirm the merge
+        // 2. If the novel type has *not* changed, return true (no merge needed)
         if (!novelTypeChanged || !this.past.pastHermidata) return true;
         
-        // 2. If the user confirms the merge, merge the two hermidatas
+        // 3. If the novel type has changed, generate a new id
         const newId = returnHashedTitle(this.hermidata.title, this.hermidata.novelType);
         this.hermidata.id = newId;
-
+        
+        // 4. If the user confirms the merge, merge the two hermidatas and return the new hermidata, else return false
         const newHermidata = await this.mergeNovelType(this.hermidata, this.past.pastHermidata)
 
-        if (!newHermidata) {
-            console.error('new Hermidata has different novel type and user declined to merge');
-            return false;
-        }
+        if (!newHermidata) return false;
+        
         this.hermidata = new HermidataModel(newHermidata);
         return true;
     }
@@ -299,10 +298,21 @@ class HermidataController {
             <br>
             Are you sure you want to change it?
         `;
+        // 1. let user confirm the merge
         const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
-        if (!confirmed) return false;
+
+        if (!confirmed) {
+            console.error('new Hermidata has different novel type and user declined to merge');
+            return false;
+        }
+        // 2. merge
         const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
-        if (merged instanceof Error) return false;
+
+        if (merged instanceof Error) {
+            console.error('failed to merge two hermidatas', merged);
+            return false;
+        }
+        // 3. return
         console.log(`Merged "${older.title}" with "${newer.title}"`);
         return merged;
     }
