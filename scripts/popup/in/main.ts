@@ -1,6 +1,6 @@
 
 import { ext } from '../../shared/utils/BrowserCompat';
-import { getChapterFromTitle } from '../../shared/utils/StringOutput';
+import { getChapterFromTitle, returnHashedTitle } from '../../shared/utils/StringOutput';
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
@@ -13,6 +13,7 @@ import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
+import type { OnlyPlainHermidata } from '../../shared/types/popup';
 
 
 const stateConfig = {
@@ -272,12 +273,21 @@ class HermidataController {
     }
     /** merge novel type if changed */
     private async updateNovelType(): Promise<boolean> {
-        const newNovelType = this.pastHermidata ? this.pastHermidata?.novelType !== this.hermidata.novelType : false;
-        const newHermidata = newNovelType && this.past.pastHermidata ? await this.mergeNovelType(this.hermidata, this.past.pastHermidata) : this.hermidata;
-        if (!newHermidata) {
-            console.error('new Hermidata has different novel type and user declined to merge');
-            return false;
-        }
+        // 1. check if the novel type has changed
+        const novelTypeChanged = this.past.pastHermidata ? this.past.pastHermidata?.novelType !== this.hermidata.novelType : false;
+
+        // 2. If the novel type has *not* changed, return true (no merge needed)
+        if (!novelTypeChanged || !this.past.pastHermidata) return true;
+        
+        // 3. If the novel type has changed, generate a new id
+        const newId = returnHashedTitle(this.hermidata.title, this.hermidata.novelType);
+        this.hermidata.id = newId;
+        
+        // 4. If the user confirms the merge, merge the two hermidatas and return the new hermidata, else return false
+        const newHermidata = await this.mergeNovelType(this.hermidata, this.past.pastHermidata)
+
+        if (!newHermidata) return false;
+        
         this.hermidata = new HermidataModel(newHermidata);
         return true;
     }
@@ -288,22 +298,33 @@ class HermidataController {
             <br>
             Are you sure you want to change it?
         `;
+        // 1. let user confirm the merge
         const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
-        if (!confirmed) return false;
+
+        if (!confirmed) {
+            console.error('new Hermidata has different novel type and user declined to merge');
+            return false;
+        }
+        // 2. merge
         const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
-        if (merged instanceof Error) return false;
+
+        if (merged instanceof Error) {
+            console.error('failed to merge two hermidatas', merged);
+            return false;
+        }
+        // 3. return
         console.log(`Merged "${older.title}" with "${newer.title}"`);
         return merged;
     }
-    private async saveBookmarkOrAndSheet(allowenced: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }): Promise<boolean> {
+    private async saveBookmarkOrAndSheet(allowed: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }): Promise<boolean> {
         // save to google sheet & bookmark/replace bookmark
-        if (allowenced.allowedSendBookmark || allowenced.allowedSendSHeet || (allowenced.allowedSendBookmark && allowenced.allowedSendSHeet)) {
-            const saved = await ext.runtime.sendMessage({
+        if (allowed.allowedSendBookmark || allowed.allowedSendSHeet || (allowed.allowedSendBookmark && allowed.allowedSendSHeet)) {
+            const saved = await ext.runtime.sendMessage<{type: "SAVE_NOVEL", data: OnlyPlainHermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }}>({
                 type: "SAVE_NOVEL",
-                data: this.hermidata,
+                data: this.hermidata.toJSON(),
                 args: { 
-                    allowedSendSHeet: allowenced.allowedSendSHeet, 
-                    allowedSendBookmark: allowenced.allowedSendBookmark
+                    allowedSendSHeet: allowed.allowedSendSHeet, 
+                    allowedSendBookmark: allowed.allowedSendBookmark
                 },
             }) as boolean;
             return saved

@@ -1,6 +1,6 @@
 import type { HermidataDateType } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
-import { RSSPageBuilder } from "../build";
+import { LibraryBuilder } from "../build";
 
 export type AllSortsType = BasicSortsType | ReverseSortsType;
 
@@ -14,7 +14,7 @@ export type BasicSortsType = "Alphabetical"
 export type ReverseSortsType = `Reverse-${BasicSortsType}`;
 
 
-export abstract class Sort extends RSSPageBuilder {
+export abstract class Sort extends LibraryBuilder {
 
 
     protected amountOfYearBuckets: number = 0;

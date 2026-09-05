@@ -2,9 +2,9 @@ import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { findByTitleOrAlt, openLink } from "../../shared/utils/StringOutput";
-import { PageDetailBuilder, RSSPageBuilder } from "../build";
+import { PageDetailBuilder, LibraryBuilder } from "../build";
 
-export class Detail extends RSSPageBuilder {
+export class Detail extends LibraryBuilder {
 
 
     private readonly hermidata: HermidataModel = this.getCurrentHermidata();

@@ -42,7 +42,7 @@ export async function checkSyncQuota(): Promise<void> {
     console.group('[Sync] Current usage');
     
     console.log(`[Sync] Used ${used_Items} of ${max_items} items (${Math.round(used_Items / max_items * 100)}%)`);
-    console.log(`[Sync] Used ${used_bytes} of ${max_bytes}bytes (${Math.round( used_bytes / max_bytes * 100)}%)`);
+    console.log(`[Sync] Used ${used_bytes} of ${max_bytes} bytes (${Math.round( used_bytes / max_bytes * 100)}%)`);
     console.log(`[Sync] Used ${used_bytes_per_item} of ${max_bytes_per_item} bytes per item (${Math.round( used_bytes_per_item / max_bytes_per_item * 100)}%)`);
     console.log(`[Sync] Used ${used_write_operations} of ${max_write_operations} write operations per hour (${Math.round( used_write_operations / max_write_operations * 100)}%)`);
     // 4. warn if close to limit
