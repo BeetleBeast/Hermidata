@@ -4,6 +4,7 @@ import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement } from "../../shared/utils/Selection";
 import { Sort } from "./filter";
+import { StarRangeFilter } from "./starRating";
 
 export class filter extends Sort {
 
@@ -91,9 +92,8 @@ export class filter extends Sort {
 
         container.innerHTML = '';
 
-        const starRatingCheckbox = this.buildStarRatingCheckbox(0,10);
-
-        container.append(starRatingCheckbox);
+        // const starRatingCheckbox = this.buildStarRatingCheckbox(0,10);
+        new StarRangeFilter(container);
     }
     private setContentRatingFilter() {
         const container = this.contentRatingDialog;
