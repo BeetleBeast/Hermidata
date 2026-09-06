@@ -19,41 +19,74 @@ const ITEM_LAYOUT = {
     sides: {
         defaultSize: 8,
     },
-    exlamation: {
+    exclamation: {
         leftPadding: 5,
     }
 } as const;
 
-const DEBUG = false;
+interface Measurement {
+    li: HTMLElement;
+    svg: SVGElement;
+    liWidth: number;
+    lineStartXps: number;
+    halfLineBoundary: number;
+    liRectWidth: number;
+}
 
-export function positionDiamond(li: HTMLElement): void {
-    // Derived constant — left boundary is always image paddingLeft + width + paddingRight
+export function positionDiamondBatch(items: HTMLElement[]): void {
     const LEFT_BOUNDARY = ITEM_LAYOUT.image.paddingLeft + ITEM_LAYOUT.image.width + ITEM_LAYOUT.image.paddingRight;
 
-    // left side diamond
+    const measurements: Measurement[] = [];
+
+    // read phase
+    for (const li of items) {
+        const measurement = getMeasurement(li);
+        if (!measurement) continue;
+        measurements.push(measurement);
+    }
+
+    // write phase
+    for (const { svg, lineStartXps, halfLineBoundary, liRectWidth } of measurements) {
+        const rightBoundaryDiamond = lineStartXps + halfLineBoundary;
+
+        // setRightDiamond, inlined as a pure write
+        svg.querySelector<SVGGElement>('.diamond-group-r')
+        ?.setAttribute('transform', `translate(${liRectWidth}, 0)`);
+
+        // setRSSLink, inlined as a pure write
+        setRSSLinkWriteOnly(svg, { left: LEFT_BOUNDARY, right: rightBoundaryDiamond });
+    }
+}
+
+function setRSSLinkWriteOnly(svg: SVGElement, boundaries: { left: number; right: number }): void {
+    const availableWidth = boundaries.right - boundaries.left;
+    const centerX = boundaries.left + availableWidth / 2;
+    const size = Math.max(
+        ITEM_LAYOUT.diamond.minSize,
+        Math.min(ITEM_LAYOUT.diamond.maxSize, availableWidth / ITEM_LAYOUT.diamond.sizeRatioDivisor)
+    );
+
+    svg.querySelector<SVGGElement>('.diamond-group-line')?.setAttribute('transform', `translate(${centerX}, ${ITEM_LAYOUT.diamond.centerY})`);
+    svg.querySelector<SVGPolygonElement>('.line-diamond')?.setAttribute('points', diamondCoord(size).positionLeft);
+}
+function getMeasurement(li: HTMLElement): Measurement | false {
     const svg = li.querySelector<SVGElement>('.hermidata-item-svg');
     const liWidth = li.offsetWidth;
-    if (!svg || liWidth === 0) return;
+    if (!svg || liWidth === 0) return false;
 
-    
     const lineBend = svg.querySelector<SVGLineElement>('.line-top-left-bend');
     const lineStartX = lineBend?.getAttribute('x1');
-    if (!lineStartX) return;
+    if (!lineStartX) return false;
 
-    
     const lineStartXps = li.clientWidth / parseFloat(lineStartX.replace('%', ''));
     const lineBendRect = lineBend?.getBoundingClientRect();
-    if (!lineBendRect?.width || !lineBendRect.height) return;
+    if (!lineBendRect?.width || !lineBendRect.height) return false;
 
-    const HalfLineBoundary =  lineBendRect.width / 2 || Math.sqrt(lineBendRect.height **2 + lineBendRect.width **2);
+    const halfLineBoundary = lineBendRect.width / 2 || Math.sqrt(lineBendRect.height ** 2 + lineBendRect.width ** 2);
+    const liRect = li.getBoundingClientRect();
+    const liRectWidth = liRect.right - liRect.left;
 
-    const rightBoundaryDiamond = lineStartXps + HalfLineBoundary;
-
-    // set-up the right diamond position
-    setRightDiamond(li, svg);
-    
-    // set-up the RSS-link indicator size and position
-    setRSSLink(svg, {left: LEFT_BOUNDARY, right: rightBoundaryDiamond});
+    return { li, svg, liWidth, lineStartXps, halfLineBoundary, liRectWidth };
 }
 // needs to be set after sort
 export function updatePolygons(): void {
@@ -68,7 +101,7 @@ export function updatePolygons(): void {
         const updates = Array.from(items, (item, index) =>({
             item,
             isFirst: index === 0,
-            exclamationPosition: getExlamationPosition(item),
+            exclamationPosition: getExclamationPosition(item),
         }));
 
 
@@ -97,71 +130,24 @@ export function updatePolygons(): void {
         
     }, 10);
 }
-function getExlamationPosition(item: HTMLElement): number {
+function getExclamationPosition(item: HTMLElement): number {
     const itemRect = item.getBoundingClientRect();
     const chapter = item.querySelector<HTMLElement>('.hermidata-item-chapter');
     const chapterRect = chapter?.getBoundingClientRect();
-    const chapterLeft = chapter ? window.getComputedStyle(chapter).left : null;
 
-    if (!chapterLeft || !chapterRect) {
-        return itemRect.width * 0.6 + ITEM_LAYOUT.exlamation.leftPadding;
+    if (!chapterRect) {
+        return itemRect.width * 0.6 + ITEM_LAYOUT.exclamation.leftPadding;
     }
 
-    // TEMP fix the temparary offset
-    const basicWidth = Number.parseFloat(chapterLeft) + chapterRect.width - 50; // 50 is an offset
-    return basicWidth + ITEM_LAYOUT.exlamation.leftPadding;
+    // chapterRect.left and itemRect.left are both viewport-relative,
+    // so their difference is chapter's offset from item's left edge —
+    // equivalent to computed `left` in px, without the getComputedStyle cost.
+    const chapterLeft = chapterRect.left - itemRect.left;
+
+    // TEMP fix the temporary offset
+    const basicWidth = chapterLeft + chapterRect.width - 50; // 50 is an offset
+    return basicWidth + ITEM_LAYOUT.exclamation.leftPadding;
 }
-function setRightDiamond(li: HTMLElement, svg: SVGElement): void {
-    const liRect = li.getBoundingClientRect();
-    const liWidth = liRect.right - liRect.left;
-    // Move the diamond group to the right position
-    svg.querySelector<SVGGElement>('.diamond-group-r')?.setAttribute('transform', `translate(${liWidth}, 0)`);
-}
-function setRSSLink(svg: SVGElement, boundaries: { left: number, right: number }): void {
-    // Available space for the diamond
-    const availableWidth = boundaries.right - boundaries.left;
-    
-    const centerX = boundaries.left + availableWidth / 2;
-
-    const size = Math.max(
-        ITEM_LAYOUT.diamond.minSize, 
-        Math.min(ITEM_LAYOUT.diamond.maxSize, 
-        availableWidth / ITEM_LAYOUT.diamond.sizeRatioDivisor 
-    ));
-
-
-    // Update diamond group position
-    svg.querySelector<SVGGElement>('.diamond-group-line')?.setAttribute('transform', `translate(${centerX}, ${ITEM_LAYOUT.diamond.centerY})`);
-
-    // Update diamond points relative to 0,0 inside the group
-    svg.querySelector<SVGPolygonElement>('.line-diamond')?.setAttribute('points', diamondCoord(size).positionLeft);
-
-    if (DEBUG) drawDebugLines(svg, boundaries.left, boundaries.right);
-}
-function drawDebugLines(svg: SVGElement, leftBoundaryDiamond: number, rightBoundaryDiamond: number): void {
-    // Draw debug lines for boundaries
-    const existingLeftLine = svg.querySelector('.debug-left-line');
-    const existingRightLine = svg.querySelector('.debug-right-line');
-    if (!existingLeftLine) {
-        const leftLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        leftLine.setAttribute('class', 'debug-left-line hermidata-item-lines');
-        leftLine.setAttribute('x1', String(leftBoundaryDiamond));
-        leftLine.setAttribute('y1', '0');
-        leftLine.setAttribute('x2', String(leftBoundaryDiamond));
-        leftLine.setAttribute('y2', '100%');
-        svg.appendChild(leftLine);
-    }
-    if (!existingRightLine) {
-        const rightLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        rightLine.setAttribute('class', 'debug-right-line hermidata-item-lines');
-        rightLine.setAttribute('x1', String(rightBoundaryDiamond));
-        rightLine.setAttribute('y1', '0');
-        rightLine.setAttribute('x2', String(rightBoundaryDiamond));
-        rightLine.setAttribute('y2', '100%');
-        svg.appendChild(rightLine);
-    }
-}
-
 function triangleCoord(distanceToPoints: number = ITEM_LAYOUT.sides.defaultSize) {
 
     let x1 = 0, y1 = 0;
