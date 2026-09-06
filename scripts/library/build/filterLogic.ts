@@ -11,6 +11,12 @@ export type Filters = {
     exclude: Record<string, string[]>;
     sort: AllSortsType;
 }
+export type Query = {
+    title: string;
+    author: string;
+    tags: string;
+    chapter: string;
+}
 export type FilterName = {
     novelType: string;
     readStatus: string;
@@ -51,18 +57,18 @@ export class FilterLogic extends Sort {
     private selectedIndex: number = -1;
 
 
-    public build(): void {
+    public async build(): Promise<void> {
         if (!this.libraryEntriesContainer || !this.searchInput || !this.autocompleteContainer) {
             throw new Error('One or more required elements not found');
         }
 
-        this.generalFilterOptionLogic(this.libraryEntriesContainer);
+        await this.generalFilterOptionLogic(this.libraryEntriesContainer);
 
         // on tag search inclusion mode change, update filters
         this.tagSearchMode.forEach(mode => mode?.addEventListener('click', async () => {
             const filters = await getLastLibraryFilters();
             if (!filters) return;
-            this.applyFilterToEntries(filters);
+            this.applyFiltersSortAndSearchToEntries(filters);
         }));
 
         // Hermidata  bar
@@ -83,11 +89,29 @@ export class FilterLogic extends Sort {
             this.updateHighlightedSuggestion(array, this.selectedIndex);
         });
 
-        this.filterReset?.addEventListener('click', () => {
-            this.resetFilters();
+        this.filterReset?.addEventListener('click', async () => {
+            await this.resetFilters();
         });
 
         this.countVisibleEntries();
+    }
+    private filterInputValues() {
+        if (!this.searchInput || !this.tagsSearchInput || !this.AuthorSearchInput || !this.ChapterCompletionFilter) return;
+
+        this.filterEntries(this.searchInput.value, 'title');
+        this.filterEntries(this.AuthorSearchInput.value, 'author');
+        this.filterEntries(this.ChapterCompletionFilter.value, 'chapter');
+        this.filterTags(this.tagsSearchInput.value); // tags
+    }
+
+    private hasAnyQueryParams(): boolean {
+        const query: Partial<Query> = {
+            title: this.searchInput?.value,
+            author: this.AuthorSearchInput?.value,
+            tags: this.tagsSearchInput?.value,
+            chapter: this.ChapterCompletionFilter?.value,
+        }
+        return Object.values(query).some(val => val);
     }
     protected reload(): void {
         throw new Error("Method not implemented.");
@@ -112,7 +136,7 @@ export class FilterLogic extends Sort {
         return count;
     }
 
-    private resetFilters() {
+    private async resetFilters() {
         // Reset all checkboxes
         const checkboxes = document.querySelectorAll<HTMLDivElement>(".custom-checkbox");
         for (const cb of checkboxes) {
@@ -123,8 +147,7 @@ export class FilterLogic extends Sort {
             exclude: {},
             sort: 'Alphabetical'
         };
-        this.applyFilterToEntries(filters);
-        this.applySortToEntries(filters.sort);
+        this.applyFiltersSortAndSearchToEntries(filters);
         
         // reset search input
         this.searchInput!.value = '';
@@ -145,7 +168,7 @@ export class FilterLogic extends Sort {
         sortCheckboxAlphabetical.dataset.state = '1';
 
         // persist the reset state to local storage
-        setLastLibraryFilters(filters);
+        await setLastLibraryFilters(filters);
     }
 
 
@@ -153,7 +176,7 @@ export class FilterLogic extends Sort {
 
     public async generalFilterOptionLogic(parent_section: HTMLElement): Promise<void> {
         // state object for filters
-        const lastSort: Filters | undefined = await getLastLibraryFilters() as Filters | undefined;
+        const lastSort = await getLastLibraryFilters();
         const filters: Filters = lastSort ?? {
             include: {}, // { type: ['Manga'], status: ['Ongoing'] }
             exclude: {},
@@ -194,20 +217,26 @@ export class FilterLogic extends Sort {
             return (
                 Object.values(filters.include || {}).some(v => v.length > 0) ||
                 Object.values(filters.exclude || {}).some(v => v.length > 0) ||
-                !!filters.sort
+                !!filters.sort ||
+                this.hasAnyQueryParams()
             );
         }
     
         // apply filters from local storage Logically
         setTimeout(() => {
-            if (hasAnyFilters(filters)) {
-                this.applyFilterToEntries(filters);
-                if (filters.sort) {
-                    this.applySortToEntries(filters.sort);
-                }
-            }
+            if (hasAnyFilters(filters)) this.applyFiltersSortAndSearchToEntries(filters);
         }, 300);
     
+    }
+    private applyFiltersSortAndSearchToEntries(filters: Filters) {
+        // apply filters
+        this.applyFilterToEntries(filters);
+
+        // apply search
+        if (this.hasAnyQueryParams()) this.filterInputValues();
+
+        // apply sort
+        if (filters.sort) this.applySortToEntries(filters.sort);
     }
 
     private eventOnClick(cbWithLabel: HTMLDivElement, filters: Filters) {
@@ -270,7 +299,7 @@ export class FilterLogic extends Sort {
         if (state === 1) filters.include[section].push(contentValue);
         else if (state === 2) filters.exclude[section].push(contentValue);
         // trigger filtering logic here
-        this.applyFilterToEntries(filters);
+        this.applyFiltersSortAndSearchToEntries(filters);
         setLastLibraryFilters(filters);
     };
 
@@ -289,18 +318,24 @@ export class FilterLogic extends Sort {
         const filterButtons = document.querySelectorAll<HTMLDivElement>(".filter-button:not(#resetFilters, #Sort-filter)");
 
         for (const filterButton of filterButtons) {
+            const filterType = filterButton.dataset.filterType;
             let titleList: string[] = []
-            if (filterButton.dataset.filterType === "Genres & Themes") {
+            if (filterType === "Genres & Themes") {
                 const Demographic = this.firstNonEmpty(filters.include["Demographic"], filters.exclude["Demographic"]);
                 const genresThemes = this.firstNonEmpty(filters.include["genres-themes"], filters.exclude["genres-themes"]);
                 const result = this.firstNonEmpty(Demographic, genresThemes);
                 if (result) titleList.push(...result);
             }
-            const possibleTitles = this.firstNonEmpty(filters.include[filterButton.dataset.filterType || ""], filters.exclude[filterButton.dataset.filterType || ""]);
+            const possibleTitles = this.firstNonEmpty(filters.include[filterType || ""], filters.exclude[filterButton.dataset.filterType || ""]);
             if (possibleTitles) titleList.push(...(possibleTitles));
 
             const title = (titleList.length >= 2)  ? `${titleList[0]} +[${titleList.length-1}]` : titleList[0] || "Any";
             filterButton.textContent = title;
+
+            // check if the title comes from exclude filters
+            if (filterType === "Genres & Themes" && filters.exclude["genres-themes"]?.find(v => v === titleList[0])) filterButton.dataset.labelExclude = "true";
+            else if (filterType && filters.exclude[filterType]?.find(v => v === titleList[0])) filterButton.dataset.labelExclude = "true";
+            else filterButton.dataset.labelExclude = "false";
         }
     }
     private firstNonEmpty<T>(...arrays: (T[] | undefined)[]): T[] | undefined {

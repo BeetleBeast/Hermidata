@@ -383,7 +383,7 @@ export class filter extends Sort {
 
         
 
-        const genresThemes = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
+        const genresThemes = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag)).sort((a, b) => a.localeCompare(b));
 
         for (const name of genresThemes) {
             // create a generic list item for each dataset entry

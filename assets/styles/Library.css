@@ -539,6 +539,12 @@ html::-webkit-scrollbar-thumb {
     height: 30px;
 }
 
+.filter-button[data-label-exclude="true"] {
+    font-style: italic;
+    text-decoration: line-through;
+    color: var(--Text-disabled);
+}
+
 #resetFilters {
     background-color: cornflowerblue;
     color: var(--resetFilterBtn);
@@ -1357,7 +1363,7 @@ body[data-list-mode="false"]
 
 /* incomplete */
 
-#merger-dialog[data-step="incomplete"] {
+#merger-dialog[data-step="incomplete"]:popover-open {
 	display: grid;
 	grid-template-areas: 
     "counter .       exit   "
@@ -1423,7 +1429,7 @@ body[data-list-mode="false"]
     display: none;
 }
 
-#merger-dialog[data-step="firstStep"] {
+#merger-dialog[data-step="firstStep"]:popover-open {
 	display: grid;
 	grid-template-areas: 
     "progression progression progression progression progression"
@@ -1438,7 +1444,7 @@ body[data-list-mode="false"]
     transform: scale(1);
     grid-row-gap: 20px;
 }
-#merger-dialog[data-step="secondStep"] {
+#merger-dialog[data-step="secondStep"]:popover-open {
     display: grid;
 	grid-template-areas: 
     "progression  progression  "

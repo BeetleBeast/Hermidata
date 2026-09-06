@@ -37,7 +37,7 @@ export class Controller {
 
         this.filter.build();
 
-        this.filterLogic.build();
+        await this.filterLogic.build();
         
         this.merger.build();
 
