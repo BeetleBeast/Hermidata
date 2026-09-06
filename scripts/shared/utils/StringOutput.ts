@@ -142,6 +142,8 @@ export function simpleHash(str: string) {
 export async function openLink(url: string, location: 'newTab' | 'newWindow' | 'sameTab'): Promise<void> {
     const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
 
+    url = ext.runtime.getURL(`dist/pages/${url}`);
+
     if (isFirefox && location === 'newTab') return openInSameContainer(url);
 
     switch (location) {
