@@ -92,8 +92,22 @@ export class filter extends Sort {
 
         container.innerHTML = '';
 
+        const label = document.createElement('h2');
+        label.textContent = 'Filter by star rating';
+
+        const hint = document.createElement('p');
+        hint.classList.add('hint');
+        hint.textContent = 'Drag either handle to set a min and max star rating.';
+
+        const starRating = document.createElement('div');
+        starRating.classList.add('rating-filter');
+        starRating.id = 'rating-filter';
+
+        container.append(label, hint, starRating);
+
+
         // const starRatingCheckbox = this.buildStarRatingCheckbox(0,10);
-        new StarRangeFilter(container);
+        new StarRangeFilter(starRating, { min: 3, max: 5 });
     }
     private setContentRatingFilter() {
         const container = this.contentRatingDialog;

@@ -18,7 +18,7 @@ export class StarRangeFilter {
     private trackFill!: HTMLDivElement;
     private labelEl!: HTMLDivElement;
 
-    constructor(containerRef: HTMLElement | string, onChange?: (range: { min: number; max: number }) => void) {
+    constructor(containerRef: HTMLElement | string, startValue: StarRange, onChange?: (range: { min: number; max: number }) => void) {
         
         const container = typeof containerRef === "string" ? document.querySelector<HTMLElement>(containerRef) : containerRef;
 
@@ -30,7 +30,7 @@ export class StarRangeFilter {
         this.step = 1;
         this.onChange = onChange;
 
-        this.value = { min: 3, max: 5 };
+        this.value = { min: startValue.min ?? 3, max: startValue.max ?? 5 };
 
         this.render();
         this.update(false);
@@ -66,23 +66,25 @@ export class StarRangeFilter {
         this.labelEl = document.createElement("div");
         this.labelEl.className = "srf-label";
 
-        // Track: a background bar + a highlighted fill between the two thumbs
         const track = document.createElement("div");
         track.className = "srf-track";
-
+    
+        const trackBg = document.createElement("div");
+        trackBg.className = "srf-track-bg";
+    
         this.trackFill = document.createElement("div");
         this.trackFill.className = "srf-track-fill";
-        track.appendChild(this.trackFill);
-
+    
         this.minInput = this.makeRangeInput("srf-thumb srf-thumb-min");
         this.maxInput = this.makeRangeInput("srf-thumb srf-thumb-max");
-        this.maxInput.value = String(this.value.max);
         this.minInput.value = String(this.value.min);
-
+        this.maxInput.value = String(this.value.max);
+    
+        track.appendChild(trackBg);
+        track.appendChild(this.trackFill);
         track.appendChild(this.minInput);
         track.appendChild(this.maxInput);
-
-        // Tick marks for each whole-star value along the bottom
+    
         const ticks = document.createElement("div");
         ticks.className = "srf-ticks";
         for (let v = this.min; v <= this.max; v += this.step) {
@@ -90,13 +92,14 @@ export class StarRangeFilter {
         tick.textContent = String(v);
         ticks.appendChild(tick);
         }
-
+    
         this.root.appendChild(this.labelEl);
         this.root.appendChild(track);
         this.root.appendChild(ticks);
-
+    
         this.minInput.addEventListener("input", () => this.handleMinInput());
         this.maxInput.addEventListener("input", () => this.handleMaxInput());
+
     }
 
     private makeRangeInput(className: string): HTMLInputElement {
@@ -113,8 +116,8 @@ export class StarRangeFilter {
         let minVal = Number(this.minInput.value);
         const maxVal = Number(this.maxInput.value);
         if (minVal > maxVal) {
-        minVal = maxVal;
-        this.minInput.value = String(minVal);
+            minVal = maxVal;
+            this.minInput.value = String(minVal);
         }
         this.value.min = minVal;
         this.value.max = maxVal;
@@ -125,8 +128,8 @@ export class StarRangeFilter {
         const minVal = Number(this.minInput.value);
         let maxVal = Number(this.maxInput.value);
         if (maxVal < minVal) {
-        maxVal = minVal;
-        this.maxInput.value = String(maxVal);
+            maxVal = minVal;
+            this.maxInput.value = String(maxVal);
         }
         this.value.min = minVal;
         this.value.max = maxVal;
@@ -140,17 +143,17 @@ export class StarRangeFilter {
         const minPct = ((this.value.min - this.min) / span) * 100;
         const maxPct = ((this.value.max - this.min) / span) * 100;
 
-        this.trackFill.style.left = `${minPct}%`;
-        this.trackFill.style.right = `${100 - maxPct}%`;
+        this.trackFill.style.left = `${Math.max(minPct, 0)}%`;
+        this.trackFill.style.right = `${Math.min((100 - maxPct), 100)}%`;
 
         // Keep whichever thumb is at the top end of the range grabbable when both thumbs land on the same value.
         if (this.value.min === this.value.max) {
             // TODO: later make it so that if one grab a thumb and move to the position of the other, it takes it with it until the end
-            this.minInput.style.zIndex = minPct > 50 ? "7" : "6";
-            this.maxInput.style.zIndex = minPct > 50 ? "6" : "7";
+            this.minInput.style.zIndex = minPct > 50 ? "3" : "2";
+            this.maxInput.style.zIndex = minPct > 50 ? "2" : "3";
         } else {
-            this.minInput.style.zIndex = "6";
-            this.maxInput.style.zIndex = "6";
+            this.minInput.style.zIndex = "2";
+            this.maxInput.style.zIndex = "2";
         }
 
         const sameValueContent = `${this.value.min} ★`;
