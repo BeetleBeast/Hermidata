@@ -23,8 +23,8 @@
 
 
 body {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
+    background-color: var(--bg);
+    color: var(--text);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
     margin: 0;
@@ -45,19 +45,19 @@ input[type=number]::-webkit-inner-spin-button {
 /* generic styles */
 
 .Btn {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 4px;
     padding: 8px 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 .Btn:hover {
-    background-color: var(--Btn_hover);
+    background-color: var(--accent-hover);
 }
 .Btn:active:not(:disabled) {
-    background-color: var(--Btn_active);
+    background-color: var(--accent-active);
     transition: none;
 }
 
@@ -71,9 +71,9 @@ button,
     font-size: 0.95rem;
     font-family: inherit;
     font-weight: 500;
-    color: var(--Text-color);
-    background: var(--Btn);
-    border: 1px solid var(--borderLibrary);
+    color: var(--text);
+    background: var(--surface-input);
+    border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease,
@@ -82,28 +82,28 @@ button,
 
 button:hover,
 .btn:hover {
-    background: var(--Btn_hover);
-    border-color: var(--border-focus);
+    background: var(--accent-hover);
+    border-color: var(--accent);
 }
 
 button:active,
 .btn:active {
-    background: var(--Btn_active);
+    background: var(--accent-active);
     transform: translateY(1px);
 }
 
 button:focus-visible,
 .btn:focus-visible {
-    outline: 2px solid var(--focus-ring);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
 
 button:disabled,
 .btn:disabled,
 .btn.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
-    border-color: var(--hr);
+    background: var(--bg);
+    color: var(--text-disabled);
+    border-color: var(--border);
     cursor: not-allowed;
     transform: none;
 }
@@ -116,12 +116,12 @@ input[type=number]::-webkit-inner-spin-button {
 }
 input,
 select  {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 }
 
@@ -141,31 +141,31 @@ textarea,
     padding: 0.55em 0.75em;
     font-size: 0.95rem;
     font-family: inherit;
-    color: var(--Text-color);
-    background: var(--Input-color);
-    border: 1px solid var(--borderLibrary);
+    color: var(--text);
+    background: var(--surface-input);
+    border: 1px solid var(--border);
     border-radius: 6px;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 input::placeholder,
 textarea::placeholder {
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 input:hover,
 textarea:hover,
 .input:hover {
-    background: var(--Input-colorV2);
+    background: var(--surface-raised);
 }
 
 input:focus,
 textarea:focus,
 .input:focus {
     outline: none;
-    border-color: var(--border-focus);
-    background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px var(--select-focus-shadow)
+    border-color: var(--accent);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 2px var(--accent-soft)
 }
 
 textarea {
@@ -175,7 +175,7 @@ textarea {
 
 input[type="checkbox"],
 input[type="radio"] {
-    accent-color: var(--Btn_hover);
+    accent-color: var(--accent-hover);
     width: 1.05em;
     height: 1.05em;
     cursor: pointer;
@@ -184,21 +184,21 @@ input[type="radio"] {
 input:disabled,
 textarea:disabled,
 .input.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
-    border-color: var(--hr);
+    background: var(--bg);
+    color: var(--text-disabled);
+    border-color: var(--border);
     cursor: not-allowed;
 }
 
 input:invalid:not(:placeholder-shown) {
-    border-color: var(--Btn_hover_danger);
+    border-color: var(--danger);
 }
 
 input[type="search"]::-webkit-search-cancel-button {
     -webkit-appearance: none;
     appearance: none;
 
-    color: var(--card);
+    color: var(--surface);
     cursor: wait;
 }
 
@@ -209,14 +209,14 @@ select {
     padding: 0.55em 2em 0.55em 0.75em;
     font-size: 0.95rem;
     font-family: inherit;
-    color: var(--Text-color);
-    background: var(--Input-color);
-    border: 1px solid var(--borderLibrary);
+    color: var(--text);
+    background: var(--surface-input);
+    border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
     -webkit-appearance: none;
     appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='lightgray'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='lightgray' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='var(--text)'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='var(--text)' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     background-repeat: no-repeat;
     background-position: right 0.6em center;
     background-size: 1em;
@@ -224,40 +224,40 @@ select {
 }
 
 select:hover {
-    background-color: var(--Input-colorV2);
+    background-color: var(--surface-raised);
 }
 
 select:focus {
     outline: none;
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px var(--select-focus-shadow);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 select:disabled {
-    background-color: var(--bg_disabled);
-    color: var(--Text-disabled);
-    border-color: var(--hr);
+    background-color: var(--bg);
+    color: var(--text-disabled);
+    border-color: var(--border);
     cursor: not-allowed;
 }
 
 option:disabled,
 .option-excluded {
-    background: var(--filterExcludeOption);
-    color: var(--muted);
+    background: var(--bg);
+    color: var(--text-muted);
 }
 
 .option-included {
-    color: var(--filterIncludeOptionText);
+    color: var(--text);
 }
 
 hr {
     border: none;
-    border-top: 1px solid var(--hr);
+    border-top: 1px solid var(--border);
     margin: 1em 0;
 }
 
 label {
-    color: var(--Text-color);
+    color: var(--text);
     font-size: 0.9rem;
     margin-bottom: 0.35em;
     display: inline-block;
@@ -265,7 +265,7 @@ label {
 }
 
 .field-hint {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 0.8rem;
     margin-top: 0.3em;
 }
@@ -276,7 +276,7 @@ html {
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin; /* Firefox */
-    scrollbar-color: var(--focus-ring) transparent; /* Firefox: thumb, track */
+    scrollbar-color: var(--accent) transparent; /* Firefox: thumb, track */
 }
 
 html::-webkit-scrollbar {
@@ -286,7 +286,7 @@ html::-webkit-scrollbar-track {
     background: transparent; /* groove invisible */
 }
 html::-webkit-scrollbar-thumb {
-    background-color: var(--focus-ring);
+    background-color: var(--accent);
     border-radius: 10px;
 }
 
@@ -299,22 +299,22 @@ html::-webkit-scrollbar-thumb {
 [popover] {
     position-area: bottom;
     
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 }
 
 :popover-open {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
     position: relative;
     inset: 0;
@@ -329,8 +329,8 @@ html::-webkit-scrollbar-thumb {
 	align-items: center;
 	justify-content: space-between;
 	padding: 12px 16px;
-	background: var(--card);
-	border-bottom: 1px solid var(--borderLibrary);
+	background: var(--surface);
+	border-bottom: 1px solid var(--border);
 }
 
 .toolbar {
@@ -383,8 +383,8 @@ html::-webkit-scrollbar-thumb {
 #search-suggestions {
 	position: absolute;
 	top: calc(100%);
-	background-color: var(--searchSuggestionBg);
-	border: 1px solid var(--Btn);
+	background-color: var(--surface);
+	border: 1px solid var(--surface-input);
 	border-top: none;
 	border-radius: 0 0 8px 8px;
 	max-height: 300px;
@@ -406,12 +406,12 @@ html::-webkit-scrollbar-thumb {
     width: 100%;
 }
 .autocomplete-item:hover {
-    background: var(--Btn-hover);
+    background: var(--accent-hover);
 }
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-    background: var(--Btn_hover);
-    color: var(--Text-color);
+    background: var(--accent-hover);
+    color: var(--text);
 }
 
 #search-container {
@@ -419,30 +419,30 @@ html::-webkit-scrollbar-thumb {
 	width: 60%;
 	align-items: center;
 	/* justify-content: center; */
-	background-color: var(--Input-colorV2);
-	color: var(--Text-color);
-	outline-color: var(--Btn);
-	text-emphasis-color: var(--Btn);
-	accent-color: var(--Text-color);
-	border: 1px solid var(--Btn);
+	background-color: var(--surface-raised);
+	color: var(--text);
+	outline-color: var(--surface-input);
+	text-emphasis-color: var(--surface-input);
+	accent-color: var(--text);
+	border: 1px solid var(--surface-input);
 	border-radius: 0;
     gap: 10px;
     padding-left: 10px;
 }
 
 #search-container:has(#search:focus-within) {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 
     outline: none;
 
-    background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px var(--select-focus-shadow);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 #search {
@@ -453,7 +453,7 @@ html::-webkit-scrollbar-thumb {
     outline: none;
     font-size: 1rem;
     background-color: transparent;
-    color: var(--Text-color);
+    color: var(--text);
     padding: 0 10px;
     outline-offset: 0;
     outline-style: none;
@@ -507,14 +507,14 @@ html::-webkit-scrollbar-thumb {
 .filter-button[data-label-exclude="true"] {
     font-style: italic;
     text-decoration: line-through;
-    color: var(--Text-disabled);
+    color: var(--text-disabled);
 }
 
 #resetFilters {
-    background-color: var(--cornflower);
-    color: var(--resetFilterBtn);
+    background-color: var(--accent);
+    color: var(--accent-active);
     border-radius: 5px;
-    border: 1px solid #12174f;
+    border: 1px solid var(--accent-active);
 }
 #resetFilters-label-hidden {
     opacity: 0;
@@ -524,10 +524,10 @@ html::-webkit-scrollbar-thumb {
     user-select: none;
 }
 #resetFilters:hover {
-    background-color: var(--resetFilterBtn_hover);
-    color: var(--resetFilterBtn);
+    background-color: var(--accent-hover);
+    color: var(--accent-active);
     border-radius: 5px;
-    border: 1px solid var(--cornflower);
+    border: 1px solid var(--accent);
 }
 
 /* library container */
@@ -562,7 +562,7 @@ html::-webkit-scrollbar-thumb {
     flex-direction: row;
     align-items: center;
     padding: 5px;
-    background-color: var(--Btn);
+    background-color: var(--surface-input);
     border-radius: 10px;
 }
 
@@ -579,15 +579,15 @@ html::-webkit-scrollbar-thumb {
 #library-entries-ViewMode-list {
     width: 50px;
     height: 35px;
-    color: var(--Text-color);
+    color: var(--text);
 }
 [data-active_view_mode="true"] {
-    background-color: var(--Btn_hover);
+    background-color: var(--accent-hover);
 }
 [data-active_view_mode="true"]:hover,
 [data-active_view_mode="true"]:active,
 [data-active_view_mode="true"]:focus-visible {
-    color: var(--filterIncludeOptionText);
+    color: var(--text);
     border-color: none;
     outline: none;
     background-color: none;
@@ -596,7 +596,7 @@ html::-webkit-scrollbar-thumb {
 .viewMode-toggle:hover:not([data-active_view_mode="true"]):focus-visible,
 .viewMode-toggle:hover:not([data-active_view_mode="true"]):active,
 .viewMode-toggle:hover:not([data-active_view_mode="true"]) {
-    color: var(--filterIncludeOptionText);
+    color: var(--text);
     background-color: inherit;
     outline: none;
 }
@@ -644,7 +644,7 @@ body[data-list-mode="true"]
 	display: grid;
 	width: 100%;
 	height: 200px;
-	background-color: var(--card);
+	background-color: var(--surface);
 	border-radius: 15px;
 	grid-template-areas: 
     "site checkbox .     ." 
@@ -661,7 +661,7 @@ body[data-list-mode="false"]
 	display: grid;
 	width: 250px;
 	height: 410px;
-	/* background-color: var(--card); */
+	/* background-color: var(--surface); */
 	border-radius: 15px;
 	grid-template-areas:
         "checkbox .     .    " 
@@ -697,9 +697,9 @@ body[data-list-mode="false"]
 	align-self: center;
 	border-radius: 10px;
 	z-index: 15;
-    border: 1px solid var(--card);
-    box-shadow: inset 1px 15px var(--card);
-    box-shadow: 5px 5px 30px -10px var(--resetFilterBtn);
+    border: 1px solid var(--surface);
+    box-shadow: inset 1px 15px var(--surface);
+    box-shadow: 5px 5px 30px -10px var(--accent-active);
 }
 
 body[data-list-mode="true"]
@@ -707,7 +707,7 @@ body[data-list-mode="true"]
 	grid-area: title;
 	font-size: 1.2em;
 	text-align: center;
-	color: var(--Text-color);
+	color: var(--text);
 	display: flex;
 	align-items: baseline;
 	justify-content: center;
@@ -721,7 +721,7 @@ body[data-list-mode="false"]
 	grid-area: title;
 	font-size: 1.2em;
 	text-align: center;
-	color: var(--Text-color);
+	color: var(--text);
 	display: flex;
 	align-items: baseline;
 	justify-content: center;
@@ -738,9 +738,9 @@ body[data-list-mode="true"]
 	padding-left: 10px;
 	padding-right: 10px;
 	margin-left: 10px;
-	background-color: var(--borderLibrary);
+	background-color: var(--border);
 	border-radius: 8px;
-	border: 1px solid var(--Btn_disabled);
+	border: 1px solid var(--text-disabled);
 	align-items: center;
 	justify-content: center;
 	width: fit-content;
@@ -761,9 +761,9 @@ body[data-list-mode="false"]
 	margin-left: 10px;
     
     background-color: rgba(var(--color-rgb), 0.5);
-	background-color: color-mix(in srgb, var(--borderLibrary) 70%, transparent);
+	background-color: color-mix(in srgb, var(--border) 70%, transparent);
 	border-radius: 8px;
-	border: 1px solid var(--Btn_disabled);
+	border: 1px solid var(--text-disabled);
 	align-items: center;
 	justify-content: center;
 	width: fit-content;
@@ -806,7 +806,7 @@ body[data-list-mode="false"]
 .hermidata-item-novelType {
     padding: 0;
 	height: fit-content;
-    color: contrast-color(var(--borderLibrary));
+    color: contrast-color(var(--border));
 	margin: 0;
 }
 
@@ -870,7 +870,7 @@ body[data-list-mode="true"]
 	position: absolute;
 	top: -30px;
 	display: block;
-	background-color: var(--card);
+	background-color: var(--surface);
 	padding-bottom: 20px;
 	padding-left: 15px;
 	padding-right: 15px;
@@ -909,7 +909,7 @@ body[data-list-mode="false"]
 body[data-list-mode="true"]
 .hermidata-item-checkbox {
     display: block;
-    background-color: var(--card);
+    background-color: var(--surface);
     padding-bottom: 20px;
     padding-left: 15px;
     padding-right: 15px;
@@ -955,7 +955,7 @@ body[data-list-mode="true"]
     inset: -2px;                 /* border thickness, sits just outside the real edges */
     border-radius: inherit;      /* matches the 10px 10px 0 0 rounding automatically */
     padding: 2px;
-    background: conic-gradient(from var(--angle), transparent 0%, #286eca 15%, #96a9ff 30%, transparent 45%);
+    background: conic-gradient(from var(--angle), transparent 0%, var(--accent) 15%, var(--accent-hover) 30%, transparent 45%);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -1057,7 +1057,7 @@ body[data-list-mode="false"]
     padding-left: 10px;
     padding-right: 30px;
     border-radius: 5px;
-    box-shadow: var(--dialog-shadow-1) 0px 18px 40px -12px, var(--dialog-shadow-2) 0px 2px 6px;
+    box-shadow: var(--overlay) 0px 18px 40px -12px, var(--shadow) 0px 2px 6px;
     opacity: 1;
     transform: scale(1) translateY(0);
 }
@@ -1104,7 +1104,7 @@ body[data-list-mode="false"]
 .filter-item-checkbox {
 	width: 18px;
 	height: 18px;
-	border: 1px solid var(--borderLibrary);
+	border: 1px solid var(--border);
 	border-radius: 6px;
 	display: flex;
 	flex-direction: column;
@@ -1118,8 +1118,8 @@ body[data-list-mode="false"]
 
 
 .filter-item-checkbox:hover {
-    background: var(--Btn_hover);
-    border-color: var(--border-focus);
+    background: var(--accent-hover);
+    border-color: var(--accent);
 }
 
 /* label */
@@ -1139,8 +1139,8 @@ body[data-list-mode="false"]
 }
 
 #Author-filter-suggestions {
-	background-color: var(--searchSuggestionBg);
-	border: 1px solid var(--Btn);
+	background-color: var(--surface);
+	border: 1px solid var(--surface-input);
 	border-top: none;
 	border-radius: 0 0 8px 8px;
 	max-height: 300px;
@@ -1239,7 +1239,7 @@ body[data-list-mode="false"]
     width: 15px;
     height: 15px;
     border-radius: 15px;
-    border: 1px solid var(--borderLibrary);
+    border: 1px solid var(--border);
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
     display: flex;
@@ -1247,14 +1247,14 @@ body[data-list-mode="false"]
     gap: 4px;
 }
 .custom-radio:hover {
-    background: var(--Btn_hover);
-    border-color: var(--border-focus);
+    background: var(--accent-hover);
+    border-color: var(--accent);
 }
 
 
 .filter-item-checkbox[data-state="1"] {
-    background-color: var(--resetFilterBtn_hover);
-    border-color: var(--border-focus);
+    background-color: var(--accent-hover);
+    border-color: var(--accent);
     color: var(--bg);
     appearance: none;
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 28 28' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg>");
@@ -1270,13 +1270,13 @@ body[data-list-mode="false"]
 
 .filter-item-checkbox[data-state="1"] ~
 .filter-item-label {
-    color: var(--resetFilterBtn_hover);
+    color: var(--accent-hover);
 }
 
 
 .filter-item-checkbox[data-state="2"] {
-    background-color: var(--Btn);
-    border-color: var(--border-focus);
+    background-color: var(--surface-input);
+    border-color: var(--accent);
     color: var(--bg);
     appearance: none;
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>");
@@ -1293,13 +1293,13 @@ body[data-list-mode="false"]
 .filter-item-checkbox[data-state="2"] ~
 .filter-item-label {
     text-decoration: line-through;
-    color: var(--Text-color);
+    color: var(--text);
     opacity: 0.5;
 }
 
 .search-mode-radio-item[data-state="true"] {
-    background-color: var(--resetFilterBtn_hover);
-    border-color: var(--border-focus);
+    background-color: var(--accent-hover);
+    border-color: var(--accent);
     color: var(--bg);
     appearance: none;
     border-radius: 15px;
@@ -1308,8 +1308,8 @@ body[data-list-mode="false"]
 }
 .search-mode-radio-item[data-state="false"] {
     background-color: var(--bg);
-    border-color: var(--borderLibrary);
-    color: var(--Text-color);
+    border-color: var(--border);
+    color: var(--text);
     appearance: none;
     background-color: currentColor; /* this IS the real CSS currentColor */
     border-radius: 15px;
@@ -1344,7 +1344,7 @@ body[data-list-mode="false"]
     text-align: center;
     font-size: 14px;
     font-weight: 100;
-    color: var(--Text-color);
+    color: var(--text);
 }
 .merger-dialog-exit {
 	grid-area: exit;
@@ -1367,19 +1367,19 @@ body[data-list-mode="false"]
     text-align: center;
     font-size: 25px;
     font-weight: 600;
-    color: var(--Text-color);
+    color: var(--text);
 }
 .merger-dialog-subtext {
     grid-area: subtext;
     text-align: center;
     font-size: 14px;
-    color: var(--Text-color);
+    color: var(--text);
 }
 .merger-dialog-button {
     grid-area: button;
     text-align: center;
     font-size: 14px;
-    color: var(--Text-color);
+    color: var(--text);
     cursor: pointer;
 }
 
@@ -1427,7 +1427,7 @@ body[data-list-mode="false"]
     grid-area: progression;
     text-align: center;
     font-size: 14px;
-    color: var(--Text-color);
+    color: var(--text);
 	display: flex;
 	flex-direction: row;
 	gap: 10px;
@@ -1440,57 +1440,57 @@ body[data-list-mode="false"]
 }
 .merger-dialog-progression.merger-dialog-progression-1[data-progression="1"] {
     
-    color: var(--Text-color);
+    color: var(--text);
 	display: flex;
     min-width: 50px;
 	width: 50px;
 	height: 50px;
 	text-align: center;
-	background-color: var(--Text-color);
+	background-color: var(--text);
 	border-radius: 25px;
     align-items: center;
     justify-content: center;
 }
 .merger-dialog-progression-1-text {
-	color: var(--pure-black);
+	color: var(--bg);
 	text-align: center;
 	display: flex;
 	width: 10px;
 	height: 25px;
 }
 .merger-dialog-progression.merger-dialog-progression-1[data-progression="2"] {
-	color: var(--pure-black);
+	color: var(--bg);
 	display: flex;
 	min-width: 50px;
 	width: 50px;
 	height: 50px;
 	text-align: center;
-	background-color: var(--merger-dialog-correct);
+	background-color: var(--success);
 	border-radius: 25px;
 	align-items: center;
 	justify-content: center;
 }
 .merger-dialog-progression.merger-dialog-progression-2[data-progression="1"] {
-	color: var(--muted);
+	color: var(--text-muted);
 	display: flex;
     min-width: 50px;
 	width: 50px;
 	height: 50px;
 	text-align: center;
-	background-color: var(--bg_disabled);
+	background-color: var(--bg);
 	border-radius: 25px;
 	align-items: center;
 	justify-content: center;
 }
 .merger-dialog-progression.merger-dialog-progression-2[data-progression="2"] {
     
-    color: var(--pure-black);
+    color: var(--bg);
 	display: flex;
     min-width: 50px;
 	width: 50px;
 	height: 50px;
 	text-align: center;
-	background-color: var(--Text-color);
+	background-color: var(--text);
 	border-radius: 25px;
     align-items: center;
     justify-content: center;
@@ -1511,18 +1511,18 @@ body[data-list-mode="false"]
     white-space: nowrap;
 }
 .merger-dialog-progression-1-main-text[data-progression="2"] {
-    color: var(--muted);
+    color: var(--text-muted);
     white-space: nowrap;
 }
 .merger-dialog-progression-2-main-text[data-progression="1"] {
-	color: var(--muted);
+	color: var(--text-muted);
     white-space: nowrap;
 }
 .merger-dialog-steps {
 	grid-area: step;
 	text-align: center;
 	font-size: 14px;
-	color: var(--Text-disabled);
+	color: var(--text-disabled);
 	width: fit-content;
 }
 .merger-dialog-text {
@@ -1530,7 +1530,7 @@ body[data-list-mode="false"]
 	text-align: left;
 	font-size: 20px;
 	font-weight: 600;
-	color: var(--Text-color);
+	color: var(--text);
 	padding: 0;
 	margin: 0;
 	height: 40px;
@@ -1545,7 +1545,7 @@ body[data-list-mode="false"]
     justify-content: left;
     align-items: center;
 	gap: 5px;
-    color: var(--resetFilterBtn_hover);
+    color: var(--accent-hover);
 }
 
 .info-icon {
@@ -1557,7 +1557,7 @@ body[data-list-mode="false"]
     display: flex;
     flex-direction: column;
     width: 400px;
-	background-color: var(--card);
+	background-color: var(--surface);
 	border-radius: 25px;
     min-height: 400px;
     padding-bottom: 15px;
@@ -1571,7 +1571,7 @@ body[data-list-mode="false"]
     padding-left: 20px;
     padding-right: 20px;
     align-items: baseline;
-    border-bottom: 1px solid var(--divider);
+    border-bottom: 1px solid var(--border-subtle);
     justify-content: space-between;
     transition: background-color 0.15s ease;
 }
@@ -1586,7 +1586,7 @@ body[data-list-mode="false"]
 }
 
 .merger-dialog-record-container:hover {
-    background-color: var(--slight-hover-darkening);
+    background-color: var(--border-subtle);
 }
 
 .merger-dialog-record-label {
@@ -1618,12 +1618,12 @@ body[data-list-mode="false"]
 }
 
 .merger-dialog-record-letter[data-suggested="true"] {
-    color: var(--Btn_hover_success);
+    color: var(--success);
 }
 .merger-dialog-record-letter {
     font-weight: 600;
     font-size: medium;
-    color: var(--Text-color);
+    color: var(--text);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     padding-top: 10px;
     padding-bottom: 10px;
@@ -1651,12 +1651,12 @@ body[data-list-mode="false"]
 }
 
 .merger-dialog-record-tags-container[data-has-none="true"] {
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 .merger-dialog-record-continue-button[data-suggested="true"] {
-	background-color: var(--Btn_success_fill);
-	color: var(--Btn_hover_success);
+	background-color: var(--success);
+	color: var(--success);
 }
 
 .merger-dialog-record-continue-button {
@@ -1673,26 +1673,26 @@ body[data-list-mode="false"]
     grid-area: button;
     text-align: center;
     font-size: 14px;
-    color: var(--Text-color);
+    color: var(--text);
     cursor: pointer;
 }
 
 .merger-dialog-green-field {
 	grid-area: greenField;
-	background-color: var(--Btn_success_fill);
+	background-color: var(--success);
 	padding: 15px;
 	border-radius: 15px;
 }
 
 .merger-dialog-green-field-text-1 {
-	color: var(--Btn_hover_success);
+	color: var(--success);
 }
 .merger-dialog-warning-field-text {
-	color: var(--Btn_hover_Cancel);
+	color: var(--warning);
 }
 .merger-dialog-warning-field {
 	grid-area: warningField;
-	/*background-color: var(--Btn_cancel_fill);*/
+	/*background-color: var(--warning);*/
 	border-radius: 15px;
 	padding: 15px;
 }
@@ -1708,7 +1708,7 @@ body[data-list-mode="false"]
 
 .merger-dialog-button-merge {
 	grid-area: mergeButton;
-	background-color: var(--Btn_success_fill);
+	background-color: var(--success);
 }
 
 
@@ -1726,7 +1726,7 @@ body[data-list-mode="false"]
 	gap: 10px;
 	align-items: center;
 	justify-content: flex-start;
-    border: 1px solid var(--Btn_hover_Cancel);
+    border: 1px solid var(--warning);
     border-radius: 10px;
     margin-bottom: 10px;
     cursor: pointer;
@@ -1734,7 +1734,7 @@ body[data-list-mode="false"]
 }
 
 .merger-dialog-warning-field-value-text {
-	color: var(--muted);
+	color: var(--text-muted);
 }
 
 /* star rating custom slider thumb */
@@ -1747,7 +1747,7 @@ body[data-list-mode="false"]
     align-items: unset;
     justify-content: unset;
     padding: 28px 26px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--border);
     border-radius: 10px;
 }
 
@@ -1760,5 +1760,5 @@ body[data-list-mode="false"]
 #StarRating-dialog:popover-open p.hint {
     margin: 0 0 20px;
     font-size: 13px;
-    color: var(--starRating-dialog-hint);
+    color: var(--text-muted);
 }
