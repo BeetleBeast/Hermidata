@@ -58,19 +58,27 @@ export class RSS {
             allSec.innerHTML = "";
             
             await this.BuildRSS.makeSubscibeBtn();
+            this.changeLoadingBar(10);
             
             await this.BuildRSS.makeFeedHeader(notification);
+            this.changeLoadingBar(15);
             
             this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
+            this.changeLoadingBar(50);
             
             await this.BuildRSS.makeSortSection(sortSection);
+            this.changeLoadingBar(70);
 
             await this.BuildRSS.attachEventListeners()
+            this.changeLoadingBar(80);
 
             await this.BuildRSS.makeFooterSection();
+            this.changeLoadingBar(90);
 
             await this.BuildRSS.activateAutoSubscribe();
+            this.changeLoadingBar(95);
 
+            this.changeLoadingBar(100);
             setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
         } catch (error) {
             console.error(error);
@@ -189,6 +197,8 @@ export class RSS {
 
         });
         setElement('.material-symbols-outlinedContainer', el => el.style.display = 'flex');
+
+        this.setLoadingBar();
     }
     private hideLoadingAnimation() {
         setElement(".HDClassic", el => {
@@ -205,6 +215,13 @@ export class RSS {
             el.style.pointerEvents = 'auto';
         });
         setElement('.material-symbols-outlinedContainer', el => el.style.display = 'none');
+    }
+    private setLoadingBar() {
+        this.changeLoadingBar(5);
+    }
+    private changeLoadingBar(percent: number) {
+        if (percent < 0 || percent > 100) return;
+        setElement('.loading-bar', el => el.style.width = `${percent}%`);
     }
 
 }
