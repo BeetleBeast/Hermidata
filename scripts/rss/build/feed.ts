@@ -30,7 +30,7 @@ export class FeedItem {
         return dateB - dateA;
     }
 
-    public async makefeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
+    public async makeFeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
         const fragment = document.createDocumentFragment();
         const sortedList = sortByLastUpdated ? Object.values(hermidataList).sort(this.sortByLastUpdated) : Object.values(hermidataList);
 
@@ -62,14 +62,14 @@ export class FeedItem {
 
         title.textContent = 'Notifications'
         container.appendChild(title);
-        const feedHeadersymbol = document.createElement('div');
-        feedHeadersymbol.className = 'feed-header-symbol';
-        feedHeadersymbol.dataset.feedState = 'down'; // temporarely set to down to avoid bug
+        const feedHeaderSymbol = document.createElement('div');
+        feedHeaderSymbol.className = 'feed-header-symbol';
+        feedHeaderSymbol.dataset.feedState = 'down'; // temporarily set to down to avoid bug
         container.addEventListener('click', () => {
-            feedHeadersymbol.dataset.feedState = feedHeadersymbol.dataset.feedState === 'down' ? 'up' : 'down';
-            localStorage.setItem('notificationLastDirection', JSON.stringify(feedHeadersymbol.dataset.feedState));
+            feedHeaderSymbol.dataset.feedState = feedHeaderSymbol.dataset.feedState === 'down' ? 'up' : 'down';
+            localStorage.setItem('notificationLastDirection', JSON.stringify(feedHeaderSymbol.dataset.feedState));
         });
-        title.appendChild(feedHeadersymbol);
+        title.appendChild(feedHeaderSymbol);
 
         parent_section.appendChild(container)
     }
@@ -107,24 +107,24 @@ export class FeedItem {
         `;
         return g;
     }
-    private CreateSidestriangle(): { groupLeft: SVGGElement; groupRight: SVGGElement } {
+    private CreateSidesTriangle(): { groupLeft: SVGGElement; groupRight: SVGGElement } {
         const svgNS = "http://www.w3.org/2000/svg";
         
         const diamondLeft = document.createElementNS(svgNS, 'polygon');
         diamondLeft.setAttribute("class", "diamond-group-l");
     
-        const diamondgroupLeft = document.createElementNS(svgNS, 'g');
-        diamondgroupLeft.setAttribute("class", "diamond-l");
-        diamondgroupLeft.appendChild(diamondLeft);
+        const diamondGroupLeft = document.createElementNS(svgNS, 'g');
+        diamondGroupLeft.setAttribute("class", "diamond-l");
+        diamondGroupLeft.appendChild(diamondLeft);
         
 
         const diamondRight = document.createElementNS(svgNS, 'polygon');
         diamondRight.setAttribute("class", "diamond-group-r");
 
-        const diamondgroupRight = document.createElementNS(svgNS, 'g');
-        diamondgroupRight.setAttribute("class", "diamond-r");
-        diamondgroupRight.appendChild(diamondRight);
-        return { groupLeft: diamondgroupLeft, groupRight: diamondgroupRight }
+        const diamondGroupRight = document.createElementNS(svgNS, 'g');
+        diamondGroupRight.setAttribute("class", "diamond-r");
+        diamondGroupRight.appendChild(diamondRight);
+        return { groupLeft: diamondGroupLeft, groupRight: diamondGroupRight }
     }
     private CreateSidesDiamond(): { groupLeft: SVGGElement; groupRight: SVGGElement } {
         const svgNS = "http://www.w3.org/2000/svg";
@@ -138,17 +138,17 @@ export class FeedItem {
         diamondRight.setAttribute("class", "diamond-r");
         
 
-        const diamondgroupLeft = document.createElementNS(svgNS, 'g');
-        diamondgroupLeft.setAttribute("class", "diamond-group-l");
+        const diamondGroupLeft = document.createElementNS(svgNS, 'g');
+        diamondGroupLeft.setAttribute("class", "diamond-group-l");
 
-        const diamondgroupRight = document.createElementNS(svgNS, 'g');
-        diamondgroupRight.setAttribute("class", "diamond-group-r");
+        const diamondGroupRight = document.createElementNS(svgNS, 'g');
+        diamondGroupRight.setAttribute("class", "diamond-group-r");
         
         
-        diamondgroupLeft.appendChild(diamondLeft);
-        diamondgroupRight.appendChild(diamondRight);
+        diamondGroupLeft.appendChild(diamondLeft);
+        diamondGroupRight.appendChild(diamondRight);
 
-        return { groupLeft: diamondgroupLeft, groupRight: diamondgroupRight }
+        return { groupLeft: diamondGroupLeft, groupRight: diamondGroupRight }
     }
     private createItemLines(item: Hermidata, isFirstItemOfList: boolean = false): SVGElement {
         const svgNS = "http://www.w3.org/2000/svg";
@@ -165,7 +165,7 @@ export class FeedItem {
         const rightLine = this.CreateLine({ x1: "100%", y1: "8px", x2: "100%", y2: "100%" }, "line-v line-right item-lines");
         // lines
         const topLeftBend = this.CreateLine({ x1: "10%", y1: "0%", x2: "15%", y2: "50%" }, "line-h line-top-left-bend item-lines");
-        const middelHorizontal = this.CreateLine({ x1: "8%", y1: "50%", x2: "98%", y2: "50%" }, "line-v line-middel-horizontal item-lines" );
+        const middleHorizontal = this.CreateLine({ x1: "8%", y1: "50%", x2: "98%", y2: "50%" }, "line-v line-middle-horizontal item-lines" );
         const topRightBend = this.CreateLine({ x1: "85%", y1: "50%", x2: "90%", y2: "0%" }, "line-h line-top-right-bend item-lines" );
         const bottomLeftBend = this.CreateLine({ x1: "15%", y1: "50%", x2: "40%", y2: "100%" }, "line-bottom-left-bend item-lines" );
         const bottomRightBend = this.CreateLine({ x1: "60%", y1: "100%", x2: "85%", y2: "50%" }, "line-bottom-right-bend item-lines" );
@@ -175,8 +175,8 @@ export class FeedItem {
         let x2 = 12, y2 = 0;
         let x3 = 0, y3 = 12;
         let x4 = -12, y4 = 0;
-        const diamondgroup = document.createElementNS(svgNS, 'g');
-        diamondgroup.setAttribute("class", "diamond-group-line");
+        const diamondGroup = document.createElementNS(svgNS, 'g');
+        diamondGroup.setAttribute("class", "diamond-group-line");
         const diamond = document.createElementNS(svgNS, 'polygon');
         
         diamond.setAttribute('points',`${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`);
@@ -185,7 +185,7 @@ export class FeedItem {
 
         const titleOfDiamond = this.createSVGItemTitle(item.rss?.latestItem ? "This Item is linked" : "this Item is not linked to a RSS feed")
         diamond.appendChild(titleOfDiamond);
-        diamondgroup.appendChild(diamond);
+        diamondGroup.appendChild(diamond);
         
         // RSS link missing Icon ( only for non RSS items)
         if (!item.rss?.latestItem) {
@@ -197,11 +197,11 @@ export class FeedItem {
             svg.appendChild(notifyRSSLinkIcon);
         }
 
-        const { groupLeft, groupRight } = isFirstItemOfList ? this.CreateSidestriangle() : this.CreateSidesDiamond();
+        const { groupLeft, groupRight } = isFirstItemOfList ? this.CreateSidesTriangle() : this.CreateSidesDiamond();
         svg.append(
             groupLeft, groupRight, 
-            diamondgroup, topLeftBend, 
-            middelHorizontal, topRightBend, bottomLeftBend, bottomRightBend, 
+            diamondGroup, topLeftBend, 
+            middleHorizontal, topRightBend, bottomLeftBend, bottomRightBend, 
             bottomVertical, 
             topLine, bottomLine, leftLine, rightLine);
         return svg
@@ -237,14 +237,14 @@ export class FeedItem {
         return pubDate
     }
     private createItemFooter(item: HermidataModel): HTMLElement {
-        const Elfooter = document.createElement("div");
+        const ElFooter = document.createElement("div");
 
-        Elfooter.className = "hermidata-item-footer"
+        ElFooter.className = "hermidata-item-footer"
         const domain = item.source || item.GetUrl().replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
         const altDomains = item.meta.altSources.length >= 2 ? item.meta.altSources.join(', ') : '';
-        Elfooter.textContent = altDomains ? String(altDomains) : String(domain);
-        Elfooter.title = String(domain);
-        return Elfooter
+        ElFooter.textContent = altDomains ? String(altDomains) : String(domain);
+        ElFooter.title = String(domain);
+        return ElFooter
     }
     private createItemTitle(title: string): HTMLElement {
         const ELTitle = document.createElement("div");
@@ -317,11 +317,11 @@ export class FeedItem {
         
         // bottom row
         const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem);
-        const pubdate = this.createItemPubDate(item);
-        const Elfooter = this.createItemFooter(item);
+        const pubDate = this.createItemPubDate(item);
+        const ElFooter = this.createItemFooter(item);
         const ElTagContainer = this.createItemTags(itemInfo.currentHermidata, settings );
 
-        bottomRow.append(ELchapter, Elfooter, pubdate, ElTagContainer);
+        bottomRow.append(ELchapter, ElFooter, pubDate, ElTagContainer);
         ElInfo.append(itemImage, itemTitle, ELprogress, bottomRow);
 
         return ElInfo
@@ -346,7 +346,7 @@ export class FeedItem {
         li.dataset.isNotificationItem = isRSSItem ? 'false' : 'true';
         li.dataset.hashKey = key;
         li.dataset.hasRSS = 'true';
-        li.dataset.seachable = 'true';
+        li.dataset.searchable= 'true';
         li.style.setProperty('--line-h2-y', `0px`);
         li.style.setProperty('--line-h1-y', `0px`);
         li.style.setProperty('--line-v1-x', `0px`);
@@ -357,10 +357,10 @@ export class FeedItem {
 
     private showLatestDate(item: Hermidata): { date: Date, originalDateVariable: string} {
 
-        const allDatesExeptBookmarks = item.rss ? {
+        const allDatesExceptBookmarks = item.rss ? {
             added: new Date(item.meta.added),
             updated: new Date(item.meta.updated),
-            latestrss: new Date(item.rss.latestItem.pubDate)
+            latestRss: new Date(item.rss.latestItem.pubDate)
         } : {
             added: new Date(item.meta.added),
             updated: new Date(item.meta.updated)
@@ -371,13 +371,13 @@ export class FeedItem {
                 createdAt: new Date(bookmark.createdAt)
             };
         });
-        const allDates = [...Object.values(allDatesExeptBookmarks), ...allBookmarkDates];
+        const allDates = [...Object.values(allDatesExceptBookmarks), ...allBookmarkDates];
         const date = allDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 
         let originalDateVariable: string = '';
-        if (date === allDatesExeptBookmarks.updated) originalDateVariable = 'updated';
-        if (date === allDatesExeptBookmarks.added) originalDateVariable = 'added';
-        if (date === allDatesExeptBookmarks.latestrss) originalDateVariable = 'updated';
+        if (date === allDatesExceptBookmarks.updated) originalDateVariable = 'updated';
+        if (date === allDatesExceptBookmarks.added) originalDateVariable = 'added';
+        if (date === allDatesExceptBookmarks.latestRss) originalDateVariable = 'updated';
         if (allBookmarkDates.some(bookmark => bookmark.updatedAt === date)) originalDateVariable = 'updated';
         if (allBookmarkDates.some(bookmark => bookmark.createdAt === date)) originalDateVariable = 'added';
 

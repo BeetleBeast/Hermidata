@@ -6,7 +6,7 @@ import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { writeToSheet } from "./sheets"
-import { lastAutoFeedCkeck, lastFeedCkeck, setState } from "./state"
+import { lastAutoFeedCheck, lastFeedCheck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
 import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput"
 import { pushToSync, removeFromSync } from "../shared/db/sync"
@@ -72,8 +72,8 @@ export async function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet:
 
 export function handleReloadRss(): true {
     const now = Date.now()
-    if (now - lastFeedCkeck >= 1000 *60 * 2) { // 2min passed
-        setState.lastFeedCkeck(now);
+    if (now - lastFeedCheck >= 1000 *60 * 2) { // 2min passed
+        setState.lastFeedCheck(now);
         checkFeedsForUpdates();
         ext.runtime.sendMessage({ type: "SYNC_COMPLETED" });
     } else {
@@ -84,8 +84,8 @@ export function handleReloadRss(): true {
 
 export function handleGetLastSync(sendResponse: (r: unknown) => void): true {
     // Send the age in minutes (max 2 digits)
-    const diffMinutes = lastAutoFeedCkeck
-    ? Math.min(99, Math.floor((Date.now() - lastAutoFeedCkeck) / 60000))
+    const diffMinutes = lastAutoFeedCheck
+    ? Math.min(99, Math.floor((Date.now() - lastAutoFeedCheck) / 60000))
     : null;
 
     sendResponse({ minutesAgo: diffMinutes });

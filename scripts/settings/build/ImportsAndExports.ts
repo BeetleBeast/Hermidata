@@ -164,11 +164,7 @@ export class ImportsAndExports extends Build {
         
         return [...exact, ...startsWith, ...contains, ...fuzzy].slice(0, limit);
     }
-    private cutSuggestion(suggestion: string, rule: string): string {
-        // example suggestion: /home/user/novel/onepiece/onepiece-1/onepiece-1
-        // example rule: /home/user/
-        // result: /home/user/novel/
-        
+    private cutSuggestion(suggestion: string, rule: string): string {        
         // Normalize rule to ensure it doesn't end with /
         const normalizedRule = rule.endsWith('/') ? rule.slice(0, -1) : rule;
         
@@ -184,10 +180,10 @@ export class ImportsAndExports extends Build {
         if (segments.length === 0) return normalizedRule + '/';
 
         // if normalizedRule is only a section of the suggestion, don't add a trailing slash
-        const firstsegment = suggestion.at(normalizedRule.length) === '/' ? '/' + segments[0] : segments[0];
+        const firstSegment = suggestion.at(normalizedRule.length) === '/' ? '/' + segments[0] : segments[0];
         
         // Return rule + first directory after it
-        return normalizedRule + firstsegment + '/';
+        return normalizedRule + firstSegment + '/';
     }
     private setGhostTextForCustomRule() {
         if (!this.massImportFromBookmarkFolderSuggestion) return;
@@ -734,8 +730,8 @@ export class ImportsAndExports extends Build {
         await this.saveAllHermidatas(hermidatas);
     }
     private getBrowserRoot() {
-        const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox") ? "Bookmarks Menu" : "Bookmarks";
-        return Browserroot;
+        const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox") ? "Bookmarks Menu" : "Bookmarks";
+        return BrowserRoot;
     }
 
 

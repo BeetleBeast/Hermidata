@@ -223,7 +223,7 @@ export interface HermidataV6 {
         notes: string;
         added: string;
         updated: string;
-        altSources: string[]; // for multiple souces ( with the first one the same as above )
+        altSources: string[]; // for multiple sources ( with the first one the same as above )
         altTitles: string[];
         originalRelease: string | null; // Date.toISOString of when the novel was released in the original language
         novelStatus: AnyNovelStatus;

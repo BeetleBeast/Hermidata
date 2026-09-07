@@ -17,10 +17,10 @@ import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { returnHashedTitle } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
-import { type RawFeed, type Settings, type AllsortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
+import { type RawFeed, type Settings, type AllSortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
-import type { AllSortsType } from '../../library/build/filter';
+import type { AllSortsType as LibraryAllSortsType } from '../../library/build/filter';
 import type { Filters as LibraryFilters } from '../../library/build/filterLogic';
 import type { OnlyPlainHermidata } from '../types/popup';
 
@@ -257,7 +257,7 @@ export async function getSettings(): Promise<Settings> {
         return await new Promise<Settings>((resolve, reject) => {
             ext.storage.sync.get('Settings', (result: { Settings: Settings }) => {
                 if (ext.runtime.lastError) reject(new Error(ext.runtime.lastError.message));
-                else resolve(result.Settings ?? defaultSettings); // TEMP: if you remove the result.setings you can regain the default settings
+                else resolve(result.Settings ?? defaultSettings); // TEMP: if you remove the result.settings you can regain the default settings
             });
         });
     } catch (err) {
@@ -480,7 +480,7 @@ export async function setLastLibraryFilters(lastFilter: LibraryFilters): Promise
     }
 }
 
-export async function getLastSortOption(): Promise<AllsortsType | undefined> {
+export async function getLastSortOption(): Promise<AllSortsType | undefined> {
     try {
         const filter = await getLastFilter();
         return filter?.sort ?? undefined;
@@ -490,7 +490,7 @@ export async function getLastSortOption(): Promise<AllsortsType | undefined> {
     }
 }
 
-export async function setLastSortOption(lastSortOption: AllsortsType): Promise<boolean> {
+export async function setLastSortOption(lastSortOption: AllSortsType): Promise<boolean> {
     try {
         const lastFilter = await getLastFilter();
         return setLastFilter({
@@ -504,7 +504,7 @@ export async function setLastSortOption(lastSortOption: AllsortsType): Promise<b
     }
 }
 
-export async function getLastLibrarySortOption(): Promise<AllSortsType | undefined> {
+export async function getLastLibrarySortOption(): Promise<LibraryAllSortsType | undefined> {
     try {
         const filter = await getLastLibraryFilters();
         return filter?.sort ?? undefined;
@@ -514,7 +514,7 @@ export async function getLastLibrarySortOption(): Promise<AllSortsType | undefin
     }
 }
 
-export async function setLastLibrarySortOption(lastSortOption: AllSortsType): Promise<boolean> {
+export async function setLastLibrarySortOption(lastSortOption: LibraryAllSortsType): Promise<boolean> {
     try {
         const lastFilter = await getLastLibraryFilters();
         return setLastLibraryFilters({

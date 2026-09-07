@@ -82,10 +82,10 @@ interface oldSettingsV6 {
     FolderMapping: FolderMapping,
 }
 
-type oldFoldermapping = Record<string, Record<string, FolderEntry>>;
+type oldFolderMapping = Record<string, Record<string, FolderEntry>>;
 
 export class SettingsMigration {
-    private static getLatestFolderMappingFromPotentiallyOldFolderMapping( folderMapping: oldFoldermapping | FolderMapping ): FolderMapping {
+    private static getLatestFolderMappingFromPotentiallyOldFolderMapping( folderMapping: oldFolderMapping | FolderMapping ): FolderMapping {
         const isFolderMapping = (value: any): value is FolderMapping => {
             return value && 
                 typeof value === 'object' && 
@@ -94,7 +94,7 @@ export class SettingsMigration {
                 'defaultPath' in value;
         };
         const migratedFolderMapping: FolderMapping = isFolderMapping(folderMapping)
-            ? folderMapping : SettingsMigration.migrateFolderMapping( folderMapping as oldFoldermapping,  defaultSettings.FolderMapping.root );
+            ? folderMapping : SettingsMigration.migrateFolderMapping( folderMapping as oldFolderMapping,  defaultSettings.FolderMapping.root );
         return migratedFolderMapping;
     }
     public static async migrateSettingsToLatest(settings: oldSettingsV6 | oldSettingsV5 | oldSettingsV4 | unknown, version: number): Promise<void> {
@@ -184,7 +184,7 @@ export class SettingsMigration {
             FolderMapping: data.FolderMapping,
         };
     }
-    public static migrateFolderMapping( old: oldFoldermapping, root: string ): FolderMapping {
+    public static migrateFolderMapping( old: oldFolderMapping, root: string ): FolderMapping {
         // Collect status → folder name from the first type's entries
         const statusFolders: Record<string, string> = {}
         const typeAliases: Record<string, string> = {}

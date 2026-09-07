@@ -82,10 +82,10 @@ export type {
 
 export type {
     NormalSortsType,
-    ExeptionSortsType,
-    ReverseAllsortsType,
+    ExceptionSortsType,
+    ReverseAllSortsType,
 
-    AllsortsType,
+    AllSortsType,
     
     MenuOptions,
     MenuOption,
@@ -98,7 +98,7 @@ export type {
     FilterClassName,
     
 
-    RSSDOM,
+    RssDOM,
     RSSData,
 
     TagMap,
@@ -130,7 +130,7 @@ export type {
     quickBackup,
 
     elementsInputAndMenu,
-    ElmentsWithInputAndMenu,
+    ElementsWithInputAndMenu,
 
     FolderMapping,
     FolderRule,

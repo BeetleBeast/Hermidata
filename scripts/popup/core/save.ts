@@ -82,7 +82,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
     
 
     const label = 'Primary';
-    const newBoomark: Bookmark = {
+    const newBookmark: Bookmark = {
         version: 4,
         id: returnBookmarkHash(label),
         current: 0,
@@ -107,7 +107,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
         chapter: {
             latest: 0,
             bookmarks: {
-                [newBoomark.id]: newBoomark
+                [newBookmark.id]: newBookmark
             },
             revisitingCount: 0,
             lastChecked: new Date().toISOString(),

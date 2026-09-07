@@ -198,7 +198,7 @@ export type RawFeed = {
     latestItem: FeedItem,
     lastToken: string | null
 }
-// FIXME: lastToken && guid have been added; sheck if it works
+// FIXME: lastToken && guid have been added; check if it works
 export type FeedItem = {
     id: string, // based on title + link
     rawTitle: string, // the title as it appears in the feed

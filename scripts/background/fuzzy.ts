@@ -18,7 +18,7 @@ declare const browser: typeof chrome | undefined;
  * @returns 
  */
 async function hasRelatedBookmark(currentTab: chrome.tabs.Tab): Promise<FuzzyMatchResult>  {
-    const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
+    const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox")
         ? "Bookmarks Menu"
         : "Bookmarks";
     const settings = settingsCashed ?? await getSettings();
@@ -29,8 +29,8 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab): Promise<FuzzyMat
 
     let folderPaths: string[] = getFolderPathsFromMapping(settings);
     
-    const resultFuzzyBookmark = await detectFuzzyBookmark(currentTab, folderPaths, Browserroot);
-    const ressultFuzzyHermidata = await detectFuzzyHermidata(currentTab);
+    const resultFuzzyBookmark = await detectFuzzyBookmark(currentTab, folderPaths, BrowserRoot);
+    const resultFuzzyHermidata = await detectFuzzyHermidata(currentTab);
 
     if ( resultFuzzyBookmark.hasValidFuzzyBookmark ) {
         return {
@@ -39,11 +39,11 @@ async function hasRelatedBookmark(currentTab: chrome.tabs.Tab): Promise<FuzzyMat
             sameChapter: isSameChapterCount(resultFuzzyBookmark.fuzzyMatches[0], currentTab)
         }
     }
-    else if ( ressultFuzzyHermidata.hasValidFuzzyHermidata ) {
+    else if ( resultFuzzyHermidata.hasValidFuzzyHermidata ) {
         return {
             type: 'hermidata',
-            match: ressultFuzzyHermidata.fuzzyMatches[0],
-            sameChapter: isSameChapterCount(ressultFuzzyHermidata.fuzzyMatches[0], currentTab)
+            match: resultFuzzyHermidata.fuzzyMatches[0],
+            sameChapter: isSameChapterCount(resultFuzzyHermidata.fuzzyMatches[0], currentTab)
         }
     }
     else return { type: 'none' };
@@ -109,7 +109,7 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
     const hasValidFuzzyHermidata = fuzzyMatches.length > 0;
     return {hasValidFuzzyHermidata, fuzzyMatches};
 }
-async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, folderPaths: string[], Browserroot: string, threshold = 0.8): 
+async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, folderPaths: string[], BrowserRoot: string, threshold = 0.8): 
     Promise<{hasValidFuzzyBookmark: boolean, fuzzyMatches: FuzzyBookmarkMatches[]}> {
     const fuzzyMatches: FuzzyBookmarkMatches[] = [];
     
@@ -119,7 +119,7 @@ async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, folderPaths: str
 
         const pathSegments = folderPath.split('/').filter(Boolean);
 
-        const finalFolderId = await findNestedFolder(pathSegments, Browserroot)
+        const finalFolderId = await findNestedFolder(pathSegments, BrowserRoot)
         if (!finalFolderId) continue;
         const bookmarks = await getBookmarkChildren(finalFolderId);
 
@@ -148,15 +148,15 @@ async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, folderPaths: str
 }
 
 function isSameChapterCount(a: (FuzzyBookmarkMatches | FuzzyHermidataMatches),b: chrome.tabs.Tab) {
-    let isSameNummber = false;
+    let isSameNumber = false;
 
-    const fuzzychapter = (a as FuzzyHermidataMatches).chapter ?? getChapterFromTitle(a.bookmarkTitle, a.fuzzySearchUrl)
-    if (!b.title || !b.url) return isSameNummber
+    const fuzzyChapter = (a as FuzzyHermidataMatches).chapter ?? getChapterFromTitle(a.bookmarkTitle, a.fuzzySearchUrl)
+    if (!b.title || !b.url) return isSameNumber
     // default title: <title> - chapter <chapter number>
-    const curentTabChapter = getChapterFromTitle(b.title, b.url)
+    const currentTabChapter = getChapterFromTitle(b.title, b.url)
 
 
 
-    if ( fuzzychapter === curentTabChapter) isSameNummber = true
-    return isSameNummber
+    if ( fuzzyChapter === currentTabChapter) isSameNumber = true
+    return isSameNumber
 }
