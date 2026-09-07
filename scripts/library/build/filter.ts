@@ -1,6 +1,7 @@
-import type { HermidataDateType } from "../../shared/types/index";
+import type { Hermidata, HermidataDateType, Settings } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
 import { LibraryBuilder } from "../build";
+import type { Controller } from "../controller";
 
 export type AllSortsType = BasicSortsType | ReverseSortsType;
 
@@ -16,9 +17,17 @@ export type ReverseSortsType = `Reverse-${BasicSortsType}`;
 
 export abstract class Sort extends LibraryBuilder {
 
+    protected selectedRange: { min: number, max: number } = { min: 0, max: 0 };
+
+    protected StarRatingRange: Controller;
 
     protected amountOfYearBuckets: number = 0;
-    private readonly maxYearBuckets: number = 15; 
+    private readonly maxYearBuckets: number = 15;
+
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings, Controller: Controller) {
+        super(AllHermidata, settings);
+        this.StarRatingRange = Controller;
+    }
 
     protected searchMode: 'all' | 'any' = 'all';
 

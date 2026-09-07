@@ -29,8 +29,9 @@
     --focus-ring: rgb(120, 150, 210);
 
     --resetFilterBtn: #12174f;
-    --resetFilterBtn_hover: #6792d7;
+    --resetFilterBtn_hover: rgb(103, 146, 215);
     --resetFilterBtn_active: #1c2b6b;
+
 }
 
 * {
@@ -1770,4 +1771,30 @@ body[data-list-mode="false"]
 
 .merger-dialog-warning-field-value-text {
 	color: var(--muted);
+}
+
+/* star rating custom slider thumb */
+
+#StarRating-dialog:popover-open {
+    width: 400px;
+    height: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: unset;
+    justify-content: unset;
+    padding: 28px 26px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+#StarRating-dialog:popover-open h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+#StarRating-dialog:popover-open p.hint {
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: #8c8375;
 }

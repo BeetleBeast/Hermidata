@@ -4,6 +4,7 @@ import { feed } from "./build/feed";
 import { filter } from "./build/setFilter";
 import { FilterLogic } from "./build/filterLogic";
 import { HermidataMerge } from "./build/merge";
+import type { DualRangeSlider } from "../shared/utils/DualRangeSlider";
 
 export class Controller {
     
@@ -23,11 +24,12 @@ export class Controller {
 
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         this.feed = new feed(allHermidata, settings);
-        this.filter = new filter(allHermidata, settings);
-        this.filterLogic = new FilterLogic(allHermidata, settings);
+        this.filter = new filter(allHermidata, settings, this);
+        this.filterLogic = new FilterLogic(allHermidata, settings, this);
         this.merger = new HermidataMerge(allHermidata, settings);
     }
 
+    public range: DualRangeSlider | null = null;
 
 
     public async init() {

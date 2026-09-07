@@ -2,6 +2,7 @@ import { getLastLibraryFilters, setLastLibraryFilters, setLastLibrarySortOption 
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../../shared/utils/Selection";
+import type { Controller } from "../controller";
 import { Sort, type AllSortsType, type BasicSortsType } from "./filter";
 
 
@@ -47,6 +48,10 @@ export class FilterLogic extends Sort {
         return [document.querySelector<HTMLDivElement>('#search-mode-radio-any'), document.querySelector<HTMLDivElement>('#search-mode-radio-all') ]
     }
 
+    private get minEl(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('.drs-thumb-min'); }
+    private get maxEl(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('.drs-thumb-max'); }
+
+
     private readonly filterReset = document.querySelector<HTMLButtonElement>('#resetFilters');
 
     private readonly ChapterCompletionFilter = document.querySelector<HTMLInputElement>('#ChapterCompletion-filter');
@@ -56,6 +61,9 @@ export class FilterLogic extends Sort {
 
     private selectedIndex: number = -1;
 
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings, StarRatingRange: Controller) {
+        super(AllHermidata, settings, StarRatingRange);
+    }
 
     public async build(): Promise<void> {
         if (!this.libraryEntriesContainer || !this.searchInput || !this.autocompleteContainer) {
@@ -65,35 +73,47 @@ export class FilterLogic extends Sort {
         await this.generalFilterOptionLogic(this.libraryEntriesContainer);
 
         // on tag search inclusion mode change, update filters
+        this.tagSearchToggle();
+
+        // star rating filter
+        await this.setStarRatingFilter();
+
+        // text query inputs
+        this.addTextQueryInputs(this.searchInput, this.autocompleteContainer);
+
+        // update highlighted suggestion on hover
+        this.updateSuggestions();
+
+        // reset filters
+        this.filterReset?.addEventListener('click', async () => await this.resetFilters());
+
+        this.countVisibleEntries();
+    }
+    private tagSearchToggle() {
         this.tagSearchMode.forEach(mode => mode?.addEventListener('click', async () => {
             const filters = await getLastLibraryFilters();
             if (!filters) return;
             this.applyFiltersSortAndSearchToEntries(filters);
         }));
-
+    }
+    private addTextQueryInputs(searchInput: HTMLInputElement, autocompleteContainer: HTMLDivElement) {
         // Hermidata  bar
-        this.searchInput.addEventListener('input', (e) => this.handleSearchInput(e, this.autocompleteContainer!));
-        this.searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!, '.autocomplete-item'));
+        searchInput?.addEventListener('input', (e) => this.handleSearchInput(e, autocompleteContainer));
+        searchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer, '.autocomplete-item'));
         // tags search bar
         this.tagsSearchInput?.addEventListener('input', (e) => this.handleTagsSearchInput(e));
         // Author search bar
         this.AuthorSearchInput?.addEventListener('input', (e) => this.handleAuthorSearchInput(e));
-        this.AuthorSearchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!, '#Author-filter-suggestions'));
+        this.AuthorSearchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer, '#Author-filter-suggestions'));
         // ChapterCompletionFilter
         this.ChapterCompletionFilter?.addEventListener('input', (e) => this.applyChapterCompletionFilter(e));
-
-        // update highlighted suggestion on hover
-        this.autocompleteContainer.addEventListener('mouseover', (e) => {
+    }
+    private updateSuggestions() {
+        this.autocompleteContainer?.addEventListener('mouseover', (e) => {
             this.selectedIndex = Array.from(this.autocompleteContainer!.children).indexOf(e.target as HTMLDivElement);
             const array = this.autocompleteContainer!.querySelectorAll('div') as NodeListOf<HTMLDivElement>;
             this.updateHighlightedSuggestion(array, this.selectedIndex);
         });
-
-        this.filterReset?.addEventListener('click', async () => {
-            await this.resetFilters();
-        });
-
-        this.countVisibleEntries();
     }
     private filterInputValues() {
         if (!this.searchInput || !this.tagsSearchInput || !this.AuthorSearchInput || !this.ChapterCompletionFilter) return;
@@ -116,9 +136,6 @@ export class FilterLogic extends Sort {
     protected reload(): void {
         throw new Error("Method not implemented.");
     }
-    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
-        super(AllHermidata, settings);
-    }
     /** Count the amount of Elements are visible in the DOM, then write inside the counter and return it */
     private countVisibleEntries(hidden: boolean = false): number {
         // get visible elements
@@ -134,6 +151,39 @@ export class FilterLogic extends Sort {
 
         // return
         return count;
+    }
+    private async setStarRatingFilter() {
+
+        // get default filters
+        const lastSort = await getLastLibraryFilters();
+        
+        const filters: Filters = lastSort ?? {
+            include: { starRating: this.addSubRange(this.selectedRange.min, this.selectedRange.max)},
+            exclude: {},
+            sort: "Alphabetical"
+        }
+        // add default star rating value
+        filters.include["starRating"] = this.addSubRange(this.selectedRange.min, this.selectedRange.max);
+
+        const updateFilters = () => {
+            filters.include["starRating"] = this.addSubRange(this.minEl?.valueAsNumber, this.maxEl?.valueAsNumber);
+            
+            this.applyFiltersSortAndSearchToEntries(filters);
+        };
+        // add event listeners
+        this.minEl?.addEventListener('input', updateFilters);
+        this.maxEl?.addEventListener('input', updateFilters);
+
+        this.applyFiltersSortAndSearchToEntries(filters);
+    }
+    private addSubRange(start: number | undefined, end: number | undefined): string[] {
+        if (start === undefined || end === undefined) return [];
+
+        const list: string[] = []
+
+        for (let i = start; i <= end; i++) list.push(String(i))
+
+        return list
     }
 
     private async resetFilters() {
@@ -161,6 +211,8 @@ export class FilterLogic extends Sort {
 
         // reset author search input
         this.AuthorSearchInput!.value = '';
+
+        this.StarRatingRange.range?.setValue(0, 10);
 
         // set sort to default
         const sortCheckboxAlphabetical = getElement<HTMLDivElement>('#sort-checkbox-Alphabetical');
