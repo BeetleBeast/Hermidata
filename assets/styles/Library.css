@@ -1,39 +1,3 @@
-:root {
-    --Btn: rgb(63, 76, 96);
-    --Btn_hover: rgb(34, 48, 89);
-    --Btn_active: rgb(15, 34, 94);
-    --Text-color: lightgray;
-    --Btn_hover_danger: rgb(255, 0, 0);
-    --Btn_hover_success: rgb(0, 255, 0);
-    --Btn_hover_Cancel: rgb(255, 217, 0);
-    --bg-color: rgb(12, 17, 24);
-    --Input-color: rgb(40, 53, 75);
-    --table-color: var(--Input-color);
-    --Input-colorV2: rgb(32, 39, 51);
-    --Btn_disabled: rgb(120, 120, 120);
-    --bg_disabled: rgb(24, 28, 36);
-    --hr: #555;
-    --filterExcludeOption: #04060a;
-    --filterIncludeOptionText: #fff;
-    --muted: #989898;
-
-    --border: rgb(70, 85, 110);
-    --border-focus: rgb(120, 150, 210);
-
-    --Btn_danger_fill: rgb(120, 40, 40);
-    --Btn_success_fill: rgb(30, 90, 60);
-    --Btn_cancel_fill: rgb(120, 100, 20);
-
-    --Text-disabled: var(--muted);
-
-    --focus-ring: rgb(120, 150, 210);
-
-    --resetFilterBtn: #12174f;
-    --resetFilterBtn_hover: rgb(103, 146, 215);
-    --resetFilterBtn_active: #1c2b6b;
-
-}
-
 * {
     box-sizing: border-box;
     font-family: Segoe UI, system-ui, Arial;
@@ -201,7 +165,7 @@ textarea:focus,
     outline: none;
     border-color: var(--border-focus);
     background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    box-shadow: 0 0 0 2px var(--select-focus-shadow)
 }
 
 textarea {
@@ -266,7 +230,7 @@ select:hover {
 select:focus {
     outline: none;
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    box-shadow: 0 0 0 2px var(--select-focus-shadow);
 }
 
 select:disabled {
@@ -419,7 +383,7 @@ html::-webkit-scrollbar-thumb {
 #search-suggestions {
 	position: absolute;
 	top: calc(100%);
-	background-color: rgba(12, 17, 24, 0.71);
+	background-color: var(--searchSuggestionBg);
 	border: 1px solid var(--Btn);
 	border-top: none;
 	border-radius: 0 0 8px 8px;
@@ -478,7 +442,7 @@ html::-webkit-scrollbar-thumb {
     outline: none;
 
     background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    box-shadow: 0 0 0 2px var(--select-focus-shadow);
 }
 
 #search {
@@ -547,7 +511,7 @@ html::-webkit-scrollbar-thumb {
 }
 
 #resetFilters {
-    background-color: cornflowerblue;
+    background-color: var(--cornflower);
     color: var(--resetFilterBtn);
     border-radius: 5px;
     border: 1px solid #12174f;
@@ -563,7 +527,7 @@ html::-webkit-scrollbar-thumb {
     background-color: var(--resetFilterBtn_hover);
     color: var(--resetFilterBtn);
     border-radius: 5px;
-    border: 1px solid cornflowerblue;
+    border: 1px solid var(--cornflower);
 }
 
 /* library container */
@@ -623,7 +587,7 @@ html::-webkit-scrollbar-thumb {
 [data-active_view_mode="true"]:hover,
 [data-active_view_mode="true"]:active,
 [data-active_view_mode="true"]:focus-visible {
-    color: #fff;
+    color: var(--filterIncludeOptionText);
     border-color: none;
     outline: none;
     background-color: none;
@@ -632,7 +596,7 @@ html::-webkit-scrollbar-thumb {
 .viewMode-toggle:hover:not([data-active_view_mode="true"]):focus-visible,
 .viewMode-toggle:hover:not([data-active_view_mode="true"]):active,
 .viewMode-toggle:hover:not([data-active_view_mode="true"]) {
-    color: #fff;
+    color: var(--filterIncludeOptionText);
     background-color: inherit;
     outline: none;
 }
@@ -1093,7 +1057,7 @@ body[data-list-mode="false"]
     padding-left: 10px;
     padding-right: 30px;
     border-radius: 5px;
-    box-shadow: rgba(0, 0, 0, 0.45) 0px 18px 40px -12px, rgba(0, 0, 0, 0.25) 0px 2px 6px;
+    box-shadow: var(--dialog-shadow-1) 0px 18px 40px -12px, var(--dialog-shadow-2) 0px 2px 6px;
     opacity: 1;
     transform: scale(1) translateY(0);
 }
@@ -1175,7 +1139,7 @@ body[data-list-mode="false"]
 }
 
 #Author-filter-suggestions {
-	background-color: rgba(12, 17, 24, 0.71);
+	background-color: var(--searchSuggestionBg);
 	border: 1px solid var(--Btn);
 	border-top: none;
 	border-radius: 0 0 8px 8px;
@@ -1488,20 +1452,20 @@ body[data-list-mode="false"]
     justify-content: center;
 }
 .merger-dialog-progression-1-text {
-	color: black;
+	color: var(--pure-black);
 	text-align: center;
 	display: flex;
 	width: 10px;
 	height: 25px;
 }
 .merger-dialog-progression.merger-dialog-progression-1[data-progression="2"] {
-	color: black;
+	color: var(--pure-black);
 	display: flex;
 	min-width: 50px;
 	width: 50px;
 	height: 50px;
 	text-align: center;
-	background-color: rgb(0, 172, 0);
+	background-color: var(--merger-dialog-correct);
 	border-radius: 25px;
 	align-items: center;
 	justify-content: center;
@@ -1520,7 +1484,7 @@ body[data-list-mode="false"]
 }
 .merger-dialog-progression.merger-dialog-progression-2[data-progression="2"] {
     
-    color: black;
+    color: var(--pure-black);
 	display: flex;
     min-width: 50px;
 	width: 50px;
@@ -1607,7 +1571,7 @@ body[data-list-mode="false"]
     padding-left: 20px;
     padding-right: 20px;
     align-items: baseline;
-    border-bottom: 1px solid var(--hr, rgba(255, 255, 255, 0.06));
+    border-bottom: 1px solid var(--divider);
     justify-content: space-between;
     transition: background-color 0.15s ease;
 }
@@ -1622,7 +1586,7 @@ body[data-list-mode="false"]
 }
 
 .merger-dialog-record-container:hover {
-    background-color: var(--surface-hover, rgba(255,255,255,0.03));
+    background-color: var(--slight-hover-darkening);
 }
 
 .merger-dialog-record-label {
@@ -1796,5 +1760,5 @@ body[data-list-mode="false"]
 #StarRating-dialog:popover-open p.hint {
     margin: 0 0 20px;
     font-size: 13px;
-    color: #8c8375;
+    color: var(--starRating-dialog-hint);
 }

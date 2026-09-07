@@ -10,6 +10,10 @@
 
     --bg-color: rgb(12, 17, 24);
 
+    --pure-black: rgb(0, 0, 0);
+    --pure-white: rgb(255, 255, 255);
+    
+
     --Input-color: rgb(40, 53, 75);
     --Input-colorV2: rgb(32, 39, 51);
 
@@ -19,33 +23,105 @@
     --bg_disabled: rgb(24, 28, 36);
 
     --hr: #555;
+    
+    --context-menu-item-hover: #444;
+
+    --divider: rgba(255, 255, 255, 0.06);
+
+    --autoCompleteGhost: #999;
+
+    --customRuleGhost: #888;
+
+    --searchSuggestionBg: rgba(12, 17, 24, 0.71);
+
+    --bannerBg: rgb(99 81 127 / 13%);
+
+    --dialog-shadow-1: rgba(0, 0, 0, 0.45);
+    --dialog-shadow-2: rgba(0, 0, 0, 0.25);
+
+    --context-menu-shadow: rgba(0,0,0,0.3);
+
+    --promptShadow: rgba(0, 0, 0, 0.2);
+
+    --boxShadow1: var(--dialog-shadow-1);
+    --boxShadow2: var(--dialog-shadow-2);
+
+    --slight-hover-darkening: rgba(255,255,255,0.03);
+
+    --select-focus-shadow: rgba(120, 150, 210, 0.25);
 
     --filterExcludeOption: #04060a;
 
+    --settings-footer-hr: #ccc;
+
     --filterIncludeOptionText: #fff;
+
+    --settings-th: #d1d5db;
+
+    --settings-subFolder-inputs-leftBorder: #808080; /* grey */
+
+    --hermidata-item-footer: #808080;
+
+    --rssLink-missing: yellow;
+    --rssLink-missing-hover: #f0f8ff; /* aliceblue */
 
     --muted: #989898;
 
     --border: rgb(70, 85, 110);
     --border-focus: rgb(120, 150, 210);
 
+    --statusBar: rgb(0, 128, 0);
+
     --Btn_danger_fill: rgb(120, 40, 40);
     --Btn_success_fill: rgb(30, 90, 60);
     --Btn_cancel_fill: rgb(120, 100, 20);
+
+    --merger-dialog-correct: rgb(0, 172, 0);
 
     --Text-disabled: var(--muted);
 
     --focus-ring: rgb(120, 150, 210);
     
+    --context-menuBg: #222;
 
     --card: rgb(18, 31, 49);
     --borderLibrary: rgb(63, 76, 96);
+
+    --Btn_danger_fill-hover: rgb(140, 48, 48);
+    --Btn_danger_fill-active: rgb(95, 30, 30);
+    --Btn_danger_text: #f5f0f0;
+
+    --resetFilterBtn: #12174f;
+    --resetFilterBtn_hover: #6792d7;
+    --resetFilterBtn_active: #1c2b6b;
+
+    --cornflower: #6495ed; /* rename this */
+
+    --defaultTagBg:rgb(0, 174, 255);
+    --defaultTagColor: contrast-color(rgb(0, 174, 255));
 
     --ink: #2b2620;
     --paper: #faf7f2;
     --line: #ddd4c6;
     --amber: #c9821f;
     --amber-soft: #eddcbd;
+
+    --starRating-dialog-hint: #8c8375;
+
+    --dual-range-input-shadow: rgba(0,0,0,0.15);
+
+    --custom-checkboxes-hover-shadow: rgba(0, 122, 255, 0.2);
+
+    --dual-range-input-stick: #a89f8f;
+
+    --filter-search-focus-border: #007aff;
+    --filter-search-focus-shadow: rgba(0, 122, 255, 0.4);
+
+    --filter-container-shadow: rgba(0,0,0,0.05);
+
+    --svg-line-strokes: #4e83ff54; /* keep */
+
+    --temp: #808080;
 }
 
 body {
@@ -83,11 +159,11 @@ body {
 
 .custom-context-menu {
     position: absolute;
-    background: #222;
-    color: white;
+    background: var(--context-menuBg);
+    color: var(--pure-white);
     border-radius: 8px;
     padding: 4px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px var(--context-menu-shadow);
     z-index: 10000;
     min-width: 180px;
     font-size: 14px;
@@ -96,7 +172,7 @@ body {
     justify-self: center;
     width: fit-content;
     flex-flow: column;
-    border: 1px solid #555;
+    border: 1px solid var(--hr);
 }
 .context-menu-item-container {
     width: 100%;
@@ -116,12 +192,12 @@ body {
 }
 
 .menu-item:hover {
-    background: #444;
+    background: var(--context-menu-item-hover);
 }
 
 .menu-separator {
     height: 1px;
-    background: #555;
+    background: var(--hr);
     margin: 4px 0;
     width: 100%;
 }
@@ -132,7 +208,7 @@ body {
 .promptSection {
     display: none;
     flex-direction: column;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--promptShadow);
     align-items: center;
     justify-content: center;
     position: absolute;
@@ -331,9 +407,9 @@ body {
     height: 18px;
     margin-top: -7px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--filterIncludeOptionText);
     border: 2px solid var(--border-focus);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 2px var(--dual-range-input-shadow);
     cursor: pointer;
 }
 .drs-thumb::-moz-range-thumb {
@@ -341,9 +417,9 @@ body {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--filterIncludeOptionText);
     border: 2px solid var(--border-focus);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 2px var(--dual-range-input-shadow);
     cursor: pointer;
 }
 
@@ -360,7 +436,7 @@ body {
     display: flex;
     justify-content: space-between;
     font-size: 11px;
-    color: #a89f8f;
+    color: var(--dual-range-input-stick);
     padding: 0 1px;
 }
 
@@ -374,7 +450,7 @@ body {
     padding-top: 16px;
     border-top: 1px dashed var(--line);
     font-size: 12px;
-    color: #8c8375;
+    color: var(--starRating-dialog-hint);
 }
 
 .result code {
@@ -398,13 +474,13 @@ body {
 .drs-thumb:hover::-webkit-slider-thumb,
 .drs-thumb:focus-visible::-webkit-slider-thumb {
     border-color: var(--border-focus);
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    background: var(--filterIncludeOptionText);
+    box-shadow: 0 1px 3px var(--promptShadow);
 }
 .drs-thumb:active::-webkit-slider-thumb {
     background: var(--border-focus);
     border-color: var(--border-focus);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 1px 3px var(--select-focus-shadow);
 }
 .drs-thumb:hover::-webkit-slider-runnable-track,
 .drs-thumb:active::-webkit-slider-runnable-track,
@@ -416,13 +492,13 @@ body {
 .drs-thumb:hover::-moz-range-thumb,
 .drs-thumb:focus-visible::-moz-range-thumb {
     border-color: var(--border-focus);
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    background: var(--filterIncludeOptionText);
+    box-shadow: 0 1px 3px var(--promptShadow);
 }
 .drs-thumb:active::-moz-range-thumb {
     background: var(--border-focus);
     border-color: var(--border-focus);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 1px 3px var(--select-focus-shadow);
 }
 .drs-thumb:hover::-moz-range-track,
 .drs-thumb:active::-moz-range-track,

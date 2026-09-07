@@ -1,34 +1,3 @@
-:root {
-    --Btn: rgb(63, 76, 96);
-    --Btn_hover: rgb(34, 48, 89);
-    --Btn_active: rgb(15, 34, 94);
-    --Text-color: lightgray;
-    --Btn_hover_danger: rgb(255, 0, 0);
-    --Btn_hover_success: rgb(0, 255, 0);
-    --Btn_hover_Cancel: rgb(255, 217, 0);
-    --bg-color: rgb(12, 17, 24);
-    --Input-color: rgb(40, 53, 75);
-    --table-color: var(--Input-color);
-    --Input-colorV2: rgb(32, 39, 51);
-    --Btn_disabled: rgb(120, 120, 120);
-    --bg_disabled: rgb(24, 28, 36);
-    --hr: #555;
-    --filterExcludeOption: #04060a;
-    --filterIncludeOptionText: #fff;
-    --muted: #989898;
-
-    --border: rgb(70, 85, 110);
-    --border-focus: rgb(120, 150, 210);
-
-    --Btn_danger_fill: rgb(120, 40, 40);
-    --Btn_success_fill: rgb(30, 90, 60);
-    --Btn_cancel_fill: rgb(120, 100, 20);
-
-    --Text-disabled: var(--muted);
-
-    --focus-ring: rgb(120, 150, 210);
-}
-
 body {
     background-color: var(--bg-color);
     color: var(--Text-color);
@@ -90,19 +59,19 @@ button:disabled,
 .btn-danger:hover {
     background: var(--Btn_danger_fill);
     border-color: var(--Btn_hover_danger);
-    color: #fff;
+    color: var(--filterIncludeOptionText);
 }
 
 .btn-success:hover {
     background: var(--Btn_success_fill);
     border-color: var(--Btn_hover_success);
-    color: #fff;
+    color: var(--filterIncludeOptionText);
 }
 
 .btn-cancel:hover {
     background: var(--Btn_cancel_fill);
     border-color: var(--Btn_hover_Cancel);
-    color: #fff;
+    color: var(--filterIncludeOptionText);
 }
 
 .btn-ghost {
@@ -156,7 +125,7 @@ textarea:focus,
     outline: none;
     border-color: var(--border-focus);
     background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    box-shadow: 0 0 0 2px var(--select-focus-shadow);
 }
 
 textarea {
@@ -261,7 +230,7 @@ input[type="color"]:hover {
 input[type="color"]:focus {
     outline: none;
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    box-shadow: 0 0 0 2px var(--select-focus-shadow);
 }
 
 input[type="color"]:disabled {
@@ -313,7 +282,7 @@ select:hover {
 select:focus {
     outline: none;
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    box-shadow: 0 0 0 2px var(--select-focus-shadow);
 }
 
 select:disabled {
@@ -408,7 +377,7 @@ footer {
 	width: 70%;
 	height: 50px;
 	background-color: var(--bg-color);
-	border-top: 1px solid #ccc;
+	border-top: 1px solid var(--settings-footer-hr);
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -455,12 +424,12 @@ table {
 td, th {
     text-align: center;
     vertical-align: middle;
-    border: 1px solid #ccc;
+    border: 1px solid var(--settings-footer-hr);
     padding: 0;
 }
 th {
     background-color: var(--Input-color);
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--settings-th);
     font-weight: bold;
     padding: 8px;
     width: fit-content;
@@ -552,7 +521,7 @@ select.autoInput {
 #statusSheetURL, 
 #statusSaveDefaultInput,
 #statusSaveDefaultInputInputTextMenu {
-    color: green;
+    color: var(--statusBar);
 }
 
 [data-active="false"] {
@@ -588,7 +557,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	color: white;
+	color: var(--pure-white);
 	position: absolute;
 	top: 10%;
 	border: 1px solid;
@@ -620,7 +589,7 @@ nav {
 	text-align: left;
 	cursor: pointer;
 	transition: background 0.2s;
-	color: white;
+	color: var(--pure-white);
 	border: 1px solid;
 }
 
@@ -730,7 +699,7 @@ nav {
 
 .nav-item[data-active="true"] {
     background: var(--Btn_active);
-    color: white;
+    color: var(--pure-white);
 }
 
 .content {
@@ -941,7 +910,7 @@ nav {
 	top: 17px;
 	left: 10px;
 	pointer-events: none;
-	color: #888;
+	color: var(--customRuleGhost);
 	opacity: 0.5;
 	white-space: nowrap;
 	overflow: visible;
@@ -951,7 +920,7 @@ nav {
 #advancedOptionsBtn {
 	width: 30%;
 	background-color: transparent;
-	color: white;
+	color: var(--pure-white);
 	padding: 15px;
 	margin-top: 15px;
 	margin-bottom: 15px;
@@ -1050,13 +1019,13 @@ nav {
     display: flex;
     flex-direction: row;
     align-items: center;
-    border-left: 1px solid grey;
+    border-left: 1px solid var(--settings-subFolder-inputs-leftBorder);
 }
 #add_ReadStatuses_Subfolder_Options_Inputs {
     display: flex;
     flex-direction: row;
     align-items: center;
-	border-left: 1px solid grey;
+	border-left: 1px solid var(--settings-subFolder-inputs-leftBorder);
 }
 
 
