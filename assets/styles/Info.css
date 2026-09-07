@@ -1,43 +1,3 @@
-:root {
-    --Btn: rgb(63, 76, 96);
-    --Btn_hover: rgb(34, 48, 89);
-    --Btn_active: rgb(15, 34, 94);
-    --Text-color: lightgray;
-    --Btn_hover_danger: rgb(255, 0, 0);
-    --Btn_hover_success: rgb(0, 255, 0);
-    --Btn_hover_Cancel: rgb(255, 217, 0);
-    --bg-color: rgb(12, 17, 24);
-    --Input-color: rgb(40, 53, 75);
-    --table-color: var(--Input-color);
-    --Input-colorV2: rgb(32, 39, 51);
-    --Btn_disabled: rgb(120, 120, 120);
-    --bg_disabled: rgb(24, 28, 36);
-    --hr: #555;
-    --filterExcludeOption: #04060a;
-    --filterIncludeOptionText: #fff;
-    --muted: #989898;
-
-    --border: rgb(70, 85, 110);
-    --border-focus: rgb(120, 150, 210);
-
-    --Btn_danger_fill: rgb(120, 40, 40);
-    --Btn_success_fill: rgb(30, 90, 60);
-    --Btn_cancel_fill: rgb(120, 100, 20);
-
-    --Btn_danger_fill: rgb(120, 40, 40);
-    --Btn_danger_fill-hover: rgb(140, 48, 48);
-    --Btn_danger_fill-active: rgb(95, 30, 30);
-    --Btn_danger_text: #f5f0f0;
-
-    --Text-disabled: var(--muted);
-
-    --focus-ring: rgb(120, 150, 210);
-
-    --resetFilterBtn: #12174f;
-    --resetFilterBtn_hover: #6792d7;
-    --resetFilterBtn_active: #1c2b6b;
-}
-
 * {
     box-sizing: border-box;
     font-family: Segoe UI, system-ui, Arial;
@@ -245,7 +205,7 @@ select:hover {
 select:focus {
     outline: none;
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    box-shadow: 0 0 0 2px var(--select-focus-shadow);
 }
 
 select:disabled {
@@ -364,7 +324,7 @@ label {
 #search-suggestions {
 	position: absolute;
 	top: calc(100%);
-	background-color: rgba(12, 17, 24, 0.71);
+	background-color: var(--searchSuggestionBg);
 	border: 1px solid var(--Btn);
 	border-top: none;
 	border-radius: 0 0 8px 8px;
@@ -465,7 +425,7 @@ label {
 	grid-template-columns: 400px auto 400px;
 	grid-template-rows: 80px;
 	border: none;
-    background-color: rgb(99 81 127 / 13%);
+    background-color: var(--bannerBg);
 }
 
 #cancel-edit-btn {
@@ -561,17 +521,17 @@ label {
 	align-items: center;
 	justify-self: center;
 	font-size: 1.2em;
-    background-color: cornflowerblue;
+    background-color: var(--cornflower);
     color: var(--resetFilterBtn);
     border-radius: 5px;
-    border: 1px solid #12174f;
+    border: 1px solid var(--resetFilterBtn);
     transition: background 0.2s ease;
 }
 #hermidata-readLatest-btn:hover {
     background-color: var(--resetFilterBtn_hover);
-    color: #12174f;
+    color: var(--resetFilterBtn);
     border-radius: 5px;
-    border: 1px solid #12174f;
+    border: 1px solid var(--resetFilterBtn);;
     
 }
 
@@ -751,7 +711,7 @@ label {
 [data-state="true"]:hover,
 [data-state="true"]:active,
 [data-state="true"]:focus-visible {
-    color: #fff;
+    color: var(--filterIncludeOptionText);
     border-color: none;
     outline: none;
     background-color: none;
@@ -760,7 +720,7 @@ label {
 .filter-button:hover:not([data-state="true"]):focus-visible,
 .filter-button:hover:not([data-state="true"]):active,
 .filter-button:hover:not([data-state="true"]) {
-    color: #fff;
+    color: var(--filterIncludeOptionText);
     background-color: transparent;
     outline: none;
 }
@@ -1111,7 +1071,7 @@ label {
 .tag-pill-removeX:hover {
     background-color: var(--border-focus);
     transform: scale(1.2);
-	color: red;
+	color: var(--Btn_hover_danger);
 }
 
 .filterInput[data-editing="true"] {
@@ -1347,7 +1307,7 @@ button#hermidata-img {
     height: 10%;
 
     border-radius: 5px;
-    box-shadow: rgba(0, 0, 0, 0.45) 0px 18px 40px -12px, rgba(0, 0, 0, 0.25) 0px 2px 6px;
+    box-shadow: var(--boxShadow1) 0px 18px 40px -12px, var(--boxShadow2) 0px 2px 6px;
     opacity: 1;
     transform: scale(1) translateY(0);
 }
