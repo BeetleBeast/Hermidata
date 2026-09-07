@@ -5,7 +5,7 @@ import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement } from "../../shared/utils/Selection";
 import type { Controller } from "../controller";
 import { Sort } from "./filter";
-import { DualRangeSlider } from "./starRating";
+import { DualRangeSlider } from "../../shared/utils/starRating";
 
 export class filter extends Sort {
 

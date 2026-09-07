@@ -4,7 +4,7 @@ import { feed } from "./build/feed";
 import { filter } from "./build/setFilter";
 import { FilterLogic } from "./build/filterLogic";
 import { HermidataMerge } from "./build/merge";
-import type { DualRangeSlider } from "./build/starRating";
+import type { DualRangeSlider } from "../shared/utils/starRating";
 
 export class Controller {
     
