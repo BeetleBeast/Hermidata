@@ -40,6 +40,12 @@
 
     --card: rgb(18, 31, 49);
     --borderLibrary: rgb(63, 76, 96);
+
+    --ink: #2b2620;
+    --paper: #faf7f2;
+    --line: #ddd4c6;
+    --amber: #c9821f;
+    --amber-soft: #eddcbd;
 }
 
 body {
