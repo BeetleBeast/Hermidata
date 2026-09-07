@@ -1,7 +1,7 @@
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/utils/BrowserCompat"
 import { dbUpdateImageKey, getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
-import type { DbCall, DbStore, Filters, Hermidata, RawFeed, RawScrappedFeed, SyncCall } from "../shared/types/index"
+import type { DbCall, DbStore, Filters, Hermidata, RawFeed, RawScrapedItem, RawScrappedFeed, SyncCall } from "../shared/types/index"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
