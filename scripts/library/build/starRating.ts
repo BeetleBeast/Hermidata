@@ -117,10 +117,11 @@ export class StarRangeFilter {
 
     private handleMinInput(): void {
         let minVal = Number(this.minInput.value);
-        const maxVal = Number(this.maxInput.value);
+        let maxVal = Number(this.maxInput.value);
         if (minVal > maxVal) {
-            minVal = maxVal;
+            maxVal = minVal;
             this.minInput.value = String(minVal);
+            this.maxInput.value = String(maxVal);
         }
         this.value.min = minVal;
         this.value.max = maxVal;
@@ -128,11 +129,12 @@ export class StarRangeFilter {
     }
 
     private handleMaxInput(): void {
-        const minVal = Number(this.minInput.value);
+        let minVal = Number(this.minInput.value);
         let maxVal = Number(this.maxInput.value);
         if (maxVal < minVal) {
-            maxVal = minVal;
+            minVal = maxVal;
             this.maxInput.value = String(maxVal);
+            this.minInput.value = String(minVal);
         }
         this.value.min = minVal;
         this.value.max = maxVal;
@@ -151,7 +153,6 @@ export class StarRangeFilter {
 
         // Keep whichever thumb is at the top end of the range grabbable when both thumbs land on the same value.
         if (this.value.min === this.value.max) {
-            // TODO: later make it so that if one grab a thumb and move to the position of the other, it takes it with it until the end
             this.minInput.style.zIndex = minPct > 50 ? "3" : "2";
             this.maxInput.style.zIndex = minPct > 50 ? "2" : "3";
         } else {
@@ -160,7 +161,7 @@ export class StarRangeFilter {
         }
 
         const sameValueContent = `${this.value.min} ★`;
-        const normalContent =  `${this.value.min} ★ - ${this.value.max} ★`;
+        const normalContent =  `${this.value.min} ★ <———> ${this.value.max} ★`;
         this.labelEl.textContent = this.value.min === this.value.max ? sameValueContent : normalContent;
 
         if (fireChange && this.onChange) {

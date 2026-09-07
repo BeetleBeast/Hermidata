@@ -1819,6 +1819,9 @@ body[data-list-mode="false"]
     font-weight: 600;
     letter-spacing: 0.02em;
     color: var(--border-focus);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .srf-track {

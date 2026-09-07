@@ -76,7 +76,7 @@ export class FilterLogic extends Sort {
         this.tagSearchToggle();
 
         // star rating filter
-        this.setStarRatingFilter();
+        await this.setStarRatingFilter();
 
         // text query inputs
         this.addTextQueryInputs(this.searchInput, this.autocompleteContainer);
@@ -152,24 +152,22 @@ export class FilterLogic extends Sort {
         // return
         return count;
     }
-    private setStarRatingFilter() {
-        
-        // TODO: fix this
+    private async setStarRatingFilter() {
 
-        // get default selected range
+        // get default filters
+        const lastSort = await getLastLibraryFilters();
         
-        const filters: Filters = {
-            include: this.addSubRange(this.selectedRange.min, this.selectedRange.max),
+        const filters: Filters = lastSort ?? {
+            include: { starRating: this.addSubRange(this.selectedRange.min, this.selectedRange.max)},
             exclude: {},
-            sort: 'Alphabetical'
+            sort: "Alphabetical"
         }
+        // add default star rating value
+        filters.include["starRating"] = this.addSubRange(this.selectedRange.min, this.selectedRange.max);
 
         const updateFilters = () => {
-            const starRatingRecord = this.addSubRange(this.minEl?.valueAsNumber, this.maxEl?.valueAsNumber);
-            filters.include = {
-                ...starRatingRecord
-            };
-
+            filters.include["starRating"] = this.addSubRange(this.minEl?.valueAsNumber, this.maxEl?.valueAsNumber);
+            
             this.applyFiltersSortAndSearchToEntries(filters);
         };
         // add event listeners
@@ -178,14 +176,14 @@ export class FilterLogic extends Sort {
 
         this.applyFiltersSortAndSearchToEntries(filters);
     }
-    private addSubRange(start: number | undefined, end: number | undefined): Record<string, string[]> {
-        if (start === undefined || end === undefined) return {};
+    private addSubRange(start: number | undefined, end: number | undefined): string[] {
+        if (start === undefined || end === undefined) return [];
 
         const list: string[] = []
 
         for (let i = start; i <= end; i++) list.push(String(i))
 
-        return { starRating: list }
+        return list
     }
 
     private async resetFilters() {
