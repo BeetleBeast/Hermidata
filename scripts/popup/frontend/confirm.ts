@@ -97,11 +97,20 @@ export function customPrompt(msg: string, options: Partial<Omit<DialogOptionsInp
 }
 
 export function customConfirm(msg: string, options: Partial<Omit<DialogOptionsInput<boolean>, 'onResolve' | 'message'>> = {}): Promise<boolean> {
+    const defaultEl = getDefaultElements();
+    const elOptions = {
+        container: options.elements?.container ?? defaultEl.container,
+        label: options.elements?.label ?? defaultEl.label,
+        btn1: options.elements?.btn1 ?? defaultEl.btn1,
+        btn2: options.elements?.btn2 ?? defaultEl.btn2,
+        input: null
+    }
     return createDialog<boolean>({
         ...options,
+        elements: elOptions,
         message: msg,
         onResolve: (result) => result.accepted
-    });
+    });;
 }
 
 
@@ -188,7 +197,6 @@ export function createDialog<T>(opts: DialogOptionsInput<T>): Promise<T> {
         const onYes = () => {
             cleanup();
             resolve(onResolve({ accepted: true, value: input?.value ?? '' }));
-            
         };
 
         const onNo = () => {

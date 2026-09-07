@@ -8,7 +8,7 @@ import { Footer } from "./build/footer";
 import { EventListener } from "./build/EventListener";
 import { SortOption } from "./build/SortOption";
 import { SortLogic } from "./build/SortLogic";
-import { updatePolygons, positionDiamond } from "./build/SetPositionSvg";
+import { positionDiamondBatch, updatePolygons } from "./build/SetPositionSvg";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
 
 
@@ -31,20 +31,20 @@ export class BuildRSSController {
         await new SortOption(this.hermidata,  await RssBuild.init()).makeSortOptions(sortSection);
 
         // needs to be after sort options and before notification are hidden
-        updatePolygons(); // potential fix for svg position bug when opening RSS page and notification svg's are not set
-        const allElements = await document.querySelectorAll<HTMLElement>('.hermidata-item');
-        allElements.forEach(item => positionDiamond(item));
+        updatePolygons();
 
-        // set tag elypsis
-        allElements.forEach(item => this.trimTagOverflow(item));
+        const allElements = Array.from(document.querySelectorAll<HTMLElement>('.hermidata-item'));
+
+        // set position svg
+        positionDiamondBatch(allElements);
+
+        // set tag ellipsis
+        this.trimTagOverflowBatch(allElements);
 
         // set title header if no saved items
         if (allElements.length === 0) {
-            const AllItems = document.querySelector('#All-RSS-entries');
-            if (!AllItems) return;
-            const Header = AllItems.querySelector('.titleHeader');
-            if (!Header)  return;
-            Header.textContent = 'No saved items';
+            const Header = document.querySelector('#All-RSS-entries')?.querySelector('.titleHeader');
+            if (Header) Header.textContent = 'No saved items';
         }
 
         await new SortLogic(this.hermidata,  await RssBuild.init()).sortOptionLogic(sortSection);
@@ -69,30 +69,51 @@ export class BuildRSSController {
     public async attachEventListeners(): Promise<void> {
         new EventListener(this.hermidata,  await RssBuild.init()).attachEventListeners();
     }
-    private trimTagOverflow(item: HTMLElement): void {
-        const container = item.querySelector<HTMLElement>('.hermidata-item-tag-container');
-        if (!container) return;
-        const tags = container.querySelectorAll<HTMLElement>('.tag-div');
-        const containerRight = container.getBoundingClientRect().right;
+    private trimTagOverflowBatch(items: HTMLElement[]): void {
+        interface Update {
+            shrinkTag?: HTMLElement;
+            maxWidth?: number;
+            hideTags?: HTMLElement[];
+        }
 
-        for (let i = 0; i < tags.length; i++) {
-            const tagRight = tags[i].getBoundingClientRect().right;
-            if (tagRight > containerRight) {
-                if (i > 0) {
-                    const prev = tags[i];
-                    const prevLeft = tags[i].getBoundingClientRect().left;
-                    const containerLeft = container.getBoundingClientRect().left;
-                    prev.style.textOverflow = 'ellipsis';
-                    prev.style.flexShrink = '1';
-                    prev.style.minWidth = '0';
-                    prev.style.maxWidth = (containerRight - containerLeft - (prevLeft - containerLeft)) + 'px';
+        const updates: Update[] = [];
+        // read phase
+        for (const item of items) {
+            const container = item.querySelector<HTMLElement>('.hermidata-item-tag-container');
+            if (!container) continue;
+
+            const tags = Array.from(container.querySelectorAll<HTMLElement>('.tag-div'));
+            if (tags.length === 0) continue;
+
+            const containerRect = container.getBoundingClientRect();
+            const tagRects = tags.map(t => t.getBoundingClientRect()); // one read pass per item, no writes yet
+
+            for (let i = 0; i < tags.length; i++) {
+                if (tagRects[i].right > containerRect.right) {
+                    const update: Update = {};
+
+                    if (i > 0) {
+                        update.shrinkTag = tags[i];
+                        update.maxWidth = containerRect.right - tagRects[i].left;
+                    }
+
+                    update.hideTags = tags.slice(i + 1);
+
+                    updates.push(update);
+                    break; // exit tag loop
                 }
-                for (let j = i; j < tags.length; j++) {
-                    if (j === i) continue;
-                    tags[j].style.display = 'none';
-                }
-                break;
             }
+        }
+
+        // write phase
+        for (const { shrinkTag, maxWidth, hideTags } of updates) {
+            if (shrinkTag && maxWidth != null) {
+                shrinkTag.style.textOverflow = 'ellipsis';
+                shrinkTag.style.flexShrink = '1';
+                shrinkTag.style.minWidth = '0';
+                shrinkTag.style.maxWidth = maxWidth + 'px';
+            }
+            hideTags?.forEach(tag => { tag.style.display = 'none'; });
         }
     }
 }

@@ -1,9 +1,9 @@
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { openLink } from "../../shared/utils/StringOutput";
-import { RSSPageBuilder } from "../build";
+import { LibraryBuilder } from "../build";
 
-export class feed extends RSSPageBuilder {
+export class feed extends LibraryBuilder {
 
     private readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('#library-entries-container');
 
@@ -76,7 +76,7 @@ export class feed extends RSSPageBuilder {
 
     private async buildFeedAll() {
         // get all entries that are filtered
-        const allEntries = this.AllHermidata ?? {};
+        const allEntries = this.AllHermidata;
 
         const docFragment = document.createDocumentFragment();
 
@@ -158,30 +158,48 @@ export class feed extends RSSPageBuilder {
         img.sizes = "150x190";
         img.alt = `${entry.title} Image`;
         
-        img.src = await entry.getDisplayImageUrl();
+        const url = await entry.getDisplayImageUrl();
         
-        await this.waitForImageLoad(img);
+        await this.loadImage(img, url);
         
-        img.loading = "lazy"; // 
+        img.loading = "lazy";
 
         this.calculateImageRatio(img);
 
-        
-
         return img;
     }
-    private waitForImageLoad(img: HTMLImageElement, timeoutMs = 5000): Promise<void> {
-        // already loaded (e.g. from cache) — naturalWidth is already available
-        if (img.complete && img.naturalWidth !== 0) return Promise.resolve();
-
+    private loadImage(img: HTMLImageElement, src: string, timeoutMs = 500): Promise<void> {
         return new Promise((resolve) => {
-            setTimeout(() => {
-                console.warn('Image load timed out:', img.src);
+            let settled = false;
+
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                img.removeEventListener('load', onLoad);
+                img.removeEventListener('error', onError);
                 resolve();
+            };
+
+            const onLoad = () => settle();
+            const onError = () => {
+                console.warn('Image failed to load:', src);
+                settle();
+            };
+
+            // attach listeners BEFORE setting src, so a fast/cached load can't slip past them
+            img.addEventListener('load', onLoad);
+            img.addEventListener('error', onError);
+
+            const timer = setTimeout(() => {
+                console.warn('Image load timed out:', src);
+                settle();
             }, timeoutMs);
 
-            img.addEventListener('load', () => resolve(), { once: true });
-            img.addEventListener('error', () => resolve(), { once: true }); // don't hang forever on broken images
+            img.src = src;
+
+            // some browsers mark `complete` synchronously for cached images right after assignment
+            if (img.complete) settle();
         });
     }
     private buildTitle(entry: Hermidata): HTMLDivElement {

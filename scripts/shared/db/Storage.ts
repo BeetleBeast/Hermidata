@@ -592,7 +592,7 @@ export class dbAccess {
         }
     }
 
-    public dbRequest<T>(store: DbStore, call: DbCall): Promise<T> {
+    private dbRequest<T>(store: DbStore, call: DbCall): Promise<T> {
         try {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, call }, async (response: { success: boolean, error?: string, result?: any }) => {
@@ -607,7 +607,7 @@ export class dbAccess {
             throw error;
         }
     }
-    public syncRequest<T>(call: SyncCall): Promise<T> {
+    private syncRequest<T>(call: SyncCall): Promise<T> {
         try {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({ type: 'SYNC_OPERATION', call }, async (response: { success: boolean, error?: string, result?: any }) => {

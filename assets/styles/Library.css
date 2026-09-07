@@ -29,8 +29,9 @@
     --focus-ring: rgb(120, 150, 210);
 
     --resetFilterBtn: #12174f;
-    --resetFilterBtn_hover: #6792d7;
+    --resetFilterBtn_hover: rgb(103, 146, 215);
     --resetFilterBtn_active: #1c2b6b;
+
 }
 
 * {
@@ -539,6 +540,12 @@ html::-webkit-scrollbar-thumb {
     height: 30px;
 }
 
+.filter-button[data-label-exclude="true"] {
+    font-style: italic;
+    text-decoration: line-through;
+    color: var(--Text-disabled);
+}
+
 #resetFilters {
     background-color: cornflowerblue;
     color: var(--resetFilterBtn);
@@ -646,11 +653,12 @@ body[data-list-mode="true"]
 	scroll-behavior: auto;
 	align-items: center;
 	height: -moz-available;
-	grid-template-columns: 1fr 1fr 1fr;
+	grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
 	justify-content: space-evenly;
-	grid-row-gap: 200px;
-	grid-column-gap: 100px;
+	grid-row-gap: clamp(2.5rem, 4vw, 200px);
+	grid-column-gap: clamp(1rem, 4vw, 100px);
     margin-top: 80px;
+    justify-items: center;
 }
 body[data-list-mode="false"]
 #library-entries-container {
@@ -659,11 +667,12 @@ body[data-list-mode="false"]
     scroll-behavior: auto;
     align-items: center;
     height: -moz-available;
-    grid-template-columns: auto auto auto auto auto auto;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     justify-content: space-evenly;
-    grid-row-gap: 200px;
-    grid-column-gap: 100px;
+    grid-row-gap: clamp(5rem, 4vw, 200px);
+    grid-column-gap: clamp(1rem, 4vw, 100px);
     margin-top: 80px;
+    justify-items: center;
 }
 
 body[data-list-mode="true"]
@@ -1355,7 +1364,7 @@ body[data-list-mode="false"]
 
 /* incomplete */
 
-#merger-dialog[data-step="incomplete"] {
+#merger-dialog[data-step="incomplete"]:popover-open {
 	display: grid;
 	grid-template-areas: 
     "counter .       exit   "
@@ -1421,7 +1430,7 @@ body[data-list-mode="false"]
     display: none;
 }
 
-#merger-dialog[data-step="firstStep"] {
+#merger-dialog[data-step="firstStep"]:popover-open {
 	display: grid;
 	grid-template-areas: 
     "progression progression progression progression progression"
@@ -1436,7 +1445,7 @@ body[data-list-mode="false"]
     transform: scale(1);
     grid-row-gap: 20px;
 }
-#merger-dialog[data-step="secondStep"] {
+#merger-dialog[data-step="secondStep"]:popover-open {
     display: grid;
 	grid-template-areas: 
     "progression  progression  "
@@ -1762,4 +1771,30 @@ body[data-list-mode="false"]
 
 .merger-dialog-warning-field-value-text {
 	color: var(--muted);
+}
+
+/* star rating custom slider thumb */
+
+#StarRating-dialog:popover-open {
+    width: 400px;
+    height: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: unset;
+    justify-content: unset;
+    padding: 28px 26px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+#StarRating-dialog:popover-open h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+#StarRating-dialog:popover-open p.hint {
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: #8c8375;
 }
