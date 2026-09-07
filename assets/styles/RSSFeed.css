@@ -81,7 +81,7 @@
 
 .hermidata-item-footer {
     font-size: 12px;
-    color: gray;
+    color: var(--hermidata-item-footer);
     grid-column: 1;
     justify-self: self-end;
     overflow: hidden;
@@ -187,7 +187,7 @@
 }
 
 .line-diamond.hermidata-item-lines:hover {
-	stroke: aliceblue;
+	stroke: var(--rssLink-missing-hover);
 	cursor: help;
 }
 
@@ -200,7 +200,7 @@
 
 
 .item-lines {
-    stroke: #4e83ff54
+    stroke: var(--svg-line-strokes);
 }
 
 .bottom-row {
@@ -219,12 +219,12 @@
 
 
 .rss-link-missing-icon {
-    stroke: yellow;
-    fill: yellow;
+    stroke: var(--rssLink-missing);
+    fill: var(--rssLink-missing);;
 }
 
 .rss-link-missing-icon:hover {
-	stroke: aliceblue;
+	stroke: var(--rssLink-missing-hover);
 	cursor: help;
 }
 
@@ -424,8 +424,8 @@
 
 .filter-search input[type="text"]:focus {
     outline: none;
-    border-color: #007aff;
-    box-shadow: 0 0 4px rgba(0, 122, 255, 0.4);
+    border-color: var(--filter-search-focus-border);
+    box-shadow: 0 0 4px var(--filter-search-focus-shadow);
 }
 .filter-section-container {
     display: flex;
@@ -435,7 +435,7 @@
     background: var(--bg-color);
     border: 10 solid var(--Btn);
     border-radius: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px var(--filter-container-shadow);
     justify-content: center;
     
     max-height: 0;
@@ -458,7 +458,7 @@
     background: var(--bg-color);
     padding: 0.8rem;
     border-radius: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px var(--filter-container-shadow);
     align-items: center;
     border: 1px solid var(--Btn);
     height: fit-content;
@@ -566,7 +566,7 @@
 
 /* Hover highlight */
 .custom-checkbox:hover {
-    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    box-shadow: 0 0 0 2px var(--custom-checkboxes-hover-shadow);
 }
 
 /* Neutral (empty) */
@@ -710,9 +710,9 @@
     display: none;
     position: absolute;
     top: 10%;
-    background-color: #222;
+    background-color: var(--context-menuBg);
     width: 50%;
     height: fit-content;
-    border: 1px solid #555;
+    border: 1px solid var(--hr);
     border-radius: 8px;
 }
