@@ -566,7 +566,7 @@
 
 /* Hover highlight */
 .custom-checkbox:hover {
-    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    box-shadow: 0 0 0 2px var(--custom-checkboxes-hover-shadow);
 }
 
 /* Neutral (empty) */

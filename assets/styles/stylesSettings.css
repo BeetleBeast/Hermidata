@@ -426,7 +426,7 @@ table {
 td, th {
     text-align: center;
     vertical-align: middle;
-    border: 1px solid #ccc;
+    border: 1px solid var(--settings-footer-hr);
     padding: 0;
 }
 th {
