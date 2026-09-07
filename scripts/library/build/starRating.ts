@@ -1,28 +1,28 @@
 
-export interface StarRange {
+export interface Range {
     min: number;
     max: number;
 }
 
-export class StarRangeFilter {
+export class DualRangeSlider {
     private root: HTMLElement;
     private min: number;
     private max: number;
     private step: number;
-    private onChange?: (range: StarRange) => void;
+    private onChange?: (range: Range) => void;
 
-    private value: StarRange;
+    private value: Range;
 
     private minInput!: HTMLInputElement;
     private maxInput!: HTMLInputElement;
     private trackFill!: HTMLDivElement;
     private labelEl!: HTMLDivElement;
 
-    constructor(containerRef: HTMLElement | string, startValue: StarRange, onChange?: (range: { min: number; max: number }) => void) {
+    constructor(containerRef: HTMLElement | string, startValue: Range, onChange?: (range: { min: number; max: number }) => void) {
         
         const container = typeof containerRef === "string" ? document.querySelector<HTMLElement>(containerRef) : containerRef;
 
-        if (!container) throw new Error("StarRangeFilter: container not found");
+        if (!container) throw new Error("DualRangeSlider: container not found");
 
         this.root = container;
         this.min = 0;
@@ -37,7 +37,7 @@ export class StarRangeFilter {
     }
 
     /** Current selected {min, max}. */
-    public getValue(): StarRange {
+    public getValue(): Range {
         return { ...this.value };
     }
 
@@ -61,22 +61,22 @@ export class StarRangeFilter {
 
     private render(): void {
         this.root.innerHTML = "";
-        this.root.classList.add("srf-root");
+        this.root.classList.add("drs-root");
 
         this.labelEl = document.createElement("div");
-        this.labelEl.className = "srf-label";
+        this.labelEl.className = "drs-label";
 
         const track = document.createElement("div");
-        track.className = "srf-track";
+        track.className = "drs-track";
     
         const trackBg = document.createElement("div");
-        trackBg.className = "srf-track-bg";
+        trackBg.className = "drs-track-bg";
     
         this.trackFill = document.createElement("div");
-        this.trackFill.className = "srf-track-fill";
+        this.trackFill.className = "drs-track-fill";
     
-        this.minInput = this.makeRangeInput("srf-thumb srf-thumb-min");
-        this.maxInput = this.makeRangeInput("srf-thumb srf-thumb-max");
+        this.minInput = this.makeRangeInput(["drs-thumb", "drs-thumb-min"]);
+        this.maxInput = this.makeRangeInput(["drs-thumb", "drs-thumb-max"]);
         this.minInput.value = String(this.value.min);
         this.maxInput.value = String(this.value.max);
     
@@ -86,12 +86,12 @@ export class StarRangeFilter {
         track.appendChild(this.maxInput);
     
         const ticks = document.createElement("div");
-        ticks.className = "srf-ticks";
+        ticks.className = "drs-ticks";
         for (let v = this.min; v <= this.max; v += this.step) {
             const tick = document.createElement("span");
             tick.textContent = String(v);
 
-            if (v >= this.value.min && v <= this.value.max) tick.classList.add('active-srf-stick');
+            if (v >= this.value.min && v <= this.value.max) tick.classList.add('active-drs-stick');
 
             ticks.appendChild(tick);
         }
@@ -105,10 +105,10 @@ export class StarRangeFilter {
 
     }
 
-    private makeRangeInput(className: string): HTMLInputElement {
+    private makeRangeInput(classNames: string[]): HTMLInputElement {
         const input = document.createElement("input");
         input.type = "range";
-        input.className = className;
+        input.classList.add(...classNames);
         input.min = String(this.min);
         input.max = String(this.max);
         input.step = String(this.step);

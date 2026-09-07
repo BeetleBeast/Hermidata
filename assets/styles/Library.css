@@ -1808,13 +1808,13 @@ body[data-list-mode="false"]
 
 /* --- StarRangeFilter component styles --- */
 
-.srf-root {
+.drs-root {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.srf-label {
+.drs-label {
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -1824,7 +1824,7 @@ body[data-list-mode="false"]
     justify-content: center;
 }
 
-.srf-track {
+.drs-track {
     position: relative;
     height: 28px;
 }
@@ -1832,8 +1832,8 @@ body[data-list-mode="false"]
 /* Static base line + fill, drawn exactly once each. Never let a per-input
    native track carry visible color — that's what caused thumbs to get
    painted over before. */
-.srf-track-bg,
-.srf-track-fill {
+.drs-track-bg,
+.drs-track-fill {
     position: absolute;
     top: 50%;
     height: 4px;
@@ -1841,19 +1841,19 @@ body[data-list-mode="false"]
     border-radius: 2px;
     pointer-events: none;
 }
-.srf-track-bg {
+.drs-track-bg {
     left: 0;
     right: 0;
     background: var(--line);
     z-index: 0;
 }
-.srf-track-fill {
+.drs-track-fill {
     background: var(--border-focus);
     z-index: 1;
     overflow: hidden;
 }
 
-.srf-thumb {
+.drs-thumb {
     -webkit-appearance: none;
     appearance: none;
     position: absolute;
@@ -1869,17 +1869,17 @@ body[data-list-mode="false"]
 }
 
 /* Both native tracks must stay fully transparent — the visible line comes
-   only from .srf-track-bg / .srf-track-fill above. */
-.srf-thumb::-webkit-slider-runnable-track {
+   only from .drs-track-bg / .drs-track-fill above. */
+.drs-thumb::-webkit-slider-runnable-track {
     height: 4px;
     background: transparent;
 }
-.srf-thumb::-moz-range-track {
+.drs-thumb::-moz-range-track {
     height: 4px;
     background: transparent;
 }
 
-.srf-thumb::-webkit-slider-thumb {
+.drs-thumb::-webkit-slider-thumb {
     -webkit-appearance: none;
     pointer-events: auto;
     width: 18px;
@@ -1891,7 +1891,7 @@ body[data-list-mode="false"]
     box-shadow: 0 1px 2px rgba(0,0,0,0.15);
     cursor: pointer;
 }
-.srf-thumb::-moz-range-thumb {
+.drs-thumb::-moz-range-thumb {
     pointer-events: auto;
     width: 18px;
     height: 18px;
@@ -1902,16 +1902,16 @@ body[data-list-mode="false"]
     cursor: pointer;
 }
 
-.srf-thumb:focus-visible::-webkit-slider-thumb {
+.drs-thumb:focus-visible::-webkit-slider-thumb {
     outline: 2px solid var(--border-focus);
     outline-offset: 2px;
 }
-.srf-thumb:focus-visible::-moz-range-thumb {
+.drs-thumb:focus-visible::-moz-range-thumb {
     outline: 2px solid var(--border-focus);
     outline-offset: 2px;
 }
 
-.srf-ticks {
+.drs-ticks {
     display: flex;
     justify-content: space-between;
     font-size: 11px;
@@ -1919,7 +1919,7 @@ body[data-list-mode="false"]
     padding: 0 1px;
 }
 
-.active-srf-stick {
+.active-drs-stick {
     color: var(--border-focus);
     font-weight: 600;
 }
@@ -1940,9 +1940,9 @@ body[data-list-mode="false"]
 }
 
 
-.srf-thumb:hover,
-.srf-thumb:active,
-.srf-thumb:focus-visible {
+.drs-thumb:hover,
+.drs-thumb:active,
+.drs-thumb:focus-visible {
     background: transparent;
     border: none;
     outline: none;
@@ -1950,42 +1950,42 @@ body[data-list-mode="false"]
 }
 
 /* Chrome / Edge / Safari */
-.srf-thumb:hover::-webkit-slider-thumb,
-.srf-thumb:focus-visible::-webkit-slider-thumb {
+.drs-thumb:hover::-webkit-slider-thumb,
+.drs-thumb:focus-visible::-webkit-slider-thumb {
     border-color: var(--border-focus);
     background: #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-.srf-thumb:active::-webkit-slider-thumb {
+.drs-thumb:active::-webkit-slider-thumb {
     background: var(--border-focus);
     border-color: var(--border-focus);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.srf-thumb:hover::-webkit-slider-runnable-track,
-.srf-thumb:active::-webkit-slider-runnable-track,
-.srf-thumb:focus-visible::-webkit-slider-runnable-track {
+.drs-thumb:hover::-webkit-slider-runnable-track,
+.drs-thumb:active::-webkit-slider-runnable-track,
+.drs-thumb:focus-visible::-webkit-slider-runnable-track {
     background: transparent;
 }
 
 /* Firefox */
-.srf-thumb:hover::-moz-range-thumb,
-.srf-thumb:focus-visible::-moz-range-thumb {
+.drs-thumb:hover::-moz-range-thumb,
+.drs-thumb:focus-visible::-moz-range-thumb {
     border-color: var(--border-focus);
     background: #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-.srf-thumb:active::-moz-range-thumb {
+.drs-thumb:active::-moz-range-thumb {
     background: var(--border-focus);
     border-color: var(--border-focus);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.srf-thumb:hover::-moz-range-track,
-.srf-thumb:active::-moz-range-track,
-.srf-thumb:focus-visible::-moz-range-track {
+.drs-thumb:hover::-moz-range-track,
+.drs-thumb:active::-moz-range-track,
+.drs-thumb:focus-visible::-moz-range-track {
     background: transparent;
 }
 
-.srf-thumb:focus {
+.drs-thumb:focus {
     outline: unset;
     box-shadow: unset;
     border-color: unset;

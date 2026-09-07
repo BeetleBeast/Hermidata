@@ -48,8 +48,8 @@ export class FilterLogic extends Sort {
         return [document.querySelector<HTMLDivElement>('#search-mode-radio-any'), document.querySelector<HTMLDivElement>('#search-mode-radio-all') ]
     }
 
-    private get minEl(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('.srf-thumb-min'); }
-    private get maxEl(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('.srf-thumb-max'); }
+    private get minEl(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('.drs-thumb-min'); }
+    private get maxEl(): HTMLInputElement | null { return document.querySelector<HTMLInputElement>('.drs-thumb-max'); }
 
 
     private readonly filterReset = document.querySelector<HTMLButtonElement>('#resetFilters');

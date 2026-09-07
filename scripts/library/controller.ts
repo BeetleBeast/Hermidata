@@ -4,7 +4,7 @@ import { feed } from "./build/feed";
 import { filter } from "./build/setFilter";
 import { FilterLogic } from "./build/filterLogic";
 import { HermidataMerge } from "./build/merge";
-import type { StarRangeFilter } from "./build/starRating";
+import type { DualRangeSlider } from "./build/starRating";
 
 export class Controller {
     
@@ -29,7 +29,7 @@ export class Controller {
         this.merger = new HermidataMerge(allHermidata, settings);
     }
 
-    public range: StarRangeFilter | null = null;
+    public range: DualRangeSlider | null = null;
 
 
     public async init() {

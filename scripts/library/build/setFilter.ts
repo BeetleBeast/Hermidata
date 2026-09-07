@@ -5,7 +5,7 @@ import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement } from "../../shared/utils/Selection";
 import type { Controller } from "../controller";
 import { Sort } from "./filter";
-import { StarRangeFilter } from "./starRating";
+import { DualRangeSlider } from "./starRating";
 
 export class filter extends Sort {
 
@@ -106,25 +106,22 @@ export class filter extends Sort {
 
         container.append(label, hint, starRating);
 
-
-        // const starRatingCheckbox = this.buildStarRatingCheckbox(0,10);
-
-        this.StarRatingRange.range = new StarRangeFilter(starRating, { min: 3, max: 5 }, (range) => this.setStarRating(range));
+        this.StarRatingRange.range = new DualRangeSlider(starRating, { min: 3, max: 5 }, (range) => this.setStarRating(range));
     }
     private setStarRating(range: { min: number; max: number }) {
         this.selectedRange = range;
 
-        const sticksContainer = document.querySelector('.srf-ticks');
+        const sticksContainer = document.querySelector('.drs-ticks');
         if (!sticksContainer) return;
 
         // find the stick where its content is the same as the range
         const sticks = sticksContainer.querySelectorAll('span');
         for (const stick of sticks) {
             const stickValue = Number(stick.textContent);
-            // if (stickValue === range.min || stickValue === range.max) stick.classList.add('active-srf-stick'); // same
-            if (stickValue >= range.min && stickValue <= range.max) stick.classList.add('active-srf-stick'); // all in between
+            // if (stickValue === range.min || stickValue === range.max) stick.classList.add('active-drs-stick'); // same
+            if (stickValue >= range.min && stickValue <= range.max) stick.classList.add('active-drs-stick'); // all in between
 
-            else stick.classList.remove('active-srf-stick');
+            else stick.classList.remove('active-drs-stick');
         }
     }
     private setContentRatingFilter() {
@@ -305,37 +302,6 @@ export class filter extends Sort {
 
         container.append(sortCheckbox);
     }
-    private buildStarRatingCheckbox(min: number, max: number): HTMLDivElement {
-        const container = document.createElement('div');
-
-        container.classList.add('star-rating-checkbox-container', 'filter-checkbox-container');
-
-        for (let i = min; i <= max; i++) {
-            // create a generic list item for each dataset entry
-            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${i}`, classes: ['star-rating-item-list']});
-
-            // build checkbox to list item
-            const checkbox = document.createElement('div');
-            checkbox.id = `star-rating-checkbox-${i}`;
-            checkbox.classList.add('star-rating-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
-            checkbox.dataset.value = String(i);
-            checkbox.dataset.state = '0';
-            checkbox.dataset.filterType = 'star-rating';
-
-            // build label to list item
-            const label = document.createElement('div');
-            label.id = `star-rating-label-${i}`;
-            label.classList.add('star-rating-label-item', 'filter-item-label', 'custom-checkbox');
-            label.textContent = i === 1 ? '1 star' : `${i} stars`;
-            label.dataset.value = String(i);
-
-            // append checkbox & label to list item
-            listItem.append(checkbox, label);
-            container.appendChild(listItem);
-        }
-        return container;
-    }
-    
 
     private buildContentRatingCheckbox(): HTMLDivElement {
         const container = document.createElement('div');
