@@ -138,36 +138,81 @@ export function simpleHash(str: string) {
     return hash.toString();
 }
 
-/** - open url into another location */
-export async function openLink(url: string, location: 'newTab' | 'newWindow' | 'sameTab'): Promise<void> {
+/** 
+ * - open url into another location
+ * @param {string} path - the url
+ * @param {string} location - where to open the url: inside a newTab, newWindow or the sameTab
+ * @param {number} scrollPositionY - the y position to scroll to
+ * */
+export async function openLink(path: string, location: 'newTab' | 'newWindow' | 'sameTab', scrollPositionY: number = 0): Promise<void> {
     const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+    const isExternal = /^[a-z][a-z0-9+.-]*:\/\//i.test(path); // has a scheme, e.g. https://, http://
 
-    if (isFirefox && location === 'newTab') return openInSameContainer(url);
+    const url = isExternal ? path : ext.runtime.getURL(`dist/pages/${path}`);
 
-    switch (location) {
-        case 'newTab':
-            await ext.tabs.create({ url });
-            break;
-        case 'newWindow':
-            await ext.windows.create({ url });
-            break;
-        case 'sameTab':
-            await ext.tabs.update({ url, active: true });
-            break;
-        default:
-            await ext.tabs.create({ url });
-    }
+    if (isFirefox && location === 'newTab') return openInSameContainer(url, scrollPositionY);
+
+    const tab = await createTabForLocation(url, location);
+    if (tab) openInSpecificYPosition(tab, scrollPositionY);
 }
 
+async function createTabForLocation( url: string, location: 'newTab' | 'newWindow' | 'sameTab' ): Promise<chrome.tabs.Tab | undefined> {
+    switch (location) {
+        case 'newTab':
+            return ext.tabs.create({ url });
+
+        case 'newWindow': {
+            const win = await ext.windows.create({ url });
+            return win?.tabs?.[0]; // TODO: still no way to set Y position for a brand-new window's initial paint
+        }
+
+        case 'sameTab':
+            return ext.tabs.update({ url, active: true });
+
+        default: {
+            const _exhaustive: never = location;
+            return _exhaustive;
+        }
+    }
+}
+function openInSpecificYPosition(tab: browser.tabs.Tab | undefined, scrollPositionY: number): void {
+    if (!tab?.id) return;
+
+    const tabId = tab.id;
+
+    const onUpdated = (changedTabId: number, info: { status?: string }) => {
+        if (changedTabId === tabId && info.status === 'complete') {
+            cleanup();
+            chrome.scripting.executeScript({
+                target: { tabId },
+                func: (y) => window.scrollTo(0, y),
+                args: [scrollPositionY],
+            });
+        }
+    };
+
+    const onRemoved = (removedTabId: number) => {
+        if (removedTabId === tabId) cleanup();
+    };
+
+    function cleanup() {
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        chrome.tabs.onRemoved.removeListener(onRemoved);
+    }
+
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    chrome.tabs.onRemoved.addListener(onRemoved);
+}
 /** Get the current tab's `cookieStoreId` and pass it straight to `tabs.create`:*/
-async function openInSameContainer(url: string): Promise<void> {
+async function openInSameContainer(url: string, scrollPositionY: number): Promise<void> {
     if (!browser) return; // shouldn't happen since caller already checked isFirefox, but keeps TS happy
 
     const [currentTab] = await browser.tabs.query({ active: true, currentWindow: true });
     
     const cookieStoreId = currentTab.cookieStoreId; // inherits the container
 
-    await browser.tabs.create({ url, cookieStoreId });
+    const tab = await browser.tabs.create({ url, cookieStoreId });
+    openInSpecificYPosition(tab, scrollPositionY);
 }
 
 export function getTitleAndChapterFromUrl(url: string): { title: string | null, chapter: number } {

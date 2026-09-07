@@ -17,8 +17,10 @@ export abstract class Build {
     protected setSettings(data: Settings): Promise<void> {
         return this.dbAccess.setSettings(data);
     }
-    /** @implements `updateHermidata` instead of `setHermidata` for backwards compatibility */
-    protected setHermidata(data: Hermidata): Promise<void> {
+    protected setHermidata(id: string, data: Hermidata): Promise<void> {
+        return this.dbAccess.setHermidata(id, data);
+    }
+    protected updateHermidata(data: Hermidata): Promise<void> {
         return this.dbAccess.updateHermidata(data);
     }
     protected getAllHermidata(): Promise<Record<string, Hermidata>> {

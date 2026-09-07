@@ -261,7 +261,7 @@ export class TagManagement extends Build {
         for (const hermidata of Object.values(allHermidata)) {
             if (hermidata.meta?.tags && hermidata.meta.tags.includes(oldTag)) {
                 hermidata.meta.tags = hermidata.meta.tags.map(t => t === oldTag ? newTag : t);
-                await this.setHermidata(hermidata);
+                await this.updateHermidata(hermidata);
             }
         }
         await this.ResetLocalFilters();
@@ -276,7 +276,7 @@ export class TagManagement extends Build {
         for (const hermidata of Object.values(allHermidata)) {
             if (hermidata.meta?.tags && hermidata.meta.tags.includes(tag)) {
                 hermidata.meta.tags = hermidata.meta.tags.filter(t => t !== tag);
-                await this.setHermidata(hermidata);
+                await this.updateHermidata(hermidata);
             }
         }
         await this.ResetLocalFilters();
@@ -286,7 +286,7 @@ export class TagManagement extends Build {
         for (const hermidata of Object.values(allHermidata)) {
             if (hermidata.meta?.tags && hermidata.meta.tags.includes(toBeRemovedTag)) {
                 hermidata.meta.tags = hermidata.meta.tags.map(t => t === toBeRemovedTag ? trueTag : t);
-                await this.setHermidata(hermidata);
+                await this.updateHermidata(hermidata);
             }
         }
         await this.ResetLocalFilters();

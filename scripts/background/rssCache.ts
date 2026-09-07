@@ -37,7 +37,7 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export async function handleSaveNovel(data: HermidataModel | Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): Promise<true> {
+export async function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): Promise<true> {
     const hermidata = new HermidataModel(data);
     const errors: string[] = [];
     
