@@ -1916,6 +1916,11 @@ body[data-list-mode="false"]
     padding: 0 1px;
 }
 
+.active-srf-stick {
+    color: var(--border-focus);
+    font-weight: 600;
+}
+
 .result {
     margin-top: 20px;
     padding-top: 16px;

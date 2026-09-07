@@ -25,7 +25,7 @@ export class StarRangeFilter {
         if (!container) throw new Error("StarRangeFilter: container not found");
 
         this.root = container;
-        this.min = 1;
+        this.min = 0;
         this.max = 10;
         this.step = 1;
         this.onChange = onChange;
@@ -88,9 +88,12 @@ export class StarRangeFilter {
         const ticks = document.createElement("div");
         ticks.className = "srf-ticks";
         for (let v = this.min; v <= this.max; v += this.step) {
-        const tick = document.createElement("span");
-        tick.textContent = String(v);
-        ticks.appendChild(tick);
+            const tick = document.createElement("span");
+            tick.textContent = String(v);
+
+            if (v >= this.value.min && v <= this.value.max) tick.classList.add('active-srf-stick');
+
+            ticks.appendChild(tick);
         }
     
         this.root.appendChild(this.labelEl);

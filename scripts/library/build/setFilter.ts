@@ -3,6 +3,7 @@ import { getAllTags } from "../../shared/db/Storage";
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement } from "../../shared/utils/Selection";
+import type { Controller } from "../controller";
 import { Sort } from "./filter";
 import { StarRangeFilter } from "./starRating";
 
@@ -32,8 +33,8 @@ export class filter extends Sort {
         state 2: checked exclude
     */
 
-    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
-        super(AllHermidata, settings);
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings, StarRatingRange: Controller) {
+        super(AllHermidata, settings, StarRatingRange);
     }
 
 
@@ -107,7 +108,24 @@ export class filter extends Sort {
 
 
         // const starRatingCheckbox = this.buildStarRatingCheckbox(0,10);
-        new StarRangeFilter(starRating, { min: 3, max: 5 });
+
+        this.StarRatingRange.range = new StarRangeFilter(starRating, { min: 3, max: 5 }, (range) => this.setStarRating(range));
+    }
+    private setStarRating(range: { min: number; max: number }) {
+        this.selectedRange = range;
+
+        const sticksContainer = document.querySelector('.srf-ticks');
+        if (!sticksContainer) return;
+
+        // find the stick where its content is the same as the range
+        const sticks = sticksContainer.querySelectorAll('span');
+        for (const stick of sticks) {
+            const stickValue = Number(stick.textContent);
+            // if (stickValue === range.min || stickValue === range.max) stick.classList.add('active-srf-stick'); // same
+            if (stickValue >= range.min && stickValue <= range.max) stick.classList.add('active-srf-stick'); // all in between
+
+            else stick.classList.remove('active-srf-stick');
+        }
     }
     private setContentRatingFilter() {
         const container = this.contentRatingDialog;
