@@ -33,8 +33,9 @@ body::after {
     background: transparent;
 }
 
+
 .HDRss::-webkit-scrollbar-thumb {
-    background-color: var(--Btn);
+    background-color: var(--surface-input);
     border-radius: 999px;
 }
 
@@ -52,8 +53,8 @@ footer {
     bottom: 0;
     width: 98vw;
     height: 40px;
-    background-color: var(--bg-color);
-    border-top: 1px solid #ccc;
+    background-color: var(--bg);
+    border-top: 1px solid var(--border);
     display: flex;
     justify-content:flex-start;
     align-items:center;
@@ -66,7 +67,7 @@ footer {
 #statusSheetURL, 
 #statusSaveDefaultInput,
 #statusSaveDefaultInputInputTextMenu {
-    color: green;
+    color: var(--success);
 }
 
 
@@ -93,7 +94,7 @@ footer {
 	outline-offset: -8px;
 	outline-style: groove;
 	outline-width: thin;
-	outline-color: var(--border-focus);
+	outline-color: var(--accent);
 }
 
 /* settings tooth wheel */
@@ -118,7 +119,7 @@ footer {
 .table-2 {
 	width: 100%;
 	border-collapse: collapse;
-	background-color: var(--bg-color);
+	background-color: var(--bg);
 	table-layout: fixed;
 }
 
@@ -153,20 +154,20 @@ select.autoInput {
     scroll-behavior: smooth;
     outline: none;
     outline-width: 0;
-    outline-color: var(--Text-color);
-    color: var(--Text-color);
+    outline-color: var(--text);
+    color: var(--text);
     background-image: none;
-    background-color: var(--bg-color);
+    background-color: var(--bg);
 }
 td, th {
     text-align: center;
     vertical-align: middle;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     padding: 0;
 }
 th {
-    background-color: var(--Input-color);
-    border: 1px solid #d1d5db;
+    background-color: var(--surface-input);
+    border: 1px solid var(--text);
     font-weight: bold;
     padding: 8px;
     width: fit-content;
@@ -219,12 +220,12 @@ input[type=number]::-webkit-inner-spin-button {
 	scroll-behavior: smooth;
 	outline: none;
 	outline-width: 0;
-	outline-color: var(--Text-color);
-	color: var(--Text-color);
+	outline-color: var(--text);
+	color: var(--text);
 	background-image: none;
-	background-color: var(--bg-color);
+	background-color: var(--bg);
 	width: 45%;
-	color: var(--Btn_disabled);
+	color: var(--text-disabled);
 	margin: 0;
 }
 #chapter[data-has-previous-chapter="false"],
@@ -256,7 +257,7 @@ input[type=number]::-webkit-inner-spin-button {
 .table-1 {
     width: 100%;
     border-collapse: collapse;
-    background-color: var(--bg-color);
+    background-color: var(--bg);
     table-layout: fixed;
     ;
 }
@@ -304,7 +305,7 @@ input[type=number]::-webkit-inner-spin-button {
 
 .tagsLabel, .notesLabel {
 	font-size: 14px;
-	color: var(--Text-color);
+	color: var(--text);
 	display: block;
 	text-align: center;
 	width: 15%;
@@ -361,14 +362,14 @@ input[type=number]::-webkit-inner-spin-button {
 	/* justify-content: center; */
 	align-items: center;
 	gap: 5px;
-	background-color: var(--defaultTagBg);
+	background-color: var(--accent);
 	height: fit-content;
 	border-radius: 10px;
 	padding-left: 5px;
 	padding-right: 5px;
 	margin: 5px;
-	color: var(--defaultTagColor);
-	border: 1px solid black;
+	color: var(--bg);
+	border: 1px solid var(--bg);
 }
 
 .tag-pill-text {
@@ -391,7 +392,7 @@ input[type=number]::-webkit-inner-spin-button {
 
 .tag-pill-removeX:hover {
 	transform: scale(1.2);
-	color: red;
+	color: var(--danger);
 }
 
 /* notes container */
@@ -447,13 +448,13 @@ input[type=number]::-webkit-inner-spin-button {
 	translate: 20px 20px;
 }
 .RSSLinkState-polygon {
-    stroke: var(--Text-color);
+    stroke: var(--text);
     stroke-width: 1;
     animation-delay: 0.2s;
 }
 
 .RSSLinkState-polygon:hover {
-	stroke: aliceblue;
+	stroke: var(--accent-hover);
 	cursor: help;
 }
 
@@ -480,7 +481,7 @@ input[type=number]::-webkit-inner-spin-button {
 	top: 0;
 	left: 0;
 	z-index: 1;
-	color: var(--autoCompleteGhost);/* Gray suggestion text */
+	color: var(--text-muted);/* Gray suggestion text */
 	pointer-events: none;
 	white-space: nowrap;
 	overflow: hidden;
@@ -509,19 +510,19 @@ input[type=number]::-webkit-inner-spin-button {
 	background: none;
 }
 .imgBookmark:hover {
-	fill: white;
+	fill: var(--text);
 }
 
 /* Bookmark menu */
 .bookmarkMenuContainer {
 	display: none;
 	border-radius: 15px;
-	border: 1px solid lightgray;
+	border: 1px solid var(--text);
 	width: 30%;
 	position: absolute;
 	top: 75px;
 	left: 5%;
-	background-color: var(--bg_disabled);
+	background-color: var(--bg);
 	z-index: 20;
 }
 .bookmarkMenu {
@@ -545,7 +546,7 @@ input[type=number]::-webkit-inner-spin-button {
 	height: 35px;
 	padding: 5px;
 	background-color: transparent;
-	color: var(--Text-color);
+	color: var(--text);
 	border: none;
 	transition: background-color 0.15s ease;
 }
@@ -555,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button {
 	height: 35px;
 	padding: 5px;
 	background-color: transparent;
-	color: var(--Text-color);
+	color: var(--text);
 	border: none;
 	margin-bottom: 20px;
 	transition: background-color 0.15s ease;
@@ -563,13 +564,13 @@ input[type=number]::-webkit-inner-spin-button {
 .bookmarkMenu-item:hover,
 .addNewBookmarkBtn:hover,
 .bookmarkMenuBtn:hover {
-	background-color: var(--Btn_hover);
+	background-color: var(--accent-hover);
 	cursor: pointer;
 }
 .bookmarkMenu-item:active,
 .addNewBookmarkBtn:active,
 .bookmarkMenuBtn:active {
-	background-color: var(--Btn_active);
+	background-color: var(--accent-active);
 }
 
 
@@ -590,7 +591,7 @@ hr {
 	position: absolute;
 	top: 60px;
 	left: 25%;
-	background-color: var(--bg_disabled);
+	background-color: var(--bg);
 	z-index: 20;
 }
 .bookmarkMenuManager-header {
@@ -619,7 +620,7 @@ hr {
 	background-color: transparent;
 }
 #cancelBookmarkMenuBtn:hover {
-	color: red;
+	color: var(--danger);
 }
 #bookmarkMenuManager {
 	display: flex;
@@ -642,7 +643,7 @@ hr {
 	grid-area: svg;
 	width: 35px;
 	height: 31px;
-	fill: white;
+	fill: var(--text);
 }
 .bookmarkDelete {
 	cursor: pointer;
@@ -658,26 +659,26 @@ hr {
 .bookmarkLabel {
 	grid-area: label;
 	background-color: transparent;
-	color: var(--Text-color);
+	color: var(--text);
 	border: none;
 }
 .bookmarkLastUpdated {
-	color: var(--Btn_disabled);
+	color: var(--text-disabled);
 	grid-area: footer;
 }
 
-#addNewBookmarkBtn-manager {
+.NewBookmarkBtn-manager {
 	left: 20px;
 	position: relative;
-	background-color: var(--Btn_hover);
+	background-color: var(--accent-hover);
 	width: 40%;
 	border-radius: 5px;
 	border: 1px solid;
 	margin-top: 10px;
 	z-index: 5;
 }
-#addNewBookmarkBtn-manager:hover {
-	background-color: var(--Btn_active);
+.NewBookmarkBtn-manager:hover {
+	background-color: var(--accent-active);
 }
 
 .bookmarkMenuManager-sub {
@@ -695,7 +696,7 @@ hr {
 	position: absolute;
 	top: 20%;
 	left: 10%;
-	background-color: var(--bg_disabled);
+	background-color: var(--bg);
 	z-index: 20;
 }
 
@@ -725,10 +726,10 @@ label {
 	align-items: center;
 	justify-content: center;
 	margin-left: 10%;
-	background-color: var(--Input-colorV2);
-	border: 1px solid lightgray;
+	background-color: var(--surface-raised);
+	border: 1px solid var(--text);
 	border-radius: 5px;
-	color: var(--Text-color);
+	color: var(--text);
 	height: 20px;
 }
 #bookmarkChapterInput-label {
@@ -739,8 +740,8 @@ label {
 	width: 80%;
 	border: none;
 	border-radius: 3px;
-	background-color: var(--Input-colorV2);
-	color: var(--Text-color);
+	background-color: var(--surface-raised);
+	color: var(--text);
 	padding: 10px;
 }
 .buttonContainer {
@@ -752,15 +753,15 @@ label {
 }
 
 #saveBookmarkBtn {
-	background-color: var(--Btn_hover);
+	background-color: var(--accent-hover);
 }
 #saveBookmarkBtn:hover {
-	background-color: var(--Btn_active);
+	background-color: var(--accent-active);
 }
 
 #bookmarkColorInput {
 	width: 40px;
-	background-color: var(--Input-colorV2);
+	background-color: var(--surface-raised);
 	border: none;
 	height: 36px;
 	border-radius: 3px;
@@ -773,7 +774,7 @@ label {
 #bookmarkNotesInput {
 	border: none;
 	border-radius: 3px;
-	background-color: var(--Input-colorV2);
-	color: var(--Text-color);
+	background-color: var(--surface-raised);
+	color: var(--text);
 	padding: 10px;
 }
