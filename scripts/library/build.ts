@@ -1,9 +1,10 @@
 import { PastHermidata } from "../popup/core/Past";
 import { dbAccess } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
+import type { OnlyPlainHermidata } from "../shared/types/popup";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 
-export abstract class RSSPageBuilder {
+export abstract class LibraryBuilder {
 
     protected AllHermidata: Record<string, Hermidata>;
 
@@ -11,15 +12,13 @@ export abstract class RSSPageBuilder {
 
     private dbAccess = new dbAccess();
 
-    protected saveHermidata(id: string, data: Hermidata): Promise<void> {
+    protected saveHermidata(id: string, data: OnlyPlainHermidata): Promise<void> {
         return this.dbAccess.setHermidata(id, data);
     }
-    /** @implements `changeHermidata` instead of `updateHermidata` for backwards compatibility */
-    protected changeHermidata(entry: Hermidata): Promise<void> {
+    protected updateHermidata(entry: OnlyPlainHermidata): Promise<void> {
         return this.dbAccess.updateHermidata(entry);
     }
-    /**@implements `updateHermidata` instead of `changeHermidata` for backwards compatibility */
-    protected updateHermidata(oldKey: string, newKey: string, entry: Hermidata): Promise<void> {
+    protected changeHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
         return this.dbAccess.changeHermidata(oldKey, newKey, entry);
     }
     protected removeHermidata(id: string): Promise<void> {

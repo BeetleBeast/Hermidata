@@ -20,9 +20,13 @@ export abstract class RssBuild {
 
         // Register exactly once, for the lifetime of the popup.
         chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
+            // Handle messages related to element picking and user feedback
             if (!this.pendingPick) return;
+
             if (msg.action === "elementPicked") this.pendingPick(msg.data); 
             else if (msg.action === "pickingCancelled") this.pendingPick(null);
+
+            // Clear the pending callbacks after handling the message
             this.pendingPick = null;
         });
     }
@@ -104,41 +108,6 @@ export abstract class RssBuild {
         if(!newVersion) throw new Error('hash not found');
 
         return newVersion;
-    }
-    protected updateTab(tab: chrome.tabs.Tab, url: URL | string, scrollPositionY: number): void {
-        chrome.tabs.update(tab.id!, { url: url.toString() }, (updatedTab) => {
-            if (!updatedTab?.id) return;
-
-            const tabId = updatedTab.id;
-
-            chrome.tabs.onUpdated.addListener(function listener(changedTabId, info) {
-                if (changedTabId === tabId && info.status === "complete") {
-                    chrome.tabs.onUpdated.removeListener(listener);
-
-                    chrome.scripting.executeScript({
-                        target: { tabId },
-                        func: (y) => window.scrollTo(0, y),
-                        args: [scrollPositionY],
-                    });
-                }
-            });
-        });
-    }
-    protected openNewTab(url: URL | string, scrollPositionY: number): void {
-
-        chrome.tabs.create({ url: url.toString() }, (tab) => {
-            chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-                if (tabId === tab.id && info.status === "complete") {
-                chrome.tabs.onUpdated.removeListener(listener);
-
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: (y) => window.scrollTo(0, y),
-                    args: [scrollPositionY],
-                });
-                }
-            });
-            });
     }
 
 }

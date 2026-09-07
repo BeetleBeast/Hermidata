@@ -2,6 +2,7 @@
 
 import { FeedDetection } from "./feedDetection";
 import { ElementPicker, type RuntimeMessage } from "./picker";
+import { PickerFeedbackController } from "./pickerFeedback";
 
 // ------------ feed detection ------------ //
 
@@ -13,15 +14,19 @@ feedDetector.addFeedToGlobalMain();
 
 
 let activePicker: ElementPicker | null = null;
+let activeFeedback: PickerFeedbackController | null = null;
 
 chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
     if (msg.action === "startPicking") {
-        // Fresh instance each time — avoids any stale `hovered` state
-        // from a previous pick/cancel leaking into the next one.
+
         activePicker = new ElementPicker();
         activePicker.initPicker();
+        activeFeedback = new PickerFeedbackController(activePicker)
+
     }else if (msg.action === "cancelPicking") {
-        activePicker?.forceCancel(); // just calls this.cleanup()
+        activePicker?.forceCancel();
+        activeFeedback?.forceDestroy();
         activePicker = null;
+        activeFeedback = null;
     }
 });

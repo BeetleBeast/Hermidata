@@ -1,6 +1,6 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
-import { getMultipleTitles, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
+import { getMultipleTitles, openLink, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
@@ -12,6 +12,8 @@ import type { PickedElementData } from "../../shared/types/rss";
 export class EventListener extends RssBuild {
     
     private activeSubMenu: HTMLDivElement | null = null;
+
+    private currentTabId: number | null = null;
 
     public async attachEventListeners(): Promise<void> {
         // parents
@@ -37,12 +39,12 @@ export class EventListener extends RssBuild {
             items.onclick = () => this.clickOnItem(this.AllHermidata[hashItem], false);
         }
     }
-    private clickOnItem(value: Hermidata, isNotificationItem: boolean) {
+    private async clickOnItem(value: Hermidata, isNotificationItem: boolean) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
 
         const hermidata = new HermidataModel(value);
 
-        this.openNewTab(value?.rss?.latestItem?.link || hermidata.GetUrl(), hermidata.GetScrollPosition());
+        await openLink(value?.rss?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
     }
     private async rightmouseclickonItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
@@ -321,10 +323,10 @@ export class EventListener extends RssBuild {
             return;
         }
         const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
-        if (!currentUrl) return;
-        // Get the current active tab and update its URL
-        const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) this.updateTab(tab, currentUrl, id ? entry.GetScrollPosition(id) : entry.GetScrollPosition());
+        const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
+        if (!currentUrl || !currentScrollPosition) return; 
+        
+        await openLink(currentUrl, 'sameTab', currentScrollPosition);
     }
     
     private async openInNewWindow(target: HTMLDivElement | null, id: string | null = null) {
@@ -338,7 +340,10 @@ export class EventListener extends RssBuild {
             return;
         }
         const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
-        if (currentUrl) this.openNewTab(currentUrl, id ? entry.GetScrollPosition(id) : entry.GetScrollPosition());
+        const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
+        if (!currentUrl || !currentScrollPosition) return; 
+        
+        await openLink(currentUrl, 'newWindow', currentScrollPosition);
     }
     
     private clearNotification(target: HTMLDivElement | null) {
@@ -386,11 +391,20 @@ export class EventListener extends RssBuild {
             );
         }
 
+        // give feedback to user
+        if (!this.currentTabId) {
+            console.warn("No current tab ID found.");
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab.id) {
+                console.warn("No active tab found.");
+                return null;
+            }
+            this.currentTabId = tab.id;
+        }
+
         // Save to storage
         await saveHermidata(hashItem, entry.toJSON());
     }
-
-    private currentTabId: number | null = null;
 
     private async getPickerElement(): Promise<PickedElementData | null> {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

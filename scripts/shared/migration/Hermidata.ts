@@ -516,7 +516,7 @@ export class HermidataMigration {
         return reconciled;
     }
     private static recomputeHermidataId(record: Hermidata): string {
-        return returnHashedTitle(record.title, record.novelType, record.source);
+        return returnHashedTitle(record.title, record.novelType, record?.chapter?.bookmarks?.[record.chapter?.bookmarkInUse]?.url);
     }
 
     private static resolveBookmarkInUse( keep: Hermidata, discard: Hermidata, mergedBookmarks: Record<string, Bookmark> ): string {
@@ -645,7 +645,12 @@ export class HermidataMigration {
         setter(merged, value);
     }
 
-    public static async mergeTwoHermidataWithConfiguration(recordToKeep: Hermidata, recordToRemove: Hermidata, config: HermidataMigrationConfiguration): Promise<boolean> { 
+    public static async mergeTwoHermidataWithConfiguration(recordToKeep: Hermidata, recordToRemove: Hermidata, config: HermidataMigrationConfiguration): Promise<{
+        merged: boolean;
+        removedIds: string[];
+        addedId: string | null;
+    }> {
+        const removedIds: string[] = [];
         try {
             if (config.keepId !== recordToKeep.id || config.removeId !== recordToRemove.id) {
                 throw new Error("Configuration does not match the provided records");
@@ -664,17 +669,20 @@ export class HermidataMigration {
             merged.id = this.recomputeHermidataId(merged);
             
             if (merged.id !== recordToKeep.id) {
+                removedIds.push(recordToKeep.id);
+                removedIds.push(recordToRemove.id);
                 // identity shifted — neither original key is valid for the merged record
                 await updateHermidata(recordToRemove.id, merged.id, merged);
                 await removeHermidata(recordToKeep.id);
             } else {
                 await updateHermidata(recordToRemove.id, merged.id, merged);
+                removedIds.push(recordToRemove.id);
             }
-        
-            return true;
+
+            return { merged: true, removedIds: removedIds, addedId: merged.id };
         } catch (err) {
             console.error("Failed to merge Hermidata:", err);
-            return false;
+            return { merged: false, removedIds: [], addedId: null };
         }
     }
     private static setByPath(obj: Record<string, unknown>, path: string, value: unknown): void {

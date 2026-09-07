@@ -3,7 +3,9 @@ import { getAllTags } from "../../shared/db/Storage";
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getElement } from "../../shared/utils/Selection";
+import type { Controller } from "../controller";
 import { Sort } from "./filter";
+import { DualRangeSlider } from "../../shared/utils/DualRangeSlider";
 
 export class filter extends Sort {
 
@@ -31,8 +33,8 @@ export class filter extends Sort {
         state 2: checked exclude
     */
 
-    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
-        super(AllHermidata, settings);
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings, StarRatingRange: Controller) {
+        super(AllHermidata, settings, StarRatingRange);
     }
 
 
@@ -91,9 +93,36 @@ export class filter extends Sort {
 
         container.innerHTML = '';
 
-        const starRatingCheckbox = this.buildStarRatingCheckbox(0,10);
+        const label = document.createElement('h2');
+        label.textContent = 'Filter by star rating';
 
-        container.append(starRatingCheckbox);
+        const hint = document.createElement('p');
+        hint.classList.add('hint');
+        hint.textContent = 'Drag either handle to set a min and max star rating.';
+
+        const starRating = document.createElement('div');
+        starRating.classList.add('rating-filter');
+        starRating.id = 'rating-filter';
+
+        container.append(label, hint, starRating);
+
+        this.StarRatingRange.range = new DualRangeSlider(starRating, { min: 3, max: 5 }, (range) => this.setStarRating(range));
+    }
+    private setStarRating(range: { min: number; max: number }) {
+        this.selectedRange = range;
+
+        const sticksContainer = document.querySelector('.drs-ticks');
+        if (!sticksContainer) return;
+
+        // find the stick where its content is the same as the range
+        const sticks = sticksContainer.querySelectorAll('span');
+        for (const stick of sticks) {
+            const stickValue = Number(stick.textContent);
+            // if (stickValue === range.min || stickValue === range.max) stick.classList.add('active-drs-stick'); // same
+            if (stickValue >= range.min && stickValue <= range.max) stick.classList.add('active-drs-stick'); // all in between
+
+            else stick.classList.remove('active-drs-stick');
+        }
     }
     private setContentRatingFilter() {
         const container = this.contentRatingDialog;
@@ -273,37 +302,6 @@ export class filter extends Sort {
 
         container.append(sortCheckbox);
     }
-    private buildStarRatingCheckbox(min: number, max: number): HTMLDivElement {
-        const container = document.createElement('div');
-
-        container.classList.add('star-rating-checkbox-container', 'filter-checkbox-container');
-
-        for (let i = min; i <= max; i++) {
-            // create a generic list item for each dataset entry
-            const listItem = this.buildGenericListItem({id: `generic-list-checkbox-${i}`, classes: ['star-rating-item-list']});
-
-            // build checkbox to list item
-            const checkbox = document.createElement('div');
-            checkbox.id = `star-rating-checkbox-${i}`;
-            checkbox.classList.add('star-rating-checkbox-item', 'filter-item-checkbox', 'custom-checkbox');
-            checkbox.dataset.value = String(i);
-            checkbox.dataset.state = '0';
-            checkbox.dataset.filterType = 'star-rating';
-
-            // build label to list item
-            const label = document.createElement('div');
-            label.id = `star-rating-label-${i}`;
-            label.classList.add('star-rating-label-item', 'filter-item-label', 'custom-checkbox');
-            label.textContent = i === 1 ? '1 star' : `${i} stars`;
-            label.dataset.value = String(i);
-
-            // append checkbox & label to list item
-            listItem.append(checkbox, label);
-            container.appendChild(listItem);
-        }
-        return container;
-    }
-    
 
     private buildContentRatingCheckbox(): HTMLDivElement {
         const container = document.createElement('div');
@@ -383,7 +381,7 @@ export class filter extends Sort {
 
         
 
-        const genresThemes = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
+        const genresThemes = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag)).sort((a, b) => a.localeCompare(b));
 
         for (const name of genresThemes) {
             // create a generic list item for each dataset entry

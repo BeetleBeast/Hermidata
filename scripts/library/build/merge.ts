@@ -1,9 +1,9 @@
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import type { Hermidata, Settings, MergeAnalysis } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { RSSPageBuilder } from "../build";
+import { LibraryBuilder } from "../build";
 
-export class HermidataMerge extends RSSPageBuilder {
+export class HermidataMerge extends LibraryBuilder {
 
     
 
@@ -334,10 +334,16 @@ export class HermidataMerge extends RSSPageBuilder {
 
         const merged = await HermidataMigration.mergeTwoHermidataWithConfiguration(recordToKeep, recordToRemove, merging.configuration);
 
-        // remove stail cache
-        delete this.AllHermidata[recordToRemove.id];
 
-        console.log("merged", merged);
+        // remove stael cache and remove elements from DOM
+        for (const removedId of merged.removedIds) {
+            delete this.AllHermidata[removedId];
+
+            document.querySelector<HTMLDivElement>(`.hermidata-item[data-id="${removedId}"]`)?.remove();
+        }
+        
+
+        console.log("merged", merged.merged);
 
         this.closeMergePanel();
     }

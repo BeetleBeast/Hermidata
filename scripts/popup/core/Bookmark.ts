@@ -177,7 +177,12 @@ export class BookmarkController {
 
         const bookmarkChapter = document.createElement('div');
         bookmarkChapter.className = 'bookmarkChapter';
-        bookmarkChapter.textContent = 'Ch. ' + String(bookmark?.history?.at(-1) || bookmark.current);
+
+        const lastChapter = bookmark?.history?.at(-1)?.chapter || bookmark.current;
+
+        if (typeof lastChapter !== 'number') return; // safety check to ensure lastChapter is a number before proceeding
+
+        bookmarkChapter.textContent = 'Ch. ' + String(lastChapter);
 
         bookmarkContainer.addEventListener('click', () => {
             this.closeBookmarkMenu();
