@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hermidata — RSS / Library</title>
+<link rel="stylesheet" href="../assets/styles/styles.css">
+<link rel="stylesheet" href="../assets/styles/Library.css" />
+</head>
+<body data-list-mode="true">
+
+  <section class="topBar">
+    <h1>Hermidata Library</h1>
+    <div class="toolbar">
+      
+      <button type="button" popovertargetaction="toggle" popovertarget="merger-dialog" id="mergeTwoHermidatas" class="Btn">merge two hermidata's</button>
+      <!--<button type="button" id="bulkOpen" class="Btn">Open in Tab</button>--> <!-- TODO: Add this feature later -->
+      <button type="button" id="reloadData" class="Btn">Reload</button>
+      <div id="merger-dialog" class="filter-dialog" popover>
+        <div class="merger-dialog-progression-container">
+          <div class="merger-dialog-progression merger-dialog-progression-1" data-progression="2">
+            <p class="merger-dialog-progression-1-text">✓</p>
+          </div>
+          <p class="merger-dialog-progression-1-main-text" data-progression="2">Keep record A</p>
+          <svg class="merger-dialog-progression-line">
+            <line x1="0" y1="25" x2="100%" y2="25" stroke="var(--border)" stroke-width="1"></line>
+          </svg>
+          <div class="merger-dialog-progression merger-dialog-progression-2" data-progression="2">
+            <p class="merger-dialog-progression-2-text" data-progression="2">2</p>
+          </div>
+          <p class="merger-dialog-progression-2-main-text" data-progression="2">Resolve conflict</p>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <section id="search-filter-container">
+    <div id="search-input-container">
+      <div id="search-container">
+        <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+        <input id="search" placeholder="Search titles..." type="search" />
+      </div>
+      <div id="search-suggestions"></div>
+    </div>
+    <div id="filter-container">
+      <div class="filter-row-1">
+        <div id="StarRating-filter-container" class="filter-container">
+          <h4>Star Rating</h4>
+          <button id="StarRating-filter" class="filter-button" title="Star Rating" type="button" data-filter-type="star-rating" popovertargetaction="toggle" popovertarget="StarRating-dialog">Any</button>
+          
+          <div id="StarRating-dialog" class="filter-dialog" popover>
+          </div>
+        </div>
+        <div id="ContentRating-filter-container" class="filter-container">
+          <h4>Content Rating</h4>
+          <button id="ContentRating-filter" class="filter-button" title="Content Rating" data-filter-type="Content Rating" type="button" popovertargetaction="toggle" popovertarget="ContentRating-dialog">Any</button>
+          
+          <div id="ContentRating-dialog" class="filter-dialog" popover>
+          </div>
+        </div>
+        <div id="NovelType-filter-container" class="filter-container">
+          <h4>Novel Type</h4>
+          <button id="NovelType-filter" class="filter-button" title="Novel Type" type="button" data-filter-type="Novel Type" popovertargetaction="toggle" popovertarget="NovelType-dialog">Any</button>
+          
+          <div id="NovelType-dialog" class="filter-dialog" popover>
+          </div>
+        </div>
+        <div id="Genres-filter-container" class="filter-container">
+          <h4>Genres & themes</h4>
+          <button id="Genres-filter" class="filter-button" title="Genres & themes" type="button" data-filter-type="Genres & Themes" popovertargetaction="toggle" popovertarget="Genres-dialog">Any</button>
+          
+          <div id="Genres-dialog" class="filter-dialog" popover>
+          </div>
+        </div>
+        <div id="NovelStatus-filter-container" class="filter-container">
+          <h4>Novel Status</h4>
+          <button id="NovelStatus-filter" class="filter-button" title="Novel Status" type="button" data-filter-type="Novel Status" popovertargetaction="toggle" popovertarget="NovelStatus-dialog">Any</button>
+          
+          <div id="NovelStatus-dialog" class="filter-dialog" popover>
+          </div>
+        </div>
+      </div>
+      <div class="filter-row-2">
+        <div id="Sort-filter-container" class="filter-container">
+          <h4>Sort</h4>
+          <button id="Sort-filter" class="filter-button" title="Sort" type="button" popovertargetaction="toggle" popovertarget="Sort-dialog">Alphabetical</button>
+          
+          <div id="Sort-dialog" class="filter-dialog" popover>
+          </div>
+        </div>
+        <div id="Site-filter-container" class="filter-container">
+          <h4>Site</h4>
+          <button id="Site-filter" class="filter-button" title="Site" type="button" data-filter-type="Site" popovertargetaction="toggle" popovertarget="Site-dialog">Open Site dialog</button>
+          
+          <div id="Site-dialog" class="filter-dialog" popover>
+          </div>
+          
+        </div>
+        <div id="Author-filter-container" class="filter-container">
+          <h4>Author</h4>
+
+          <button id="Author-filter" class="filter-button" title="Author" type="button" data-filter-type="Author" popovertargetaction="toggle" popovertarget="Author-dialog">Author</button>
+          
+          <div id="Author-dialog" class="filter-dialog" popover>
+            <div id="Author-input-container">
+              <input id="Author-filter-input" title="Author" type="search" />
+              <p id="Author-filter-suggestions"></p>
+            </div>
+          </div>
+
+        </div>
+        <div id="ReleaseDate-filter-container" class="filter-container">
+          <h4>Release Date</h4>
+          <button id="ReleaseDate-filter" class="filter-button" title="Release Date" type="button" data-filter-type="Release Date" popovertargetaction="toggle" popovertarget="ReleaseDate-dialog">Any</button>
+          
+          <div id="ReleaseDate-dialog" class="filter-dialog" popover>
+          </div>
+
+        </div>
+        <div id="ChapterCompletion-filter-container" class="filter-container">
+          <h4>Minimum chapters read</h4>
+          <input id="ChapterCompletion-filter" class="filter-button" title="minimum completion percentage" type="number" placeholder="0" value=""/>
+        </div>
+        <div id="ResetFilters" class="filter-container">
+          <h4 id="resetFilters-label-hidden" >0</h4>
+          <button type="button" id="resetFilters" class="filter-button" class="Btn">Reset Filters</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="library-container">
+    <div id="library-entries-info">
+      <div id="library-entries-info-amount-container">
+        <span id="library-entries-info-amount">0</span><p id="library-entries-info-amount-label">titles</p>
+      </div>
+      <div id="library-entries-ViewMode-container">
+        <div id="library-entries-ViewMode-toggle" role="group" aria-label="View Mode">
+          <button id="library-entries-ViewMode-list" class="viewMode-toggle" type="button" aria-label="List View" aria-pressed="true" data-active_view_mode="true" >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </button>
+          <button id="library-entries-ViewMode-grid" class="viewMode-toggle" type="button" aria-label="List View" aria-pressed="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+          </button>
+
+        </div>
+      </div>
+    </div>
+    <div id="library-entries-container"><!-- Dynamic load items--></div>
+  </section>
+
+
+
+
+<script src="../scripts/library/main.ts" type="module"></script>
+</body>
+</html>

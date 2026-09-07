@@ -37,6 +37,9 @@
 
     --focus-ring: rgb(120, 150, 210);
     
+
+    --card: rgb(18, 31, 49);
+    --borderLibrary: rgb(63, 76, 96);
 }
 
 body {
@@ -144,7 +147,7 @@ body {
     color: var(--Text-color);
     outline-color: var(--Btn);
     text-emphasis-color: var(--Btn);
-    text-align: center;
+    text-align: left;
     accent-color: var(--Text-color);
     border: 1px solid var(--Btn);
     border-radius: 3px;
@@ -154,11 +157,12 @@ body {
 }
 .genericLabel {
     display: none;
+    align-items: center;
+    justify-content: center;
+	width: 80%;
     color: var(--Text-color);
-	display: block;
-	width: fit-content;
+    text-align: center;
 	word-wrap: unset;
-	white-space: nowrap;
     gap: 10px;
 }
 .genericPromptBtns {

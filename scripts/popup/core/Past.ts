@@ -39,7 +39,7 @@ export class PastHermidata {
         this.pastHermidata = await this.getPastHermidata();
         return this.pastHermidata;
     }
-    public async checkForDuplicates(): Promise<Hermidata | null> {
+    public async checkForDuplicates(): Promise<Hermidata | false> {
         // get all Hermidata
         const AllHermidata = await PastHermidata.getAllHermidata();
         // update cashe
@@ -60,7 +60,7 @@ export class PastHermidata {
         }
 
         // only 1 result -> return
-        if ( Object.keys(possibleObj).length == 1 ) return null
+        if ( Object.keys(possibleObj).length == 1 ) return false
 
         // more then 1 result -> filter it
         if ( Object.keys(possibleObj).length > 1 ) {
@@ -68,10 +68,11 @@ export class PastHermidata {
             if (byOtherMeans ) return byOtherMeans;
             const objs = Object.values(possibleObj);
             // Check for possible same-series different-type pairs
-            return await HermidataMigration.migrateCopy(objs);
+            const result = await HermidataMigration.migrateCopy(objs);
+            if (!(result instanceof Error) ) return result
         }
-
-        return null
+        // if less than 1 ( no results )
+        return false
     }
 
 
@@ -108,7 +109,9 @@ export class PastHermidata {
             if (byOtherMeans ) return byOtherMeans;
             const objs = Object.values(possibleObj);
             // Check for possible same-series different-type pairs
-            return await HermidataMigration.migrateCopy(objs);
+            const result = await HermidataMigration.migrateCopy(objs);
+            if (!(result instanceof Error) ) return result
+            else return null
         }
 
         const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());

@@ -2,6 +2,8 @@
 // In MV3 Chrome also supports promises, but not everywhere yet
 
 // Tell TS these globals may exist
-declare const browser: typeof chrome | undefined
+/// <reference types="firefox-webext-browser" />
+declare const browser: typeof chrome | typeof globalThis.browser
 
-export const ext: typeof chrome = ( browser ?? chrome )
+
+export const ext: typeof chrome = (browser as typeof chrome) ?? chrome;

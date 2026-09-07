@@ -246,15 +246,10 @@ class HermidataController {
 
 
         // if new novel type, then merge the old to new
-        const newNovelType = this.pastHermidata ? this.pastHermidata?.novelType !== this.hermidata.novelType : false;
-        const newHermidata = newNovelType && this.past.pastHermidata ? await this.mergeNovelType(this.hermidata, this.past.pastHermidata) : this.hermidata;
-        if (!newHermidata) {
-            console.error('new Hermidata has different novel type and user declined to merge');
-            return;
-        }
-        this.hermidata = new HermidataModel(newHermidata);
-        
-        // TODO: sheck if it works
+        const hasMergedNovelType = await this.updateNovelType();
+        if (!hasMergedNovelType) return; // if merge failed/ declined then exit saving
+
+        // TODO: check if it works
         // migrate if duplicate
         const hasMigrated = await this.migrateIfDuplicate();
         if (hasMigrated) console.info('magration plan activated');
@@ -275,9 +270,20 @@ class HermidataController {
 
         if (!this.Testing && savedInStorage && saved ) setTimeout( () => window.close(), 400);
     }
+    /** merge novel type if changed */
+    private async updateNovelType(): Promise<boolean> {
+        const newNovelType = this.pastHermidata ? this.pastHermidata?.novelType !== this.hermidata.novelType : false;
+        const newHermidata = newNovelType && this.past.pastHermidata ? await this.mergeNovelType(this.hermidata, this.past.pastHermidata) : this.hermidata;
+        if (!newHermidata) {
+            console.error('new Hermidata has different novel type and user declined to merge');
+            return false;
+        }
+        this.hermidata = new HermidataModel(newHermidata);
+        return true;
+    }
     private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
         const msg = `
-            The Novel Type of "${older.title}" has changed from "${older.novelType}" to "${newer.novelType}".
+            The Novel Type of "${older.title}" will changed from "${older.novelType}" to "${newer.novelType}".
             <br>
             <br>
             Are you sure you want to change it?
@@ -285,7 +291,7 @@ class HermidataController {
         const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
         if (!confirmed) return false;
         const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
-        if (!merged) return false;
+        if (merged instanceof Error) return false;
         console.log(`Merged "${older.title}" with "${newer.title}"`);
         return merged;
     }
@@ -371,7 +377,7 @@ class HermidataController {
         // max 20 entries in history
         if (this.hermidata.GetHistory()?.length >= 20) this.hermidata.ShiftHistory();
 
-        this.hermidata.PushHistory(this.hermidata.GetChapter());
+        this.hermidata.PushHistory(this.hermidata.GetChapter(), new Date().toISOString());
         // only unique entries in history
         this.hermidata.SetHistory(Array.from( new Set(this.hermidata.GetHistory())));
         

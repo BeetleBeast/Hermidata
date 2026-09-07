@@ -1,39 +1,18 @@
-// must be a self-contained IIFE bundle — no imports allowed
+// must be a self-contained IIFE bundle — no imports allowed except separated content files
 
-// ============================================================
-// Types
-// ============================================================
+import { FeedDetection } from "./feedDetection";
+import { ElementPicker, type RuntimeMessage } from "./picker";
 
-type RawScrappedFeed = {
-    title: string;
-    url: string;
-    domain: string;
-    lastFetched: string;
-    lastBuildDateStr: string;
-    image: string;
-    latestItem: RawScrapedItem;
-    lastToken: string | null;
-};
+// ------------ feed detection ------------ //
 
-type RawScrapedItem  = {
-    title: string;
-    link: string;
-    pubDate: Date;
-    guid: string;
-};
+const feedDetector = new FeedDetection();
 
-// ============================================================
-// Globals
-// ============================================================
+feedDetector.addFeedToGlobalMain();
 
-declare const browser: typeof chrome | undefined;
-const ext: typeof chrome = (browser ?? chrome);
+// ------------ element picker ------------ //
 
-// ============================================================
-// Entry point
-// ============================================================
 
-addFeedToGlobalMain();
+let activePicker: ElementPicker | null = null;
 
 // ============================================================
 // Detection
@@ -163,5 +142,14 @@ async function addFeedToGlobalMain(): Promise<void> {
 
     } catch (err) {
         console.error('[Hermidata] addFeedToGlobalMain failed:', err);
+chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
+    if (msg.action === "startPicking") {
+        // Fresh instance each time — avoids any stale `hovered` state
+        // from a previous pick/cancel leaking into the next one.
+        activePicker = new ElementPicker();
+        activePicker.initPicker();
+    }else if (msg.action === "cancelPicking") {
+        activePicker?.forceCancel(); // just calls this.cleanup()
+        activePicker = null;
     }
-}
+});

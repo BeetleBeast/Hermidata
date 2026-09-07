@@ -1,5 +1,7 @@
-import type { Hermidata, RegexConfig, TrimmedTitle } from '../types/index';
+import type { PickedElementData } from '../types/rss';
+import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
+import { ext } from './BrowserCompat';
 
 export function getChapterFromTitle(title: string | undefined, url: string): number {
     if (!title) return Number.NaN;
@@ -43,7 +45,7 @@ export function getChapterFromTitleReturn(correctTitle: string, title: string, c
     return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
-export function normaliseDateToIso(rawDate: string): string {
+export function normalizeDateToIso(rawDate: string): string {
     
     if (!rawDate) return '';
 
@@ -53,6 +55,35 @@ export function normaliseDateToIso(rawDate: string): string {
     return new Date(date)?.toISOString();
 }
 
+function isConcatenationOfOthers(candidate: string, others: string[]): boolean {
+    let remaining = candidate;
+    let matchedCount = 0;
+
+    for (const other of others) {
+        const idx = remaining.indexOf(other);
+        if (idx === -1) continue;
+        remaining = remaining.slice(idx + other.length);
+        matchedCount++;
+    }
+
+    // Only treat as a "summary" if it's stitched together from 2+ other
+    // leaves in order — a single containment match is more likely a
+    // coincidence (like "New" inside "New Arrivals") than a real duplicate.
+    return matchedCount >= 2;
+}
+
+function dedupeContainerTexts(texts: string[]): string[] {
+    return texts.filter((text, i) => {
+        const others = texts.filter((_, j) => j !== i);
+        return !isConcatenationOfOthers(text, others);
+    });
+}
+
+export function getMultipleTitles(data: PickedElementData, separator = '\n'): string[] | null {
+
+    const deduped = dedupeContainerTexts(data.leafTexts);
+    return deduped.length > 0 ? deduped : null;
+}
 
 export function findByTitleOrAlt(title: string, allData: Record<string, Hermidata> ): Hermidata | undefined {
     title = TrimTitle.trimTitle(title, '').title; // force trim title to remove any chapter info or site name
@@ -107,6 +138,38 @@ export function simpleHash(str: string) {
     return hash.toString();
 }
 
+/** - open url into another location */
+export async function openLink(url: string, location: 'newTab' | 'newWindow' | 'sameTab'): Promise<void> {
+    const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+
+    if (isFirefox && location === 'newTab') return openInSameContainer(url);
+
+    switch (location) {
+        case 'newTab':
+            await ext.tabs.create({ url });
+            break;
+        case 'newWindow':
+            await ext.windows.create({ url });
+            break;
+        case 'sameTab':
+            await ext.tabs.update({ url, active: true });
+            break;
+        default:
+            await ext.tabs.create({ url });
+    }
+}
+
+/** Get the current tab's `cookieStoreId` and pass it straight to `tabs.create`:*/
+async function openInSameContainer(url: string): Promise<void> {
+    if (!browser) return; // shouldn't happen since caller already checked isFirefox, but keeps TS happy
+
+    const [currentTab] = await browser.tabs.query({ active: true, currentWindow: true });
+    
+    const cookieStoreId = currentTab.cookieStoreId; // inherits the container
+
+    await browser.tabs.create({ url, cookieStoreId });
+}
+
 export function getTitleAndChapterFromUrl(url: string): { title: string | null, chapter: number } {
     if (!url) return { title: null, chapter: Number.NaN };
     if (!url.trim()) return { title: null, chapter: Number.NaN };
@@ -154,6 +217,9 @@ export class TrimTitle {
         return cleanString
     }
     private static extractDomainFromUrl(HermidataUrl: string): string {
+        // Detect our own browser extension and return a constant
+        if (HermidataUrl.startsWith(ext.runtime.getURL(""))) return "Hermidata";
+
         // Extract domain name from url
         const siteMatch = new RegExp(/:\/\/(?:www\.)?([^./]+)/i).exec(HermidataUrl);
         const siteName = siteMatch ? siteMatch[1] : "DummySite";
@@ -217,6 +283,9 @@ export class TrimTitle {
 
         const keyword = ['manga', 'novel', 'anime', 'tv-series', 'comic', 'webtoon', 'ln'];
         const keywordPattern = keyword.join('|');
+        
+        const trailingJunkWords = ['english', 'eng', 'raw', 'online', 'free', 'sub', 'dub', 'hd'];
+        const trailingJunkPattern = trailingJunkWords.join('|');
 
         /**
          * Matches a full chapter reference, including optional leading/trailing numbers.
@@ -245,6 +314,10 @@ export class TrimTitle {
         // const readRegex = /^\s*read(\s+\w+)*(\s*online)?\s*$/i;
         const readRegex = /^\s*read(\s+online|\s+now)?\s*$/i;
 
+        // Words that commonly trail a chapter marker on scraper sites
+        // e.g. "... Chapter 3 English Online" -> after chapter removal, "... English Online" is left dangling
+        const trailingJunkRegex = new RegExp(String.raw`(?:\s*\b(?:${trailingJunkPattern})\b)+\s*$`, 'i');
+
         // Regex for "novel bin"
         const junkRegex = new RegExp(String.raw`\b(${junkKeywordPattern})\b`, 'i');
 
@@ -272,7 +345,8 @@ export class TrimTitle {
             flexibleSiteNameRegex,
             cleanTitleKeywordEnd,
             cleanTitleKeywordStart,
-            stripReadOnline
+            stripReadOnline,
+            trailingJunkRegex
         }
     }
     private static removeJunkAndSiteName(parts: string[], regexUsed: RegexConfig) {
@@ -286,6 +360,7 @@ export class TrimTitle {
             .filter(p => !regexUsed.siteNameRegex.test(p))
             .filter(p => !regexUsed.flexibleSiteNameRegex.test(p))
             .map(p => p.replace(regexUsed.cleanTitleKeywordStart, '').replace(regexUsed.cleanTitleKeywordEnd, '').trim())
+            .map(p => p.replace(regexUsed.trailingJunkRegex, ''))
             .map(p => p.replace(/^[\s:;,\-–—|]+/, "").trim()) // remove leading punctuation + spaces
             .map(p => p.replace('#', ' ').trim()) // remove any '#' characters
             .map(p => p.replace('／', " ").trim()) // remove trailing punctuation + spaces
@@ -303,6 +378,40 @@ export class TrimTitle {
         const Url_filter_parts = HermidataUrl.split('/')
         const Url_filter = Url_filter_parts.at(-1)?.replaceAll('-',' ').toLowerCase().trim() || '';
         return Url_filter
+    }
+    /**
+     * Removes the chapter/volume/episode marker block from a title, choosing which side to keep based on structure rather than a word list:
+     *  - If a subtitle separator (: - – — |) immediately follows the marker block, the author intentionally continued the title -> keep the suffix.
+     *    e.g. "Volume 2, Chapter 5: Revenge" -> "Revenge"
+     *  - Otherwise, whatever trails the marker is scraper metadata (language tag, resolution, domain, scanlator name, etc.) with no reliable enumeration -> keep the prefix.
+     *    e.g. "The Generic Title Chapter 3 English online test.com" -> "The Generic Title"
+    */
+    private static stripChapterBlock(title: string, regexUsed: RegexConfig): string {
+        // TODO: rewrite this method for better readability
+        regexUsed.chapterRemoveRegexV3.lastIndex = 0;
+
+        let match: RegExpExecArray | null;
+        let blockStart = -1;
+        let blockEnd = -1;
+        while ((match = regexUsed.chapterRemoveRegexV3.exec(title)) !== null) {
+            if (blockStart === -1) blockStart = match.index;
+            blockEnd = match.index + match[0].length;
+            if (match[0].length === 0) regexUsed.chapterRemoveRegexV3.lastIndex++; // avoid infinite loop on zero-width match
+        }
+
+        if (blockStart === -1) return title; // no chapter marker found, nothing to do
+
+        const prefix = title.slice(0, blockStart).trim();
+        const rawSuffix = title.slice(blockEnd);
+
+        const subtitleMarker = /^\s*[:\-–—|]\s*/;
+        const hasMarker = subtitleMarker.test(rawSuffix);
+        const suffix = rawSuffix.replace(subtitleMarker, '').trim();
+
+        if (hasMarker && suffix) return suffix;
+        if (prefix) return prefix;
+        if (suffix) return suffix;
+        return '';
     }
 
     private static makeTitle(filter: string[], regexUsed: RegexConfig, HermidataUrl: string): TrimmedTitle | null {
@@ -334,8 +443,8 @@ export class TrimTitle {
         // early strip first string if its a leading number
         if (/^\d{1,4}(?:\.\d+)?$/.test(filter[0])) return TrimTitle.makeTitle(filter.slice(1), regexUsed, HermidataUrl);
 
-        mainTitle = filter[0]
-        .replace(regexUsed.chapterRemoveRegexV3, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
+        mainTitle = TrimTitle.stripChapterBlock(filter[0], regexUsed)
+        // .replace(regexUsed.chapterRemoveRegexV3, '').trim() // remove optional leading/trailing numbers (int/float + optional letter) & remove the "chapter/chap/ch" part
         .replace(/^\d{1,4}(?:\d+)?\s+(?=[A-Za-z\u3040-\u9FFF])/, '') // remove leading numbers if followed by text (to catch cases like "12 Monkeys" where "12" is not a chapter number)
         .replace(/^[\s:;,\-–—|]+/, "").trim() // remove leading punctuation + spaces
         .replace(/[:;,\-–—|]+$/,"") // remove trailing punctuation

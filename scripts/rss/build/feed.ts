@@ -228,9 +228,10 @@ export class FeedItem {
     }
     private createItemPubDate(item: Hermidata): HTMLElement {
         const pubDate = document.createElement("p");
-        pubDate.className = "hermidata-item-pubDate"
-        const dateString = this.showLatestDate(item).toLocaleString().split(',')[0];
-        const pubDateText = `Published: ${dateString}`;
+        pubDate.className = "hermidata-item-pubDate";
+        const latestDate = this.showLatestDate(item);
+        const dateString = latestDate.date.toLocaleDateString('fr-FR');
+        const pubDateText = `${latestDate.originalDateVariable}: ${dateString}`;
         pubDate.textContent = pubDateText;
         pubDate.title = pubDateText;
         return pubDate
@@ -304,7 +305,7 @@ export class FeedItem {
         ElInfo.className = "hermidata-item-info"
 
         // image
-        const itemImage = this.createItemImage(item);
+        const itemImage = await this.createItemImage(item);
 
         // top row
         const itemTitle = this.createItemTitle(itemInfo.title);
@@ -325,10 +326,10 @@ export class FeedItem {
 
         return ElInfo
     }
-    private createItemImage(item: Hermidata): HTMLImageElement {
+    private async createItemImage(item: HermidataModel): Promise<HTMLImageElement> {
         const ElImage = document.createElement("img");
         ElImage.className = "hermidata-item-image"
-        ElImage.src = item?.rss?.image ?? '../../../assets/icon/icon48.png';
+        ElImage.src = await item.getDisplayImageUrl();
 
         ElImage.sizes = "40x60";
         ElImage.style.width = "40px";
@@ -354,7 +355,7 @@ export class FeedItem {
         return li
     }
 
-    private showLatestDate(item: Hermidata): Date {
+    private showLatestDate(item: Hermidata): { date: Date, originalDateVariable: string} {
 
         const allDatesExeptBookmarks = item.rss ? {
             added: new Date(item.meta.added),
@@ -373,7 +374,14 @@ export class FeedItem {
         const allDates = [...Object.values(allDatesExeptBookmarks), ...allBookmarkDates];
         const date = allDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 
-        return date;
+        let originalDateVariable: string = '';
+        if (date === allDatesExeptBookmarks.updated) originalDateVariable = 'updated';
+        if (date === allDatesExeptBookmarks.added) originalDateVariable = 'added';
+        if (date === allDatesExeptBookmarks.latestrss) originalDateVariable = 'updated';
+        if (allBookmarkDates.some(bookmark => bookmark.updatedAt === date)) originalDateVariable = 'updated';
+        if (allBookmarkDates.some(bookmark => bookmark.createdAt === date)) originalDateVariable = 'added';
+
+        return {date, originalDateVariable};
     }
 }
 

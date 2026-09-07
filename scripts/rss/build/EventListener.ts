@@ -1,13 +1,13 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
-import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
-import type { AnyNovelType, Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
-import { getHermidataViaKey, saveHermidata, setNotificationList, updateHermidata } from "../../shared/db/Storage";
+import { getMultipleTitles, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
+import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
+import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
-import { deleteHermidata } from "../../shared/db/db";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import type { PickedElementData } from "../../shared/types/rss";
 
 export class EventListener extends RssBuild {
     
@@ -82,6 +82,7 @@ export class EventListener extends RssBuild {
             { label: "Open marker in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
             { label: "Open marker in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
+            { label: "pick element(s) to add as alt title", action: async () => await this.pickElement(e.target as HTMLDivElement) },
             { label: "add alt title", action: async () => await this.addAltTitle(e.target as HTMLDivElement) },
             { label: "Rename", action: async () => await this.RenameItem(e.target as HTMLDivElement) },
             ...optinalMenuOption,
@@ -355,6 +356,78 @@ export class EventListener extends RssBuild {
         if (this.AllHermidata[hashItem].rss?.Notified) this.AllHermidata[hashItem].rss.Notified = undefined;
         saveHermidata(hashItem, this.AllHermidata[hashItem]);
     }
+    private async pickElement(target: HTMLDivElement | null) {
+        if (!target) return;
+        const item = this.getEntriesItem(target)
+        if (!item) {
+            console.log('isn\'t a entries item');
+            return;
+        }
+        const hashItem = this.GetHashItem(item);
+        const entry = new HermidataModel(this.AllHermidata[hashItem]);
+        if (!entry) {
+            console.warn("Entry not found for hash:", hashItem);
+            return;
+        }
+        // TODO: get title from element picker
+        const picked = await this.getPickerElement();
+        if (!picked) {
+            console.log('picker cancelled');
+            return;
+        }
+        const newTitle = getMultipleTitles(picked);
+        if (!newTitle) return;
+        
+        // Normalize and deduplicate
+        for (let i = 0; i < newTitle.length; i++) {
+            const trimmed = TrimTitle.trimTitle(newTitle[i], entry.GetUrl()).title;
+            entry.meta.altTitles = Array.from(
+                new Set([...(entry.meta.altTitles || []), trimmed])
+            );
+        }
+
+        // Save to storage
+        await saveHermidata(hashItem, entry.toJSON());
+    }
+
+    private currentTabId: number | null = null;
+
+    private async getPickerElement(): Promise<PickedElementData | null> {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab.id) {
+            console.warn("No active tab found.");
+            return null;
+        }
+        this.hidePopup();
+
+        this.currentTabId = tab.id;
+
+        await chrome.tabs.sendMessage(tab.id, { action: "startPicking" });
+        const result = await new Promise<PickedElementData | null>((resolve) => this.pendingPick = resolve);
+
+        // TODO: these events need to be removed, as they do not work*
+        // * because the popup hides first and only on the second key stroke does the element picker closes
+        window.addEventListener("pagehide", () => {
+            if (this.currentTabId) chrome.tabs.sendMessage(this.currentTabId, { action: "cancelPicking" });
+        });
+        // TODO: same as above
+        document.addEventListener("pagehide", () => {
+            chrome.tabs.sendMessage(tab.id!, { action: "cancelPicking" });
+        });
+
+        this.revertPopupToDefault();
+        return result;
+    }
+    private hidePopup() {
+        const popup = document.querySelector('html');
+        // UPDATE: give a hint of the progress of the element picker instead of hiding*
+        // * the popup doesn't hide but its width and height are reduced to the minimum the browser has set ( about 20 px)
+        if (popup) popup.style.display = 'none';
+    }
+    private revertPopupToDefault() {
+        const popup = document.querySelector('html');
+        if (popup) popup.style.display = 'block';
+    }
     private async addAltTitle(target: HTMLDivElement | null) {
         if (!target) return;
         const item = this.getEntriesItem(target)
@@ -379,7 +452,7 @@ export class EventListener extends RssBuild {
         );
     
         // Save to storage
-        await saveHermidata(hashItem, entry);
+        await saveHermidata(hashItem, entry.toJSON());
     
         console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
     }
@@ -396,22 +469,25 @@ export class EventListener extends RssBuild {
             console.warn("No data found for this item");
             return;
         }
-        const newTitle = await customPrompt(`Renaming to:`, oldData.title);
+        const newTitle = await customPrompt(`Renaming to:`, {defaultValue: oldData.title});
         if (!newTitle || newTitle.trim() === oldData.title.trim()) {
             console.log("Rename canceled or unchanged");
             return;
         }
         // Generate new key and object
         const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.GetUrl(), false);
-        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title
-        const newData = { ...oldData, title: newTitle, id: newKey };
+        const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title;
+
+        const newData: HermidataModel = oldData.Copy();
+        newData.title = newTitle;
+        newData.id = newKey;
     
         // Add the old title as an altTitle
         if (TrimmedTitle === newTitle) newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), TrimmedTitle]) );
         else newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), oldData.title, TrimmedTitle]) );
     
         // Save and clean up
-        await updateHermidata(oldKey, newKey, newData);
+        await updateHermidata(oldKey, newKey, newData.toJSON());
     
         //  update your in-memory list
         delete this.AllHermidata[oldKey];
@@ -439,7 +515,7 @@ export class EventListener extends RssBuild {
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
             delete this.AllHermidata[hashItem]
-            deleteHermidata(hashItem)
+            removeHermidata(hashItem)
         }
         await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
     }
@@ -470,7 +546,7 @@ export class EventListener extends RssBuild {
 
         entry.rss = null;
 
-        await saveHermidata(entry.id, entry);
+        await saveHermidata(entry.id, entry.toJSON());
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined

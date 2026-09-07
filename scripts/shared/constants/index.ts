@@ -5,7 +5,11 @@ export {
     DEFAULT_READ_STATUSES,
     DEFAULT_TAGS,
     DEFAULT_TAG_COLOURS,
+    
+    CONTENT_RATING,
 
+    CONTENT_RATING_MAP,
+    DEMOGRAPHIC_TAGS,
 
     makeDefaultHermidata,
     makeDefaultBookmark

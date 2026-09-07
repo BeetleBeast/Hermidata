@@ -105,7 +105,14 @@ async function webSearch() {
             console.groupEnd();
             continue;
         }
-        
+        // if feedText ins't a Feed but a html page, skip
+        if (feedText.includes("<!DOCTYPE html>")) {
+            console.warn("No feed text found:", novel.url);
+            console.dirxml(feedText);
+            console.groupEnd();
+            continue;
+        }
+
         // get the latest token
         const token = getFeedLatestToken(feedText);
         if (!token) {

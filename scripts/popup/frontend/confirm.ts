@@ -32,7 +32,7 @@ export async function confirmMigrationPrompt(newer: HermidataModel, older: Hermi
     }
 }
 
-export function deactivateother(execptionElement: HTMLElement | null = null) {
+export function deactivateOther(execptionElement: HTMLElement | null = null) {
     // deactivate links in classic
     document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
         a.style.pointerEvents = 'none';
@@ -42,8 +42,13 @@ export function deactivateother(execptionElement: HTMLElement | null = null) {
         a.style.pointerEvents = 'none';
     });
     // deactivate links in classic & HDRSS
-    document.querySelector<HTMLDivElement>(".HDClassic")!.style.pointerEvents = 'none';
-    document.querySelector<HTMLDivElement>(".HDRSS")!.style.pointerEvents = 'none';
+    const hdClassic = document.querySelector<HTMLDivElement>(".HDClassic");
+    const hdrss = document.querySelector<HTMLDivElement>(".HDRSS");
+    if (hdClassic && hdrss) {
+        hdClassic.style.pointerEvents = 'none';
+        hdrss.style.pointerEvents = 'none';
+    }
+
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
     setElement(".HDRSS", el => el.style.opacity = String(classicCurrentActive ? 0 : 0.2));
     setElement(".HDClassic", el => el.style.opacity = String(classicCurrentActive ? 0.2 : 0));
@@ -67,7 +72,7 @@ export function toggleBookmarkPopups(toggleOn: boolean, execptionElement: HTMLEl
         AddNewBookmarkContainer.style.pointerEvents = toggleOn ? 'auto' : 'none';
     }
 }
-export function activateother(execptionElement: HTMLElement | null = null) {
+export function activateOther(execptionElement: HTMLElement | null = null) {
     const classicCurrentActive = document.querySelector(`#${'HDClassicBtn'}.${'active'}`);
     // de/activate links in classic depending on current active
     document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
@@ -82,104 +87,122 @@ export function activateother(execptionElement: HTMLElement | null = null) {
     toggleBookmarkPopups(true, execptionElement);
 }
 
-
-export function customPrompt(msg: string, defaultInput: string = '', inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }): Promise<string | false> {
-    return new Promise<string | false>((resolve) => {
-        const container = getElement('.promptSection');
-        const input = getElement<HTMLInputElement>('.genericInput');
-        const label = getElement('.genericLabel');
-        const btn1 = getElement('.genericButton1');
-        const btn2 = getElement('.genericButton2');
-
-        if (!container || !input || !label || !btn1 || !btn2) return resolve(false);
-
-        btn1.innerHTML = inputText.accept;
-        btn2.innerHTML = inputText.reject;
-
-
-        const activateConfirmSetup = () => {
-            deactivateother();
-            container.style.display = 'flex';
-            label.style.display = 'block';
-            input.style.display = 'block';
-            btn1.style.display = 'block';
-            btn2.style.display = 'block';
-        }
-        const deactivateConfirmSetup = () => {
-            activateother();
-            container.style.display = 'none';
-            label.style.display = 'none';
-            input.style.display = 'none';
-            btn1.style.display = 'none';
-            btn2.style.display = 'none';
-        }
-        const cleanup = () => {
-            deactivateConfirmSetup();
-            btn1.removeEventListener('click', onYes);
-            btn2.removeEventListener('click', onNo);
-        };
-        const onYes = () => {
-            cleanup();
-            resolve(input.value);
-        };
-
-        const onNo = () => {
-            cleanup();
-            resolve(false);
-        };
-
-        activateConfirmSetup();
-        label.textContent = msg;
-        input.value = defaultInput;
-
-        btn1.addEventListener('click', onYes);
-        btn2.addEventListener('click', onNo);
+/** custom prompt */
+export function customPrompt(msg: string, options: Partial<Omit<DialogOptionsInput<string | false>, 'onResolve' | 'message'>> = {}): Promise<string | false> {
+    return createDialog<string | false>({
+        ...options,
+        message: msg,
+        onResolve: (result) => result.accepted ? result.value ?? '' : false
     });
 }
-export function customConfirm(msg: string, inputText: { accept: string; reject: string; } = { accept: 'Save', reject: 'Cancel' }, contentDirection: 'vertical' | 'horizontal' = 'vertical'): Promise<boolean> {
-    return new Promise((resolve) => {
-        const container = getElement('.promptSection');
-        const label = getElement('.genericLabel');
-        const btn1 = getElement('.genericButton1');
-        const btn2 = getElement('.genericButton2');
-        
-        if (!container || !label || !btn1 || !btn2) return resolve(false);
-        
-        btn1.innerHTML = inputText.accept;
-        btn2.innerHTML = inputText.reject;
 
-        const activateConfirmSetup = () => {
-            deactivateother();
-            container.style.display = 'flex';
-            container.style.flexDirection = contentDirection == 'vertical' ? 'column' : 'row';
-            container.style.gap = contentDirection == 'vertical' ? '30px' : '10px';
-            label.style.display = 'flex';
-            btn1.style.display = 'block';
-            btn2.style.display = 'block';
-        }
-        const deactivateConfirmSetup = () => {
-            activateother();
-            container.style.display = 'none';
-            label.style.display = 'none';
-            btn1.style.display = 'none';
-            btn2.style.display = 'none';
-        }
-        const onYes = () => {
-            deactivateConfirmSetup();
+export function customConfirm(msg: string, options: Partial<Omit<DialogOptionsInput<boolean>, 'onResolve' | 'message'>> = {}): Promise<boolean> {
+    return createDialog<boolean>({
+        ...options,
+        message: msg,
+        onResolve: (result) => result.accepted
+    });
+}
+
+
+// -----
+interface DialogElements {
+    container: HTMLDivElement | null,
+    label: HTMLDivElement | null,
+    btn1: HTMLDivElement | null,
+    btn2: HTMLDivElement | null,
+    input?: HTMLInputElement | null
+}
+
+type DialogResult = { accepted: true; value?: string } | { accepted: false };
+
+interface DialogOptions<T> {
+    elements: DialogElements;
+    accept: string;
+    reject: string;
+    message: string;
+    defaultValue?: string;
+    contentDirection?: 'vertical' | 'horizontal';
+    onResolve: (accepted: DialogResult) => T;
+}
+
+function activateSetup(exceptionElement: HTMLElement | null, elements: DialogElements, contentDirection: 'vertical' | 'horizontal' = 'vertical'): boolean {
+    deactivateOther(exceptionElement);
+    
+    const { container, label, btn1, btn2, input } = elements;
+    
+    if (!container || !label || !btn1 || !btn2) return false;
+
+    
+    container.style.display = 'flex';
+    container.style.flexDirection = contentDirection === 'vertical' ? 'column' : 'row';
+    container.style.gap = contentDirection === 'vertical' ? '30px' : '10px';
+    label.style.display = 'block';
+    btn1.style.display = 'block';
+    btn2.style.display = 'block';
+    if (input) input.style.display = 'flex';
+    return true
+}
+function deactivateSetup(exceptionElement: HTMLElement | null = null, elements: DialogElements): boolean {
+    activateOther(exceptionElement);
+
+    const { container, label, btn1, btn2, input } = elements;
+    if (!container || !label || !btn1 || !btn2) return false;
+
+    container.style.display = 'none';
+    label.style.display = 'none';
+    btn1.style.display = 'none';
+    btn2.style.display = 'none';
+    if (input) input.style.display = 'none';
+    return true
+}
+function getDefaultElements(): DialogElements {
+    return {
+        container: getElement<HTMLDivElement>('.promptSection'),
+        label: getElement<HTMLDivElement>('.genericLabel'),
+        btn1: getElement<HTMLDivElement>('.genericButton1'),
+        btn2: getElement<HTMLDivElement>('.genericButton2'),
+        input: getElement<HTMLInputElement>('.genericInput'),
+    };
+}
+
+type DialogOptionsInput<T> = Partial<Omit<DialogOptions<T>, 'onResolve'>> & Pick<DialogOptions<T>, 'onResolve'>
+
+
+export function createDialog<T>(opts: DialogOptionsInput<T>): Promise<T> {
+
+    const elements: DialogElements = { ...getDefaultElements(), ...opts.elements };
+    const { container, label, btn1, btn2, input } = elements;
+    const { onResolve } = opts;
+
+    if (!container || !label || !btn1 || !btn2) return Promise.resolve(onResolve({ accepted: false}));
+
+    return new Promise<T>((resolve) => {
+
+        const cleanup = () => {
+            deactivateSetup(null, elements);
             btn1.removeEventListener('click', onYes);
             btn2.removeEventListener('click', onNo);
-            resolve(true);
+        };
+
+        const onYes = () => {
+            cleanup();
+            resolve(onResolve({ accepted: true, value: input?.value ?? '' }));
+            
         };
 
         const onNo = () => {
-            deactivateConfirmSetup();
-            btn1.removeEventListener('click', onYes);
-            btn2.removeEventListener('click', onNo);
-            resolve(false);
+            cleanup();
+            resolve(onResolve({ accepted: false}));
         };
 
-        activateConfirmSetup();
-        label.innerHTML = msg;
+        btn1.innerHTML = opts.accept ?? "Save";
+        btn2.innerHTML = opts.reject ?? "Cancel";
+
+        activateSetup(null, elements);
+
+        label.innerHTML = opts.message ?? '';
+        if (input) input.value = opts.defaultValue ?? '';
 
         btn1.addEventListener('click', onYes);
         btn2.addEventListener('click', onNo);

@@ -123,7 +123,7 @@ export class Subscribe extends RssBuild {
                 <br>
                 <small><p>Tip: you can always unsubscribe at any time by clicking the "Unsubscribe" button by right clicking on the RSS feed item</p></small>
                 `;
-            const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel' }, "vertical");
+            const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel', contentDirection: "vertical" });
             if (!shouldSubscribe) {
                 const RawFeedID = returnRawFeedHash(RawFeed.latestItem.title, RawFeed.url);
                 const newRecord: Record<string, string> = { [Hermidata.id]: RawFeedID };

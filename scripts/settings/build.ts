@@ -1,21 +1,37 @@
 import { ext } from "../shared/utils/BrowserCompat";
 import { defaultSettings } from "../shared/constants";
-import { type Hermidata, type Settings } from "../shared/types";
+import { type Hermidata, type RawFeed, type Settings } from "../shared/types";
 import { getElement, setElement } from "../shared/utils/Selection";
+import { dbAccess } from "../shared/db/Storage";
 
 
 
 
 export abstract class Build {
 
+    private readonly dbAccess = new dbAccess();
+
     protected getSettings(): Promise<Settings> {
-        return this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null });
+        return this.dbAccess.getSettings();
     }
     protected setSettings(data: Settings): Promise<void> {
-        return this.dbRequest<void>('settings', 'put', { id: 'Settings', data });
+        return this.dbAccess.setSettings(data);
     }
+    /** @implements `updateHermidata` instead of `setHermidata` for backwards compatibility */
     protected setHermidata(data: Hermidata): Promise<void> {
-        return this.dbRequest<void>('hermidata', 'update', { id: data.id, data });
+        return this.dbAccess.updateHermidata(data);
+    }
+    protected getAllHermidata(): Promise<Record<string, Hermidata>> {
+        return this.dbAccess.getAllHermidata();
+    }
+    protected putAllHermidata(data: Record<string, Hermidata>): Promise<void> {
+        return this.dbAccess.putAllHermidata(data);
+    }
+    protected getAllFeeds(): Promise<RawFeed[]> {
+        return this.dbAccess.getAllFeeds();
+    }
+    protected putAllFeeds(data: RawFeed[]): Promise<void> {
+        return this.dbAccess.putAllFeeds(data);
     }
 
     protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000, color: string = 'green'): void {
@@ -70,22 +86,6 @@ export abstract class Build {
         }
 
         return updated;
-    }
-
-
-    protected async dbRequest<T>(store: string, operation: string, payload?: { id: string, data: any}): Promise<T> {
-        try {
-            return new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, operation, payload }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (!response) reject(new Error('No response from background script'));
-                    if (!response?.success) reject(new Error(response.error));
-                    resolve(await response.result as T);
-                });
-            });
-        } catch (error) {
-            console.error(error);
-            throw error;
-        }
     }
     protected async ResetLocalFilters(): Promise<boolean> {
         // when tags are changed / removed the local ( browser extension local storage ) filters need to be reset

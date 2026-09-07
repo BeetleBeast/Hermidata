@@ -98,7 +98,7 @@
     <section id="All-RSS-entries"><!-- Dynamic load items--></section>
     <footer>
         <button type="button" id="clear-notifications" class="Btn">Clear notifications</button>
-        <button type="button" id="openFullPageRSS" class="fullpage-RSS-btn Btn">Open RSS page</button>
+        <button type="button" id="openLibraryBtn" class="library-btn Btn">Open Library page</button>
         <div id="RSS-latest-sync-div">RSS: <span id="lastSync">Never</span></div> 
         <button type="button" id="RSS-sync-Manual" class="Btn">Manual sync</button>
         <span id="version">v1.4.3</span>
@@ -151,11 +151,11 @@
 <section class="material-symbols-outlinedContainer">
     <span class="material-symbols-outlined">progress_activity</span>
 </section>
-    <div id="spreadsheetPrompt">
-        <label for="sheetUrlInput">Enter Spreadsheet URL:</label>
-        <input type="text" id="sheetUrlInput" />
-        <button type="button" id="saveSheetUrlBtn" class="Btn">Save</button>
-    </div>
+<section id="spreadsheetPrompt">
+    <label for="sheetUrlInput">Enter Spreadsheet URL:</label>
+    <input type="text" id="sheetUrlInput" />
+    <button type="button" id="saveSheetUrlBtn" class="Btn">Save</button>
+</section>
     <script src="../scripts/popup/in/main.ts" type="module"></script>
 </body>
 </html>

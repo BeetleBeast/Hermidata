@@ -291,9 +291,4 @@ export class TagManagement extends Build {
         }
         await this.ResetLocalFilters();
     }
-
-    private async getAllHermidata(): Promise<Record<string, Hermidata>> {
-        const getAllHermidataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-        return Object.fromEntries(getAllHermidataList.map(h => [h.id, h]));
-    }
 }

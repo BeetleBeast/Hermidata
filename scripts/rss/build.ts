@@ -5,15 +5,26 @@ import { FeedItem } from "./build/feed";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
+import type { PickedElementData, RuntimeMessage } from "../shared/types/rss";
 
 export abstract class RssBuild {
     protected readonly hermidata: HermidataModel;
 
     protected AllHermidata: Record<string, Hermidata>;
 
+    protected pendingPick: ((data: PickedElementData | null) => void) | null = null;
+
     constructor(hermidata: HermidataModel, AllHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;
         this.AllHermidata = AllHermidata;
+
+        // Register exactly once, for the lifetime of the popup.
+        chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
+            if (!this.pendingPick) return;
+            if (msg.action === "elementPicked") this.pendingPick(msg.data); 
+            else if (msg.action === "pickingCancelled") this.pendingPick(null);
+            this.pendingPick = null;
+        });
     }
     public static async init(): Promise<Record<string, Hermidata>> {
         return await PastHermidata.getAllHermidata();

@@ -232,9 +232,9 @@ export class ImportsAndExports extends Build {
         try {
             const importedData = await new Blob([file]).text();
             
-            const existingData = await this.dbRequest<Settings>('settings', 'get', { id: 'Settings', data: null });
+            const existingData = await this.getSettings();
             const mergedData: Settings = { ...existingData, ...JSON.parse(importedData) };
-            await this.dbRequest<Settings>('settings', 'put', { id: 'Settings', data: mergedData});
+            await this.setSettings(mergedData);
 
             alert("Settings imported successfully!");
         } catch (err) {
@@ -245,8 +245,7 @@ export class ImportsAndExports extends Build {
 
     private async exportHermidata() {
         try {
-            const DataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-            const Data = Object.fromEntries(DataList.map(h => [h.id, h]));
+            const Data = await this.getAllHermidata();
             
             const jsonSTR = JSON.stringify(Data, null, 2);
             const blob = new Blob([jsonSTR], { type: "application/json" });
@@ -276,14 +275,13 @@ export class ImportsAndExports extends Build {
                 const importedData: Record<string, Hermidata> = JSON.parse(target?.result as string);
 
                 // Get existing storage
-                const existingDataList =  await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-                const existingData = Object.fromEntries(existingDataList.map(h => [h.id, h]));
+                const existingData =  await this.getAllHermidata();
 
                 // Merge
                 const mergedDataRecord = { ...existingData, ...importedData };
 
                 // Save merged result
-                await this.dbRequest<void>('hermidata', 'putAll', { id: 'hermidata', data: mergedDataRecord });
+                await this.putAllHermidata(mergedDataRecord);
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
@@ -305,13 +303,13 @@ export class ImportsAndExports extends Build {
                 const importedData: RawFeed[] = JSON.parse(target?.result as string);
 
                 // Get existing storage
-                const existingData = await this.dbRequest<RawFeed[]>('feeds', 'getAll');
+                const existingData = await this.getAllFeeds();
 
                 // Merge
                 const mergedData: RawFeed[] = { ...existingData, ...importedData };
 
                 // Save merged result
-                await this.dbRequest<void>('feeds', 'putAll', { id: 'feeds', data: mergedData });
+                await this.putAllFeeds(mergedData);
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
@@ -323,7 +321,7 @@ export class ImportsAndExports extends Build {
 
     private async exportRSSBtn() { // possible rss
         try {
-            const DataList = await this.dbRequest<RawFeed[]>('feeds', 'getAll');;
+            const DataList = await this.getAllFeeds();
             const Data = Object.fromEntries(DataList.map(h => [h.url, h]));
             
             const jsonSTR = JSON.stringify(Data, null, 2);
@@ -455,13 +453,12 @@ export class ImportsAndExports extends Build {
     private async quickBackup() {
         try {
             // get Settings, Hermidata, RSSData, SyncData
-            const [updatedSettings, hermidataList, RSSDataList, SyncData ] = await Promise.all([
+            const [updatedSettings, hermidata, RSSDataList, SyncData ] = await Promise.all([
                 this.ensureSettingsUpToDate(),
-                this.dbRequest<Hermidata[]>('hermidata', 'getAll'),
-                this.dbRequest<RawFeed[]>('feeds', 'getAll'),
+                this.getAllHermidata(),
+                this.getAllFeeds(),
                 ext.storage.sync.get(null)
             ])
-            const hermidata = Object.fromEntries(hermidataList.map(h => [h.id, h]));
             const RSSData = Object.fromEntries(RSSDataList.map(h => [h.url, h]));
 
             const BackupData: quickBackup = {
@@ -499,14 +496,13 @@ export class ImportsAndExports extends Build {
                 const importedData = this.makeHermidataFromMAL(target?.result as string);
                 
                 // Get existing storage
-                const existingDataList =  await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-                const existingData = Object.fromEntries(existingDataList.map(h => [h.id, h]));
+                const existingData = await this.getAllHermidata();
 
                 // Merge
                 const mergedDataRecord = { ...existingData, ...importedData };
 
                 // Save merged result
-                await this.dbRequest<void>('hermidata', 'putAll', { id: 'hermidata', data: mergedDataRecord });
+                await this.putAllHermidata(mergedDataRecord);
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
@@ -518,8 +514,7 @@ export class ImportsAndExports extends Build {
     private async exportToMAL() {
         try {
             // get data
-            const existingDataList =  await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-            const existingData = Object.fromEntries(existingDataList.map(h => [h.id, h]));
+            const existingData = await this.getAllHermidata();
             // transform data
             const opml = this.makeMalFromHermidata(existingData);
             const blob = new Blob([opml], { type: "application/json" });
@@ -619,8 +614,7 @@ export class ImportsAndExports extends Build {
 
     private async massImportFromBookmarkFolderBtnClick() {
         // get all Hermidata
-        const DataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-        const allHermidata: Record<string, Hermidata>  = Object.fromEntries(DataList.map(h => [h.id, h]));
+        const allHermidata = await this.getAllHermidata();
         const settings = await this.getSettings();
         const allNovelTypes = settings.ContentTypesAndStatuses.TYPE_OPTIONS;
         
@@ -747,11 +741,10 @@ export class ImportsAndExports extends Build {
 
     private async saveAllHermidatas(hermidata: Record<string, Hermidata>) {
         // Get existing storage
-        const DataList = await this.dbRequest<Hermidata[]>('hermidata', 'getAll');
-        const existingData: Record<string, Hermidata>  = Object.fromEntries(DataList.map(h => [h.id, h]));
+        const existingData = await this.getAllHermidata();
         // Merge
         const mergedDataRecord: Record<string, Hermidata> = { ...existingData, ...hermidata };
         // Save
-        await this.dbRequest<void>('hermidata', 'putAll', { id: 'hermidata', data: mergedDataRecord });
+        await this.putAllHermidata(mergedDataRecord);
     }
 }
