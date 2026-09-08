@@ -162,7 +162,7 @@ select.autoInput {
 td, th {
     text-align: center;
     vertical-align: middle;
-    border: 1px solid var(--border);
+    border: 1px solid #ccc;
     padding: 0;
 }
 th {
@@ -687,7 +687,7 @@ hr {
 	grid-area: footer;
 }
 
-.NewBookmarkBtn-manager {
+#addNewBookmarkBtn-manager {
 	left: 20px;
 	position: relative;
 	background-color: var(--accent-hover-dark);
