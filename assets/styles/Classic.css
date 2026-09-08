@@ -93,7 +93,7 @@ footer {
 	outline-offset: -8px;
 	outline-style: groove;
 	outline-width: thin;
-	outline-color: var(--accent);
+	outline-color: var(--accent-dark);
 }
 
 /* settings tooth weel */
@@ -161,7 +161,7 @@ select.autoInput {
 td, th {
     text-align: center;
     vertical-align: middle;
-    border: 1px solid var(--border);
+    border: 1px solid #ccc;
     padding: 0;
 }
 th {
@@ -361,7 +361,7 @@ input[type=number]::-webkit-inner-spin-button {
 	/* justify-content: center; */
 	align-items: center;
 	gap: 5px;
-	background-color: var(--accent);
+	background-color: var(--accent-dark);
 	height: fit-content;
 	border-radius: 10px;
 	padding-left: 5px;
@@ -453,7 +453,7 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 .RSSLinkState-polygon:hover {
-	stroke: var(--accent-hover);
+	stroke: var(--accent-hover-dark);
 	cursor: help;
 }
 
@@ -539,6 +539,12 @@ input[type=number]::-webkit-inner-spin-button {
 	border-radius: 15px 15px 0 0;
 }
 
+.bookmarkMenu-item[data-active="true"] {
+	background-color: var(--accent-active-dark);
+}
+.bookmarkMenu-item[data-active="false"] {
+	background-color: var(--accent-dark);
+}
 
 .addNewBookmarkBtn {
 	width: 100%;
@@ -560,16 +566,30 @@ input[type=number]::-webkit-inner-spin-button {
 	margin-bottom: 20px;
 	transition: background-color 0.15s ease;
 }
+
+.bookmarkMenuBtn:last-child {
+	width: 100%;
+	height: 55px;
+	padding: 5px;
+	background-color: transparent;
+	color: var(--text);
+	border: none;
+	padding-bottom: 20px;
+	transition: background-color 0.15s ease;
+	border-radius: 0 0 15px 15px;
+	margin-bottom: 0;
+}
+
 .bookmarkMenu-item:hover,
 .addNewBookmarkBtn:hover,
 .bookmarkMenuBtn:hover {
-	background-color: var(--accent-hover);
+	background-color: var(--accent-hover-dark);
 	cursor: pointer;
 }
 .bookmarkMenu-item:active,
 .addNewBookmarkBtn:active,
 .bookmarkMenuBtn:active {
-	background-color: var(--accent-active);
+	background-color: var(--accent-active-dark);
 }
 
 
@@ -666,18 +686,18 @@ hr {
 	grid-area: footer;
 }
 
-.NewBookmarkBtn-manager {
+#addNewBookmarkBtn-manager {
 	left: 20px;
 	position: relative;
-	background-color: var(--accent-hover);
+	background-color: var(--accent-hover-dark);
 	width: 40%;
 	border-radius: 5px;
 	border: 1px solid;
 	margin-top: 10px;
 	z-index: 5;
 }
-.NewBookmarkBtn-manager:hover {
-	background-color: var(--accent-active);
+#addNewBookmarkBtn-manager:hover {
+	background-color: var(--accent-active-dark);
 }
 
 .bookmarkMenuManager-sub {
@@ -752,10 +772,10 @@ label {
 }
 
 #saveBookmarkBtn {
-	background-color: var(--accent-hover);
+	background-color: var(--accent-hover-dark);
 }
 #saveBookmarkBtn:hover {
-	background-color: var(--accent-active);
+	background-color: var(--accent-active-dark);
 }
 
 #bookmarkColorInput {

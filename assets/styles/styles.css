@@ -6,17 +6,24 @@
     --surface-input: #28354b;
 
     --text: #d3d3d3;
-    --text-muted: var(--text-muted);
+    --text-highlight: #fff;
+    --text-muted: #989898;
     --text-disabled: #777f8c;
+
+    --text-dark: #12174f;
 
     --border: #46556e;
     --border-subtle: rgba(255, 255, 255, 0.06);
 
     /* Single app accent family */
-    --accent: #7896d2;
-    --accent-hover: #96a9df;
-    --accent-active: #5f7fbd;
-    --accent-soft: var(--accent-soft);
+    --accent-soft: #7896d2; /* was --accent */
+    --accent-dark: #3c5b99; /* unused */
+    
+    --accent-hover-soft: #96a9df; /* was  --accent-hover */
+    --accent-hover-dark: rgb(34, 48, 89);
+
+    --accent-active-soft: #5f7fbd; /* was --accent-active */
+    --accent-active-dark: rgb(15, 34, 94); /* incorrect */
 
     /* Semantic states */
     --danger: #c85b5b;
@@ -53,15 +60,15 @@ body {
     transition: background-color 0.3s ease;
 }
 .Btn:hover {
-    background-color: var(--accent-hover);
+    background-color: var(--accent-hover-dark);
 }
 .Btn:active:not(:disabled) {
-    background-color: var(--accent-active);
+    background-color: var(--accent-active-dark);
     transition: none;
 }
 
 .active {
-    background-color: var(--accent-active);
+    background-color: var(--accent-active-dark);
 }
 
 /* --- custom context-menu --- */
@@ -216,7 +223,7 @@ body {
 	display: flex;
 	width: 10%;
 	height: 100%;
-	background-color: var(--accent);
+	background-color: var(--accent-dark);
     transition: width 100ms ease-in-out;
     border-radius: 5px;
 }
@@ -248,7 +255,7 @@ body {
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: var(--accent);
+    color: var(--accent-soft);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -274,11 +281,11 @@ body {
 .drs-track-bg {
     left: 0;
     right: 0;
-    background: var(--border);
+    background: var(--surface-input);
     z-index: 0;
 }
 .drs-track-fill {
-    background: var(--accent);
+    background: var(--accent-dark);
     z-index: 1;
     overflow: hidden;
 }
@@ -317,7 +324,7 @@ body {
     margin-top: -7px;
     border-radius: 50%;
     background: var(--text);
-    border: 2px solid var(--accent);
+    border: 2px solid var(--accent-dark);
     box-shadow: 0 1px 2px var(--shadow-soft);
     cursor: pointer;
 }
@@ -327,17 +334,17 @@ body {
     height: 18px;
     border-radius: 50%;
     background: var(--text);
-    border: 2px solid var(--accent);
+    border: 2px solid var(--accent-dark);
     box-shadow: 0 1px 2px var(--shadow-soft);
     cursor: pointer;
 }
 
 .drs-thumb:focus-visible::-webkit-slider-thumb {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-dark);
     outline-offset: 2px;
 }
 .drs-thumb:focus-visible::-moz-range-thumb {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-dark);
     outline-offset: 2px;
 }
 
@@ -350,7 +357,7 @@ body {
 }
 
 .active-drs-stick {
-    color: var(--accent);
+    color: var(--accent-soft);
     font-weight: 600;
 }
 
@@ -364,7 +371,7 @@ body {
 
 .result code {
     color: var(--text);
-    background: var(--accent-hover);
+    background: var(--accent-hover-dark);
     padding: 1px 5px;
     border-radius: 4px;
 }
@@ -376,19 +383,19 @@ body {
     background: transparent;
     border: none;
     outline: none;
-    accent-color: var(--accent);
+    accent-color: var(--accent-dark);
 }
 
 /* Chrome / Edge / Safari */
 .drs-thumb:hover::-webkit-slider-thumb,
 .drs-thumb:focus-visible::-webkit-slider-thumb {
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     background: var(--text);
     box-shadow: 0 1px 3px var(--shadow);
 }
 .drs-thumb:active::-webkit-slider-thumb {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
     box-shadow: 0 1px 3px var(--accent-soft);
 }
 .drs-thumb:hover::-webkit-slider-runnable-track,
@@ -400,13 +407,13 @@ body {
 /* Firefox */
 .drs-thumb:hover::-moz-range-thumb,
 .drs-thumb:focus-visible::-moz-range-thumb {
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     background: var(--text);
     box-shadow: 0 1px 3px var(--shadow);
 }
 .drs-thumb:active::-moz-range-thumb {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
     box-shadow: 0 1px 3px var(--accent-soft);
 }
 .drs-thumb:hover::-moz-range-track,
@@ -420,4 +427,9 @@ body {
     box-shadow: unset;
     border-color: unset;
     background: unset;
+}
+
+
+input:focus-visible {
+    outline-offset: -2px;
 }

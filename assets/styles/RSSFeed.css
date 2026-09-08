@@ -20,7 +20,7 @@
 }
 
 .hermidata-item:hover{
-    background-color: var(--accent-hover);
+    background-color: var(--accent-hover-dark);
     cursor: pointer;
 }
 
@@ -187,7 +187,7 @@
 }
 
 .line-diamond.hermidata-item-lines:hover {
-	stroke: var(--accent-hover);
+	stroke: var(--accent-hover-dark);
 	cursor: help;
 }
 
@@ -200,7 +200,7 @@
 
 
 .item-lines {
-    stroke: var(--accent);
+    stroke: var(--accent-dark);
 }
 
 .bottom-row {
@@ -224,7 +224,7 @@
 }
 
 .rss-link-missing-icon:hover {
-	stroke: var(--accent-hover);
+	stroke: var(--accent-hover-dark);
 	cursor: help;
 }
 
@@ -307,7 +307,7 @@
 }
 
 .autocomplete-item:hover {
-    background: var(--accent-hover);
+    background: var(--accent-hover-dark);
 }
 
 #filter-search {
@@ -338,7 +338,7 @@
 
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-    background: var(--accent-hover);
+    background: var(--accent-hover-dark);
     color: var(--text);
 }
 
@@ -424,8 +424,8 @@
 
 .filter-search input[type="text"]:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 4px var(--accent-soft);
+    border-color: var(--accent-dark);
+    box-shadow: 0 0 4px var(--accent-soft-dark);
 }
 .filter-section-container {
     display: flex;
@@ -547,7 +547,7 @@
 }
 
 .custom-checkbox[data-state="1"]  ~ .filter-item-label {
-    color: var(--text);
+    color: var(--text-highlight);
 }
 
 /* Custom SVG checkbox box */
@@ -566,7 +566,7 @@
 
 /* Hover highlight */
 .custom-checkbox:hover {
-    box-shadow: 0 0 0 2px var(--accent-soft);
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
 }
 
 /* Neutral (empty) */
@@ -577,7 +577,7 @@
 /* Include (+) */
 .custom-checkbox[data-state="1"] {
     background: url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">\<line x1="8" y1="2" x2="8" y2="14" stroke="%235aab7d" stroke-width="2"/>\<line x1="2" y1="8" x2="14" y2="8" stroke="%235aab7d" stroke-width="2"/>\</svg>') center/contain no-repeat;
-    /* background-color: var(--accent); */
+    /* background-color: var(--accent-dark); */
 }
 
 /* Exclude (-) */
@@ -609,7 +609,7 @@
 #subscribeBtn:disabled {
     cursor:not-allowed;
     color: var(--text-disabled);
-    background-color: var(--bg);
+    background-color: var(--surface);
     opacity: 0.7;
 }
 #HDRSS-subscribe-container {

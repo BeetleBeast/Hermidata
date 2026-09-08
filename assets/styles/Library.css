@@ -54,10 +54,10 @@ input[type=number]::-webkit-inner-spin-button {
     transition: background-color 0.3s ease;
 }
 .Btn:hover {
-    background-color: var(--accent-hover);
+    background-color: var(--accent-hover-dark);
 }
 .Btn:active:not(:disabled) {
-    background-color: var(--accent-active);
+    background-color: var(--accent-active-dark);
     transition: none;
 }
 
@@ -82,19 +82,19 @@ button,
 
 button:hover,
 .btn:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-dark);
 }
 
 button:active,
 .btn:active {
-    background: var(--accent-active);
+    background: var(--accent-active-dark);
     transform: translateY(1px);
 }
 
 button:focus-visible,
 .btn:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-dark);
     outline-offset: 2px;
 }
 
@@ -163,7 +163,7 @@ input:focus,
 textarea:focus,
 .input:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     background: var(--surface-raised);
     box-shadow: 0 0 0 2px var(--accent-soft)
 }
@@ -175,7 +175,7 @@ textarea {
 
 input[type="checkbox"],
 input[type="radio"] {
-    accent-color: var(--accent-hover);
+    accent-color: var(--accent-hover-dark);
     width: 1.05em;
     height: 1.05em;
     cursor: pointer;
@@ -229,7 +229,7 @@ select:hover {
 
 select:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
@@ -276,7 +276,7 @@ html {
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin; /* Firefox */
-    scrollbar-color: var(--accent) transparent; /* Firefox: thumb, track */
+    scrollbar-color: var(--accent-dark) transparent; /* Firefox: thumb, track */
 }
 
 html::-webkit-scrollbar {
@@ -286,7 +286,7 @@ html::-webkit-scrollbar-track {
     background: transparent; /* groove invisible */
 }
 html::-webkit-scrollbar-thumb {
-    background-color: var(--accent);
+    background-color: var(--accent-dark);
     border-radius: 10px;
 }
 
@@ -406,11 +406,11 @@ html::-webkit-scrollbar-thumb {
     width: 100%;
 }
 .autocomplete-item:hover {
-    background: var(--accent-hover);
+    background: var(--accent-hover-dark);
 }
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-    background: var(--accent-hover);
+    background: var(--accent-hover-dark);
     color: var(--text);
 }
 
@@ -511,10 +511,9 @@ html::-webkit-scrollbar-thumb {
 }
 
 #resetFilters {
-    background-color: var(--accent);
-    color: var(--accent-active);
+    background-color: #6495ed;
+    color: #12174f;
     border-radius: 5px;
-    border: 1px solid var(--accent-active);
 }
 #resetFilters-label-hidden {
     opacity: 0;
@@ -524,10 +523,10 @@ html::-webkit-scrollbar-thumb {
     user-select: none;
 }
 #resetFilters:hover {
-    background-color: var(--accent-hover);
-    color: var(--accent-active);
+    background-color: #6792d7;
+    color: #12174f;
     border-radius: 5px;
-    border: 1px solid var(--accent);
+    border: 1px solid #6495ed;
 }
 
 /* library container */
@@ -582,7 +581,7 @@ html::-webkit-scrollbar-thumb {
     color: var(--text);
 }
 [data-active_view_mode="true"] {
-    background-color: var(--accent-hover);
+    background-color: var(--accent-hover-dark);
 }
 [data-active_view_mode="true"]:hover,
 [data-active_view_mode="true"]:active,
@@ -699,7 +698,7 @@ body[data-list-mode="false"]
 	z-index: 15;
     border: 1px solid var(--surface);
     box-shadow: inset 1px 15px var(--surface);
-    box-shadow: 5px 5px 30px -10px var(--accent-active);
+    box-shadow: 5px 5px 30px -10px var(--accent-active-dark);
 }
 
 body[data-list-mode="true"]
@@ -955,7 +954,7 @@ body[data-list-mode="true"]
     inset: -2px;                 /* border thickness, sits just outside the real edges */
     border-radius: inherit;      /* matches the 10px 10px 0 0 rounding automatically */
     padding: 2px;
-    background: conic-gradient(from var(--angle), transparent 0%, var(--accent) 15%, var(--accent-hover) 30%, transparent 45%);
+    background: conic-gradient(from var(--angle), transparent 0%, var(--accent-dark) 15%, var(--accent-hover-dark) 30%, transparent 45%);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -1118,8 +1117,8 @@ body[data-list-mode="false"]
 
 
 .filter-item-checkbox:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-dark);
 }
 
 /* label */
@@ -1247,14 +1246,14 @@ body[data-list-mode="false"]
     gap: 4px;
 }
 .custom-radio:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-dark);
 }
 
 
 .filter-item-checkbox[data-state="1"] {
-    background-color: var(--accent-hover);
-    border-color: var(--accent);
+    background-color: var(--accent-hover-soft);
+    border-color: var(--accent-dark);
     color: var(--bg);
     appearance: none;
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 28 28' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg>");
@@ -1270,13 +1269,13 @@ body[data-list-mode="false"]
 
 .filter-item-checkbox[data-state="1"] ~
 .filter-item-label {
-    color: var(--accent-hover);
+    color: var(--accent-hover-soft);
 }
 
 
 .filter-item-checkbox[data-state="2"] {
     background-color: var(--surface-input);
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     color: var(--bg);
     appearance: none;
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>");
@@ -1298,8 +1297,8 @@ body[data-list-mode="false"]
 }
 
 .search-mode-radio-item[data-state="true"] {
-    background-color: var(--accent-hover);
-    border-color: var(--accent);
+    background-color: var(--accent-hover-dark);
+    border-color: var(--accent-dark);
     color: var(--bg);
     appearance: none;
     border-radius: 15px;
@@ -1545,7 +1544,7 @@ body[data-list-mode="false"]
     justify-content: left;
     align-items: center;
 	gap: 5px;
-    color: var(--accent-hover);
+    color: var(--accent-hover-soft);
 }
 
 .info-icon {
@@ -1618,7 +1617,7 @@ body[data-list-mode="false"]
 }
 
 .merger-dialog-record-letter[data-suggested="true"] {
-    color: var(--success);
+    color: rgb(0, 255, 0);
 }
 .merger-dialog-record-letter {
     font-weight: 600;
@@ -1655,8 +1654,8 @@ body[data-list-mode="false"]
 }
 
 .merger-dialog-record-continue-button[data-suggested="true"] {
-	background-color: var(--success);
-	color: var(--success);
+	background-color: rgb(30, 90, 60);
+	color: rgb(0, 255, 0);
 }
 
 .merger-dialog-record-continue-button {
@@ -1679,7 +1678,7 @@ body[data-list-mode="false"]
 
 .merger-dialog-green-field {
 	grid-area: greenField;
-	background-color: var(--success);
+	/* background-color: var(--success); */
 	padding: 15px;
 	border-radius: 15px;
 }
@@ -1695,6 +1694,7 @@ body[data-list-mode="false"]
 	/*background-color: var(--warning);*/
 	border-radius: 15px;
 	padding: 15px;
+    border: 1px solid var(--border);
 }
 
 .merger-dialog-warning-field-title {
@@ -1708,7 +1708,12 @@ body[data-list-mode="false"]
 
 .merger-dialog-button-merge {
 	grid-area: mergeButton;
-	background-color: var(--success);
+	background-color: rgb(30, 90, 60)
+}
+.merger-dialog-button-merge:hover {
+    background-color: rgb(30, 90, 60);
+    outline-color: rgb(0, 180, 0);
+    border-color: rgb(0, 180, 0);
 }
 
 
