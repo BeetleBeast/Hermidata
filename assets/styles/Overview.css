@@ -37,10 +37,10 @@ input[type=number]::-webkit-inner-spin-button {
     transition: background-color 0.3s ease;
 }
 .Btn:hover {
-    background-color: var(--accent-hover);
+    background-color: var(--accent-hover-dark);
 }
 .Btn:active:not(:disabled) {
-    background-color: var(--accent-active);
+    background-color: var(--accent-active-dark);
     transition: none;
 }
 
@@ -65,19 +65,19 @@ button,
 
 button:hover,
 .btn:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-dark);
 }
 
 button:active,
 .btn:active {
-    background: var(--accent-active);
+    background: var(--accent-active-dark);
     transform: translateY(1px);
 }
 
 button:focus-visible,
 .btn:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-dark);
     outline-offset: 2px;
 }
 
@@ -146,7 +146,7 @@ input:focus,
 textarea:focus,
 .input:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     background: var(--surface-raised);
     box-shadow: 0 0 0 2px var(--accent-soft);
 }
@@ -158,7 +158,7 @@ textarea {
 
 input[type="checkbox"],
 input[type="radio"] {
-    accent-color: var(--accent-hover);
+    accent-color: var(--accent-hover-dark);
     width: 1.05em;
     height: 1.05em;
     cursor: pointer;
@@ -204,7 +204,7 @@ select:hover {
 
 select:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
@@ -349,11 +349,11 @@ label {
 	justify-content: center;
 }
 .autocomplete-item:hover {
-    background: var(--accent-hover);
+    background: var(--accent-hover-dark);
 }
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-    background: var(--accent-hover);
+    background: var(--accent-hover-dark);
     color: var(--text);
 }
 
@@ -521,17 +521,17 @@ label {
 	align-items: center;
 	justify-self: center;
 	font-size: 1.2em;
-    background-color: var(--accent);
-    color: var(--accent-active);
+    background-color: var(--accent-dark);
+    color: var(--text-dark);
     border-radius: 5px;
-    border: 1px solid var(--accent-active);
+    border: 1px solid var(--accent-active-dark);
     transition: background 0.2s ease;
 }
 #hermidata-readLatest-btn:hover {
-    background-color: var(--accent-hover);
-    color: var(--accent-active);
+    background-color: #6495ed;
+    color: var(--accent-active-dark);
     border-radius: 5px;
-    border: 1px solid var(--accent-active);;
+    border: 1px solid var(--accent-active-dark);;
     
 }
 
@@ -563,7 +563,7 @@ label {
 
 .hermidata-demographic:hover,
 .hermidata-genre:hover {
-	background-color: var(--accent);
+	background-color: var(--accent-dark);
 	color: var(--bg);
 }
 
@@ -669,11 +669,11 @@ label {
 	gap: 10px;
 
 	align-items: center;
-  	padding: 5px;
-  	background-color: var(--surface-input);
-  	border-radius: 10px;
+    padding: 5px;
+    background-color: var(--surface-raised);
+    border-radius: 10px;
 	height: 30px;
-  	justify-content: center;
+    justify-content: center;
     position: relative;
 }
 
@@ -740,7 +740,7 @@ label {
     left: 4px;
     width: calc(50% - 4px); /* half the pill minus padding */
     height: calc(100% - 8px);
-    background-color: var(--accent-hover);
+    background-color: var(--accent-hover-dark);
     border-radius: 999px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     transition: transform 0.25s ease;
@@ -803,7 +803,7 @@ label {
 	/*padding: 10px;*/
 	justify-content: space-between;
 	align-items: center;
-	border: 1px solid var(--accent);
+	border: 1px solid var(--accent-dark);
     text-transform: uppercase;
 }
 
@@ -872,7 +872,7 @@ label {
     -moz-user-select: none;
     user-select: none;
 	padding: 5px;
-	border: 1px solid var(--accent);
+	border: 1px solid var(--accent-dark);
 	width: fit-content;
 	padding-left: 20px;
 	padding-right: 20px;
@@ -898,7 +898,7 @@ label {
 	display: block;
 	left: 0;
 	border: none;
-	outline: 1px solid var(--accent);
+	outline: 1px solid var(--accent-dark);
 }
 .hermidata-marker {
 	display: grid;
@@ -915,7 +915,7 @@ label {
 	align-content: center;
 	justify-items: center;
 	height: 30px;
-	outline: 1px solid var(--accent);
+	outline: 1px solid var(--accent-dark);
 }
 
 .hermidata-marker-chapter {
@@ -923,6 +923,12 @@ label {
 }
 
 /* notes */
+
+#hermidata-notes-content[readonly] {
+	outline: none;
+	border: none;
+	box-shadow: none;
+}
 
 #hermidata-notes-content {
     height: 5em;
@@ -961,14 +967,14 @@ label {
     position: relative; /* so .hermidata-marker-color's absolute positioning still anchors here */
     border: 1px solid;
     border-radius: 10px;
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     cursor: pointer;
 }
 
 .hermidata-marker-row:hover {
 	text-emphasis-color: var(--surface-input);
 	accent-color: var(--text);
-	outline: 1px solid var(--accent);
+	outline: 1px solid var(--accent-dark);
 	transform: scale(1.005);
 	transition: transform 0.2s ease-in-out;
 }
@@ -1030,8 +1036,8 @@ label {
 }
 
 .hermidata-tag-pill[data-is-selected="true"] {
-    border:0.5px solid var(--accent);
-    background: var(--accent);
+    border:0.5px solid var(--accent-dark);
+    background: var(--accent-dark);
     color: var(--bg);
 }
 
@@ -1069,7 +1075,7 @@ label {
 	border-radius: 5px;
 }
 .tag-pill-removeX:hover {
-    background-color: var(--accent);
+    background-color: var(--accent-dark);
     transform: scale(1.2);
 	color: var(--danger);
 }
@@ -1168,7 +1174,7 @@ label {
 /* image changer */
 
 .image-changer-popover {
-    border: 1px solid var(--accent);
+    border: 1px solid var(--accent-dark);
     border-radius: 8px;
     padding: 12px;
     background: var(--surface-raised);
@@ -1189,7 +1195,7 @@ label {
 .tab-btn {
     flex: 1;
     padding: 4px 8px;
-    border: 1px solid var(--accent);
+    border: 1px solid var(--accent-dark);
     border-radius: 6px;
     background: none;
     cursor: pointer;
