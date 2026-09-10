@@ -120,7 +120,7 @@
         </div>
         <div id="ChapterCompletion-filter-container" class="filter-container">
           <h4>Minimum chapters read</h4>
-          <input id="ChapterCompletion-filter" class="filter-button" title="minimum completion percentage" type="number" placeholder="0" value=""/>
+          <input id="ChapterCompletion-filter" class="filter-button" title="minimum completion percentage" type="number" min="0" placeholder="0" oninput="this.value = this.value.replace(/[^0-9.-]/g, '');"value=""/>
         </div>
         <div id="ResetFilters" class="filter-container">
           <h4 id="resetFilters-label-hidden" >0</h4>
