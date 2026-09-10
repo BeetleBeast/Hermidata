@@ -5,8 +5,8 @@
 
 
 body {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
+    background-color: var(--bg);
+    color: var(--text);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
     margin: 0;
@@ -28,19 +28,19 @@ input[type=number]::-webkit-inner-spin-button {
 /* generic styles */
 
 .Btn {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 4px;
     padding: 8px 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 .Btn:hover {
-    background-color: var(--Btn_hover);
+    background-color: var(--accent-hover-dark);
 }
 .Btn:active:not(:disabled) {
-    background-color: var(--Btn_active);
+    background-color: var(--accent-active-dark);
     transition: none;
 }
 
@@ -54,8 +54,8 @@ button,
     font-size: 0.95rem;
     font-family: inherit;
     font-weight: 500;
-    color: var(--Text-color);
-    background: var(--Btn);
+    color: var(--text);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
@@ -65,28 +65,28 @@ button,
 
 button:hover,
 .btn:hover {
-    background: var(--Btn_hover);
-    border-color: var(--border-focus);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-dark);
 }
 
 button:active,
 .btn:active {
-    background: var(--Btn_active);
+    background: var(--accent-active-dark);
     transform: translateY(1px);
 }
 
 button:focus-visible,
 .btn:focus-visible {
-    outline: 2px solid var(--focus-ring);
+    outline: 2px solid var(--accent-dark);
     outline-offset: 2px;
 }
 
 button:disabled,
 .btn:disabled,
 .btn.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
-    border-color: var(--hr);
+    background: var(--bg);
+    color: var(--text-disabled);
+    border-color: var(--border);
     cursor: not-allowed;
     transform: none;
 }
@@ -99,12 +99,12 @@ input[type=number]::-webkit-inner-spin-button {
 }
 input,
 select  {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 }
 
@@ -124,8 +124,8 @@ textarea,
     padding: 0.55em 0.75em;
     font-size: 0.95rem;
     font-family: inherit;
-    color: var(--Text-color);
-    background: var(--Input-color);
+    color: var(--text);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -133,22 +133,22 @@ textarea,
 
 input::placeholder,
 textarea::placeholder {
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 input:hover,
 textarea:hover,
 .input:hover {
-    background: var(--Input-colorV2);
+    background: var(--surface-raised);
 }
 
 input:focus,
 textarea:focus,
 .input:focus {
     outline: none;
-    border-color: var(--border-focus);
-    background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    border-color: var(--accent-dark);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 textarea {
@@ -158,7 +158,7 @@ textarea {
 
 input[type="checkbox"],
 input[type="radio"] {
-    accent-color: var(--Btn_hover);
+    accent-color: var(--accent-hover-dark);
     width: 1.05em;
     height: 1.05em;
     cursor: pointer;
@@ -167,14 +167,14 @@ input[type="radio"] {
 input:disabled,
 textarea:disabled,
 .input.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
-    border-color: var(--hr);
+    background: var(--bg);
+    color: var(--text-disabled);
+    border-color: var(--border);
     cursor: not-allowed;
 }
 
 input:invalid:not(:placeholder-shown) {
-    border-color: var(--Btn_hover_danger);
+    border-color: var(--danger);
 }
 
 
@@ -184,14 +184,14 @@ select {
     padding: 0.55em 2em 0.55em 0.75em;
     font-size: 0.95rem;
     font-family: inherit;
-    color: var(--Text-color);
-    background: var(--Input-color);
+    color: var(--text);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
     -webkit-appearance: none;
     appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='lightgray'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='lightgray' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='var(--text)'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='var(--text)' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     background-repeat: no-repeat;
     background-position: right 0.6em center;
     background-size: 1em;
@@ -199,40 +199,40 @@ select {
 }
 
 select:hover {
-    background-color: var(--Input-colorV2);
+    background-color: var(--surface-raised);
 }
 
 select:focus {
     outline: none;
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px var(--select-focus-shadow);
+    border-color: var(--accent-dark);
+    box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 select:disabled {
-    background-color: var(--bg_disabled);
-    color: var(--Text-disabled);
-    border-color: var(--hr);
+    background-color: var(--bg);
+    color: var(--text-disabled);
+    border-color: var(--border);
     cursor: not-allowed;
 }
 
 option:disabled,
 .option-excluded {
-    background: var(--filterExcludeOption);
-    color: var(--muted);
+    background: var(--bg);
+    color: var(--text-muted);
 }
 
 .option-included {
-    color: var(--filterIncludeOptionText);
+    color: var(--text);
 }
 
 hr {
     border: none;
-    border-top: 1px solid var(--hr);
+    border-top: 1px solid var(--border);
     margin: 1em 0;
 }
 
 label {
-    color: var(--Text-color);
+    color: var(--text);
     font-size: 0.9rem;
     margin-bottom: 0.35em;
     display: inline-block;
@@ -240,7 +240,7 @@ label {
 }
 
 .field-hint {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 0.8rem;
     margin-top: 0.3em;
 }
@@ -251,22 +251,22 @@ label {
 [popover] {
     position-area: bottom;
     
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 }
 
 :popover-open {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
     position: relative;
     inset: 0;
@@ -281,7 +281,7 @@ label {
 	align-items: center;
 	justify-content: space-between;
 	padding: 12px 16px;
-	background: var(--card);
+	background: var(--surface);
 	border-bottom: 1px solid var(--border);
 }
 
@@ -324,8 +324,8 @@ label {
 #search-suggestions {
 	position: absolute;
 	top: calc(100%);
-	background-color: var(--searchSuggestionBg);
-	border: 1px solid var(--Btn);
+	background-color: var(--surface);
+	border: 1px solid var(--surface-input);
 	border-top: none;
 	border-radius: 0 0 8px 8px;
 	max-height: 300px;
@@ -349,12 +349,12 @@ label {
 	justify-content: center;
 }
 .autocomplete-item:hover {
-    background: var(--Btn-hover);
+    background: var(--accent-hover-dark);
 }
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-    background: var(--Btn_hover);
-    color: var(--Text-color);
+    background: var(--accent-hover-dark);
+    color: var(--text);
 }
 
 #search-container {
@@ -362,12 +362,12 @@ label {
 	width: 60%;
 	align-items: center;
 	/* justify-content: center; */
-	background-color: var(--Input-colorV2);
-	color: var(--Text-color);
-	outline-color: var(--Btn);
-	text-emphasis-color: var(--Btn);
-	accent-color: var(--Text-color);
-	border: 1px solid var(--Btn);
+	background-color: var(--surface-raised);
+	color: var(--text);
+	outline-color: var(--surface-input);
+	text-emphasis-color: var(--surface-input);
+	accent-color: var(--text);
+	border: 1px solid var(--surface-input);
 	border-radius: 0;
     gap: 10px;
 }
@@ -377,18 +377,18 @@ label {
 }
 
 #search-container:has(#search:focus-within) {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 
     outline: none;
 
-    background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 #search {
@@ -399,7 +399,7 @@ label {
     outline: none;
     font-size: 1rem;
     background-color: transparent;
-    color: var(--Text-color);
+    color: var(--text);
     padding: 0 10px;
     outline-offset: 0;
     outline-style: none;
@@ -425,7 +425,7 @@ label {
 	grid-template-columns: 400px auto 400px;
 	grid-template-rows: 80px;
 	border: none;
-    background-color: var(--bannerBg);
+    background-color: var(--border-subtle);
 }
 
 #cancel-edit-btn {
@@ -521,17 +521,17 @@ label {
 	align-items: center;
 	justify-self: center;
 	font-size: 1.2em;
-    background-color: var(--cornflower);
-    color: var(--resetFilterBtn);
+    background-color: var(--accent-dark);
+    color: var(--text-dark);
     border-radius: 5px;
-    border: 1px solid var(--resetFilterBtn);
+    border: 1px solid var(--accent-active-dark);
     transition: background 0.2s ease;
 }
 #hermidata-readLatest-btn:hover {
-    background-color: var(--resetFilterBtn_hover);
-    color: var(--resetFilterBtn);
+    background-color: #6495ed;
+    color: var(--accent-active-dark);
     border-radius: 5px;
-    border: 1px solid var(--resetFilterBtn);;
+    border: 1px solid var(--accent-active-dark);;
     
 }
 
@@ -547,7 +547,7 @@ label {
 /* tags */
 .hermidata-demographic,
 .hermidata-genre {
-	background-color: var(--table-color);
+	background-color: var(--surface-input);
 	padding: 4px;
 	border-radius: 5px;
     transition: background 0.2s ease, color 0.2s ease;
@@ -558,13 +558,13 @@ label {
     justify-content: center;
     gap: 3px;
     flex-wrap: nowrap;
-    color: var(--Text-color);
+    color: var(--text);
 }
 
 .hermidata-demographic:hover,
 .hermidata-genre:hover {
-	background-color: var(--border-focus);
-	color: var(--bg-color);
+	background-color: var(--accent-dark);
+	color: var(--bg);
 }
 
 .emptyInput {
@@ -606,30 +606,30 @@ label {
 	width: 35%;
 	align-items: center;
 	/* justify-content: center; */
-	background-color: var(--Input-colorV2);
-	color: var(--Text-color);
-	outline-color: var(--Btn);
-	text-emphasis-color: var(--Btn);
-	accent-color: var(--Text-color);
-	border: 1px solid var(--Btn);
+	background-color: var(--surface-raised);
+	color: var(--text);
+	outline-color: var(--surface-input);
+	text-emphasis-color: var(--surface-input);
+	accent-color: var(--text);
+	border: 1px solid var(--surface-input);
 	border-radius: 0;
     gap: 10px;
     padding-left: 10px;
 }
 
 #hermidata-markers-utility-search-container:has(#search-marker:focus-within) {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 
     outline: none;
 
-    background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 #search-marker {
@@ -644,7 +644,7 @@ label {
     outline: none;
     font-size: 1rem;
     background-color: transparent;
-    color: var(--Text-color);
+    color: var(--text);
     padding: 0 10px;
     outline-offset: 0;
     outline-style: none;
@@ -669,11 +669,11 @@ label {
 	gap: 10px;
 
 	align-items: center;
-  	padding: 5px;
-  	background-color: var(--Btn);
-  	border-radius: 10px;
+    padding: 5px;
+    background-color: var(--surface-raised);
+    border-radius: 10px;
 	height: 30px;
-  	justify-content: center;
+    justify-content: center;
     position: relative;
 }
 
@@ -711,7 +711,7 @@ label {
 [data-state="true"]:hover,
 [data-state="true"]:active,
 [data-state="true"]:focus-visible {
-    color: var(--filterIncludeOptionText);
+    color: var(--text);
     border-color: none;
     outline: none;
     background-color: none;
@@ -720,7 +720,7 @@ label {
 .filter-button:hover:not([data-state="true"]):focus-visible,
 .filter-button:hover:not([data-state="true"]):active,
 .filter-button:hover:not([data-state="true"]) {
-    color: var(--filterIncludeOptionText);
+    color: var(--text);
     background-color: transparent;
     outline: none;
 }
@@ -740,7 +740,7 @@ label {
     left: 4px;
     width: calc(50% - 4px); /* half the pill minus padding */
     height: calc(100% - 8px);
-    background-color: var(--Btn_hover);
+    background-color: var(--accent-hover-dark);
     border-radius: 999px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     transition: transform 0.25s ease;
@@ -786,7 +786,7 @@ label {
 }
 
 .hermidata-metadata-group-2[data-has-none="true"] {
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 .hermidata-metadata-group-2:has(.hermidata-genre[data-editing="true"]) {
@@ -798,12 +798,12 @@ label {
 	display: inline-block;
 	flex-direction: row;
 	gap: 10px;
-	background-color: var(--table-color);
+	background-color: var(--surface-input);
 	border-radius: 10px;
 	/*padding: 10px;*/
 	justify-content: space-between;
 	align-items: center;
-	border: 1px solid var(--border-focus);
+	border: 1px solid var(--accent-dark);
     text-transform: uppercase;
 }
 
@@ -821,7 +821,7 @@ label {
 	display: flex;
 	flex-direction: row;
 	gap: 10px;
-	background-color: var(--Input-colorV2);
+	background-color: var(--surface-raised);
 	border-radius: 10px;
 	padding: 10px;
 	justify-content: space-between;
@@ -872,7 +872,7 @@ label {
     -moz-user-select: none;
     user-select: none;
 	padding: 5px;
-	border: 1px solid var(--focus-ring);
+	border: 1px solid var(--accent-dark);
 	width: fit-content;
 	padding-left: 20px;
 	padding-right: 20px;
@@ -898,12 +898,12 @@ label {
 	display: block;
 	left: 0;
 	border: none;
-	outline: 1px solid var(--focus-ring);
+	outline: 1px solid var(--accent-dark);
 }
 .hermidata-marker {
 	display: grid;
 	padding-left: 15px;
-	background-color: var(--Input-colorV2);
+	background-color: var(--surface-raised);
 	border-radius: 10px;
 	width: 96%;
 	padding-right: 10px;
@@ -915,7 +915,7 @@ label {
 	align-content: center;
 	justify-items: center;
 	height: 30px;
-	outline: 1px solid var(--focus-ring);
+	outline: 1px solid var(--accent-dark);
 }
 
 .hermidata-marker-chapter {
@@ -923,6 +923,12 @@ label {
 }
 
 /* notes */
+
+#hermidata-notes-content[readonly] {
+	outline: none;
+	border: none;
+	box-shadow: none;
+}
 
 #hermidata-notes-content {
     height: 5em;
@@ -961,14 +967,14 @@ label {
     position: relative; /* so .hermidata-marker-color's absolute positioning still anchors here */
     border: 1px solid;
     border-radius: 10px;
-    border-color: var(--focus-ring);
+    border-color: var(--accent-dark);
     cursor: pointer;
 }
 
 .hermidata-marker-row:hover {
-	text-emphasis-color: var(--Btn);
-	accent-color: var(--Text-color);
-	outline: 1px solid var(--focus-ring);
+	text-emphasis-color: var(--surface-input);
+	accent-color: var(--text);
+	outline: 1px solid var(--accent-dark);
 	transform: scale(1.005);
 	transition: transform 0.2s ease-in-out;
 }
@@ -989,7 +995,7 @@ label {
 
 .hermidata-marker-container:hover > .hermidata-marker-notes {
 	grid-template-rows: 1fr;
-	background-color: var(--table-color);
+	background-color: var(--surface-input);
 	border-radius: 5px;
     align-items: center;
     padding-top: 5px;
@@ -998,7 +1004,7 @@ label {
 
 .hermidata-alternative-title-button-arrow {
     transition: transform 0.2s ease-in-out;
-    color: var(--Text-color); /* or whatever fits */
+    color: var(--text); /* or whatever fits */
 
     display: flex;
 	align-content: center;
@@ -1025,14 +1031,14 @@ label {
 }
 .hermidata-tag-pill[data-is-selected="false"] {
     border:0.5px solid var(--border);
-    background: var(--surface-1);
-    color: var(--text-primary);
+    background: var(--surface);
+    color: var(--text);
 }
 
 .hermidata-tag-pill[data-is-selected="true"] {
-    border:0.5px solid var(--border-accent);
-    background: var(--bg-accent);
-    color: var(--text-accent);
+    border:0.5px solid var(--accent-dark);
+    background: var(--accent-dark);
+    color: var(--bg);
 }
 
 .selected-tag-container[data-editing="true"] {
@@ -1053,7 +1059,7 @@ label {
 	border: medium;
 	background: none;
 	cursor: pointer;
-	color: var(--text-color);
+	color: var(--text);
 	padding: 0px;
 	line-height: 1;
 	font-size: 14px;
@@ -1069,20 +1075,20 @@ label {
 	border-radius: 5px;
 }
 .tag-pill-removeX:hover {
-    background-color: var(--border-focus);
+    background-color: var(--accent-dark);
     transform: scale(1.2);
-	color: var(--Btn_hover_danger);
+	color: var(--danger);
 }
 
 .filterInput[data-editing="true"] {
     border:0.5px solid var(--border);
-    background: var(--fill-field);
+    background: var(--surface-raised);
     outline:none; width:100%;
     font-size:13px;
     height:32px;
     padding: 0 10px;
     border-radius: var(--radius);
-    color: var(--text-primary);
+    color: var(--text);
     margin-bottom: 10px;
 }
 
@@ -1101,7 +1107,7 @@ label {
 
 
 .hermidata-marker > [data-editing="true"] {
-    background-color: var(--table-color);
+    background-color: var(--surface-input);
     height: 40px;
 }
 
@@ -1144,7 +1150,7 @@ label {
 
 .hermidata-marker-notes[data-editing="true"] {
     grid-template-rows: 1fr;
-    background-color: var(--table-color);
+    background-color: var(--surface-input);
     border-radius: 5px;
     align-items: center;
     padding-top: 5px;
@@ -1168,10 +1174,10 @@ label {
 /* image changer */
 
 .image-changer-popover {
-    border: 1px solid var(--focus-ring);
+    border: 1px solid var(--accent-dark);
     border-radius: 8px;
     padding: 12px;
-    background: var(--Input-colorV2);
+    background: var(--surface-raised);
     width: 280px;
 }
 
@@ -1189,14 +1195,14 @@ label {
 .tab-btn {
     flex: 1;
     padding: 4px 8px;
-    border: 1px solid var(--focus-ring);
+    border: 1px solid var(--accent-dark);
     border-radius: 6px;
     background: none;
     cursor: pointer;
 }
 
 .tab-btn.active {
-    background: var(--Btn);
+    background: var(--surface-input);
 }
 
 .image-changer-panel {
@@ -1226,22 +1232,22 @@ button#hermidata-img {
 [popover] {
     position-area: initial;
     
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
 }
 
 :popover-open {
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 0;
     position: relative;
     inset: 0;
@@ -1262,7 +1268,7 @@ button#hermidata-img {
     align-items: center;
     justify-content: center;
     width: 80%;
-    color: var(--Text-color);
+    color: var(--text);
     text-align: center;
     word-wrap: unset;
     gap: 10px;
@@ -1271,25 +1277,25 @@ button#hermidata-img {
 }
 
 #delete-info-btn {
-    background: var(--Btn_danger_fill);
-    color: var(--Btn_danger_text);
+    background: var(--danger);
+    color: var(--text);
     border: 1px solid transparent;
     transition: background-color 0.15s ease-in-out;
 }
 #delete-info-btn:hover {
-    background: var(--Btn_danger_fill-hover);
+    background: var(--danger-hover);
 }
 #delete-info-btn:active {
-    background: var(--Btn_danger_fill-active);
+    background: var(--danger-active);
 }
 
 #customPrompt-button-delete {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
+    background-color: var(--bg);
+    color: var(--text);
 }
 #customPrompt-button-cancel {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
+    background-color: var(--bg);
+    color: var(--text);
 }
 
 
@@ -1307,7 +1313,7 @@ button#hermidata-img {
     height: 10%;
 
     border-radius: 5px;
-    box-shadow: var(--boxShadow1) 0px 18px 40px -12px, var(--boxShadow2) 0px 2px 6px;
+    box-shadow: var(--overlay) 0px 18px 40px -12px, var(--shadow) 0px 2px 6px;
     opacity: 1;
     transform: scale(1) translateY(0);
 }
