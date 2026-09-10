@@ -384,6 +384,19 @@ export class FilterLogic extends Sort {
             const title = (titleList.length >= 2)  ? `${titleList[0]} +[${titleList.length-1}]` : titleList[0] || "Any";
             filterButton.textContent = title;
 
+            // because Star rating is a dualRange input the label is set differently
+            if (filterType === "star-rating") {
+                const values = this.StarRatingRange.range?.getValue();
+                if (!values) return;
+
+                let content: string;
+                if (values.min === values.max) content = `${values.min}`;
+                else if (values.min === 0 && values.max === 10) content = "Any";
+                else content = `${values.min} <——> ${values.max}`;
+                filterButton.textContent = content;
+            }
+
+
             // check if the title comes from exclude filters
             if (filterType === "Genres & Themes" && filters.exclude["genres-themes"]?.find(v => v === titleList[0])) filterButton.dataset.labelExclude = "true";
             else if (filterType && filters.exclude[filterType]?.find(v => v === titleList[0])) filterButton.dataset.labelExclude = "true";
