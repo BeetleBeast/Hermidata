@@ -256,57 +256,54 @@ async function getCurrentTab(): Promise<chrome.tabs.Tab> {
     const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
     return currentTab
 }
+// Chrome bug workaround: tab.title isn't populated until you re-fetch by id.
+async function getCompleteTab(tab: chrome.tabs.Tab): Promise<chrome.tabs.Tab | null> {
+    return tab.id ? ext.tabs.get(tab.id) : null;
+}
 
 export async function updateCurrentBookmarkAndIcon(colour: string | null = null, Url: string | null = null) {
     const requestId = ++currentRequestId;
+    const isStale = () => requestId !== currentRequestId;
 
     // get current tab
-    const currentTab = await getCurrentTab();
+    const tab = await getCurrentTab();
 
-    if (!currentTab && !Url) return;
+    // early exit as no tab or url specified can't be bookmarked
+    if (!tab && !Url) return;
 
     // initialize currentBookmark
-    let searchUrl = Url ?? currentTab.url;
+    const searchUrl = Url ?? tab.url;
+    // get complete tab
+    const completeTab = tab ? await getCompleteTab(tab) : null;
+    // get fuzzy promise ( slower than searchValidBookmarks and so is not awaited here)
+    const fuzzyPromise = completeTab ? hasRelatedBookmarkCached(completeTab) : null;
 
-    const currentTabComplete = currentTab.id ? await ext.tabs.get(currentTab.id) : null; // bugfix: Title only updates after first call
-
-    const fuzzyPromise = currentTabComplete ? hasRelatedBookmarkCached(currentTabComplete) : null;
-
-    // get hermidata
-    colour = colour ?? await getHermidataColour(searchUrl);
-
+    // get hermidata colour
+    colour ??= await getHermidataColour(searchUrl);
     if (!colour) return;
 
     // get valid bookmark
     const validBookmarks = await searchValidBookmarks(searchUrl);
-    if (requestId !== currentRequestId) return; // a newer call has started — abandon this one
+    if (isStale()) return;
 
-    if (validBookmarks.length > 0) {
-        setState.currentBookmark(validBookmarks[0]);
-        updateIcon(validBookmarks[0].url, colour);
-    } else {
-        setState.currentBookmark(null);
-        updateIcon(null, colour, currentTab);
-    }
+    const [bestMatch] = validBookmarks;
 
-    if ((!currentBookmark && fuzzyPromise) && requestId === currentRequestId) { // if dons't already have valid bookmark
-        updateInvalidBookmark(fuzzyPromise, searchUrl, colour);
-    }
+    setState.currentBookmark(bestMatch ?? null);
+    updateIcon(bestMatch.url ?? null, colour, bestMatch ? undefined : tab);
+
+    // update with slower fuzzy promise if best current Bookmark not found
+    if ((!currentBookmark && fuzzyPromise)) await updateInvalidBookmark(fuzzyPromise, searchUrl, colour);
 }
 async function updateInvalidBookmark(fuzzyPromise: Promise<FuzzyMatchResult>, searchUrl: string | undefined, colour: string) {
     // get fuzzy bookmark & hermidata | slower
-        const validFuzzyBookmarks = await fuzzyPromise;
-        if (validFuzzyBookmarks.type === 'none') return;
-        const isValid = validFuzzyBookmarks.sameChapter;
-        const validEntry = validFuzzyBookmarks.match;
-        if (isValid && validEntry) {
-            
-            const validEntryBookmark = await searchValidBookmarks(validEntry.fuzzySearchUrl).then(b => b[0]);
+    const fuzzy = await fuzzyPromise;
 
-            setState.currentBookmark(validEntryBookmark);
+    if (fuzzy.type === 'none' || !fuzzy.sameChapter || !fuzzy.match) return;
+    
+    const [validEntryBookmark] = await searchValidBookmarks(fuzzy.match.fuzzySearchUrl);
 
-            updateIcon(validEntry.currentUrl ?? searchUrl, colour);
-        }
+    setState.currentBookmark(validEntryBookmark);
+    updateIcon(fuzzy.match.currentUrl ?? searchUrl, colour);
 }
 
 
