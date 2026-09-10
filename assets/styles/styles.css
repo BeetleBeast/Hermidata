@@ -46,15 +46,6 @@
     --hr: #555;
 }
 
-/*
-  '--Btn_danger_fill',
-  '--Btn_success_fill',
-  '--Btn_cancel_fill',
-  '--accent-hover-dark_danger',
-  '--accent-hover-dark_success',
-  '--accent-hover-dark_Cancel',
-*/
-
 body {
 	background-color: var(--bg);
 	color: var(--text);
