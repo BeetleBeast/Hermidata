@@ -1,3 +1,52 @@
+:root {
+    /* App palette */
+    --bg: #0c1118;
+    --surface: #121f31;
+    --surface-raised: #202733;
+    --surface-input: #28354b; /* was Btn ( rgb(63, 76, 96); ) */
+
+    --bg-disabled: #181c24; /* not deeded? */
+
+    --text: #d3d3d3;
+    --text-highlight: #fff;
+    --text-muted: #989898;
+    --text-disabled: #777f8c;
+
+    --text-dark: #12174f;
+
+    --border: #46556e;
+    --border-subtle: rgba(255, 255, 255, 0.06);
+
+    /* Single app accent family */
+    --accent-soft: #7896d2; /* was --accent */
+    --accent-dark: #3c5b99; /* unused */
+    
+    --accent-hover-soft: #96a9df; /* was  --accent-hover */
+    --accent-hover-dark: rgb(34, 48, 89);
+
+    --accent-active-soft: #5f7fbd; /* was --accent-active */
+    --accent-active-dark: rgb(15, 34, 94); /* incorrect */
+
+    /* Semantic states */
+    --danger: #c85b5b;
+    --danger-hover: #d66a6a;
+    --danger-active: #a94747;
+    --success: #5aab7d;
+    --warning: #caa35a;
+
+    --cancel: rgb(255, 217, 0);
+
+    /* Effects */
+    --overlay: rgba(0, 0, 0, 0.45);
+    --shadow: rgba(0, 0, 0, 0.25);
+    --shadow-soft: rgba(0, 0, 0, 0.15);
+
+    --radius: 6px;
+
+    --hr: #555;
+}
+
+
 body {
     background-color: var(--bg);
     color: var(--text);
@@ -31,7 +80,7 @@ button,
 button:hover,
 .btn:hover {
     background: var(--accent-hover-dark);
-    border-color: var(--accent);
+    border-color: var(--accent-hover-soft);
 }
 
 button:active,
@@ -42,36 +91,34 @@ button:active,
 
 button:focus-visible,
 .btn:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-hover-soft);
     outline-offset: 2px;
 }
 
 button:disabled,
 .btn:disabled,
 .btn.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
     transform: none;
 }
 
 .btn-danger:hover {
-    background: var(--Btn_danger_fill);
-    border-color: var(--accent-hover-dark_danger);
-    color: var(--filterIncludeOptionText);
+    background: var(--danger-hover);
+    border-color: var(--danger);
+    color: var(--text-highlight);
 }
 
 .btn-success:hover {
-    background: var(--Btn_success_fill);
-    border-color: var(--accent-hover-dark_success);
-    color: var(--filterIncludeOptionText);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
+    color: var(--text-highlight);
 }
 
 .btn-cancel:hover {
-    background: var(--Btn_cancel_fill);
-    border-color: var(--accent-hover-dark_Cancel);
-    color: var(--filterIncludeOptionText);
+    color: var(--text-highlight);
 }
 
 .btn-ghost {
@@ -81,7 +128,7 @@ button:disabled,
 
 .btn-ghost:hover {
     background: var(--surface-raised);
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
 }
 
 /* ============ INPUTS ============ */
@@ -110,7 +157,7 @@ textarea,
 
 input::placeholder,
 textarea::placeholder {
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 input:hover,
@@ -123,9 +170,9 @@ input:focus,
 textarea:focus,
 .input:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--accent-dark);
     background: var(--surface-raised);
-    box-shadow: 0 0 0 2px var(--select-focus-shadow);
+    box-shadow: 0 0 0 2px var(--shadow-soft);
 }
 
 textarea {
@@ -135,7 +182,7 @@ textarea {
 
 input[type="checkbox"],
 input[type="radio"] {
-    accent-color: var(--accent-hover-dark);
+    accent-color: var(--accent-hover-soft);
     width: 1.05em;
     height: 1.05em;
     cursor: pointer;
@@ -144,14 +191,14 @@ input[type="radio"] {
 input:disabled,
 textarea:disabled,
 .input.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
 }
 
 input:invalid:not(:placeholder-shown) {
-    border-color: var(--accent-hover-dark_danger);
+    border-color: var(--danger);
 }
 
 /* -- file input -- */
@@ -165,7 +212,7 @@ input:invalid:not(:placeholder-shown) {
     font-size: 0.95rem;
     font-weight: 500;
     color: var(--text);
-    background: var(--Btn);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
@@ -174,7 +221,7 @@ input:invalid:not(:placeholder-shown) {
 
 .file-btn:hover {
     background: var(--accent-hover-dark);
-    border-color: var(--accent);
+    border-color: var(--accent-hover-soft);
 }
 
 .file-btn:active {
@@ -183,13 +230,13 @@ input:invalid:not(:placeholder-shown) {
 
 .file-input-hidden:focus-visible + .file-btn,
 .file-input-hidden:focus-visible ~ .file-btn {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-hover-soft);
     outline-offset: 2px;
 }
 
 .file-btn.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
 }
@@ -229,12 +276,12 @@ input[type="color"]:hover {
 
 input[type="color"]:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--select-focus-shadow);
+    border-color: var(--accent-dark);
+    box-shadow: 0 0 0 2px var(--shadow-soft);
 }
 
 input[type="color"]:disabled {
-    background: var(--bg_disabled);
+    background: var(--bg-disabled);
     border-color: var(--hr);
     cursor: not-allowed;
 }
@@ -281,25 +328,25 @@ select:hover {
 
 select:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--select-focus-shadow);
+    border-color: var(--accent-dark);
+    box-shadow: 0 0 0 2px var(--shadow-soft);
 }
 
 select:disabled {
-    background-color: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background-color: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
 }
 
 option:disabled,
 .option-excluded {
-    background: var(--filterExcludeOption);
-    color: var(--muted);
+    background: #04060a;
+    color: var(--text-muted);
 }
 
 .option-included {
-    color: var(--filterIncludeOptionText);
+    color: var(--text-highlight);
 }
 
 /* ============ MISC SHARED ============ */
@@ -319,7 +366,7 @@ label {
 }
 
 .field-hint {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 0.8rem;
     margin-top: 0.3em;
 }
@@ -333,7 +380,7 @@ label {
 .Btn {
     background-color: var(--bg);
     color: var(--text);
-    border: 1px solid var(--Btn);
+    border: 1px solid var(--surface-input);
     border-radius: 4px;
     padding: 8px 16px;
     cursor: pointer;
@@ -377,7 +424,7 @@ footer {
 	width: 70%;
 	height: 50px;
 	background-color: var(--bg);
-	border-top: 1px solid var(--settings-footer-hr);
+	border-top: 1px solid #ccc;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -386,11 +433,11 @@ footer {
 .footerBtn {
 	background-color: var(--bg);
 	color: var(--text);
-	border: 1px solid var(--Btn);
+	border: 1px solid var(--surface-input);
 	border-radius: 4px;
 	padding: 8px 16px;
 	cursor: pointer;
-	transition: background-color 0.3s ease;
+	transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 .footerBtn:hover {
 	background-color: var(--accent-hover-dark);
@@ -400,13 +447,17 @@ footer {
 	transition: none;
 }
 #resetSettingsBtn:hover {
-	background-color: var(--Btn_danger_fill);
+	background-color: var(--danger);
+    color: var(--text-dark);
+    border-color: var(--danger);
 }
 #cancelSettingsBtn:hover {
-	background-color: var(--Btn_cancel_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 #saveSettingsBtn:hover {
-	background-color: var(--Btn_success_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 .fullpage-btn {
     position: absolute;
@@ -424,12 +475,12 @@ table {
 td, th {
     text-align: center;
     vertical-align: middle;
-    border: 1px solid var(--settings-footer-hr);
+    border: 1px solid #ccc;
     padding: 0;
 }
 th {
     background-color: var(--surface-input);
-    border: 1px solid var(--settings-th);
+    border: 1px solid #d1d5db;
     font-weight: bold;
     padding: 8px;
     width: fit-content;
@@ -502,16 +553,17 @@ select.autoInput {
 }
 
 #logOut:hover {
-	background: var(--Btn_danger_fill);
-	border-color: var(--accent-hover-dark_danger);
+	background: var(--danger);
+	border-color: var(--danger);
+    color: var(--text-dark);
 }
 #testSpreadsheetUrl:hover {
-	border-color: var(--accent-hover-dark_Cancel);
-	background: var(--Btn_cancel_fill);
+	border-color: var(--accent-hover-soft);
+	background: var(--accent-hover-dark);
 }
 #saveSpreadsheetUrl:hover {
-	background: var(--Btn_success_fill);
-	border-color: var(--accent-hover-dark_success);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 #spreadsheetPrompt {
@@ -521,7 +573,7 @@ select.autoInput {
 #statusSheetURL, 
 #statusSaveDefaultInput,
 #statusSaveDefaultInputInputTextMenu {
-    color: var(--statusBar);
+    color: rgb(0, 128, 0);
 }
 
 [data-active="false"] {
@@ -557,7 +609,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	color: var(--pure-white);
+	color: var(--text-highlight);
 	position: absolute;
 	top: 10%;
 	border: 1px solid;
@@ -589,7 +641,7 @@ nav {
 	text-align: left;
 	cursor: pointer;
 	transition: background 0.2s;
-	color: var(--pure-white);
+	color: var(--text-highlight);
 	border: 1px solid;
 }
 
@@ -644,8 +696,9 @@ nav {
 }
 
 .EditORemoveItem-removeBtn:hover {
-	border-color: var(--accent-hover-dark_danger);
-	background: var(--Btn_danger_fill);
+	border-color: var(--danger);
+	background: var(--danger);
+    color: var(--text-dark);
 }
 .EditORemoveItem-removeBtn {
 	border-radius: 0 6px 6px 0 !important;
@@ -664,8 +717,8 @@ nav {
 	height: 2.4rem !important;
 }
 .EditORemoveItem-updateBtn:hover {
-	background: var(--Btn_success_fill);
-	border-color: var(--accent-hover-dark_success);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 .EditORemoveItem-updateBtn {
 	border-radius: unset !important;
@@ -695,11 +748,12 @@ nav {
 
 .nav-item:hover {
     background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 .nav-item[data-active="true"] {
     background: var(--accent-active-dark);
-    color: var(--pure-white);
+    color: var(--text-highlight);
 }
 
 .content {
@@ -910,7 +964,7 @@ nav {
 	top: 17px;
 	left: 10px;
 	pointer-events: none;
-	color: var(--customRuleGhost);
+	color: var(--text-muted);
 	opacity: 0.5;
 	white-space: nowrap;
 	overflow: visible;
@@ -920,7 +974,7 @@ nav {
 #advancedOptionsBtn {
 	width: 30%;
 	background-color: transparent;
-	color: var(--pure-white);
+	color: var(--text-highlight);
 	padding: 15px;
 	margin-top: 15px;
 	margin-bottom: 15px;
@@ -1011,7 +1065,7 @@ nav {
     color: var(--text);
 }
 .prefixAndSuffix:focus {
-    outline: 1px invert var(--Btn);
+    outline: 1px invert var(--surface-input);
 }
 
 
@@ -1019,13 +1073,13 @@ nav {
     display: flex;
     flex-direction: row;
     align-items: center;
-    border-left: 1px solid var(--settings-subFolder-inputs-leftBorder);
+    border-left: 1px solid var(--hr);
 }
 #add_ReadStatuses_Subfolder_Options_Inputs {
     display: flex;
     flex-direction: row;
     align-items: center;
-	border-left: 1px solid var(--settings-subFolder-inputs-leftBorder);
+	border-left: 1px solid var(--hr);
 }
 
 
@@ -1079,18 +1133,18 @@ nav {
 }
 
 
-/* sucess btns */
+/* success btns */
 #newNovelTypeBtn:hover,
 #newNovelStatusBtn:hover,
 #newReadStatusBtn:hover,
 #saveDefaultInputTextMenu:hover,
 #saveDefaultInput:hover {
-	border-color: var(--accent-hover-dark_success);
-	background: var(--Btn_success_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 
 #addTagBtn:hover {
-	border-color: var(--accent-hover-dark_success);
-	background: var(--Btn_success_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
