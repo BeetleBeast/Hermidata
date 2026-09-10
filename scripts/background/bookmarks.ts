@@ -1,12 +1,12 @@
 import { ext } from "../shared/utils/BrowserCompat";
-import type { InputArraySheetType, InputArrayType, ShouldReplaceOrBlockReturn, ShouldReplaceReturn } from "../shared/types/index";
-import { getSettings } from "../shared/db/Storage";
+import type { FuzzyMatchResult, InputArraySheetType, ShouldReplaceOrBlockReturn, ShouldReplaceReturn } from "../shared/types/index";
+import { getAllHermidata, getSettings } from "../shared/db/Storage";
 import { hasRelatedBookmarkCached } from "./fuzzy";
-import { currentBookmark, setState } from "./state";
+import { allHermidataCashed, currentBookmark, setState } from "./state";
 import { updateIcon } from "./tabs";
 import { getTitleAndChapterFromUrl, TrimTitle } from "../shared/utils/StringOutput";
 import { FolderMapping } from "../settings/build/FolderMapping";
-import type { HermidataModel } from "../shared/utils/HermidataSelector";
+import { HermidataModel } from "../shared/utils/HermidataSelector";
 
 declare const browser: typeof chrome | undefined;
 
@@ -48,7 +48,7 @@ async function addBookmark(hermidata: HermidataModel) {
         url: hermidata.GetUrl()
     });
     console.log("Created bookmark", bookmark);
-    updateCurrentBookmarkAndIcon();
+    updateCurrentBookmarkAndIcon(hermidata.getBookmark().color);
     console.log('Change Icon');
 }
 async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplaceReturn) {
@@ -86,7 +86,7 @@ async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplac
         console.warn("Old bookmark not found, adding new one.");
         addBookmark(hermidata);
     }
-    updateCurrentBookmarkAndIcon();
+    updateCurrentBookmarkAndIcon(hermidata.getBookmark().color);
     console.log('Change Icon');
 }
 
@@ -251,11 +251,20 @@ export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.Bo
         });
     });
 }
-export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
+
+async function getCurrentTab(): Promise<chrome.tabs.Tab> {
+    const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
+    return currentTab
+}
+
+export async function updateCurrentBookmarkAndIcon(colour: string | null = null, Url: string | null = null) {
     const requestId = ++currentRequestId;
 
-    const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
+    // get current tab
+    const currentTab = await getCurrentTab();
+
     if (!currentTab && !Url) return;
+
     // initialize currentBookmark
     let searchUrl = Url ?? currentTab.url;
 
@@ -263,21 +272,29 @@ export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
 
     const fuzzyPromise = currentTabComplete ? hasRelatedBookmarkCached(currentTabComplete) : null;
 
+    // get hermidata
+    colour = colour ?? await getHermidataColour(searchUrl);
+
+    if (!colour) return;
+
     // get valid bookmark
     const validBookmarks = await searchValidBookmarks(searchUrl);
     if (requestId !== currentRequestId) return; // a newer call has started — abandon this one
 
     if (validBookmarks.length > 0) {
         setState.currentBookmark(validBookmarks[0]);
-        updateIcon(validBookmarks[0].url);
-    }else {
+        updateIcon(validBookmarks[0].url, colour);
+    } else {
         setState.currentBookmark(null);
-        updateIcon(null, currentTab);
+        updateIcon(null, colour, currentTab);
     }
-    if (!currentBookmark && fuzzyPromise) { // if dons't already have valid bookmark
-        if (requestId !== currentRequestId) return;
 
-        // get fuzzy bookmark & hermidata | slower
+    if ((!currentBookmark && fuzzyPromise) && requestId === currentRequestId) { // if dons't already have valid bookmark
+        updateInvalidBookmark(fuzzyPromise, searchUrl, colour);
+    }
+}
+async function updateInvalidBookmark(fuzzyPromise: Promise<FuzzyMatchResult>, searchUrl: string | undefined, colour: string) {
+    // get fuzzy bookmark & hermidata | slower
         const validFuzzyBookmarks = await fuzzyPromise;
         if (validFuzzyBookmarks.type === 'none') return;
         const isValid = validFuzzyBookmarks.sameChapter;
@@ -287,9 +304,30 @@ export async function updateCurrentBookmarkAndIcon(Url: string | null = null) {
             const validEntryBookmark = await searchValidBookmarks(validEntry.fuzzySearchUrl).then(b => b[0]);
 
             setState.currentBookmark(validEntryBookmark);
-            updateIcon(validEntry.currentUrl || searchUrl);
+
+            updateIcon(validEntry.currentUrl ?? searchUrl, colour);
         }
-    }
+}
+
+
+async function getHermidataFromUrl(url?: string): Promise<HermidataModel | null> {
+    if (!url) return null;
+
+    const allHermidata = Object.values(allHermidataCashed || await getAllHermidata());
+
+    const hermidata = allHermidata.find(h => h.chapter.bookmarks[h.chapter.bookmarkInUse].url === url) ?? null;
+
+    if (!hermidata) return null;
+
+    return new HermidataModel(hermidata);
+}
+async function getHermidataColour(url?: string): Promise<string | null> {
+    const hermidata = await getHermidataFromUrl(url);
+
+    if (!hermidata) return null;
+    const bookmark = hermidata.getBookmark();
+
+    return bookmark.color;
 }
 
 // Main entry point
