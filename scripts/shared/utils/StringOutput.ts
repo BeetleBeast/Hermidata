@@ -55,6 +55,37 @@ export function normalizeDateToIso(rawDate: string): string {
     return new Date(date)?.toISOString();
 }
 
+/**
+ * set a dynamic icon
+ * @param isFound - if the Hermidata is found
+ * @param colour - the new colour of the icon
+*/
+export async function setDynamicIcon(isFound: boolean, colour?: string, currenTabId?: number): Promise<void> {
+    const defaultColour = '#e3e3e3';
+    const defaultFoundColour = '#5979d6';
+
+    const newColour = isFound ? colour ?? defaultFoundColour : defaultColour;
+
+    const svgIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill=${newColour}>
+            <path d="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640h-80v280l-100-60-100 60v-280H240v640Zm0 0v-640 640Zm200-360 100-60 100 60-100-60-100 60Z"/>
+        </svg>
+    `;
+
+    let tabId: number | undefined = currenTabId;
+    if (!tabId) {
+
+        const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
+    
+        if (!currentTab) return;
+
+        tabId = currentTab.id;
+    }
+
+
+    ext.action.setIcon({ path: `data:image/svg+xml;base64,${btoa(svgIcon)}`, tabId });
+}
+
 function isConcatenationOfOthers(candidate: string, others: string[]): boolean {
     let remaining = candidate;
     let matchedCount = 0;
