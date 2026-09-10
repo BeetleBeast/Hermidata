@@ -251,7 +251,6 @@ export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.Bo
         });
     });
 }
-
 async function getCurrentTab(): Promise<chrome.tabs.Tab> {
     const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
     return currentTab
