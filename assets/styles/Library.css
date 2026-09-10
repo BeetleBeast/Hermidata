@@ -578,10 +578,9 @@ html::-webkit-scrollbar-thumb {
 #library-entries-ViewMode-list {
     width: 50px;
     height: 35px;
-    color: var(--text);
 }
 [data-active_view_mode="true"] {
-    background-color: var(--accent-hover-dark);
+    background-color: var(--accent-active-dark);
 }
 [data-active_view_mode="true"]:hover,
 [data-active_view_mode="true"]:active,
@@ -589,13 +588,13 @@ html::-webkit-scrollbar-thumb {
     color: var(--text);
     border-color: none;
     outline: none;
-    background-color: none;
+    background-color: var(--accent-active-dark);
 }
 
-.viewMode-toggle:hover:not([data-active_view_mode="true"]):focus-visible,
-.viewMode-toggle:hover:not([data-active_view_mode="true"]):active,
+.viewMode-toggle:focus-visible:not([data-active_view_mode="true"]),
+.viewMode-toggle:active:not([data-active_view_mode="true"]),
 .viewMode-toggle:hover:not([data-active_view_mode="true"]) {
-    color: var(--text);
+    color: var(--text-highlight);
     background-color: inherit;
     outline: none;
 }
@@ -1152,6 +1151,7 @@ body[data-list-mode="false"]
 	width: 100%;
 	padding-top: 0;
 	margin-top: 0;
+    margin: 0;
 }
 
 #Genres-dialog:popover-open {
@@ -1274,7 +1274,7 @@ body[data-list-mode="false"]
 
 
 .filter-item-checkbox[data-state="2"] {
-    background-color: var(--surface-input);
+    background-color: var(--accent-dark);
     border-color: var(--accent-dark);
     color: var(--bg);
     appearance: none;
@@ -1297,8 +1297,8 @@ body[data-list-mode="false"]
 }
 
 .search-mode-radio-item[data-state="true"] {
-    background-color: var(--accent-hover-dark);
-    border-color: var(--accent-dark);
+    background-color: var(--accent-hover-soft);
+    border-color: var(--accent-soft);
     color: var(--bg);
     appearance: none;
     border-radius: 15px;
