@@ -3,7 +3,9 @@
     --bg: #0c1118;
     --surface: #121f31;
     --surface-raised: #202733;
-    --surface-input: #28354b;
+    --surface-input: #28354b; /* was Btn ( rgb(63, 76, 96); ) */
+
+    --bg-disabled: #181c24; /* not deeded? */
 
     --text: #d3d3d3;
     --text-highlight: #fff;
@@ -32,13 +34,26 @@
     --success: #5aab7d;
     --warning: #caa35a;
 
+    --cancel: rgb(255, 217, 0);
+
     /* Effects */
     --overlay: rgba(0, 0, 0, 0.45);
     --shadow: rgba(0, 0, 0, 0.25);
     --shadow-soft: rgba(0, 0, 0, 0.15);
 
     --radius: 6px;
+
+    --hr: #555;
 }
+
+/*
+  '--Btn_danger_fill',
+  '--Btn_success_fill',
+  '--Btn_cancel_fill',
+  '--accent-hover-dark_danger',
+  '--accent-hover-dark_success',
+  '--accent-hover-dark_Cancel',
+*/
 
 body {
 	background-color: var(--bg);
