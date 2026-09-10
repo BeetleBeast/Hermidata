@@ -1,3 +1,52 @@
+:root {
+    /* App palette */
+    --bg: #0c1118;
+    --surface: #121f31;
+    --surface-raised: #202733;
+    --surface-input: #28354b; /* was Btn ( rgb(63, 76, 96); ) */
+
+    --bg-disabled: #181c24; /* not deeded? */
+
+    --text: #d3d3d3;
+    --text-highlight: #fff;
+    --text-muted: #989898;
+    --text-disabled: #777f8c;
+
+    --text-dark: #12174f;
+
+    --border: #46556e;
+    --border-subtle: rgba(255, 255, 255, 0.06);
+
+    /* Single app accent family */
+    --accent-soft: #7896d2; /* was --accent */
+    --accent-dark: #3c5b99; /* unused */
+    
+    --accent-hover-soft: #96a9df; /* was  --accent-hover */
+    --accent-hover-dark: rgb(34, 48, 89);
+
+    --accent-active-soft: #5f7fbd; /* was --accent-active */
+    --accent-active-dark: rgb(15, 34, 94); /* incorrect */
+
+    /* Semantic states */
+    --danger: #c85b5b;
+    --danger-hover: #d66a6a;
+    --danger-active: #a94747;
+    --success: #5aab7d;
+    --warning: #caa35a;
+
+    --cancel: rgb(255, 217, 0);
+
+    /* Effects */
+    --overlay: rgba(0, 0, 0, 0.45);
+    --shadow: rgba(0, 0, 0, 0.25);
+    --shadow-soft: rgba(0, 0, 0, 0.15);
+
+    --radius: 6px;
+
+    --hr: #555;
+}
+
+
 body {
     background-color: var(--bg);
     color: var(--text);
@@ -426,7 +475,7 @@ table {
 td, th {
     text-align: center;
     vertical-align: middle;
-    border: 1px solid var(--settings-footer-hr);
+    border: 1px solid #ccc;
     padding: 0;
 }
 th {
