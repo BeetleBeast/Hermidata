@@ -59,7 +59,7 @@ export async function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet:
         }
     }
     try {
-        updateCurrentBookmarkAndIcon(hermidata.GetUrl());
+        updateCurrentBookmarkAndIcon(hermidata.getBookmark().color, hermidata.GetUrl());
     } catch (err) {
         console.error('[Background] Icon update failed:', err);
     }
