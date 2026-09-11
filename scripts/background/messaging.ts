@@ -49,7 +49,7 @@ export function initInstalled() {
         }
     });
     ext.runtime.onStartup.addListener(() => {
-        updateCurrentBookmarkAndIcon()
+        updateCurrentBookmarkAndIcon();
         checkFeedsForUpdates();
     });
 }
