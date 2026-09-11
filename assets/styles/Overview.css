@@ -1301,6 +1301,7 @@ button#hermidata-img {
 
 #delete-info-btn {
     display: flex;
+    display: flex;
     background: var(--danger);
     color: var(--text-dark);
     border: 1px solid transparent;
