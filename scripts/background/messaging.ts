@@ -5,8 +5,6 @@ import { checkFeedsForUpdates } from "./feeds"
 import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSyncOperation } from "./rssCache"
 import { handleStartPickingFlow } from "./picking"
 
-
-
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         switch (msg.type) {
