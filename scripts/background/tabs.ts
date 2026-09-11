@@ -3,7 +3,6 @@ import { getAllHermidata } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks";
 import { allHermidataCashed, currentBookmark, currentTab, setState } from "./state";
 import { setDynamicIcon } from "../shared/utils/StringOutput";
-import { setDynamicIcon } from "../shared/utils/StringOutput";
 
 export function initTabs() {
     ext.tabs.onActivated.addListener(() => updateCurrentBookmarkAndIcon())
