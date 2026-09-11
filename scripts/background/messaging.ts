@@ -3,6 +3,7 @@ import { getSettings } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSaveRawFeeds, handleSyncOperation } from "./rssCache"
+import { handleStartPickingFlow } from "./picking"
 
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -17,6 +18,7 @@ export function initMessaging() {
             case 'DB_OPERATION' : handleDbOperation(msg.store, msg.call, sendResponse); return true;
             case 'SYNC_OPERATION': handleSyncOperation(msg.call, sendResponse); return true;
             case 'RESET_LOCAL_FILTERS': handleLocalFilterReset(sendResponse); return true;
+            case 'START_PICKING_FLOW': handleStartPickingFlow(msg.entry, msg.tabID); return; // ( fire and forget )
         }
         return true
     })
