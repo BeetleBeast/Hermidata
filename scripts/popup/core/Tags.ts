@@ -104,12 +104,12 @@ export class TagsSystem {
         // pill remove button
         const removeButton = document.createElement("span");
         removeButton.classList.add("tag-pill-removeX");
-        removeButton.dataset.color = this.originalColorIsRedish(color) ? 'white' : color;
+        removeButton.dataset.color = this.originalColorIsRedIsh(color) ? 'white' : color;
         removeButton.style.color = `contrast-color(${color})`;
         removeButton.textContent = "x";
 
         removeButton.addEventListener('mouseover', () => {
-            removeButton.style.color =  this.originalColorIsRedish(color) ? 'white' : 'red';
+            removeButton.style.color =  this.originalColorIsRedIsh(color) ? 'white' : 'red';
         })
         removeButton.addEventListener('mouseout', () => {
             removeButton.style.color =  `contrast-color(${color})`;
@@ -129,7 +129,7 @@ export class TagsSystem {
 
         return pill;
     }
-    private originalColorIsRedish(color: string): boolean {
+    private originalColorIsRedIsh(color: string): boolean {
         const r = parseInt(color.slice(1, 3), 16);
         const g = parseInt(color.slice(3, 5), 16);
         const b = parseInt(color.slice(5, 7), 16);
@@ -140,7 +140,7 @@ export class TagsSystem {
         const input = this.input;
         const ghostInput = this.ghostInput;
         const autocomplete = this.autocomplete;
-        // allow if its not alrady inside tags
+        // allow if its not already inside tags
         if (!input || !ghostInput || !autocomplete) return;
         input.addEventListener('input', () => {
 

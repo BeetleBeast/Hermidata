@@ -110,9 +110,8 @@ export class EditDetail extends LibraryBuilder {
 
         // 1. set cancel & delete button
         if (!this.cancelBtn || !this.deleteOpenPanelBtn) return;
-        this.cancelBtn.style.display = 'flex';
-        this.deleteOpenPanelBtn.style.display = 'flex';
-
+        this.cancelBtn.style.opacity = '1';
+        this.deleteOpenPanelBtn.style.opacity = '1';
         // 2. set all inputs to editable
         this.changeAllInputsToEditable();
 
@@ -123,8 +122,8 @@ export class EditDetail extends LibraryBuilder {
     public async deactivate(mode: 'cancel' | 'save'): Promise<void> {
         // 1. set cancel & delete button
         if (!this.cancelBtn || !this.deleteOpenPanelBtn) return;
-        this.cancelBtn.style.display = 'none';
-        this.deleteOpenPanelBtn.style.display = 'none';
+        this.cancelBtn.style.opacity = '0';
+        this.deleteOpenPanelBtn.style.opacity = '0';
         
         // 2. set all inputs to editable
         this.changeAllInputsBack(mode);
@@ -168,9 +167,9 @@ export class EditDetail extends LibraryBuilder {
         if (!this.deleteOpenPanelBtn) return;
 
         if (mode === 'visible') {
-            this.deleteOpenPanelBtn.style.display = 'flex';
+            this.deleteOpenPanelBtn.style.opacity = '1';
         } else {
-            this.deleteOpenPanelBtn.style.display = 'none';
+            this.deleteOpenPanelBtn.style.opacity = '0';
         }
     }
     private closeDeletePanel = () => {

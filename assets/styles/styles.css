@@ -1,56 +1,54 @@
 :root {
-    --Btn: rgb(63, 76, 96);
-    --Btn_hover: rgb(34, 48, 89);
-    --Btn_active: rgb(15, 34, 94);
-    --Text-color: lightgray;
+    /* App palette */
+    --bg: #0c1118;
+    --surface: #121f31;
+    --surface-raised: #202733;
+    --surface-input: #28354b; /* was Btn ( rgb(63, 76, 96); ) */
 
-    --Btn_hover_danger: rgb(255, 0, 0);
-    --Btn_hover_success: rgb(0, 255, 0);
-    --Btn_hover_Cancel: rgb(255, 217, 0);
+    --bg-disabled: #181c24; /* not deeded? */
 
-    --bg-color: rgb(12, 17, 24);
+    --text: #d3d3d3;
+    --text-highlight: #fff;
+    --text-muted: #989898;
+    --text-disabled: #777f8c;
 
-    --Input-color: rgb(40, 53, 75);
-    --Input-colorV2: rgb(32, 39, 51);
+    --text-dark: #12174f;
 
-    --table-color: var(----Input-color);
+    --border: #46556e;
+    --border-subtle: rgba(255, 255, 255, 0.06);
 
-    --Btn_disabled: rgb(120, 120, 120);
-    --bg_disabled: rgb(24, 28, 36);
+    /* Single app accent family */
+    --accent-soft: #7896d2; /* was --accent */
+    --accent-dark: #3c5b99; /* unused */
+    
+    --accent-hover-soft: #96a9df; /* was  --accent-hover */
+    --accent-hover-dark: rgb(34, 48, 89);
+
+    --accent-active-soft: #5f7fbd; /* was --accent-active */
+    --accent-active-dark: rgb(15, 34, 94); /* incorrect */
+
+    /* Semantic states */
+    --danger: #c85b5b;
+    --danger-hover: #d66a6a;
+    --danger-active: #a94747;
+    --success: #5aab7d;
+    --warning: #caa35a;
+
+    --cancel: rgb(255, 217, 0);
+
+    /* Effects */
+    --overlay: rgba(0, 0, 0, 0.45);
+    --shadow: rgba(0, 0, 0, 0.25);
+    --shadow-soft: rgba(0, 0, 0, 0.15);
+
+    --radius: 6px;
 
     --hr: #555;
-
-    --filterExcludeOption: #04060a;
-
-    --filterIncludeOptionText: #fff;
-
-    --muted: #989898;
-
-    --border: rgb(70, 85, 110);
-    --border-focus: rgb(120, 150, 210);
-
-    --Btn_danger_fill: rgb(120, 40, 40);
-    --Btn_success_fill: rgb(30, 90, 60);
-    --Btn_cancel_fill: rgb(120, 100, 20);
-
-    --Text-disabled: var(--muted);
-
-    --focus-ring: rgb(120, 150, 210);
-    
-
-    --card: rgb(18, 31, 49);
-    --borderLibrary: rgb(63, 76, 96);
-
-    --ink: #2b2620;
-    --paper: #faf7f2;
-    --line: #ddd4c6;
-    --amber: #c9821f;
-    --amber-soft: #eddcbd;
 }
 
 body {
-	background-color: var(--bg-color);
-	color: var(--Text-color);
+	background-color: var(--bg);
+	color: var(--text);
 	/* margin-bottom: 15px; */
 	/* margin-right: 5px; */
     /*width: minmax(360px, 400px, 700px);*/
@@ -59,35 +57,35 @@ body {
 /* --- buttons --- */
 
 .Btn {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 4px;
     padding: 8px 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 .Btn:hover {
-    background-color: var(--Btn_hover);
+    background-color: var(--accent-hover-dark);
 }
 .Btn:active:not(:disabled) {
-    background-color: var(--Btn_active);
+    background-color: var(--accent-active-dark);
     transition: none;
 }
 
 .active {
-    background-color: var(--Btn_active);
+    background-color: var(--accent-active-dark);
 }
 
 /* --- custom context-menu --- */
 
 .custom-context-menu {
     position: absolute;
-    background: #222;
-    color: white;
+    background: var(--surface);
+    color: var(--text);
     border-radius: 8px;
     padding: 4px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px var(--shadow-soft);
     z-index: 10000;
     min-width: 180px;
     font-size: 14px;
@@ -96,7 +94,7 @@ body {
     justify-self: center;
     width: fit-content;
     flex-flow: column;
-    border: 1px solid #555;
+    border: 1px solid var(--border);
 }
 .context-menu-item-container {
     width: 100%;
@@ -110,18 +108,18 @@ body {
 }
 
 .menu-item[data-danger= "true"]:hover {
-    color: var(--Btn_hover_danger);
-    background-color: var(--Btn_danger_fill);
+    color: var(--danger);
+    background-color: var(--danger);
 
 }
 
 .menu-item:hover {
-    background: #444;
+    background: var(--surface-raised);
 }
 
 .menu-separator {
     height: 1px;
-    background: #555;
+    background: var(--border);
     margin: 4px 0;
     width: 100%;
 }
@@ -132,7 +130,7 @@ body {
 .promptSection {
     display: none;
     flex-direction: column;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--shadow);
     align-items: center;
     justify-content: center;
     position: absolute;
@@ -149,24 +147,24 @@ body {
     align-items: center;
     justify-content: center;
     width: 80%;
-    background-color: var(--Input-colorV2);
-    color: var(--Text-color);
-    outline-color: var(--Btn);
-    text-emphasis-color: var(--Btn);
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
     text-align: left;
-    accent-color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 3px;
 }
 .genericInput:focus {
-    outline: 1px invert var(--Btn);
+    outline: 1px invert var(--surface-input);
 }
 .genericLabel {
     display: none;
     align-items: center;
     justify-content: center;
 	width: 80%;
-    color: var(--Text-color);
+    color: var(--text);
     text-align: center;
 	word-wrap: unset;
     gap: 10px;
@@ -180,13 +178,13 @@ body {
 }
 .genericButton1 {
     display: none;
-    background-color: var(--bg-color);
-    color: var(--Text-color);
+    background-color: var(--bg);
+    color: var(--text);
 }
 .genericButton2 {
     display: none;
-    background-color: var(--bg-color);
-    color: var(--Text-color);
+    background-color: var(--bg);
+    color: var(--text);
 }
 
 .material-symbols-outlinedContainer {
@@ -223,7 +221,7 @@ body {
 	margin-top: 10px;
 	width: 40%;
 	height: 10px;
-	background-color: var(--card);
+	background-color: var(--surface);
 	border-radius: 5px;
 }
 
@@ -231,7 +229,7 @@ body {
 	display: flex;
 	width: 10%;
 	height: 100%;
-	background-color: var(--border-focus);
+	background-color: var(--accent-dark);
     transition: width 100ms ease-in-out;
     border-radius: 5px;
 }
@@ -263,7 +261,7 @@ body {
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: var(--border-focus);
+    color: var(--accent-soft);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -289,11 +287,11 @@ body {
 .drs-track-bg {
     left: 0;
     right: 0;
-    background: var(--line);
+    background: var(--surface-input);
     z-index: 0;
 }
 .drs-track-fill {
-    background: var(--border-focus);
+    background: var(--accent-dark);
     z-index: 1;
     overflow: hidden;
 }
@@ -331,9 +329,9 @@ body {
     height: 18px;
     margin-top: -7px;
     border-radius: 50%;
-    background: #fff;
-    border: 2px solid var(--border-focus);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    background: var(--text);
+    border: 2px solid var(--accent-dark);
+    box-shadow: 0 1px 2px var(--shadow-soft);
     cursor: pointer;
 }
 .drs-thumb::-moz-range-thumb {
@@ -341,18 +339,18 @@ body {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #fff;
-    border: 2px solid var(--border-focus);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    background: var(--text);
+    border: 2px solid var(--accent-dark);
+    box-shadow: 0 1px 2px var(--shadow-soft);
     cursor: pointer;
 }
 
 .drs-thumb:focus-visible::-webkit-slider-thumb {
-    outline: 2px solid var(--border-focus);
+    outline: 2px solid var(--accent-dark);
     outline-offset: 2px;
 }
 .drs-thumb:focus-visible::-moz-range-thumb {
-    outline: 2px solid var(--border-focus);
+    outline: 2px solid var(--accent-dark);
     outline-offset: 2px;
 }
 
@@ -360,26 +358,26 @@ body {
     display: flex;
     justify-content: space-between;
     font-size: 11px;
-    color: #a89f8f;
+    color: var(--text-muted);
     padding: 0 1px;
 }
 
 .active-drs-stick {
-    color: var(--border-focus);
+    color: var(--accent-soft);
     font-weight: 600;
 }
 
 .result {
     margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px dashed var(--line);
+    border-top: 1px dashed var(--border);
     font-size: 12px;
-    color: #8c8375;
+    color: var(--text-muted);
 }
 
 .result code {
-    color: var(--ink);
-    background: var(--resetFilterBtn_hover);
+    color: var(--text);
+    background: var(--accent-hover-dark);
     padding: 1px 5px;
     border-radius: 4px;
 }
@@ -391,20 +389,20 @@ body {
     background: transparent;
     border: none;
     outline: none;
-    accent-color: var(--border-focus);
+    accent-color: var(--accent-dark);
 }
 
 /* Chrome / Edge / Safari */
 .drs-thumb:hover::-webkit-slider-thumb,
 .drs-thumb:focus-visible::-webkit-slider-thumb {
-    border-color: var(--border-focus);
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-dark);
+    background: var(--text);
+    box-shadow: 0 1px 3px var(--shadow);
 }
 .drs-thumb:active::-webkit-slider-thumb {
-    background: var(--border-focus);
-    border-color: var(--border-focus);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+    box-shadow: 0 1px 3px var(--accent-soft);
 }
 .drs-thumb:hover::-webkit-slider-runnable-track,
 .drs-thumb:active::-webkit-slider-runnable-track,
@@ -415,14 +413,14 @@ body {
 /* Firefox */
 .drs-thumb:hover::-moz-range-thumb,
 .drs-thumb:focus-visible::-moz-range-thumb {
-    border-color: var(--border-focus);
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-dark);
+    background: var(--text);
+    box-shadow: 0 1px 3px var(--shadow);
 }
 .drs-thumb:active::-moz-range-thumb {
-    background: var(--border-focus);
-    border-color: var(--border-focus);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+    box-shadow: 0 1px 3px var(--accent-soft);
 }
 .drs-thumb:hover::-moz-range-track,
 .drs-thumb:active::-moz-range-track,
@@ -435,4 +433,9 @@ body {
     box-shadow: unset;
     border-color: unset;
     background: unset;
+}
+
+
+input:focus-visible {
+    outline-offset: -2px;
 }

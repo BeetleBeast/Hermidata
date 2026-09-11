@@ -36,11 +36,11 @@ async function addBookmark(hermidata: HermidataModel) {
         console.warn("Folder mapping not found for", hermidata.novelType, hermidata.GetReadStatus());
         return;
     }
-    const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
+    const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
-    const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
+    const finalFolderId: string = await createNestedFolders(pathSegments, BrowserRoot);
     const bookmarkTitle = `${hermidata.title} - Chapter ${hermidata.GetChapter() || '0'}`;
     const bookmark = await createBookmark({
         parentId: finalFolderId,
@@ -64,12 +64,12 @@ async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplac
         return;
     }
 
-    const Browserroot = browser !== undefined && navigator.userAgent.includes("Firefox")
+    const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
 
-    const finalFolderId: string = await createNestedFolders(pathSegments, Browserroot);
+    const finalFolderId: string = await createNestedFolders(pathSegments, BrowserRoot);
     const freshBookmarks = await searchValidBookmarks();
     const bookmarkToUpdate = freshBookmarks.find(b => b.url === OldURL);
     const bookmarkToUpdateTest = freshBookmarks.find(b => b.id === OldID);
@@ -183,14 +183,14 @@ function findNodeByTitle(node: chrome.bookmarks.BookmarkTreeNode, title: string)
 }
 async function getRootByTitle(title: string) {
     const trees: chrome.bookmarks.BookmarkTreeNode[] = await new Promise((resolve) => chrome.bookmarks.getTree(resolve));
-    let rootidList = [];
+    let rootIdList = [];
     const rootNode = trees[0];
-    rootidList.push(rootNode.id);
+    rootIdList.push(rootNode.id);
 
     for (const child of rootNode.children || []) {
         if (child.title === title && !child.url) {
-            rootidList.push(child.id)
-            return rootidList.at(-1);
+            rootIdList.push(child.id)
+            return rootIdList.at(-1);
         }
     }
     return rootNode.id;

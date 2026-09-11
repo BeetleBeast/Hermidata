@@ -68,7 +68,7 @@ export async function checkFeedsForUpdates() {
             }
         }
 
-        setState.lastAutoFeedCkeck(Date.now());
+        setState.lastAutoFeedCheck(Date.now());
         await setAllRawFeeds(Object.values(savedFeeds));
     } catch (err) {
         console.error(`[Hermidata] [✕] Failed to check feeds:`, err);
@@ -81,16 +81,16 @@ async function webSearch() {
     // get the links to check
     const savedFeeds = await getAllRawFeeds();
     const allHermidata = await getAllHermidata();
-    const allnovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
+    const allNovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
 
     const allNewItemsKey: string[] = [];
 
-    console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allnovelRSS.length}`);
+    console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allNovelRSS.length}`);
 
     const combined = Object.values(savedFeeds)
     //const test = Object.values(savedFeeds).flatMap(f => f?.items).filter(Boolean);
 
-    for (const novel of allnovelRSS) {
+    for (const novel of allNovelRSS) {
         if (!novel) continue;
         if (!novel.domain || !novel.latestItem?.title || !novel.url) {
             // console.groupEnd();

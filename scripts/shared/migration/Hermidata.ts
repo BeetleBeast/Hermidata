@@ -229,7 +229,7 @@ export class HermidataMigration {
      * @param {String} id2 
      * @returns {Premise<DuplicationResult[]>} - the similarity score and details of both entries
      */
-    public async findDuplicatescore(id1: string, id2: string): Promise<DuplicationResult[]> {
+    public async findDuplicateScore(id1: string, id2: string): Promise<DuplicationResult[]> {
         const data = this.AllHermidata || await getAllHermidata();
         const score = CalcDiff(data[id1].title, data[id2].title);
         let output = []
@@ -242,8 +242,8 @@ export class HermidataMigration {
             source_B: data[id2].source,
             novelType_A: data[id1].novelType,
             novelType_B: data[id2].novelType,
-            RSSA: data[id1]?.rss || null,
-            RSSB: data[id2]?.rss || null,
+            RssA: data[id1]?.rss || null,
+            RssB: data[id2]?.rss || null,
             score: score
         })
         return output;
@@ -813,8 +813,8 @@ export class HermidataMigration {
         return ('id' in feed);
     }
     private static isFeedV1(feed: Feed | FeedV1): feed is Feed {
-        const hasnotId = !('id' in feed);
-        return hasnotId;
+        const hasNotId = !('id' in feed);
+        return hasNotId;
     }
     private static migrateFeedV1ToV2(feed: FeedV1): Feed {
         const trimmedTitle = TrimTitle.trimTitle(feed.latestItem.title, feed.latestItem.link).title;

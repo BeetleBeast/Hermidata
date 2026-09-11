@@ -119,11 +119,11 @@ export class SortLogic extends Sort {
         const entries = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"]`);
 
         for (const entry of entries) {
-            this.applyInividualFilterToEntries(entry, filters);
+            this.applyIndividualFilterToEntries(entry, filters);
         }
     }
 
-    private applyInividualFilterToEntries(entry: HTMLDivElement, filters: Filters): void {
+    private applyIndividualFilterToEntries(entry: HTMLDivElement, filters: Filters): void {
         const hashItem = this.GetHashItem(entry);
         const entryData = this.AllHermidata[hashItem];
         const Type = entryData.novelType;
@@ -147,7 +147,7 @@ export class SortLogic extends Sort {
         }
 
         entry.style.display = visible ? "" : "none";
-        entry.dataset.seachable = visible ? 'true' : 'false';
+        entry.dataset.searchable= visible ? 'true' : 'false';
     };
 
     private matchingFilter(filters: Filters, inputs: (string | string[])[], filterType: 'include' | 'exclude'): boolean {

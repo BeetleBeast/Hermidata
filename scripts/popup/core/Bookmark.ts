@@ -169,8 +169,7 @@ export class BookmarkController {
         bookmarkContainer.dataset.key = key;
         const isActiveBookmark = this.hermidata.chapter.bookmarkInUse === key;
 
-        bookmarkContainer.style.backgroundColor = isActiveBookmark ? 'var(--Btn_active)' : 'var(--Input-colorV2)';
-
+        bookmarkContainer.dataset.active = isActiveBookmark.toString();
         const bookmarkLabel = document.createElement('div');
         bookmarkLabel.className = 'bookmarkLabel';
         bookmarkLabel.textContent = bookmark.label;
@@ -199,7 +198,7 @@ export class BookmarkController {
         this.bookmarkLabelInput!.value = '';
         const defaultColor = '#fcfcfc';
         ColorPicker.updateColor(defaultColor);
-        this.bookmarkColorInput!.style.backgroundColor = 'var(--Input-colorV2)';
+        this.bookmarkColorInput!.style.backgroundColor = 'var(--surface-raised)';
         this.bookmarkChapterInput!.value = currentChapter.toString();
         this.bookmarkNotesInput!.textContent = currentNotes ?? '';
 

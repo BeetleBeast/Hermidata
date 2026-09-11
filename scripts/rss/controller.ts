@@ -18,8 +18,8 @@ export class BuildRSSController {
     constructor(hermidata: HermidataModel) {
         this.hermidata = hermidata;
     }
-    public async makeSubscibeBtn(): Promise<void> {
-        new Subscribe(this.hermidata,  await RssBuild.init()).makeSubscibeBtn();
+    public async makeSubscribeBtn(): Promise<void> {
+        new Subscribe(this.hermidata,  await RssBuild.init()).makeSubscribeBtn();
     }
     public async activateAutoSubscribe(): Promise<void> {
         new Subscribe(this.hermidata,  await RssBuild.init()).autoSubscribe();
@@ -58,8 +58,8 @@ export class BuildRSSController {
         return new FeedItem( await RssBuild.init()).makeItemHeader();
     }
     
-    public async makefeedItem(HermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
-        return new FeedItem( await RssBuild.init()).makefeedItem(HermidataList, isRSSItem, sortByLastUpdated);
+    public async makeFeedItem(HermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
+        return new FeedItem( await RssBuild.init()).makeFeedItem(HermidataList, isRSSItem, sortByLastUpdated);
     }
     
     public async makeFooterSection(): Promise<void> {

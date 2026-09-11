@@ -1,7 +1,7 @@
 import iro from '@jaames/iro';
 
 export class ColorPicker {
-    private static colorpicker: iro.ColorPicker | null = null;
+    private static colorPicker: iro.ColorPicker | null = null;
     private static hexColor: string | null = null;
     private static colorPickerDiv: HTMLDivElement | null = null;
     private static currentCallback: ((color: string) => void) | null = null;
@@ -73,15 +73,15 @@ export class ColorPicker {
         const element = ColorPicker.CreateColorPickerInDOM();
         const hexColor = ColorPicker.toHex(defaultColor);
         
-        if (this.colorpicker) {
+        if (this.colorPicker) {
             // If picker already exists, just update color
-            this.colorpicker.color.hexString = hexColor;
+            this.colorPicker.color.hexString = hexColor;
             // Ensure value is at least 50%
-            if (this.colorpicker.color.value < 50) this.colorpicker.color.value = 100;
+            if (this.colorPicker.color.value < 50) this.colorPicker.color.value = 100;
             return;
         }
 
-        this.colorpicker = iro.ColorPicker(element, {
+        this.colorPicker = iro.ColorPicker(element, {
             width: 200,
             color: hexColor,
             layoutDirection: 'horizontal',
@@ -99,7 +99,7 @@ export class ColorPicker {
             ]
         });
 
-        this.colorpicker.on('input:end', (color: iro.Color) => {
+        this.colorPicker.on('input:end', (color: iro.Color) => {
             this.hexColor = color.hexString;
             if (this.currentCallback) {
                 this.currentCallback(color.hexString);
@@ -107,7 +107,7 @@ export class ColorPicker {
         });
 
         // Also update on live changes (optional)
-        this.colorpicker.on('color:change', (color: iro.Color) => {
+        this.colorPicker.on('color:change', (color: iro.Color) => {
             this.hexColor = color.hexString;
         });
     }
@@ -162,12 +162,12 @@ export class ColorPicker {
     }
     /** Updates the color */
     public static updateColor(color: string): void {
-        if (this.colorpicker) this.colorpicker.color.hexString = color;
+        if (this.colorPicker) this.colorPicker.color.hexString = color;
     }
     /** Destroys the color picker */
     public static destroy(): void {
         // iro doesn't have a destroy method, but we can clean up
-        if (this.colorpicker) this.colorpicker = null;
+        if (this.colorPicker) this.colorPicker = null;
         if (this.colorPickerDiv) {
             this.colorPickerDiv.remove();
             this.colorPickerDiv = null;

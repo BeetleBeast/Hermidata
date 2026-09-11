@@ -36,9 +36,9 @@ const stateConfig = {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { Hermidata, past } = await startupPromise;
-    // initialise the controller class
+    // initialize the controller class
     const controller = new HermidataController(Hermidata, past);
-    // initialise the controller
+    // initialize the controller
     await controller.init();
 
     // After popup init — start quietly in the background
@@ -58,7 +58,7 @@ class HermidataController {
 
     private tagsSystem: TagsSystem = new TagsSystem();
 
-    private dupplicate: HermidataMigration = new HermidataMigration();
+    private duplicate: HermidataMigration = new HermidataMigration();
 
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
@@ -72,9 +72,9 @@ class HermidataController {
 
         this.forceSetClassic();
 
-        // initialise RSS mode
+        // initialize RSS mode
         this.RSS = new RSS(this.hermidata);
-        // initialise bookmark system
+        // initialize bookmark system
         this.bookmarkSystem = new BookmarkController(this.hermidata, this.pastHermidata === null);
         this.bookmarkSystem.init();
     }
@@ -87,7 +87,7 @@ class HermidataController {
         this.populateUI(settings);
         
         this.bindEvents();
-        // initialise tags system
+        // initialize tags system
         await this.tagsSystem.init(settings);
 
         // log a table of all potential duplicates
@@ -95,20 +95,20 @@ class HermidataController {
         setTimeout(() => this.checkForDuplicates(), 0);
     }
     private async checkForDuplicates(): Promise<void> {
-        await this.dupplicate.init();
-        const dups = await this.dupplicate.findPotentialDuplicates(0.9);
-        if (dups.length > 0) console.table(dups);
+        await this.duplicate.init();
+        const duplicates = await this.duplicate.findPotentialDuplicates(0.9);
+        if (duplicates.length > 0) console.table(duplicates);
     }
 
     private forceSetClassic() {
-        setElement("#HDRSSBtn", el => el.classList = "Btn");
-        setElement(".HDRSS", el => el.style.opacity = '0');
-        setElement(".HDRSS", el => el.style.display = 'none');
+        setElement("#HDRssBtn", el => el.classList = "Btn");
+        setElement(".HDRss", el => el.style.opacity = '0');
+        setElement(".HDRss", el => el.style.display = 'none');
         setElement(".HDClassic", el => el.style.opacity = '1');
         setElement(".HDClassic", el => el.style.overflow = 'hidden');
         
         // deactivate links in classic
-        document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
+        document.querySelectorAll<HTMLButtonElement>(".HDRss").forEach(a => {
             a.style.pointerEvents = 'none';
         });
         // activate links in RSS
@@ -173,7 +173,7 @@ class HermidataController {
         this.RSS?.changePageToClassic();
 
         this.populateSelect(settings.ContentTypesAndStatuses.TYPE_OPTIONS, "#Type");
-        this.populateSelect(settings.ContentTypesAndStatuses.TYPE_OPTIONS, "#Type_HDRSS");
+        this.populateSelect(settings.ContentTypesAndStatuses.TYPE_OPTIONS, "#Type_HDRss");
         this.populateSelect(settings.ContentTypesAndStatuses.STATUS_OPTIONS, "#status");
         this.populateSelect(settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS, "#NovelStatus");
 
@@ -182,7 +182,7 @@ class HermidataController {
 
 
         // backward compatibility for past hermidata
-        this.trycapitalizingTypesAndStatus(settings.ContentTypesAndStatuses.TYPE_OPTIONS, settings.ContentTypesAndStatuses.STATUS_OPTIONS);
+        this.tryCapitalizingTypesAndStatus(settings.ContentTypesAndStatuses.TYPE_OPTIONS, settings.ContentTypesAndStatuses.STATUS_OPTIONS);
 
         setElement<HTMLInputElement>('#title', el => el.value = this.hermidata.title);
         setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.GetLatestReadChapter()));
@@ -203,25 +203,25 @@ class HermidataController {
         setElement<HTMLSpanElement>(".version", el => el.textContent = ext.runtime.getManifest().version);
 
         // HDR RSS
-        setElement<HTMLInputElement>("#title_HDRSS", el => el.value = this.hermidata.title);
-        setElement<HTMLInputElement>("#Type_HDRSS", el => el.value = this.hermidata.novelType);
+        setElement<HTMLInputElement>("#title_HDRss", el => el.value = this.hermidata.title);
+        setElement<HTMLInputElement>("#Type_HDRss", el => el.value = this.hermidata.novelType);
     }
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
 
         getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e as PointerEvent));
-        getElement("#HDRSSBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e as PointerEvent));
+        getElement("#HDRssBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e as PointerEvent));
 
         getElement('.openSettings')?.addEventListener('click', () => {
             ext.runtime.openOptionsPage()
-            .catch((error) => console.error('Extention error trying open extention settings: ',error)); 
+            .catch((error) => console.error('Extension error trying open Extension settings: ',error)); 
         });
 
         
 
 
     }
-    private trycapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
+    private tryCapitalizingTypesAndStatus(novelTypes: AnyNovelType[], readStatus: AnyReadStatus[]): void {
         if (this.pastHermidata && Object.values(this.pastHermidata).length > 0) {
             if (!novelTypes.includes(this.pastHermidata.novelType)) {
                 let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.novelType)
@@ -253,7 +253,7 @@ class HermidataController {
         // TODO: check if it works
         // migrate if duplicate
         const hasMigrated = await this.migrateIfDuplicate();
-        if (hasMigrated) console.info('magration plan activated');
+        if (hasMigrated) console.info('migration plan activated');
         
         const settings = await getSettings();
         const allowedSendSHeet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
@@ -336,7 +336,7 @@ class HermidataController {
         await this.tagsSystem.saveTags(settings);
     }
     private async migrateIfDuplicate(): Promise<boolean> {
-        // if the Hermidata is a past entry but with a mofified Type
+        // if the Hermidata is a past entry but with a modified Type
         // then give option to migrate it to the new type
         const newPast = new PastHermidata(this.hermidata);
         const newHermidata = await newPast.checkForDuplicates();
@@ -442,7 +442,7 @@ const startupPromise = (async () => {
     const Hermidata = new HermidataModel(HermidataModel.from(defaultNovelType, defaultReadStatus, defaultNovelStatus));
     // set the values from the tab
     Hermidata.SetFromTab(CurrentTabInfo);
-    // initialise the  PastHermidata class
+    // initialize the  PastHermidata class
     const past = new PastHermidata(Hermidata);
     // create the Hermidata with all values set from a past if it exists
     await Hermidata.SetPast(past);

@@ -13,8 +13,6 @@ export class EventListener extends RssBuild {
     
     private activeSubMenu: HTMLDivElement | null = null;
 
-    private currentTabId: number | null = null;
-
     public async attachEventListeners(): Promise<void> {
         // parents
         const notificationFeed = document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="true"]');
@@ -23,7 +21,7 @@ export class EventListener extends RssBuild {
         const feedListLocalReload = await getHermidataWithRssFromBackground();
 
         for (let feed of notificationFeed) {
-            feed.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, true, true));
+            feed.addEventListener('contextmenu', (e) => this.rightMouseClickOnItem(e, true, true));
             const hashItem = this.GetHashItem(feed);
             feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], true);
         }
@@ -35,7 +33,7 @@ export class EventListener extends RssBuild {
             }
             const hashItem = this.GetHashItem(item);
             const entry = new HermidataModel(this.AllHermidata[hashItem]);
-            items.addEventListener('contextmenu', (e) => this.rightmouseclickonItem(e, false, entry.hasRSS()));
+            items.addEventListener('contextmenu', (e) => this.rightMouseClickOnItem(e, false, entry.hasRSS()));
             items.onclick = () => this.clickOnItem(this.AllHermidata[hashItem], false);
         }
     }
@@ -46,7 +44,7 @@ export class EventListener extends RssBuild {
 
         await openLink(value?.rss?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
     }
-    private async rightmouseclickonItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
+    private async rightMouseClickOnItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
 
@@ -71,7 +69,7 @@ export class EventListener extends RssBuild {
             "separator",
             { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement), danger: true },
         ];
-        const optinalMenuOption: MenuOptions[] = isRSSItem ? [
+        const optionalMenuOption: MenuOptions[] = isRSSItem ? [
             "separator",
             { label: "Unsubscribe", action: () => this.unsubscribe(e.target as HTMLDivElement), danger: true },
         ] : [];
@@ -87,7 +85,7 @@ export class EventListener extends RssBuild {
             { label: "pick element(s) to add as alt title", action: async () => await this.pickElement(e.target as HTMLDivElement) },
             { label: "add alt title", action: async () => await this.addAltTitle(e.target as HTMLDivElement) },
             { label: "Rename", action: async () => await this.RenameItem(e.target as HTMLDivElement) },
-            ...optinalMenuOption,
+            ...optionalMenuOption,
             "separator",
             { label: "delete", action: async () => await this.remove(e.target as HTMLDivElement), danger: true },
         ];
@@ -186,7 +184,7 @@ export class EventListener extends RssBuild {
     }
     private setSubMenuDirection(subMenu: HTMLDivElement, menu: HTMLDivElement, subMenuContainer: HTMLDivElement) {
 
-        const { rightSpace } = this.getSubMenuPostion(menu, subMenuContainer);
+        const { rightSpace } = this.getSubMenuPosition(menu, subMenuContainer);
 
         const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
 
@@ -234,11 +232,11 @@ export class EventListener extends RssBuild {
         menu.style.left = `${left}px`;
     }
     private setSubMenuPosition(subMenuContainer: HTMLDivElement, subMenu: HTMLDivElement, menu: HTMLDivElement) {
-        // calcualte if enaught space right
+        // calculate if enough space right
         // if not place it to the left
         subMenu.style.display = "block";
 
-        const { rightSpace, topSpace } = this.getSubMenuPostion(menu, subMenuContainer);
+        const { rightSpace, topSpace } = this.getSubMenuPosition(menu, subMenuContainer);
 
         const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
         
@@ -250,7 +248,7 @@ export class EventListener extends RssBuild {
 
         // subMenu.style.top = `${topSpace}px`;
     }
-    private getSubMenuPostion(menu: HTMLDivElement, subMenuContainer: HTMLDivElement) {
+    private getSubMenuPosition(menu: HTMLDivElement, subMenuContainer: HTMLDivElement) {
         const rectMenu = menu.getBoundingClientRect();
 
         const rect = subMenuContainer.getBoundingClientRect();
@@ -277,7 +275,7 @@ export class EventListener extends RssBuild {
         menu.appendChild(subMenuContainer);
         return subMenuContainer;
     }
-    private getEntrieFromTarget(target: HTMLDivElement | null): Hermidata | undefined {
+    private getEntryFromTarget(target: HTMLDivElement | null): Hermidata | undefined {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
 
@@ -290,7 +288,7 @@ export class EventListener extends RssBuild {
         return entry
     }
     private setAllBookmarksMenuOptions(target: HTMLDivElement | null, pageTypeOpener: "InPage" | "InNewWindow"): subMenu["options"] {
-        const entry = this.getEntrieFromTarget(target);
+        const entry = this.getEntryFromTarget(target);
         if (!entry || !target) return [];
 
         const bookmarkMenu: subMenu["options"] = [];
@@ -304,7 +302,7 @@ export class EventListener extends RssBuild {
         const item = this.getEntriesItem(target) || this.getNotificationItem(target);
         if (!item || !target) return;
         const nameClass = 'hermidata-item-title';
-        if (item.dataset.seachable == 'true') {
+        if (item.dataset.searchable == 'true') {
             const title = item.querySelector(`.${nameClass}`)
             if (!title) throw new Error('title not found');
             navigator.clipboard.writeText(title.textContent.trim());
@@ -374,73 +372,20 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        // TODO: get title from element picker
-        const picked = await this.getPickerElement();
-        if (!picked) {
-            console.log('picker cancelled');
+        
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id) {
+            console.warn("No active tab found.");
             return;
         }
-        const newTitle = getMultipleTitles(picked);
-        if (!newTitle) return;
-        
-        // Normalize and deduplicate
-        for (let i = 0; i < newTitle.length; i++) {
-            const trimmed = TrimTitle.trimTitle(newTitle[i], entry.GetUrl()).title;
-            entry.meta.altTitles = Array.from(
-                new Set([...(entry.meta.altTitles || []), trimmed])
-            );
-        }
 
-        // give feedback to user
-        if (!this.currentTabId) {
-            console.warn("No current tab ID found.");
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab.id) {
-                console.warn("No active tab found.");
-                return null;
-            }
-            this.currentTabId = tab.id;
-        }
+        await ext.runtime.sendMessage({ 
+            type: 'START_PICKING_FLOW',
+            entry: entry.toJSON(),
+            tabID: tab.id
+        })
 
-        // Save to storage
-        await saveHermidata(hashItem, entry.toJSON());
-    }
-
-    private async getPickerElement(): Promise<PickedElementData | null> {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab.id) {
-            console.warn("No active tab found.");
-            return null;
-        }
-        this.hidePopup();
-
-        this.currentTabId = tab.id;
-
-        await chrome.tabs.sendMessage(tab.id, { action: "startPicking" });
-        const result = await new Promise<PickedElementData | null>((resolve) => this.pendingPick = resolve);
-
-        // TODO: these events need to be removed, as they do not work*
-        // * because the popup hides first and only on the second key stroke does the element picker closes
-        window.addEventListener("pagehide", () => {
-            if (this.currentTabId) chrome.tabs.sendMessage(this.currentTabId, { action: "cancelPicking" });
-        });
-        // TODO: same as above
-        document.addEventListener("pagehide", () => {
-            chrome.tabs.sendMessage(tab.id!, { action: "cancelPicking" });
-        });
-
-        this.revertPopupToDefault();
-        return result;
-    }
-    private hidePopup() {
-        const popup = document.querySelector('html');
-        // UPDATE: give a hint of the progress of the element picker instead of hiding*
-        // * the popup doesn't hide but its width and height are reduced to the minimum the browser has set ( about 20 px)
-        if (popup) popup.style.display = 'none';
-    }
-    private revertPopupToDefault() {
-        const popup = document.querySelector('html');
-        if (popup) popup.style.display = 'block';
+        window.close();
     }
     private async addAltTitle(target: HTMLDivElement | null) {
         if (!target) return;
@@ -550,7 +495,7 @@ export class EventListener extends RssBuild {
         const confirmation = await customConfirm(`are you sure you want to Unsubscribe to ${entry.title}`, {accept: 'Unsubscribe', reject: 'Cancel'});
         if ( !confirmation) return;
 
-        console.log('un-link RSS to extention')
+        console.log('un-link RSS to extension')
         await this.unLinkRSSFeed(entry);
         console.log('reloading notification')
         await this.reloadContent(NotificationSection, AllItemSection)

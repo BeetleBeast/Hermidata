@@ -33,9 +33,9 @@ export function getChapterFromTitle(title: string | undefined, url: string): num
     const chapterNumberPartV1 = Number.parseFloat(chapterPartV1);
     const chapterNumberPartV2 = Number.parseFloat(chapterPartV2);
     const chapterNumberPartV3 = Number.parseFloat(chapterPartV3);
-    const chapterNumberPartv4 = Number.parseFloat(chapterPartV4);
+    const chapterNumberPartV4 = Number.parseFloat(chapterPartV4);
 
-    const candidates = [chapterNumberPartv4, chapterNumberPartV2, chapterNumberPartV3, chapterNumberPartV1];
+    const candidates = [chapterNumberPartV4, chapterNumberPartV2, chapterNumberPartV3, chapterNumberPartV1];
     return candidates.find(n => !Number.isNaN(n) && n >= 0) ?? Number.NaN;
 }
 
@@ -289,11 +289,11 @@ export class TrimTitle {
         return true;
     }
     private static splitTitleByCommonSeparators(title: string): string[] {
-        const cleanstring = TrimTitle.CleanString(title);
+        const cleanString = TrimTitle.CleanString(title);
 
         // Split only on strong separators first (em-dash, pipe, colon, hash, comma)
         // Leave plain ' - ' for a second pass with smarter logic
-        const strongSplit = cleanstring.split(/ (?:–|—|:|#|\|) /g).map(p => p.trim()).filter(Boolean);
+        const strongSplit = cleanString.split(/ (?:–|—|:|#|\|) /g).map(p => p.trim()).filter(Boolean);
 
         // Now handle ' - ' within each strong-split part
         const result: string[] = [];

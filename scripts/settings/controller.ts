@@ -1,5 +1,5 @@
 import { ImportsAndExports } from "./build/ImportsAndExports";
-import { ExtensionBehaviour } from "./build/ExtensionBehaviour";
+import { ExtensionBehavior } from "./build/ExtensionBehavior";
 import { DefaultBookmarkInputs } from "./build/DefaultBookmarkInputs";
 import { Account_Connection } from "./build/Account_Connection";
 import { ContentTypesAndStatuses } from "./build/ContentTypesAndStatuses";
@@ -14,7 +14,7 @@ export class BuildController {
 
     private readonly accountConnection = new Account_Connection();
     
-    private readonly extensionBehaviour = new ExtensionBehaviour();
+    private readonly extensionBehavior = new ExtensionBehavior();
     
     private readonly defaultBookmarkInputs = new DefaultBookmarkInputs();
     
@@ -28,7 +28,7 @@ export class BuildController {
     
     private readonly navigations: Map<string, string> = new Map([
         ['account-connection', 'Account_Connection'],
-        ['extension-behaviour', 'Extension_Behaviour'],
+        ['extension-behavior', 'Extension_Behavior'],
         ['default-bookmarks', 'DefaultBookmarkSettings'],
         ['content-types', 'ContentTypes_Statuses'],
         ['tag-management', 'TagManagement'],
@@ -42,7 +42,7 @@ export class BuildController {
 
 
     private readonly openAccount_Connection = getElement<HTMLButtonElement>(`#open${this.navigations.get('account-connection')}`);
-    private readonly openExtension_Behaviour = getElement<HTMLButtonElement>(`#open${this.navigations.get('extension-behaviour')}`);
+    private readonly openExtension_Behavior = getElement<HTMLButtonElement>(`#open${this.navigations.get('extension-behavior')}`);
     private readonly openDefaultBookmarkSettings = getElement<HTMLButtonElement>(`#open${this.navigations.get('default-bookmarks')}`);
     private readonly openContentTypes_Statuses = getElement<HTMLButtonElement>(`#open${this.navigations.get('content-types')}`);
     private readonly openTagManagement = getElement<HTMLButtonElement>(`#open${this.navigations.get('tag-management')}`);
@@ -61,7 +61,7 @@ export class BuildController {
     private bindEvents() {
         const navStrings = Array.from(this.navigations.keys());
         this.openAccount_Connection?.addEventListener('click', (e) => this.navigateTo(e, navStrings[0]));
-        this.openExtension_Behaviour?.addEventListener('click', (e) => this.navigateTo(e, navStrings[1]));
+        this.openExtension_Behavior?.addEventListener('click', (e) => this.navigateTo(e, navStrings[1]));
         this.openDefaultBookmarkSettings?.addEventListener('click', (e) => this.navigateTo(e, navStrings[2]));
         this.openContentTypes_Statuses?.addEventListener('click', (e) => this.navigateTo(e, navStrings[3]));
         this.openTagManagement?.addEventListener('click', (e) => this.navigateTo(e, navStrings[4]));
@@ -102,8 +102,8 @@ export class BuildController {
             case 'account-connection':
                 await this.accountConnection.init();
                 break;
-            case 'extension-behaviour':
-                await this.extensionBehaviour.init();
+            case 'extension-behavior':
+                await this.extensionBehavior.init();
                 break;
             case 'default-bookmarks':
                 await this.defaultBookmarkInputs.init();
@@ -127,8 +127,8 @@ export class BuildController {
             case 'account-connection':
                 await this.accountConnection.saveValues();
                 break;
-            case 'extension-behaviour':
-                await this.extensionBehaviour.saveValues();
+            case 'extension-behavior':
+                await this.extensionBehavior.saveValues();
                 break;
             case 'default-bookmarks':
                 await this.defaultBookmarkInputs.saveValues();
@@ -152,8 +152,8 @@ export class BuildController {
             case 'account-connection':
                 await this.accountConnection.cancelValues();
                 break;
-            case 'extension-behaviour':
-                await this.extensionBehaviour.cancelValues();
+            case 'extension-behavior':
+                await this.extensionBehavior.cancelValues();
                 break;
             case 'default-bookmarks':
                 await this.defaultBookmarkInputs.cancelValues();
@@ -181,8 +181,8 @@ export class BuildController {
             case 'account-connection':
                 await this.accountConnection.resetValues();
                 break;
-            case 'extension-behaviour':
-                await this.extensionBehaviour.resetValues();
+            case 'extension-behavior':
+                await this.extensionBehavior.resetValues();
                 break;
             case 'default-bookmarks':
                 await this.defaultBookmarkInputs.resetValues();

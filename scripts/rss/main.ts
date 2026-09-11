@@ -1,21 +1,21 @@
 import { PastHermidata } from "../popup/core/Past";
-import type { RSSData, RSSDOM } from "../shared/types/index";
+import type { RSSData, RssDOM } from "../shared/types/index";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
 import { getHermidataNotification } from "./load";
 
 
-let rssPreloadPromise: Promise<RSSDOM> | null = null;
+let rssPreloadPromise: Promise<RssDOM> | null = null;
 
-let rssDOMCache: RSSDOM | null = null;
+let rssDOMCache: RssDOM | null = null;
 
 /*
-0. Cashe constants
+0. Cache constants
 
 1. Preload RSS data
 
-( IN RSSDOM Class )
+( IN RssDOM Class )
 
 2. Build RSS DOM 
 3. Insert RSS DOM
@@ -33,9 +33,9 @@ export class RSS {
 
     public openClassic(e: PointerEvent) {
         this.changePageToClassic();
-        this.changclassListofClassic(e);
+        this.changClassListOfClassic(e);
     }
-    private changclassListofClassic(e: PointerEvent): void {
+    private changClassListOfClassic(e: PointerEvent): void {
         const target = e.target as HTMLButtonElement;
         target.classList = "active Btn";
     }
@@ -57,13 +57,13 @@ export class RSS {
             notification.innerHTML = "";
             allSec.innerHTML = "";
             
-            await this.BuildRSS.makeSubscibeBtn();
+            await this.BuildRSS.makeSubscribeBtn();
             this.changeLoadingBar(10);
             
             await this.BuildRSS.makeFeedHeader(notification);
             this.changeLoadingBar(15);
             
-            this.insertRSSPage(dom, {notifSec: notification, allSec: allSec});
+            this.insertRSSPage(dom, {notificationSec: notification, allSec: allSec});
             this.changeLoadingBar(50);
             
             await this.BuildRSS.makeSortSection(sortSection);
@@ -85,14 +85,14 @@ export class RSS {
         }
     }
     public changePageToClassic() {
-        setElement("#HDRSSBtn", el => el.classList = "Btn");
-        setElement(".HDRSS", el => el.style.opacity = String(0));
-        setElement(".HDRSS", el => el.style.display = 'none');
+        setElement("#HDRssBtn", el => el.classList = "Btn");
+        setElement(".HDRss", el => el.style.opacity = String(0));
+        setElement(".HDRss", el => el.style.display = 'none');
         setElement(".HDClassic", el => el.style.opacity = String(1));
         setElement(".HDClassic", el => el.style.overflow = 'hidden');
         
         // deactivate links in classic
-        document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
+        document.querySelectorAll<HTMLButtonElement>(".HDRss").forEach(a => {
             a.style.pointerEvents = 'none';
         });
         // activate links in RSS
@@ -115,17 +115,17 @@ export class RSS {
         };
 
         // Build notification items
-        rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makefeedItem(feeds, false, true));
+        rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makeFeedItem(feeds, false, true));
 
         // Build all items header
         rssDomPackage.allItems.header.appendChild(await this.BuildRSS.makeItemHeader());
 
         // Build full items list
-        rssDomPackage.allItems.items.appendChild(await this.BuildRSS.makefeedItem(hermidata, true));
+        rssDomPackage.allItems.items.appendChild(await this.BuildRSS.makeFeedItem(hermidata, true));
 
         return rssDomPackage;
     }
-    public async preloadRSS(): Promise<RSSDOM> {
+    public async preloadRSS(): Promise<RssDOM> {
         try {
             if (rssPreloadPromise) return rssPreloadPromise;
 
@@ -154,9 +154,9 @@ export class RSS {
         return { feeds, hermidata: merged };
     }
 
-    private insertRSSPage(dom: RSSDOM, {notifSec, allSec}: { notifSec: Element; allSec: Element; }) {
+    private insertRSSPage(dom: RssDOM, {notificationSec, allSec}: { notificationSec: Element; allSec: Element; }) {
         try {
-            notifSec.appendChild(dom.notifications.items.cloneNode(true));
+            notificationSec.appendChild(dom.notifications.items.cloneNode(true));
             allSec.appendChild(dom.allItems.header.cloneNode(true));
             allSec.appendChild(dom.allItems.items.cloneNode(true));
         } catch (error) {
@@ -169,14 +169,14 @@ export class RSS {
         target.classList = "active Btn";
         setElement("#HDClassicBtn", el => el.classList = "Btn");
         setElement(".HDClassic", el => el.style.opacity = '0');
-        setElement(".HDRSS", el => el.style.display = 'block');
-        setElement(".HDRSS", el => el.style.opacity = '1');
+        setElement(".HDRss", el => el.style.display = 'block');
+        setElement(".HDRss", el => el.style.opacity = '1');
         // deactivate links in classic
         document.querySelectorAll<HTMLButtonElement>(".HDClassic").forEach(a => {
             a.style.pointerEvents = 'none';
         });
         // activate links in RSS
-        document.querySelectorAll<HTMLButtonElement>(".HDRSS").forEach(a => {
+        document.querySelectorAll<HTMLButtonElement>(".HDRss").forEach(a => {
             a.style.pointerEvents = 'auto';
         });
         document.body.style.height = '580px'; // chromium limit is 600px
@@ -185,13 +185,13 @@ export class RSS {
     private showLoadingAnimation() {
         setElement(".HDClassic", el => {
             el.style.opacity = '0';
-            el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+            el.style.overflow = 'clip'; // make it no be able to scroll while waiting
             el.style.cursor = 'wait'; // make the cursor a wait cursor
             el.style.pointerEvents = 'none'; // make it not clickable
         });
-        setElement(".HDRSS", el => {
+        setElement(".HDRss", el => {
             el.style.opacity = '0';
-            el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+            el.style.overflow = 'clip'; // make it no be able to scroll while waiting
             el.style.cursor = 'wait'; // make the cursor a wait cursor
             el.style.pointerEvents = 'none'; // make it not clickable
 
@@ -207,7 +207,7 @@ export class RSS {
             el.style.cursor = 'default';
             el.style.pointerEvents = 'auto';
         });
-        setElement(".HDRSS", el => {
+        setElement(".HDRss", el => {
             el.style.opacity = '1';
             el.style.overflowY = 'auto';
             el.style.overflowX = 'hidden';

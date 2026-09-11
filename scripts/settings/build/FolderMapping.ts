@@ -7,7 +7,7 @@ import { Build } from "../build";
 
 export class FolderMapping extends Build {
 
-    // explaination of folder mapping; the formula
+    // explanation of folder mapping; the formula
     private readonly formulaOfFolderMapping = getElement<HTMLParagraphElement>("#formulaOfFolderMapping");
     private readonly formulaOfErrorFolderMapping = getElement<HTMLParagraphElement>("#formulaOfErrorFolderMapping");
     // ---
@@ -38,7 +38,7 @@ export class FolderMapping extends Build {
 
     // Active Custom Rules
     private readonly activeCustomRules = getElement<HTMLDivElement>("#activeCustomRules");
-    private readonly saveStatusFolderMapping_overides = getElement<HTMLParagraphElement>("#saveStatus-folderMapping-overides");
+    private readonly saveStatusFolderMapping_overrides = getElement<HTMLParagraphElement>("#saveStatus-folderMapping-overrides");
     // ---
     // Advanced Options Btn
     private readonly advancedOptionsBtn = getElement<HTMLButtonElement>("#advancedOptionsBtn");
@@ -62,7 +62,7 @@ export class FolderMapping extends Build {
     private readonly addCustomRuleToSelect_ReadStatus = getElement<HTMLSelectElement>("#addCustomRuleToSelect_ReadStatus");
     private readonly addCustomRule = getElement<HTMLInputElement>("#addCustomRule");
     private readonly addCustomRuleBtn = getElement<HTMLButtonElement>("#addCustomRuleBtn");
-    private readonly saveStatusFolderMapping_newOverides = getElement<HTMLParagraphElement>("#saveStatus-folderMapping-new-overides");
+    private readonly saveStatusFolderMapping_newOverrides = getElement<HTMLParagraphElement>("#saveStatus-folderMapping-new-overrides");
     private readonly customRuleGhostText = getElement<HTMLParagraphElement>("#customRuleGhostText");
 
 
@@ -89,14 +89,14 @@ export class FolderMapping extends Build {
 
             // load existing aliases
             this.loadExistingAliases(settings);
-            // load existing overide rules
+            // load existing override rules
             this.loadExistingRules(settings);
 
             // -- advanced settings --
 
             // populate sub-folders
             this.populateSubFolders(settings);
-            // populate folder mappings custom rules ( overides )
+            // populate folder mappings custom rules ( override )
             this.populateFolderMappingsCustomRules(settings);
 
             this.bindEvents();
@@ -185,10 +185,6 @@ export class FolderMapping extends Build {
         // values are saved on input change, so no need to do anything here
     }
     private cutSuggestion(suggestion: string, rule: string): string {
-        // example suggestion: /home/user/novel/onepiece/onepiece-1/onepiece-1
-        // example rule: /home/user/
-        // result: /home/user/novel/
-        
         // Normalize rule to ensure it doesn't end with /
         const normalizedRule = rule.endsWith('/') ? rule.slice(0, -1) : rule;
         
@@ -204,10 +200,10 @@ export class FolderMapping extends Build {
         if (segments.length === 0) return normalizedRule + '/';
 
         // if normalizedRule is only a section of the suggestion, don't add a trailing slash
-        const firstsegment = suggestion.at(normalizedRule.length) === '/' ? '/' + segments[0] : segments[0];
+        const firstSegment = suggestion.at(normalizedRule.length) === '/' ? '/' + segments[0] : segments[0];
         
         // Return rule + first directory after it
-        return normalizedRule + firstsegment + '/';
+        return normalizedRule + firstSegment + '/';
     }
     private setGhostTextForCustomRule() {
         if (!this.customRuleSuggestion) return;
@@ -240,26 +236,26 @@ export class FolderMapping extends Build {
     private addSubFolder(isNovelType: boolean) {
         if (isNovelType) {
             const NovelType = this.add_NovelTypes_Subfolder_To_Select?.value as AnyNovelType;
-            const preffix = this.add_NovelTypes_Subfolder_Prefix?.value;
+            const prefix = this.add_NovelTypes_Subfolder_Prefix?.value;
             const suffix = this.add_NovelTypes_Subfolder_Suffix?.value;
-            if (!NovelType || (!preffix && !suffix)) return;
+            if (!NovelType || (!prefix && !suffix)) return;
             
             let value;
-            if (!preffix && suffix) value = `${NovelType}/${suffix}`;
-            if (preffix && !suffix) value = `${preffix}/${NovelType}`;
-            if (preffix && suffix) value = `${preffix}/${NovelType}/${suffix}`;
+            if (!prefix && suffix) value = `${NovelType}/${suffix}`;
+            if (prefix && !suffix) value = `${prefix}/${NovelType}`;
+            if (prefix && suffix) value = `${prefix}/${NovelType}/${suffix}`;
             else return;
             this.setTypeAliases(NovelType, value);
         } else {
             const ReadStatus = this.add_ReadStatuses_Subfolder_Prefix?.value as AnyReadStatus;
-            const preffix = this.add_NovelTypes_Subfolder_Prefix?.value || null;
+            const prefix = this.add_NovelTypes_Subfolder_Prefix?.value || null;
             const suffix = this.add_ReadStatuses_Subfolder_Suffix?.value || null;
-            if (!ReadStatus || (!preffix && !suffix)) return;
+            if (!ReadStatus || (!prefix && !suffix)) return;
             
             let value;
-            if (!preffix && suffix) value = `${ReadStatus}/${suffix}`;
-            if (preffix && !suffix) value = `${preffix}/${ReadStatus}`;
-            if (preffix && suffix) value = `${preffix}/${ReadStatus}/${suffix}`;
+            if (!prefix && suffix) value = `${ReadStatus}/${suffix}`;
+            if (prefix && !suffix) value = `${prefix}/${ReadStatus}`;
+            if (prefix && suffix) value = `${prefix}/${ReadStatus}/${suffix}`;
             else return;
             this.setStatusFolder(ReadStatus, value);
         }
@@ -270,7 +266,7 @@ export class FolderMapping extends Build {
         const type = this.addCustomRuleToSelect_ReadStatus?.value.trim() as AnyNovelType;
         if (!rule) return;
         this.addFolderMappingRule(type, status, rule);
-        this.temporaryStatus(`Saved: ${rule}`, this.saveStatusFolderMapping_newOverides)
+        this.temporaryStatus(`Saved: ${rule}`, this.saveStatusFolderMapping_newOverrides)
     }
     private async addNovelTypeNewAlias() {
         // get the select value
@@ -317,7 +313,7 @@ export class FolderMapping extends Build {
     private async addNewAliasToFolderMapping(originalName: AnyNovelType | AnyReadStatus, newAlias: string, isANovelType: boolean): Promise<void> {
         const settings = await this.getSettings();
 
-        // ckeck if already exists
+        // check if already exists
         const existAlready = isANovelType ? settings.FolderMapping.typeAliases?.[originalName] : settings.FolderMapping.statusFolders?.[originalName]
         if (existAlready === newAlias) return
 
@@ -422,21 +418,21 @@ export class FolderMapping extends Build {
         label.className = 'folder-mapping-label';
         label.textContent = `${OriginalName} → `
 
-        const eddit = document.createElement('input');
-        eddit.type = 'text';
-        eddit.className = 'folder-mapping-edit-alias';
-        eddit.value = newAlias;
-        eddit.addEventListener('change', async () => {
-            const updatedAlias = eddit.value.trim();
+        const edit = document.createElement('input');
+        edit.type = 'text';
+        edit.className = 'folder-mapping-edit-alias';
+        edit.value = newAlias;
+        edit.addEventListener('change', async () => {
+            const updatedAlias = edit.value.trim();
             if (!updatedAlias) {
-                eddit.value = newAlias;
+                edit.value = newAlias;
                 return;
             }
         });
-        const edditBtn = document.createElement('button');
-        edditBtn.textContent = 'Save';
-        edditBtn.addEventListener('click', async () => {
-            const updatedAlias = eddit.value.trim();
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Save';
+        editBtn.addEventListener('click', async () => {
+            const updatedAlias = edit.value.trim();
             if (!updatedAlias) return;
             await this.addNewAliasToFolderMapping(OriginalName, updatedAlias, isNovelType);
             this.temporaryStatus(`Saved: ${OriginalName} → ${updatedAlias}`, this.saveStatusFolderMapping_newAliases)
@@ -449,7 +445,7 @@ export class FolderMapping extends Build {
             row.remove()
         })
 
-        row.append(label, eddit, edditBtn, removeBtn)
+        row.append(label, edit, editBtn, removeBtn)
         return row
     }
     private buildRuleRow(type: string, status: string, path: string): HTMLElement {
@@ -463,21 +459,21 @@ export class FolderMapping extends Build {
         label.textContent = `${type} + ${status} → `
         // TODO: make the text content better
 
-        const eddit = document.createElement('input');
-        eddit.className = 'folder-mapping-edit-overide';
-        eddit.type = 'text';
-        eddit.value = path;
-        eddit.addEventListener('change', async () => {
-            const updatedAlias = eddit.value.trim();
+        const edit = document.createElement('input');
+        edit.className = 'folder-mapping-edit-override';
+        edit.type = 'text';
+        edit.value = path;
+        edit.addEventListener('change', async () => {
+            const updatedAlias = edit.value.trim();
             if (!updatedAlias) {
-                eddit.value = path;
+                edit.value = path;
                 return;
             }
         });
-        const edditBtn = document.createElement('button');
-        edditBtn.textContent = 'Save';
-        edditBtn.addEventListener('click', async () => {
-            const updatedAlias = eddit.value.trim();
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Save';
+        editBtn.addEventListener('click', async () => {
+            const updatedAlias = edit.value.trim();
             if (!updatedAlias) return;
             await this.addFolderMappingRule(type, status, updatedAlias);
             this.temporaryStatus(`Saved: ${type} + ${status} → ${updatedAlias}`, this.saveStatusFolderMapping_newAliases)
@@ -490,7 +486,7 @@ export class FolderMapping extends Build {
             row.remove()
         })
 
-        row.append(label, eddit, edditBtn, removeBtn)
+        row.append(label, edit, editBtn, removeBtn)
         return row
     }
 
@@ -566,12 +562,12 @@ export class FolderMapping extends Build {
 
             this.setSettings({ ...settings, FolderMapping: updatedMapping });
 
-            this.temporaryStatus( `Rule added: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`, this.saveStatusFolderMapping_newOverides)
+            this.temporaryStatus( `Rule added: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`, this.saveStatusFolderMapping_newOverrides)
             console.log(`[FolderMapping] Added rule: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
             console.error('[FolderMapping] addFolderMappingRule:', message)
-            this.temporaryStatus(  `Error: ${message}`, this.saveStatusFolderMapping_newOverides, 3000)
+            this.temporaryStatus(  `Error: ${message}`, this.saveStatusFolderMapping_newOverrides, 3000)
         }
     }
     private async removeAliasFromFolderMapping( OriginalName: string, isNovelType: boolean ): Promise<void> {
@@ -594,7 +590,7 @@ export class FolderMapping extends Build {
 
             this.setSettings(settings);
 
-            this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overides)
+            this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overrides)
             console.log(`[FolderMapping] Removed rule: ${OriginalName}`)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
@@ -616,14 +612,14 @@ export class FolderMapping extends Build {
 
             await this.setSettings({ ...settings, FolderMapping: { ...mapping, overrides: filtered } });
 
-            this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overides)
+            this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overrides)
 
             console.log(`[FolderMapping] Removed rule: ${type ?? 'any'} + ${status ?? 'any'}`)
 
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
             console.error('[FolderMapping] removeFolderMappingRule:', message)
-            this.temporaryStatus(`Error: ${message}`, this.saveStatusFolderMapping_overides, 3000)
+            this.temporaryStatus(`Error: ${message}`, this.saveStatusFolderMapping_overrides, 3000)
         }
     }
     private async setTypeAliases( folderName: AnyNovelType, Alias: string ): Promise<void> {
