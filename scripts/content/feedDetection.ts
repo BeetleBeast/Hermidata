@@ -50,23 +50,12 @@ export class FeedDetection {
                 .map(f => { try { return this.normalizeFeedData(f) } catch { return null } })
                 .filter(Boolean) as Partial<RawScrappedFeed>[];
     
-            // 5. Fetch all feeds in parallel (network)
-            const results = await Promise.allSettled(normalized.map(f => this.buildFullFeed(f)));
-    
-            const feeds: RawScrappedFeed[] = results
-                .filter((r): r is PromiseFulfilledResult<RawScrappedFeed> => r.status === 'fulfilled' && r.value !== null)
-                .map(r => r.value);
-    
-            if (!feeds.length) {
-                console.warn('[Hermidata] No feeds successfully fetched');
-                return;
-            }
-    
-            console.log(`[Hermidata] Successfully built ${feeds.length} feed(s)`);
-    
-            // 6. Send to background for storage
-            await this.saveFeeds(feeds);
-    
+            // 5. Send to background for fetching + parsing
+            //    (background script handles CSP issues)
+            ext.runtime.sendMessage({
+                type: 'BUILD_AND_SAVE_FEEDS',
+                data: normalized
+            });
         } catch (err) {
             console.error('[Hermidata] addFeedToGlobalMain failed:', err);
         }
@@ -150,40 +139,6 @@ export class FeedDetection {
     // Fetch + parse
     // ============================================================
     
-    private async fetchAndParseRSS(feedUrl: string): Promise<[RawScrapedItem[], string | null, string | null]> {
-        const response = await fetch(feedUrl);
-        if (!response.ok) throw new Error(`Feed fetch failed: ${feedUrl} (${response.status})`);
-    
-        const text = await response.text();
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(text, 'text/xml');
-    
-        if (xml.querySelector('parsererror')) {
-            throw new Error(`XML parse error for feed: ${feedUrl}`);
-        }
-    
-        const items: RawScrapedItem[] = [...xml.querySelectorAll('item, entry')].slice(0, 10).map(item => ({
-            title: item.querySelector('title')?.textContent?.trim() ?? '',
-            link: (
-                item.querySelector('link')?.getAttribute('href') ??
-                item.querySelector('link')?.textContent ??
-                ''
-            ).trim(),
-            pubDate: new Date(item.querySelector('pubDate, updated, published')?.textContent ?? Date.now()),
-            guid: (
-                item.querySelector('guid')?.textContent ??
-                item.querySelector('id')?.textContent ??
-                item.querySelector('link')?.textContent ??
-                ''
-            )
-        }));
-    
-        const lastBuildDate = xml.querySelector('lastBuildDate, updated')?.textContent ?? null;
-        const image = xml.querySelector('image > url')?.textContent ?? null;
-    
-        return [items, lastBuildDate, image];
-    }
-    
     private normalizeFeedData(feed: Partial<RawScrappedFeed>): Partial<RawScrappedFeed> {
         if (!feed.url || !feed.title) throw new Error(`Feed missing url or title: ${JSON.stringify(feed)}`);
         const domain = new URL(feed.url).hostname.replace(/^www\./, '');
@@ -193,46 +148,4 @@ export class FeedDetection {
             domain,
         };
     }
-    
-    private async buildFullFeed(partial: Partial<RawScrappedFeed>): Promise<RawScrappedFeed | null> {
-        if (!partial.url) return null;
-        try {
-            const [items, lastBuildDate, image] = await this.fetchAndParseRSS(partial.url);
-            return {
-                title: partial.title ?? "",
-                url: partial.url,
-                domain: partial.domain ?? new URL(partial.url).hostname.replace(/^www\./, ''),
-                latestItem: items[0],
-                lastBuildDateStr: lastBuildDate ?? new Date().toISOString(),
-                image: image ?? '',
-                lastFetched: new Date().toISOString(),
-                lastToken: null,
-            };
-        } catch (err) {
-            console.warn(`[Hermidata] Failed to fetch feed ${partial.url}:`, err);
-            return null;
-        }
-    }
-    
-    // ============================================================
-    // Storage — content scripts can't use IndexedDB directly
-    // so we message the background to handle writes
-    // ============================================================
-    
-    private async saveFeeds(feeds: RawScrappedFeed[]): Promise<void> {
-        if (!feeds.length) return;
-    
-        try {
-            // Send to background which writes to IndexedDB
-            ext.runtime.sendMessage({
-                type: 'SAVE_RAW_FEEDS',
-                data: feeds
-            });
-            console.log(`[Hermidata] Sent ${feeds.length} feed(s) to background for saving`);
-        } catch (err) {
-            console.error('[Hermidata] Failed to send feeds to background:', err);
-        }
-    }
 }
-
-
