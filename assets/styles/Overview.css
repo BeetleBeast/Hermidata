@@ -422,16 +422,22 @@ label {
 	display: grid;
 	align-items: center;
 	grid-template-areas: "back search utility";
-	grid-template-columns: 400px auto 400px;
+	grid-template-columns: 400px 1fr auto;
 	grid-template-rows: 80px;
 	border: none;
     background-color: var(--border-subtle);
 }
 
+#cancel-edit-btn[data-editing="true"] {
+    opacity: 1;
+}
+#cancel-edit-btn[data-editing="false"] {
+    opacity: 0;
+}
+
 #cancel-edit-btn {
+    display: flex;
 	grid-area: cancel;
-	display: flex;
-	display: none;
 	width: fit-content;
 	align-items: center;
 	justify-content: center;
@@ -460,7 +466,19 @@ label {
 	min-width: 1000px;
 }
 
+.divider {
+    width: 2px;
+    margin: 0 10px;
+    height: 40px;
+    background-color: var(--accent-dark);
+}
 
+.divider[data-editing="false"] {
+    opacity: 0;
+}
+.divider[data-editing="true"] {
+    opacity: 1;
+}
 
 
 /* main */
@@ -1274,8 +1292,15 @@ button#hermidata-img {
     font-size: large;
     font-weight: 600;
 }
+#delete-info-btn[data-editing="true"] {
+    opacity: 1;
+}
+#delete-info-btn[data-editing="false"] {
+    opacity: 0;
+}
 
 #delete-info-btn {
+    display: flex;
     background: var(--danger);
     color: var(--text-dark);
     border: 1px solid transparent;
