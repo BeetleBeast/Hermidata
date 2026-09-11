@@ -12,23 +12,9 @@ export abstract class RssBuild {
 
     protected AllHermidata: Record<string, Hermidata>;
 
-    protected pendingPick: ((data: PickedElementData | null) => void) | null = null;
-
     constructor(hermidata: HermidataModel, AllHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;
         this.AllHermidata = AllHermidata;
-
-        // Register exactly once, for the lifetime of the popup.
-        chrome.runtime.onMessage.addListener((msg: RuntimeMessage) => {
-            // Handle messages related to element picking and user feedback
-            if (!this.pendingPick) return;
-
-            if (msg.action === "elementPicked") this.pendingPick(msg.data); 
-            else if (msg.action === "pickingCancelled") this.pendingPick(null);
-
-            // Clear the pending callbacks after handling the message
-            this.pendingPick = null;
-        });
     }
     public static async init(): Promise<Record<string, Hermidata>> {
         return await PastHermidata.getAllHermidata();

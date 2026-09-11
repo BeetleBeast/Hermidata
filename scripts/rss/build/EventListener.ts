@@ -13,8 +13,6 @@ export class EventListener extends RssBuild {
     
     private activeSubMenu: HTMLDivElement | null = null;
 
-    private currentTabId: number | null = null;
-
     public async attachEventListeners(): Promise<void> {
         // parents
         const notificationFeed = document.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="true"]');
@@ -374,73 +372,20 @@ export class EventListener extends RssBuild {
             console.warn("Entry not found for hash:", hashItem);
             return;
         }
-        // TODO: get title from element picker
-        const picked = await this.getPickerElement();
-        if (!picked) {
-            console.log('picker cancelled');
+        
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id) {
+            console.warn("No active tab found.");
             return;
         }
-        const newTitle = getMultipleTitles(picked);
-        if (!newTitle) return;
-        
-        // Normalize and deduplicate
-        for (let i = 0; i < newTitle.length; i++) {
-            const trimmed = TrimTitle.trimTitle(newTitle[i], entry.GetUrl()).title;
-            entry.meta.altTitles = Array.from(
-                new Set([...(entry.meta.altTitles || []), trimmed])
-            );
-        }
 
-        // give feedback to user
-        if (!this.currentTabId) {
-            console.warn("No current tab ID found.");
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab.id) {
-                console.warn("No active tab found.");
-                return null;
-            }
-            this.currentTabId = tab.id;
-        }
+        await ext.runtime.sendMessage({ 
+            type: 'START_PICKING_FLOW',
+            entry: entry.toJSON(),
+            tabID: tab.id
+        })
 
-        // Save to storage
-        await saveHermidata(hashItem, entry.toJSON());
-    }
-
-    private async getPickerElement(): Promise<PickedElementData | null> {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab.id) {
-            console.warn("No active tab found.");
-            return null;
-        }
-        this.hidePopup();
-
-        this.currentTabId = tab.id;
-
-        await chrome.tabs.sendMessage(tab.id, { action: "startPicking" });
-        const result = await new Promise<PickedElementData | null>((resolve) => this.pendingPick = resolve);
-
-        // TODO: these events need to be removed, as they do not work*
-        // * because the popup hides first and only on the second key stroke does the element picker closes
-        window.addEventListener("pagehide", () => {
-            if (this.currentTabId) chrome.tabs.sendMessage(this.currentTabId, { action: "cancelPicking" });
-        });
-        // TODO: same as above
-        document.addEventListener("pagehide", () => {
-            chrome.tabs.sendMessage(tab.id!, { action: "cancelPicking" });
-        });
-
-        this.revertPopupToDefault();
-        return result;
-    }
-    private hidePopup() {
-        const popup = document.querySelector('html');
-        // UPDATE: give a hint of the progress of the element picker instead of hiding*
-        // * the popup doesn't hide but its width and height are reduced to the minimum the browser has set ( about 20 px)
-        if (popup) popup.style.display = 'none';
-    }
-    private revertPopupToDefault() {
-        const popup = document.querySelector('html');
-        if (popup) popup.style.display = 'block';
+        window.close();
     }
     private async addAltTitle(target: HTMLDivElement | null) {
         if (!target) return;
