@@ -1,37 +1,6 @@
-:root {
-    --Btn: rgb(63, 76, 96);
-    --Btn_hover: rgb(34, 48, 89);
-    --Btn_active: rgb(15, 34, 94);
-    --Text-color: lightgray;
-    --Btn_hover_danger: rgb(255, 0, 0);
-    --Btn_hover_success: rgb(0, 255, 0);
-    --Btn_hover_Cancel: rgb(255, 217, 0);
-    --bg-color: rgb(12, 17, 24);
-    --Input-color: rgb(40, 53, 75);
-    --table-color: var(--Input-color);
-    --Input-colorV2: rgb(32, 39, 51);
-    --Btn_disabled: rgb(120, 120, 120);
-    --bg_disabled: rgb(24, 28, 36);
-    --hr: #555;
-    --filterExcludeOption: #04060a;
-    --filterIncludeOptionText: #fff;
-    --muted: #989898;
-
-    --border: rgb(70, 85, 110);
-    --border-focus: rgb(120, 150, 210);
-
-    --Btn_danger_fill: rgb(120, 40, 40);
-    --Btn_success_fill: rgb(30, 90, 60);
-    --Btn_cancel_fill: rgb(120, 100, 20);
-
-    --Text-disabled: var(--muted);
-
-    --focus-ring: rgb(120, 150, 210);
-}
-
 body {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
+    background-color: var(--bg);
+    color: var(--text);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
     margin-bottom: 15px;
@@ -50,8 +19,8 @@ button,
     font-size: 0.95rem;
     font-family: inherit;
     font-weight: 500;
-    color: var(--Text-color);
-    background: var(--Btn);
+    color: var(--text);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
@@ -61,48 +30,46 @@ button,
 
 button:hover,
 .btn:hover {
-    background: var(--Btn_hover);
-    border-color: var(--border-focus);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 button:active,
 .btn:active {
-    background: var(--Btn_active);
+    background: var(--accent-active-dark);
     transform: translateY(1px);
 }
 
 button:focus-visible,
 .btn:focus-visible {
-    outline: 2px solid var(--focus-ring);
+    outline: 2px solid var(--accent-hover-soft);
     outline-offset: 2px;
 }
 
 button:disabled,
 .btn:disabled,
 .btn.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
     transform: none;
 }
 
 .btn-danger:hover {
-    background: var(--Btn_danger_fill);
-    border-color: var(--Btn_hover_danger);
-    color: #fff;
+    background: var(--danger-hover);
+    border-color: var(--danger);
+    color: var(--text-highlight);
 }
 
 .btn-success:hover {
-    background: var(--Btn_success_fill);
-    border-color: var(--Btn_hover_success);
-    color: #fff;
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
+    color: var(--text-highlight);
 }
 
 .btn-cancel:hover {
-    background: var(--Btn_cancel_fill);
-    border-color: var(--Btn_hover_Cancel);
-    color: #fff;
+    color: var(--text-highlight);
 }
 
 .btn-ghost {
@@ -111,8 +78,8 @@ button:disabled,
 }
 
 .btn-ghost:hover {
-    background: var(--Input-colorV2);
-    border-color: var(--border-focus);
+    background: var(--surface-raised);
+    border-color: var(--accent-dark);
 }
 
 /* ============ INPUTS ============ */
@@ -132,8 +99,8 @@ textarea,
     padding: 0.55em 0.75em;
     font-size: 0.95rem;
     font-family: inherit;
-    color: var(--Text-color);
-    background: var(--Input-color);
+    color: var(--text);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -141,22 +108,22 @@ textarea,
 
 input::placeholder,
 textarea::placeholder {
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 input:hover,
 textarea:hover,
 .input:hover {
-    background: var(--Input-colorV2);
+    background: var(--surface-raised);
 }
 
 input:focus,
 textarea:focus,
 .input:focus {
     outline: none;
-    border-color: var(--border-focus);
-    background: var(--Input-colorV2);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    border-color: var(--accent-dark);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 2px var(--shadow-soft);
 }
 
 textarea {
@@ -166,7 +133,7 @@ textarea {
 
 input[type="checkbox"],
 input[type="radio"] {
-    accent-color: var(--Btn_hover);
+    accent-color: var(--accent-hover-soft);
     width: 1.05em;
     height: 1.05em;
     cursor: pointer;
@@ -175,14 +142,14 @@ input[type="radio"] {
 input:disabled,
 textarea:disabled,
 .input.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
 }
 
 input:invalid:not(:placeholder-shown) {
-    border-color: var(--Btn_hover_danger);
+    border-color: var(--danger);
 }
 
 /* -- file input -- */
@@ -195,8 +162,8 @@ input:invalid:not(:placeholder-shown) {
     padding: 0.55em 1.1em;
     font-size: 0.95rem;
     font-weight: 500;
-    color: var(--Text-color);
-    background: var(--Btn);
+    color: var(--text);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
@@ -204,23 +171,23 @@ input:invalid:not(:placeholder-shown) {
 }
 
 .file-btn:hover {
-    background: var(--Btn_hover);
-    border-color: var(--border-focus);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 .file-btn:active {
-    background: var(--Btn_active);
+    background: var(--accent-active-dark);
 }
 
 .file-input-hidden:focus-visible + .file-btn,
 .file-input-hidden:focus-visible ~ .file-btn {
-    outline: 2px solid var(--focus-ring);
+    outline: 2px solid var(--accent-hover-soft);
     outline-offset: 2px;
 }
 
 .file-btn.disabled {
-    background: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
 }
@@ -249,23 +216,23 @@ input[type="color"] {
     padding: 3px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: var(--Input-color);
+    background: var(--surface-input);
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 input[type="color"]:hover {
-    background: var(--Input-colorV2);
+    background: var(--surface-raised);
 }
 
 input[type="color"]:focus {
     outline: none;
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    border-color: var(--accent-dark);
+    box-shadow: 0 0 0 2px var(--shadow-soft);
 }
 
 input[type="color"]:disabled {
-    background: var(--bg_disabled);
+    background: var(--bg-disabled);
     border-color: var(--hr);
     cursor: not-allowed;
 }
@@ -292,8 +259,8 @@ select {
     padding: 0.55em 2em 0.55em 0.75em;
     font-size: 0.95rem;
     font-family: inherit;
-    color: var(--Text-color);
-    background: var(--Input-color);
+    color: var(--text);
+    background: var(--surface-input);
     border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
@@ -307,30 +274,30 @@ select {
 }
 
 select:hover {
-    background-color: var(--Input-colorV2);
+    background-color: var(--surface-raised);
 }
 
 select:focus {
     outline: none;
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px rgba(120, 150, 210, 0.25);
+    border-color: var(--accent-dark);
+    box-shadow: 0 0 0 2px var(--shadow-soft);
 }
 
 select:disabled {
-    background-color: var(--bg_disabled);
-    color: var(--Text-disabled);
+    background-color: var(--bg-disabled);
+    color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
 }
 
 option:disabled,
 .option-excluded {
-    background: var(--filterExcludeOption);
-    color: var(--muted);
+    background: #04060a;
+    color: var(--text-muted);
 }
 
 .option-included {
-    color: var(--filterIncludeOptionText);
+    color: var(--text-highlight);
 }
 
 /* ============ MISC SHARED ============ */
@@ -342,7 +309,7 @@ hr {
 }
 
 label {
-    color: var(--Text-color);
+    color: var(--text);
     font-size: 0.9rem;
     margin-bottom: 0.35em;
     display: inline-block;
@@ -350,7 +317,7 @@ label {
 }
 
 .field-hint {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 0.8rem;
     margin-top: 0.3em;
 }
@@ -362,19 +329,19 @@ label {
     margin-right: 40px;
 }
 .Btn {
-    background-color: var(--bg-color);
-    color: var(--Text-color);
-    border: 1px solid var(--Btn);
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--surface-input);
     border-radius: 4px;
     padding: 8px 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 .Btn:hover {
-    background-color: var(--Btn_hover);
+    background-color: var(--accent-hover-dark);
 }
 .Btn:active {
-    background-color: var(--Btn_active);
+    background-color: var(--accent-active-dark);
     transition: none;
 }
 #header {
@@ -399,7 +366,7 @@ label {
     width: 100%;
 }
 .active {
-    background-color: var(--Btn_active);
+    background-color: var(--accent-active-dark);
 }
 .bottomFooter,
 footer {
@@ -407,7 +374,7 @@ footer {
 	bottom: 0;
 	width: 70%;
 	height: 50px;
-	background-color: var(--bg-color);
+	background-color: var(--bg);
 	border-top: 1px solid #ccc;
 	display: flex;
 	justify-content: space-between;
@@ -415,29 +382,33 @@ footer {
 	gap: 50px;
 }
 .footerBtn {
-	background-color: var(--bg-color);
-	color: var(--Text-color);
-	border: 1px solid var(--Btn);
+	background-color: var(--bg);
+	color: var(--text);
+	border: 1px solid var(--surface-input);
 	border-radius: 4px;
 	padding: 8px 16px;
 	cursor: pointer;
-	transition: background-color 0.3s ease;
+	transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 .footerBtn:hover {
-	background-color: var(--Btn_hover);
+	background-color: var(--accent-hover-dark);
 }
 .footerBtn:active {
-	background-color: var(--Btn_active);
+	background-color: var(--accent-active-dark);
 	transition: none;
 }
 #resetSettingsBtn:hover {
-	background-color: var(--Btn_danger_fill);
+	background-color: var(--danger);
+    color: var(--text-dark);
+    border-color: var(--danger);
 }
 #cancelSettingsBtn:hover {
-	background-color: var(--Btn_cancel_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 #saveSettingsBtn:hover {
-	background-color: var(--Btn_success_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 .fullPage-btn {
     position: absolute;
@@ -448,7 +419,7 @@ footer {
 table {
     width: 100%;
     border-collapse: collapse;
-    background-color: var(--bg-color);
+    background-color: var(--bg);
     table-layout: auto;
 }
 
@@ -459,7 +430,7 @@ td, th {
     padding: 0;
 }
 th {
-    background-color: var(--Input-color);
+    background-color: var(--surface-input);
     border: 1px solid #d1d5db;
     font-weight: bold;
     padding: 8px;
@@ -485,10 +456,10 @@ select.autoInput {
     scroll-behavior: smooth;
     outline: none;
     outline-width: 0;
-    outline-color: var(--Text-color);
-    color: var(--Text-color);
+    outline-color: var(--text);
+    color: var(--text);
     background-image: none;
-    background-color: var(--bg-color);
+    background-color: var(--bg);
 }
 #chapter {
     min-width: 75px;
@@ -501,8 +472,8 @@ select.autoInput {
     padding: 0px;
     font-size: 14px;
     text-align: center;
-    color: var(--Text-color);
-    background-color: var(--bg-color);
+    color: var(--text);
+    background-color: var(--bg);
 }
 
 #openSettings {
@@ -533,16 +504,17 @@ select.autoInput {
 }
 
 #logOut:hover {
-	background: var(--Btn_danger_fill);
-	border-color: var(--Btn_hover_danger);
+	background: var(--danger);
+	border-color: var(--danger);
+    color: var(--text-dark);
 }
 #testSpreadsheetUrl:hover {
-	border-color: var(--Btn_hover_Cancel);
-	background: var(--Btn_cancel_fill);
+	border-color: var(--accent-hover-soft);
+	background: var(--accent-hover-dark);
 }
 #saveSpreadsheetUrl:hover {
-	background: var(--Btn_success_fill);
-	border-color: var(--Btn_hover_success);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 #spreadsheetPrompt {
@@ -552,7 +524,7 @@ select.autoInput {
 #statusSheetURL, 
 #statusSaveDefaultInput,
 #statusSaveDefaultInputInputTextMenu {
-    color: green;
+    color: rgb(0, 128, 0);
 }
 
 [data-active="false"] {
@@ -572,8 +544,8 @@ select.autoInput {
 }
 
 body {
-	background-color: var(--bg-color);
-	color: var(--Text-color);
+	background-color: var(--bg);
+	color: var(--text);
 	margin-bottom: 15px;
 	margin-right: 5px;
 	overflow: auto;
@@ -588,7 +560,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	color: white;
+	color: var(--text-highlight);
 	position: absolute;
 	top: 10%;
 	border: 1px solid;
@@ -620,7 +592,7 @@ nav {
 	text-align: left;
 	cursor: pointer;
 	transition: background 0.2s;
-	color: white;
+	color: var(--text-highlight);
 	border: 1px solid;
 }
 
@@ -636,7 +608,7 @@ nav {
 #notes,
 #Type {
 	border: none;
-	background-color: var(--bg-color);
+	background-color: var(--bg);
 }
 
 #tagsTextMenu,
@@ -675,8 +647,9 @@ nav {
 }
 
 .EditORemoveItem-removeBtn:hover {
-	border-color: var(--Btn_hover_danger);
-	background: var(--Btn_danger_fill);
+	border-color: var(--danger);
+	background: var(--danger);
+    color: var(--text-dark);
 }
 .EditORemoveItem-removeBtn {
 	border-radius: 0 6px 6px 0 !important;
@@ -695,8 +668,8 @@ nav {
 	height: 2.4rem !important;
 }
 .EditORemoveItem-updateBtn:hover {
-	background: var(--Btn_success_fill);
-	border-color: var(--Btn_hover_success);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 .EditORemoveItem-updateBtn {
 	border-radius: unset !important;
@@ -725,12 +698,13 @@ nav {
 }
 
 .nav-item:hover {
-    background: var(--Btn_hover);
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 .nav-item[data-active="true"] {
-    background: var(--Btn_active);
-    color: white;
+    background: var(--accent-active-dark);
+    color: var(--text-highlight);
 }
 
 .content {
@@ -871,7 +845,7 @@ nav {
 
 .folder-mapping-edit-alias {
 	background-color: transparent;
-	color: var(--Text-color);
+	color: var(--text);
 	align-self: normal;
 	border: none;
 	width: max-content;
@@ -879,7 +853,7 @@ nav {
 }
 .folder-mapping-edit-override {
 	background-color: transparent;
-	color: var(--Text-color);
+	color: var(--text);
 	align-self: normal;
 	border: none;
 	width: 40%;
@@ -941,7 +915,7 @@ nav {
 	top: 17px;
 	left: 10px;
 	pointer-events: none;
-	color: #888;
+	color: var(--text-muted);
 	opacity: 0.5;
 	white-space: nowrap;
 	overflow: visible;
@@ -951,7 +925,7 @@ nav {
 #advancedOptionsBtn {
 	width: 30%;
 	background-color: transparent;
-	color: white;
+	color: var(--text-highlight);
 	padding: 15px;
 	margin-top: 15px;
 	margin-bottom: 15px;
@@ -1030,7 +1004,7 @@ nav {
 
 .prefixAndSuffix {
     background-color: transparent;
-	color: var(--Text-color);
+	color: var(--text);
 	align-self: normal;
 	/* width: 70px; */
 	border: none;
@@ -1039,10 +1013,10 @@ nav {
 .prefixAndSuffix:hover,
 .prefixAndSuffix.highlighted {
     background: transparent;
-    color: var(--Text-color);
+    color: var(--text);
 }
 .prefixAndSuffix:focus {
-    outline: 1px invert var(--Btn);
+    outline: 1px invert var(--surface-input);
 }
 
 
@@ -1050,13 +1024,13 @@ nav {
     display: flex;
     flex-direction: row;
     align-items: center;
-    border-left: 1px solid grey;
+    border-left: 1px solid var(--hr);
 }
 #add_ReadStatuses_Subfolder_Options_Inputs {
     display: flex;
     flex-direction: row;
     align-items: center;
-	border-left: 1px solid grey;
+	border-left: 1px solid var(--hr);
 }
 
 
@@ -1116,12 +1090,12 @@ nav {
 #newReadStatusBtn:hover,
 #saveDefaultInputTextMenu:hover,
 #saveDefaultInput:hover {
-	border-color: var(--Btn_hover_success);
-	background: var(--Btn_success_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
 
 
 #addTagBtn:hover {
-	border-color: var(--Btn_hover_success);
-	background: var(--Btn_success_fill);
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
 }
