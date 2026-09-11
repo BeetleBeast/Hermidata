@@ -20,9 +20,10 @@
       <div id="search-suggestions"></div>
     </div>
     <div id="header-utility-container">
-      <button id="cancel-edit-btn" type="button" class="Btn" title="Cancel" data-disabled="true" hidden>Cancel</button>
+      <button id="cancel-edit-btn" type="button" class="Btn" title="Cancel" data-disabled="true" data-editing="false" hidden>Cancel</button>
       <button id="edit-info-btn" type="button" class="Btn" title="Edit info page">Edit</button>
-      <button id="delete-info-btn" type="button" class="Btn" title="Delete info page" popovertargetaction="toggle" popovertarget="delete-dialog" data-disabled="true" hidden>Delete</button>
+      <div class="divider" data-editing="false"></div>
+      <button id="delete-info-btn" type="button" class="Btn" title="Delete info page" popovertargetaction="toggle" popovertarget="delete-dialog" data-disabled="true" data-editing="false" hidden>Delete</button>
       <div id="delete-dialog" class="delete-dialog" popover>
         <div id="delete-label" title="delete label"></div>
         <div class="genericPromptBtns">
@@ -30,6 +31,7 @@
           <button id="customPrompt-button-cancel" type="button" class="Btn" title="Cancel">Cancel</button>
         </div>
       </div>
+      <div class="divider" data-editing="false"></div>
       <button id="reload-info-btn" type="button" class="Btn" title="reload info page">Reload</button>
     </div>
 
