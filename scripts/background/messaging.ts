@@ -3,6 +3,7 @@ import { getSettings } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSyncOperation } from "./rssCache"
+import { handleStartPickingFlow } from "./picking"
 
 
 
@@ -19,6 +20,7 @@ export function initMessaging() {
             case 'DB_OPERATION' : handleDbOperation(msg.store, msg.call, sendResponse); return true;
             case 'SYNC_OPERATION': handleSyncOperation(msg.call, sendResponse); return true;
             case 'RESET_LOCAL_FILTERS': handleLocalFilterReset(sendResponse); return true;
+            case 'START_PICKING_FLOW': handleStartPickingFlow(msg.entry, msg.tabID); return; // ( fire and forget )
         }
         return true
     })
