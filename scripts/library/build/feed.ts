@@ -126,7 +126,7 @@ export class feed extends LibraryBuilder {
         container.dataset.viewMode = this.viewMode;
         container.ariaHidden = 'false';
 
-        container.addEventListener('click', () => openLink('./Hermidata.html#/id/' + entry.id, 'sameTab'));
+        container.addEventListener('click', () => openLink('./Overview.html#/id/' + entry.id, 'sameTab'));
         container.addEventListener('mouseover', (e) => this.transformCheckboxPosition(e, 'show'));
         container.addEventListener('mouseout', (e) => this.transformCheckboxPosition(e, 'hide'));
 

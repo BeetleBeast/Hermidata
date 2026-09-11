@@ -627,7 +627,7 @@ export class Detail extends LibraryBuilder {
         input.focus();
         const entry = findByTitleOrAlt(value, this.AllHermidata);
         if (!entry) return
-        openLink('./Hermidata.html#/id/' + entry.id, 'sameTab');
+        openLink('./Overview.html#/id/' + entry.id, 'sameTab');
     }
 
     private handleSearchInput(e: KeyboardEvent | Event, suggestionBox: HTMLDivElement) {
