@@ -55,6 +55,47 @@ export function normalizeDateToIso(rawDate: string): string {
     return new Date(date)?.toISOString();
 }
 
+function drawIcon(size: number, colour: string): ImageData {
+    const ICON_PATH = "M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640h-80v280l-100-60-100 60v-280H240v640Zm0 0v-640 640Zm200-360 100-60 100 60-100-60-100 60Z";
+
+    const canvas = new OffscreenCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // viewBox is "0 -960 960 960" — map that space onto the canvas
+    const scale = size / 960;
+    ctx.setTransform(scale, 0, 0, scale, 0, size);
+
+    ctx.fillStyle = colour;
+    ctx.fill(new Path2D(ICON_PATH));
+
+    return ctx.getImageData(0, 0, size, size);
+}
+async function getTabId(): Promise<number | undefined> {
+    const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });    
+    return currentTab?.id;
+}
+/**
+ * set a dynamic icon
+ * @param isFound - if the Hermidata is found
+ * @param colour - the new colour of the icon
+*/
+export async function setDynamicIcon(isFound: boolean, colour?: string, currentTabId?: number): Promise<void> {
+    const defaultColour = '#e3e3e3';
+    const defaultFoundColour = '#5979d6';
+
+    const newColour = isFound ? colour ?? defaultFoundColour : defaultColour;
+
+    let tabId: number | undefined = currentTabId ?? await getTabId();
+
+    if (!tabId) return;
+
+    const sizes = [16, 32, 48, 128];
+    const imageData: Record<number, ImageData> = {};
+    for (const size of sizes) imageData[size] = drawIcon(size, newColour);
+
+    await ext.action.setIcon({ imageData, tabId });
+}
+
 function isConcatenationOfOthers(candidate: string, others: string[]): boolean {
     let remaining = candidate;
     let matchedCount = 0;

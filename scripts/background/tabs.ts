@@ -2,8 +2,7 @@ import { ext } from "../shared/utils/BrowserCompat"
 import { getAllHermidata } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks";
 import { allHermidataCashed, currentBookmark, currentTab, setState } from "./state";
-
-type ActionApi = typeof ext.action | typeof ext.browserAction;
+import { setDynamicIcon } from "../shared/utils/StringOutput";
 
 export function initTabs() {
     ext.tabs.onActivated.addListener(() => updateCurrentBookmarkAndIcon())
@@ -17,13 +16,12 @@ export function initTabs() {
 }
 
 
-export async function updateIcon(Url: string | null = null, currentTabParameter: chrome.tabs.Tab | null = null): Promise<boolean> {
-    const actionApi = ext.action || ext.browserAction;
+export async function updateIcon(Url: string | null = null, colour?: string, currentTabParameter: chrome.tabs.Tab | null = null): Promise<boolean> {
 
     const currentTabId = currentTabParameter?.id ?? currentTab?.id;
 
     if (Url && currentTabParameter?.id) {
-        await setIconAndTitle(actionApi, currentTabParameter.id);
+        await setIconAndTitle(currentTabParameter.id, colour);
         return true;
     }
     else if (Url) {
@@ -34,10 +32,10 @@ export async function updateIcon(Url: string | null = null, currentTabParameter:
             console.warn("No matching tab found for icon update");
             return false;
         }
-        await setIconAndTitle(actionApi, matchedTab.id);
+        await setIconAndTitle(matchedTab.id, colour);
         return true;
     } else if (currentTabId) {
-        await setIconAndTitle(actionApi, currentTabId);
+        await setIconAndTitle(currentTabId, colour);
         return true;
     } else {
         console.warn("No valid tab to set icon");
@@ -45,15 +43,11 @@ export async function updateIcon(Url: string | null = null, currentTabParameter:
     }
 }
 
-async function setIconAndTitle(actionApi: ActionApi, tabId: number) {
+async function setIconAndTitle(tabId: number, colour?: string) {
 
-    const path =  currentBookmark  ? "assets/icon/icon_red48.png" : "assets/icon/icon48.png";
     const title = currentBookmark  ? 'Already bookmarked!' : 'Bookmark it!';
 
-    actionApi.setIcon({ path, tabId }, () => {
-        if (ext.runtime.lastError) console.warn("setIcon error:", ext.runtime.lastError.message);
-    });
-    actionApi.setTitle({ title, tabId }, () => {
-        if (ext.runtime.lastError) console.warn("setTitle error:", ext.runtime.lastError.message);
-    });
+    await setDynamicIcon(currentBookmark !== null, colour, tabId);
+    await ext.action.setTitle({ title, tabId })
+    
 }
