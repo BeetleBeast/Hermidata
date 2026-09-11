@@ -37,6 +37,7 @@
 
     --focus-ring: rgb(120, 150, 210);
     
+    --accent-dark: #3c5b99; /* unused */
 
     --card: rgb(18, 31, 49);
     --borderLibrary: rgb(63, 76, 96);
