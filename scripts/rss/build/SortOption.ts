@@ -113,9 +113,9 @@ export class SortOption extends Sort {
         headerContainer.className = 'filter-header-container';
         headerContainer.style.cursor = 'pointer';
 
-        const headersymbol = document.createElement('div');
-        headersymbol.className = 'filter-header-symbol';
-        headersymbol.dataset.filterState = 'down';
+        const headerSymbol = document.createElement('div');
+        headerSymbol.className = 'filter-header-symbol';
+        headerSymbol.dataset.filterState = 'down';
 
         const header = document.createElement('h4');
         header.textContent = title;
@@ -129,9 +129,9 @@ export class SortOption extends Sort {
         innerList.className = 'filter-list-inner';
         
         headerContainer.addEventListener('click', () => {
-            headersymbol.dataset.filterState = headersymbol.dataset.filterState === 'down' ? 'up' : 'down';
+            headerSymbol.dataset.filterState = headerSymbol.dataset.filterState === 'down' ? 'up' : 'down';
         });
-        headerContainer.append(header,headersymbol);
+        headerContainer.append(header, headerSymbol);
         section.appendChild(headerContainer)
 
         for (const item of items) {
@@ -203,7 +203,7 @@ export class SortOption extends Sort {
             return;
         }
 
-        const visibleItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-seachable="true"]`);
+        const visibleItems = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-searchable="true"]`);
         for (const item of visibleItems) this.allSearchableItems.add(item);
         const visibleHashes = Array.from(visibleItems).map(item => this.GetHashItem(item));
     
@@ -240,7 +240,7 @@ export class SortOption extends Sort {
         if (!query) {
             allItems.forEach(item => {
                 // Restore visibility based on what filters decided
-                const isFilteredIn = item.dataset.seachable === 'true';
+                const isFilteredIn = item.dataset.searchable=== 'true';
                 item.style.display = isFilteredIn ? '' : 'none';
             });
             return;
@@ -249,7 +249,7 @@ export class SortOption extends Sort {
         // With a query: check both filter state AND search match
         allItems.forEach(item => {
             // First check: Is this item allowed by current filters?
-            const isFilteredIn = item.dataset.seachable === 'true';
+            const isFilteredIn = item.dataset.searchable=== 'true';
             if (!isFilteredIn) {
                 // Filters say NO - keep it hidden, don't even check search
                 item.style.display = 'none';
@@ -285,7 +285,7 @@ export class SortOption extends Sort {
 
         if (!searchInput) throw new Error('Element not found');
 
-        // const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-seachable="true"]`);
+        // const items = suggestionBox.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"][data-searchable="true"]`);
         const items = suggestionBox.querySelectorAll<HTMLDivElement>('.autocomplete-item');
         if (!items.length) return;
 
@@ -332,14 +332,14 @@ export class SortOption extends Sort {
             });
     
             const uniqueBuckets = Array.from(new Set(yearBuckets)).filter(Boolean);
-            this.ammountOfYearBuckets = uniqueBuckets.length
+            this.amountOfYearBuckets = uniqueBuckets.length
     
-            const thisYeay = new Date().getFullYear()
-            const everySingleYear = thisYeay - 2020
+            const thisYear = new Date().getFullYear()
+            const everySingleYear = thisYear - 2020
             const sortOrderOldType = ["2020s", "2010s", "2000s", "1990s", "1980s", "Unknown"];
             const sortOrderEveryYearType = []
             for (let index = 0; index < everySingleYear; index++) {
-                sortOrderEveryYearType.push(String(thisYeay - index))
+                sortOrderEveryYearType.push(String(thisYear - index))
             }
             const sortOrder = sortOrderEveryYearType.concat(sortOrderOldType)
             uniqueBuckets.sort((a, b) => sortOrder.indexOf(a) - sortOrder.indexOf(b));

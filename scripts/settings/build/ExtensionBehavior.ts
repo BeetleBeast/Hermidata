@@ -3,7 +3,7 @@ import { type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
-export class ExtensionBehaviour extends Build {
+export class ExtensionBehavior extends Build {
 
     private readonly enableLightMode = getElement<HTMLInputElement>("#enableLightMode");
     private readonly allowContextMenu = getElement<HTMLInputElement>("#AllowContextMenu");
@@ -44,7 +44,7 @@ export class ExtensionBehaviour extends Build {
         // Auto Subscribe - Threshold
         this.setValueOptionAutoSubscribeThreshold(settings)
 
-        // Auto Subscribe Threshold vaule only
+        // Auto Subscribe Threshold value only
         this.setValueOptionAutoSubscribeThresholdOnly();
         // Save Target
         this.setValueOptionSaveTarget(settings);
@@ -269,10 +269,10 @@ export class ExtensionBehaviour extends Build {
     private setValueOptionAutoSubscribeThreshold(settings: Settings) {
         if (!this.enableAutoSubscribe || !this.enableAutoSubscribeThreshold || !this.autoSubscribeThreshold) return;
         const threshold = settings.ExtensionBehaviour.AutoSubscribe.Threshold;
-        const ennableAutoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
+        const enableAutoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
         const enableAutoSubscribeThreshold = settings.ExtensionBehaviour.AutoSubscribe.AllowSimilarityScanning;
         this.autoSubscribeThreshold.value = String(threshold);
-        this.enableAutoSubscribe.checked = ennableAutoSubscribe;
+        this.enableAutoSubscribe.checked = enableAutoSubscribe;
         this.enableAutoSubscribeThreshold.checked = enableAutoSubscribeThreshold;
 
         

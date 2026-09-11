@@ -2,10 +2,10 @@ import type { AllHermidata, OnlyPlainHermidata, RawFeed } from "./popup";
 import type { Settings } from "./settings";
 
 export type NormalSortsType = 'Alphabet' | 'Novel-Type' | 'Recently-Added' | 'Latest-Updates';
-export type ExeptionSortsType = '';
-export type ReverseAllsortsType = `Reverse-${NormalSortsType}`;
+export type ExceptionSortsType = '';
+export type ReverseAllSortsType = `Reverse-${NormalSortsType}`;
 
-export type AllsortsType = (NormalSortsType | ReverseAllsortsType) | ExeptionSortsType;
+export type AllSortsType = (NormalSortsType | ReverseAllSortsType) | ExceptionSortsType;
 
 export type MenuOption = {
     label: string;
@@ -23,7 +23,7 @@ export type separator = "separator";
 export type Filters = {
     include: Record<string, string[]>; // { type: ['Manga'], status: ['Ongoing'] }
     exclude: Record<string, string[]>;
-    sort: AllsortsType;
+    sort: AllSortsType;
 }
 
 export interface FilterName {
@@ -46,7 +46,7 @@ export interface FilterClassName {
     Date: string,
 }
 
-export type RSSDOM = {
+export type RssDOM = {
     notifications: {
         items: DocumentFragment;
     };

@@ -358,7 +358,7 @@ label {
 
 /* Not very elegant but it works */
 
-#Pagetitle {
+#PageTitle {
     margin-right: 40px;
 }
 .Btn {
@@ -383,14 +383,14 @@ label {
     align-items: center;
     margin-bottom: 10px;
 }
-.HDRSS {
+.HDRss {
     opacity: 0;
     position: absolute;
     top: 50px;
     width: 98vw;
     height: 99vh;
 }
-#HDRSSBtn {
+#HDRssBtn {
     display: flex;
     width: 100%;
 }
@@ -439,7 +439,7 @@ footer {
 #saveSettingsBtn:hover {
 	background-color: var(--Btn_success_fill);
 }
-.fullpage-btn {
+.fullPage-btn {
     position: absolute;
     bottom: 15px;
     right: 0;
@@ -624,7 +624,7 @@ nav {
 	border: 1px solid;
 }
 
-/* Default Bppkmark Settings */
+/* Default Bookmark Settings */
 #TypeTextMenu,
 #NovelStatusTextMenu,
 #ReadStatusTextMenu,
@@ -877,7 +877,7 @@ nav {
 	width: max-content;
 	text-align: center;
 }
-.folder-mapping-edit-overide {
+.folder-mapping-edit-override {
 	background-color: transparent;
 	color: var(--Text-color);
 	align-self: normal;
@@ -970,7 +970,7 @@ nav {
 }
 
 /* sub-folders */
-.FolderMapping_advancedOptions_AddGeneralSubfolders {
+.FolderMapping_advancedOptions_AddGeneralSubFolders {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -1110,7 +1110,7 @@ nav {
 }
 
 
-/* sucess btns */
+/* success btns */
 #newNovelTypeBtn:hover,
 #newNovelStatusBtn:hover,
 #newReadStatusBtn:hover,

@@ -48,7 +48,7 @@ export async function updateIcon(Url: string | null = null, currentTabParameter:
 async function setIconAndTitle(actionApi: ActionApi, tabId: number) {
 
     const path =  currentBookmark  ? "assets/icon/icon_red48.png" : "assets/icon/icon48.png";
-    const title = currentBookmark  ? 'Already bookmarkt!' : 'Bookmark it!';
+    const title = currentBookmark  ? 'Already bookmarked!' : 'Bookmark it!';
 
     actionApi.setIcon({ path, tabId }, () => {
         if (ext.runtime.lastError) console.warn("setIcon error:", ext.runtime.lastError.message);

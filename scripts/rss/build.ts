@@ -52,9 +52,9 @@ export abstract class RssBuild {
             PastHermidata.getAllHermidata()
         ]);
     
-        NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(feeds, false));
+        NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(feeds, false));
         AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());
-        AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makefeedItem(hermidata, true));
+        AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(hermidata, true));
 
         const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
         if (!sortSection) throw new Error('sort section not found');
@@ -74,13 +74,13 @@ export abstract class RssBuild {
     private showLoadingAnimation() {
             setElement(".HDClassic", el => {
                 el.style.opacity = '0';
-                el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+                el.style.overflow = 'clip'; // make it no be able to scroll while waiting
                 el.style.cursor = 'wait'; // make the cursor a wait cursor
                 el.style.pointerEvents = 'none'; // make it not clickable
             });
-            setElement(".HDRSS", el => {
+            setElement(".HDRss", el => {
                 el.style.opacity = '0';
-                el.style.overflow = 'clip'; // make it no be ablr to scroll while waiting
+                el.style.overflow = 'clip'; // make it no be able to scroll while waiting
                 el.style.cursor = 'wait'; // make the cursor a wait cursor
                 el.style.pointerEvents = 'none'; // make it not clickable
     
@@ -94,7 +94,7 @@ export abstract class RssBuild {
                 el.style.cursor = 'default';
                 el.style.pointerEvents = 'auto';
             });
-            setElement(".HDRSS", el => {
+            setElement(".HDRss", el => {
                 el.style.opacity = '1';
                 el.style.overflowY = 'auto';
                 el.style.overflowX = 'hidden';

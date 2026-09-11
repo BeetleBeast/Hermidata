@@ -1,5 +1,5 @@
 import { returnBookmarkHash } from "../utils/StringOutput";
-import type { AllsortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
+import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
 
 // Default arrays — used to seed settings on first install
 export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
@@ -71,7 +71,7 @@ export const DEFAULT_TAG_COLOURS: Record<string, string> = {
 
 // RSS mode
 
-export const AllSorts: AllsortsType[] = ['Alphabet', 'Novel-Type', 'Recently-Added', 'Latest-Updates']
+export const AllSorts: AllSortsType[] = ['Alphabet', 'Novel-Type', 'Recently-Added', 'Latest-Updates']
 
 export const filterClassName: FilterClassName = {
     Sort: 'filter-sort',

@@ -10,7 +10,7 @@ export interface CalculateStatusReturnObject {
         Status: AnyNovelStatus,
         Reason: string,
         InactiveDays: number
-        Score: number // percantage of inactive days to next threshold
+        Score: number // percentage of inactive days to next threshold
     } | null
 }
 
@@ -94,7 +94,7 @@ Options:
     Based only on RSS Date** - this option is the default & recommended option
 
 * RSS Date is the date of the latest RSS item
-* This will only work on linked Hermidata's, all otyhers will be ignored
+* This will only work on linked Hermidata's, all others will be ignored
 
 ---
 
@@ -136,9 +136,9 @@ export async function calculateNovelStatusForAll(): Promise<boolean> {
 
     return false
 }
-export async function calculateNovelSatus(hermidataKey: string): Promise<boolean>;
-export async function calculateNovelSatus(hermidata: Hermidata): Promise<boolean>;
-export async function calculateNovelSatus(hermidataValue: string | Hermidata): Promise<boolean> {
+export async function calculateNovelStatus(hermidataKey: string): Promise<boolean>;
+export async function calculateNovelStatus(hermidata: Hermidata): Promise<boolean>;
+export async function calculateNovelStatus(hermidataValue: string | Hermidata): Promise<boolean> {
 
     const hermidata =  (typeof hermidataValue === 'string') ? await getHermidataViaKey(hermidataValue) : hermidataValue;
 

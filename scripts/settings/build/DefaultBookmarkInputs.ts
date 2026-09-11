@@ -1,11 +1,11 @@
 import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, defaultSettings } from "../../shared/constants";
-import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type DefaultChoice, type elementsInputAndMenu, type ElmentsWithInputAndMenu, type Settings } from "../../shared/types";
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type DefaultChoice, type elementsInputAndMenu, type ElementsWithInputAndMenu, type Settings } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
 
 const setDefaultSettingsElements = () => {
-    const elements: ElmentsWithInputAndMenu = {
+    const elements: ElementsWithInputAndMenu = {
         input: {
             Type: getElement<HTMLSelectElement>("#Type"),
             NovelStatus: getElement<HTMLSelectElement>("#NovelStatus"),
@@ -31,7 +31,7 @@ export class DefaultBookmarkInputs extends Build {
 
     private readonly status_Input = getElement<HTMLParagraphElement>('#statusSaveDefaultInput');
     private readonly statusTextMenu = getElement<HTMLParagraphElement>('#statusSaveDefaultInputInputTextMenu');
-    private readonly elements: ElmentsWithInputAndMenu = setDefaultSettingsElements();
+    private readonly elements: ElementsWithInputAndMenu = setDefaultSettingsElements();
 
     public async init() {
 

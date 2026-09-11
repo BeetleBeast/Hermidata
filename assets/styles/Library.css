@@ -375,7 +375,7 @@ html::-webkit-scrollbar-thumb {
     align-items: center;
 }
 
-.topbar h1 {
+.topBar h1 {
     font-size: 16px;
     margin: 0
 }
@@ -1607,7 +1607,7 @@ body[data-list-mode="false"]
     padding-left: 20px;
     padding-right: 20px;
     align-items: baseline;
-    border-bottom: 1px solid var(--devider, rgba(255, 255, 255, 0.06));
+    border-bottom: 1px solid var(--hr, rgba(255, 255, 255, 0.06));
     justify-content: space-between;
     transition: background-color 0.15s ease;
 }

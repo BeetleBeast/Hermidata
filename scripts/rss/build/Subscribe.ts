@@ -19,7 +19,7 @@ export class Subscribe extends RssBuild {
 
     private matchedFeed: RawFeed | null = null;
 
-    public async makeSubscibeBtn(): Promise<void> {
+    public async makeSubscribeBtn(): Promise<void> {
         const [feedListGlobal, allHermidata] = await Promise.all([ getAllRawFeeds(), PastHermidata.getAllHermidata() ]);
         const subscribeBtn = getElement<HTMLButtonElement>("#subscribeBtn");
         const notificationSection = getElement<HTMLDivElement>("#RSS-Notification");
@@ -44,15 +44,15 @@ export class Subscribe extends RssBuild {
             return;
         }
 
-        const currentTitle = getElement<HTMLInputElement>("#title_HDRSS")?.value || this.hermidata.title;
+        const currentTitle = getElement<HTMLInputElement>("#title_HDRss")?.value || this.hermidata.title;
 
         this.matchedFeed = await this.findMatchingFeed( feedListGlobal,  allHermidata,  currentTitle );
 
         if (this.matchedFeed) {
             console.log('found matching feed:', this.matchedFeed);
             subscribeBtn.disabled = false
-            subscribeBtn.title = "subscribe to recieve notifications"
-            subscribeBtn.ariaLabel = "subscribe to recieve notifications"
+            subscribeBtn.title = "subscribe to receive notifications"
+            subscribeBtn.ariaLabel = "subscribe to receive notifications"
         }
         subscribeBtn.onclick = async () => this.onSubscribeClick( notificationSection,  allItemSection );
     }
@@ -69,8 +69,8 @@ export class Subscribe extends RssBuild {
     private async onSubscribeClick( notificationSection: HTMLElement, allItemSection: HTMLElement ): Promise<void> {
         if (!this.matchedFeed) return;
 
-        const currentType = getElement<HTMLInputElement>('#Type_HDRSS')?.value as AnyNovelType || this.hermidata.novelType;
-        const currentTitle = getElement<HTMLInputElement>('#title_HDRSS')?.value || this.hermidata.title;
+        const currentType = getElement<HTMLInputElement>('#Type_HDRss')?.value as AnyNovelType || this.hermidata.novelType;
+        const currentTitle = getElement<HTMLInputElement>('#title_HDRss')?.value || this.hermidata.title;
 
         linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed);
         await this.reloadContent(notificationSection, allItemSection);
@@ -90,25 +90,25 @@ export class Subscribe extends RssBuild {
         const autoSubscribeThreshold = settings?.ExtensionBehaviour.AutoSubscribe.Threshold ?? false;
         if (!autoSubscribe) return false;
         // 1. take all raw feeds
-        // raw feeds are automaticly collected by the background script
+        // raw feeds are automatically collected by the background script
         const allRawFeeds = await getAllRawFeeds();
         
         // 2. take all hermidata
         const allHermidata = await PastHermidata.getAllHermidata();
         const RSSIdsNotAllowed = settings?.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
-        const allHimidataWithNoRSS = Object.entries(allHermidata).filter(list => {
+        const allHermidataWithNoRSS = Object.entries(allHermidata).filter(list => {
             const Hermidata = list[1];
             const hasRSS = Hermidata.rss === null;
             const isNotAllowed = typeof RSSIdsNotAllowed[Hermidata.id] === 'string';
             return hasRSS && !isNotAllowed;
         });
-        const allHermidataWithNoRSSRecord: Record<string, Hermidata> = Object.fromEntries(allHimidataWithNoRSS);
+        const allHermidataWithNoRSSRecord: Record<string, Hermidata> = Object.fromEntries(allHermidataWithNoRSS);
 
         // 3. find matching feed
-        const mathingFeeds = await this.findMatchingFeeds(allRawFeeds, allHermidataWithNoRSSRecord, allowSimilarityScanning, autoSubscribeThreshold);
-        if (!mathingFeeds || mathingFeeds.length === 0) return false;
+        const matchingFeeds = await this.findMatchingFeeds(allRawFeeds, allHermidataWithNoRSSRecord, allowSimilarityScanning, autoSubscribeThreshold);
+        if (!matchingFeeds || matchingFeeds.length === 0) return false;
         
-        for (const { RawFeed, Hermidata: value } of mathingFeeds) {
+        for (const { RawFeed, Hermidata: value } of matchingFeeds) {
             const Hermidata = new HermidataModel(value);
             // 4. confirm with user
             const confirmationMsg = `

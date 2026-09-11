@@ -1,14 +1,14 @@
-import type { AllsortsType, HermidataDateType, HermidataSortType } from "../../shared/types/index";
+import type { AllSortsType, HermidataDateType, HermidataSortType } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 
 export abstract class Sort extends RssBuild {
 
 
-    protected ammountOfYearBuckets: number = 0;
+    protected amountOfYearBuckets: number = 0;
     private readonly maxYearBuckets: number = 15; 
 
-    protected applySortToEntries(sortType: AllsortsType = "Alphabet") {
+    protected applySortToEntries(sortType: AllSortsType = "Alphabet") {
         const container = getElement('#All-RSS-entries');
         if (!container) return;
 
@@ -34,15 +34,15 @@ export abstract class Sort extends RssBuild {
         };
         const compareTypeAndTitle = (a: HTMLDivElement, b: HTMLDivElement, reverse: boolean = false) => {
             // Sort by type
-            // and then alphabeticly
+            // and then alphabetical
             const typeA = getData(a).novelType;
             const typeB = getData(b).novelType;
             const titleA = getData(a).title?.toLowerCase() || '';
             const titleB = getData(b).title?.toLowerCase() || '';
-            const positionSoterByType = reverse ? typeB.localeCompare(typeA) : typeA.localeCompare(typeB);
-            const positionSortByTitle = reverse ? titleB.localeCompare(titleA) : titleA.localeCompare(titleB);
-            if (positionSoterByType === 0) return positionSortByTitle;
-            return positionSoterByType || positionSortByTitle;
+            const positionSortedByType = reverse ? typeB.localeCompare(typeA) : typeA.localeCompare(typeB);
+            const positionSortedByTitle = reverse ? titleB.localeCompare(titleA) : titleA.localeCompare(titleB);
+            if (positionSortedByType === 0) return positionSortedByTitle;
+            return positionSortedByType || positionSortedByTitle;
         };
 
         // Normalize sort type
@@ -118,11 +118,11 @@ export abstract class Sort extends RssBuild {
 
         let bucket;
         
-        if (this.ammountOfYearBuckets >= this.maxYearBuckets) bucket = this.createDacadeBucket(year);
+        if (this.amountOfYearBuckets >= this.maxYearBuckets) bucket = this.createDecadeBucket(year);
         else bucket = this.createYearBucket(year);
         return bucket;
     }
-    private createDacadeBucket(year: string): string {
+    private createDecadeBucket(year: string): string {
 
         const decade = year.slice(0, -1).concat('0s');
 

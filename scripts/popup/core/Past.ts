@@ -7,9 +7,9 @@ import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 
-// --- cashe ---
+// --- cache ---
 const CalcDiffCache = new Map();
-let AllHermidataCashe: AllHermidata | null = null;
+let AllHermidataCache: AllHermidata | null = null;
 
 
 export class PastHermidata {
@@ -42,15 +42,15 @@ export class PastHermidata {
     public async checkForDuplicates(): Promise<Hermidata | false> {
         // get all Hermidata
         const AllHermidata = await PastHermidata.getAllHermidata();
-        // update cashe
-        if (AllHermidataCashe && Object.keys(AllHermidataCashe).length != Object.keys(AllHermidata).length) {
-            AllHermidataCashe = AllHermidata
+        // update Cache
+        if (AllHermidataCache && Object.keys(AllHermidataCache).length != Object.keys(AllHermidata).length) {
+            AllHermidataCache = AllHermidata
         }
 
         // find title from alt ( includes main title and alt title )
         const potentialTrueTitle = this.getTitleFromAlt(AllHermidata) || '';
 
-        // find title from fuzzy seach
+        // find title from fuzzy search
         const { possibleObj, AltKeyNeeded, fuzzyKey } = await this.getTitleFromFuzzy(potentialTrueTitle);
 
         // add alt title to Object
@@ -77,19 +77,19 @@ export class PastHermidata {
 
 
     private async getPastHermidata(): Promise<Hermidata | null> {
-        // ojective => find if the Hermidata already exists in the browser storage
+        // objective => find if the Hermidata already exists in the browser storage
 
         // get all Hermidata
         const AllHermidata = await PastHermidata.getAllHermidata();
-        // update cashe
-        if (AllHermidataCashe && Object.keys(AllHermidataCashe).length != Object.keys(AllHermidata).length || !AllHermidataCashe) {
-            AllHermidataCashe = AllHermidata
+        // update Cache
+        if (AllHermidataCache && Object.keys(AllHermidataCache).length != Object.keys(AllHermidata).length || !AllHermidataCache) {
+            AllHermidataCache = AllHermidata
         }
 
         // find title from alt ( includes main title and alt title )
         const potentialTrueTitle = this.getTitleFromAlt(AllHermidata) || '';
 
-        // find title from fuzzy seach
+        // find title from fuzzy search
         const { possibleObj, AltKeyNeeded, fuzzyKey } = await this.getTitleFromFuzzy(potentialTrueTitle);
 
         // early returns
@@ -117,17 +117,17 @@ export class PastHermidata {
         const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
 
         return getHermidataViaKey(key).catch(error => {
-            console.error('Extention error: Failed Premise getHermidata: ',error);
+            console.error('Extension error: Failed Premise getHermidata: ',error);
             console.log('Key',key,'\n', '\n','this.hermidata', this.hermidata);
             return null;
         })
     }
     private getTitleFromAlt(allHermidata: AllHermidata): string | undefined {
 
-        const posibleTitleV2 = this.hermidata.meta.notes.replace('Chapter Title: ', '');
+        const possibleTitleV2 = this.hermidata.meta.notes.replace('Chapter Title: ', '');
 
-        const TrueTitle = findByTitleOrAlt(this.hermidata.title, allHermidata)?.title ?? findByTitleOrAlt(posibleTitleV2, allHermidata)?.title;
-        if  (!TrueTitle) this.hermidata.meta.notes = '';
+        const TrueTitle = findByTitleOrAlt(this.hermidata.title, allHermidata)?.title ?? findByTitleOrAlt(possibleTitleV2, allHermidata)?.title;
+        if (!TrueTitle) this.hermidata.meta.notes = '';
         return TrueTitle
     }
     private async getTitleFromFuzzy(trueTitle: string): Promise<{ possibleObj: AllHermidata, AltKeyNeeded: { needAltTitle: boolean, reason: string }, fuzzyKey: string | null | undefined  }> {
@@ -139,7 +139,7 @@ export class PastHermidata {
         const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type, this.hermidata.GetUrl(), false));
         // add fuzzy key if not inside possible keys
         if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey);
-        // get all posible hermidata Obj
+        // get all possible hermidata Obj
         const possibleObj: AllHermidata = {};
         for (const key of possibleKeys) {
             const obj = await getHermidataViaKey(key);

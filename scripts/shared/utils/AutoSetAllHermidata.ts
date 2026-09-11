@@ -23,11 +23,11 @@ export class AutoSetAllHermidata {
         const bookmarks = await this.getBookmarkChildren(folderId);
         if (!bookmarks.length) return null;
         // check if there are any NEW hermidata  ( that haven't been stored yet ) and create new Hermidata's.
-        const newPorentialHermidatas = this.getNewHermidata(bookmarks);
-        return newPorentialHermidatas;
+        const newPotentialHermidatas = this.getNewHermidata(bookmarks);
+        return newPotentialHermidatas;
     }
     /**
-     * @param newPorentialHermidatas - a array or a single tuple of the new Type and the hermidata that hasn't been stored yet
+     * @param newPotentialHermidatas - a array or a single tuple of the new Type and the hermidata that hasn't been stored yet
      * @returns an array of the new hermidata
      */
     public static async setHermidataType(Hermidata: [AnyNovelType, Hermidata]): Promise<Hermidata>;
@@ -64,10 +64,10 @@ export class AutoSetAllHermidata {
 
             const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
             
-            // create all posible id with all posible types
-            const allPosibleIDs = this.allNovelTypes.map(type => returnHashedTitle(rawTitle, type, rawUrl));
-            const allPosibleIDsIncludes = Object.keys(this.allHermidata).find(novelId => allPosibleIDs.includes(novelId));
-            if (allPosibleIDsIncludes) continue;
+            // create all possible id with all possible types
+            const allPossibleIDs = this.allNovelTypes.map(type => returnHashedTitle(rawTitle, type, rawUrl));
+            const allPossibleIDsIncludes = Object.keys(this.allHermidata).find(novelId => allPossibleIDs.includes(novelId));
+            if (allPossibleIDsIncludes) continue;
             // also check if there is a novel with the same title.
             const novelFoundByID = Object.values(this.allHermidata).find(novel => novel.title === trimmedTitle);
             if (novelFoundByID) continue;

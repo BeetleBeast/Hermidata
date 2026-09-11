@@ -102,7 +102,7 @@ export type elementMenu = {
 
 export type elementsInputAndMenu = elementInput |  elementMenu;
 
-export interface ElmentsWithInputAndMenu {
+export interface ElementsWithInputAndMenu {
     input: {
         Type: HTMLSelectElement | null,
         ReadStatus: HTMLSelectElement | null,

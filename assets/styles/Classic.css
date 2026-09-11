@@ -14,7 +14,7 @@ body::after {
     align-items: center;
     margin-bottom: 10px;
 }
-.HDRSS {
+.HDRss {
     display: none;
     position: absolute;
     top: 50px;
@@ -25,20 +25,20 @@ body::after {
     height: 500px;
 }
 
-.HDRSS::-webkit-scrollbar {
+.HDRss::-webkit-scrollbar {
     width: 4px;
 }
 
-.HDRSS::-webkit-scrollbar-track {
+.HDRss::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.HDRSS::-webkit-scrollbar-thumb {
+.HDRss::-webkit-scrollbar-thumb {
     background-color: var(--Btn);
     border-radius: 999px;
 }
 
-#HDRSSBtn {
+#HDRssBtn {
     display: flex;
     width: 100%;
 }
@@ -96,7 +96,7 @@ footer {
 	outline-color: var(--border-focus);
 }
 
-/* settings tooth weel */
+/* settings tooth wheel */
 .openSettings {
 	background: none;
 	border: none;

@@ -47,7 +47,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
 
     const filteredRawFeeds: Record<string, RawFeed> = {};
     
-    const allNONmaches: RawFeed[] = [];
+    const allNonMatches: RawFeed[] = [];
     
     const domainToHermidata = getAllDomainFromHermidata(hermidataValues);
 
@@ -73,7 +73,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
         // Find the matching Hermidata entry by trimmed title among domain candidates only
         const matched = domainCandidates.find( n => TrimTitle.trimTitle(n.title, n.chapter.bookmarks[n.chapter.bookmarkInUse].url).title === feedTitle );
         if (!matched) {
-            allNONmaches.push(feed);
+            allNonMatches.push(feed);
             continue;
         }
         
@@ -86,7 +86,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
 
     console.log('filterRawFeeds result size', Object.keys(filteredRawFeeds).length);
     console.log('rawFeeds input size', Object.keys(rawFeeds).length);
-    console.log('domainCandidates misses', allNONmaches.length);
+    console.log('domainCandidates misses', allNonMatches.length);
     return filteredRawFeeds;
 }
 // only called in background after invalidation or on initial load
@@ -100,11 +100,11 @@ export async function getHermidataWithRss(): Promise<Record<string, Hermidata>> 
     console.timeEnd('getRawFeedsRecord');
     // Collect all entries that have RSS
     console.time('filter entries with RSS');
-    const hermidataWRSS = await getAllHermidataWithRss(AllHermidata);
+    const hermidataWithRss = await getAllHermidataWithRss(AllHermidata);
     console.timeEnd('filter entries with RSS');
     // Run all updateFeed calls in parallel
     console.time('updateFeed');
-    const updated = Object.values(hermidataWRSS).map(entry => updateFeed(entry, RawFeeds) );
+    const updated = Object.values(hermidataWithRss).map(entry => updateFeed(entry, RawFeeds) );
     console.timeEnd('updateFeed');
 
     // Reassemble into record
