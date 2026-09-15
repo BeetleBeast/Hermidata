@@ -60,6 +60,22 @@ describe('trimtitle notes', () => {
 
 describe('getChapterFromTitle', () => {
     it.each([
+        ["66.666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", 1],
+        ["86 - Eighty Six - Chapter 12", 12],
+        ["66,666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", 1],
+        ["Read Mobulus strantum andum Chapter 26 Online - Poznan", 26],
+        ["Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", Number.NaN],
+        [`Destiny Unchain Online chapter 99 - Read Manga Online`, 99],
+        [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, 222],
+        [`Chapter 1 | My Villainous Family Won't Let Me Be | Weeb Central`, 1],
+        [`Chapter 98 | Destiny Unchain Online Remake | Weeb Central`, 98],
+        [`Manga: The Maid is a Vampire Chapter - 15-eng-li`, 15],
+        [`The Novel's Extra chapter 150 - Read Manga Online`, 150],
+        [`Lord of the Mysteries (2025) chapter 3 - Read Manga Online`, 3],
+        [`The 100th Regression of the Max-Level Player chapter 81 - Read Manga Online`, 81],
+        [`Was Manager Seo Disposed of as an Industrial Accident? chapter 1 - Read Manga Online`, 1],
+        [`My 990 Thousand Past Lives Help Me chapter 79 - Read Manga Online`, 79],
+        [`Rebirth ( 69michi) chapter 2 - Read Manga Online`, 2],
         [`Destiny Unchain Online chapter 99 - Read Manga Online`, 99],
         [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, 222],
         [`Chapter 1 | My Villainous Family Won't Let Me Be | Weeb Central`, 1],
@@ -92,7 +108,28 @@ describe('getChapterFromTitle', () => {
         ["第12話 - Title", 12], // → NaN (Japanese episode marker)
         ["화 12 - Title", 12], // → NaN (Korean)
         ["One Piece - Chapter 1107", 1107], // → 1107 (your regex caps at \d{1,5} so fine)
-        ["Tower of God - Chapter 10000", 10000] //  → NaN (5 digits, doesn't exceeds \d{1,5})
+        ["Tower of God - Chapter 10000", 10000], //  → NaN (5 digits, doesn't exceeds \d{1,5})
+        //
+        ["my Title 14 chapters", 14],
+        //
+        ["Part 3 Volume 12", Number.NaN],
+        ["Part 3.5 Volume 12", Number.NaN],
+        ["S2E05", Number.NaN],
+        ["Chapter 1e10", 1e10],
+        //
+        ["Chapter -5", 5],
+        ["Chapter −5", 5],
+        //
+        ["Chapter 5", 5],
+        //
+        ["第5章", 5],
+        ["第五章", 5], // (CJK numeral, no ASCII digit)	any	NaN	silent total failure, no numeral support
+        ["Chapter ５", 5], // (fullwidth U+FF10)	any	NaN	\d doesn't match fullwidth digits
+        ["🎉Chapter5🎉", 5],
+        // bad data
+        ["123", 123],
+        ["", Number.NaN],
+        [undefined, Number.NaN],
     ])('getChapterFromTitle(%s) → %s', (input, expected) => {
         expect(getChapterFromTitle(input, '')).toBe(expected)
     })
