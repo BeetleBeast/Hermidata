@@ -1,8 +1,12 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
 
 export default defineConfig({
     base: './',  // ← this is the fix, makes all asset paths relative
+    test: {
+        environment: "node",
+        setupFiles: ["./vitest.setup.ts"],
+    },
     build: {
         outDir: 'dist',
         sourcemap: true,       // ← adds .js.map files next to each .js

@@ -39,6 +39,7 @@ describe('trimTitle', () => {
         ["My Title • Chapter 12", "My Title"], // → 12 or NaN? (bullet not in your split regex)
         ["Title／Chapter 12", "Title"], // → 12 or NaN? (fullwidth slash)
         ["Title　Chapter 12", "Title"], // → 12 or NaN? (ideographic space)
+        ["the generic title Chapter 3 English online <site>", "the generic title"],
         ["Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
         ["the generic title Chapter 3 English online", "the generic title"],
     ])('TrimTitle.trimTitle(%s) → %s', (input, expected) => {
