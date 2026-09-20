@@ -175,15 +175,6 @@ export class FolderMapping extends Build {
         settings.FolderMapping = defaultSettings.FolderMapping;
         await this.setSettings(settings);
     }
-    public async cancelValues() {
-        // reset page values to current settings
-        const settings = await this.getSettings();
-        this.loadExistingRules(settings);
-    }
-    public async saveValues() {
-        // TODO: implement if needed, currently values are saved immediately on change
-        // values are saved on input change, so no need to do anything here
-    }
     private cutSuggestion(suggestion: string, rule: string): string {
         // Normalize rule to ensure it doesn't end with /
         const normalizedRule = rule.endsWith('/') ? rule.slice(0, -1) : rule;

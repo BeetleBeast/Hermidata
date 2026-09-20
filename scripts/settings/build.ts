@@ -9,6 +9,12 @@ import { dbAccess } from "../shared/db/Storage";
 
 export abstract class Build {
 
+    public abstract init(): Promise<void>;
+
+    public abstract resetValues(): Promise<void>;
+
+
+
     private readonly dbAccess = new dbAccess();
 
     protected getSettings(): Promise<Settings> {

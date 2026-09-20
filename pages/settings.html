@@ -51,77 +51,142 @@
             <br>
         </section>
         <section class="section-content Extension_Behavior" data-active="false">
-            <br>
-            <label for="enableLightMode">Enable Light Mode</label>
-            <input id="enableLightMode" type="checkbox" title="Enable Light Mode" disabled>
-            <br>
-            <hr>
-            <br>
-            <label for="AllowContextMenu">Allow context menu</label>
-            <input type="checkbox" id="AllowContextMenu" title="Allow context menu" checked>
-            <br>
-            <hr>
-            <br>
-            <label for="enableNotification">Enable Notification</label>
-            <input type="checkbox" id="enableNotification" title="Enable Notification">
-            <form class="formIndented">
-                <label for="notificationBadge">Notification Badge</label>
-                <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
-                <br>
-                <label for="notificationMessageMinimum">Notification With minimum description</label>
-                <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With minimum description" value="MessageMinimum">
-                <br>
-                <label for="notificationMessageFull">Notification With Full description</label>
-                <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
-            </form>
-            <br>
-            <hr>
-            <br>
-            <label for="enableKeyboardShortcuts">Enable Keyboard Shortcuts ( Beta )</label>
-            <input type="checkbox" id="enableKeyboardShortcuts" title="Enable Keyboard Shortcuts" disabled>
-            <br>
-            <hr>
-            <br>
-            <label for="enableAutoSubscribe">Enable Auto-subscribe Bookmarks ( Beta )</label>
-            <input type="checkbox" id="enableAutoSubscribe" title="Enable Auto-subscribe Bookmarks">
-            <form class="formIndented" id="autoSubscribeForm">
-                <label for="enableAutoSubscribeThreshold">Enable Auto-subscribe threshold changer</label>
-                <input type="checkbox" id="enableAutoSubscribeThreshold" name="enableAutoSubscribeThreshold" title="enable auto subscribe threshold" value="false" disabled>
-                <br>
-                <form class="formIndented" id="autoSubscribeThresholdForm">
-                    <label for="autoSubscribeThreshold">Change the Auto-subscribe similarity threshold</label>
-                    <input type="range" min="0.9" max="1" step="0.01" id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold" value="1" disabled>
-                    <span id="autoSubscribeThresholdValue">1.0</span>
-                </form>
-            </form>
-            <br>
-            <hr>
-            <br>
-            <h3 id="saveTarget">Save Target</h3>
-            <form class="formIndented">
-                <label for="InternalCollection">save to an Internal Collection</label>
-                <input type="checkbox" id="InternalCollection" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
-                <br>
-                <label for="SaveToBrowserBookmark">Save as a browser Bookmark</label>
-                <input type="checkbox" id="SaveToBrowserBookmark" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
-                <br>
-                <label for="SaveToGoogleSpreadsheet">save to a Google Spreadsheet</label>
-                <input type="checkbox" id="SaveToGoogleSpreadsheet" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
-            </form>
-            <br>
-            <hr>
-            <br>
-            <h3 id="Novel Status auto update">Novel Status auto update ( Beta )</h3>
-            <form class="formIndented">
-                <label for="autoUpdateNovelStatusOnlyRSS">auto update Novel Status on RSS update only ( Recommended )</label>
-                <input type="checkbox" id="autoUpdateNovelStatusOnlyRSS" name="autoUpdateNovelStatus" title="auto update Novel Status" value="RSSOnly">
-                <br>
-                <label for="autoUpdateNovelStatusAllValue">auto update Novel Status on all updates</label>
-                <input type="checkbox" id="autoUpdateNovelStatusAllValue" name="autoUpdateNovelStatus" title="auto update Novel Status" value="All">
-            </form>
-            <br>
-            <hr>
-            <br>
+            <!-- Appearance & general -->
+            <div class="card">
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="enableLightMode">Light mode</label>
+                    <p>Use a light theme for the extension.</p>
+                </div>
+                <input id="enableLightMode" class="switch" type="checkbox" title="Enable Light Mode" disabled>
+                </div>
+
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="AllowContextMenu">Context menu</label>
+                    <p>Show extension actions in the right-click menu.</p>
+                </div>
+                <input id="AllowContextMenu" class="switch" type="checkbox" title="Allow context menu" checked>
+                </div>
+
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="enableKeyboardShortcuts">Keyboard shortcuts <span class="badge">Beta</span></label>
+                    <p>Trigger common actions with hotkeys.</p>
+                </div>
+                <input id="enableKeyboardShortcuts" class="switch" type="checkbox" title="Enable Keyboard Shortcuts" disabled>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card">
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="enableNotification">Notifications</label>
+                    <p>Get alerted when something changes.</p>
+                </div>
+                <input id="enableNotification" class="switch" type="checkbox" title="Enable Notification">
+                </div>
+
+                <div class="sub choices">
+                <label class="choice" for="notificationBadge">
+                    <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
+                    <strong>Badge</strong>
+                    <span>Icon badge only</span>
+                </label>
+                <label class="choice" for="notificationMessageMinimum">
+                    <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With minimum description" value="MessageMinimum">
+                    <strong>Minimal</strong>
+                    <span>Short message</span>
+                </label>
+                <label class="choice" for="notificationMessageFull">
+                    <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
+                    <strong>Full</strong>
+                    <span>Complete details</span>
+                </label>
+                </div>
+            </div>
+
+            <!-- Auto subscribe -->
+            <div class="card">
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="enableAutoSubscribe">Auto-subscribe bookmarks</label>
+                    <p>Automatically subscribe to bookmarked novels.</p>
+                </div>
+                <input id="enableAutoSubscribe" class="switch" type="checkbox" title="Enable Auto-subscribe Bookmarks">
+                </div>
+
+                <div class="sub">
+                <div class="setting">
+                    <div class="setting-text">
+                    <label for="enableAutoSubscribeThreshold">Similarity threshold</label>
+                    <p>Only subscribe when titles are similar enough.</p>
+                    </div>
+                    <input id="enableAutoSubscribeThreshold" class="switch" type="checkbox" name="enableAutoSubscribeThreshold"
+                        title="enable auto subscribe threshold" value="false" disabled>
+                </div>
+
+                <div class="setting slider-row">
+                    <label for="autoSubscribeThreshold">Threshold</label>
+                    <input type="range" id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold"
+                        min="0.9" max="1" step="0.01" value="1" disabled>
+                    <span id="autoSubscribeThresholdValue" class="value-pill">1.0</span>
+                </div>
+                </div>
+            </div>
+
+            <!-- Save target -->
+            <div class="card">
+                <h3 id="saveTarget">Save target</h3>
+
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="InternalCollection">Internal collection</label>
+                    <p>Always on. Stored inside the extension.</p>
+                </div>
+                <input type="checkbox" id="InternalCollection" class="switch" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
+                </div>
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="SaveToBrowserBookmark">Browser bookmark</label>
+                    <p>Also save as a bookmark in your browser.</p>
+                </div>
+                <input type="checkbox" id="SaveToBrowserBookmark" class="switch" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
+                </div>
+                <div class="setting">
+                <div class="setting-text">
+                    <label for="SaveToGoogleSpreadsheet">Google Spreadsheet</label>
+                    <p>Sync entries to a spreadsheet.</p>
+                </div>
+                <input type="checkbox" id="SaveToGoogleSpreadsheet" class="switch" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
+                </div>
+            </div>
+
+            <!-- Novel status -->
+            <div class="card">
+                <h3 id="novelStatusAutoUpdate">Novel status auto-update <span class="badge">Beta</span></h3>
+                <p class="card-note">
+                    Off by default, and we recommend leaving it that way. If you want statuses updated
+                    automatically, choose <strong>RSS updates only</strong>, the safer of the two.
+                </p>
+
+                <div class="setting">
+                    <div class="setting-text">
+                    <label for="autoUpdateNovelStatusOnlyRSS">RSS updates only <span class="badge good">Safer</span></label>
+                    <p>Update status only when the RSS feed reports a change.</p>
+                    </div>
+                    <input type="checkbox" id="autoUpdateNovelStatusOnlyRSS" class="switch" name="autoUpdateNovelStatus" title="auto update Novel Status" value="RSSOnly">
+                </div>
+
+                <div class="setting">
+                    <div class="setting-text">
+                    <label for="autoUpdateNovelStatusAllValue">All updates <span class="badge warn">Experimental</span></label>
+                    <p>Update status on any detected date change. May change statuses you didn't expect.</p>
+                    </div>
+                    <input type="checkbox" id="autoUpdateNovelStatusAllValue" class="switch" name="autoUpdateNovelStatus" title="auto update Novel Status" value="All">
+                </div>
+            </div>
         </section>
         <section class="section-content DefaultBookmarkSettings" data-active="false">
             <br>
@@ -481,11 +546,14 @@
             <button id="massImportFromBookmarkFolder-saveAllBtn">Save All</button>
             <br>
         </section>
-        <footer class="bottomFooter">
-            <button id="resetSettingsBtn" class="footerBtn" type="button">Reset</button>
-            <div class="saveAndCancel">
-                <button id="cancelSettingsBtn" class="footerBtn" type="button">Cancel</button>
-                <button id="saveSettingsBtn" class="footerBtn" type="button">Save</button>
+        <footer id="reset-footer" class="card danger-zone">
+            <br>
+            <div class="setting">
+                <div class="setting-text">
+                <label>Reset page settings</label>
+                <p>Restore everything on this page to its defaults.</p>
+                </div>
+                <button id="resetSettingsBtn" class="footerBtn" type="button">Reset</button>
             </div>
         </footer>
     </main>

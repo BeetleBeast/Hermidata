@@ -63,18 +63,6 @@ export class DefaultBookmarkInputs extends Build {
         this.setValuesToElements(this.elements.input, defaultSettings.DefaultBookmarkSettings.DefaultChoice);
         this.setValuesToElements(this.elements.menu, defaultSettings.DefaultBookmarkSettings.DefaultChoiceText_Menu);
     }
-    public async cancelValues() {
-        // reset page values to current settings
-        const settings = await this.getSettings();
-        await this.LoadAndPopulate(settings);
-    }
-    public async saveValues() {
-        const valuesInput = this.getValuesFromElements(this.elements.input);
-        this.updateSettings("DefaultChoice", valuesInput, this.status_Input);
-        // Save table Menu
-        const valuesMenu = this.getValuesFromElements(this.elements.menu);
-        this.updateSettings("DefaultChoiceText_Menu", valuesMenu, this.statusTextMenu);
-    }
     private async updateSettings(sectionKey: "DefaultChoice" | "DefaultChoiceText_Menu", values: DefaultChoice, statusElement: HTMLElement | null = null) {
         const settings = await this.getSettings();
         

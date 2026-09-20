@@ -197,12 +197,6 @@ export class ImportsAndExports extends Build {
     public async resetValues() {
         // no page values to reset, since all actions are file-based
     }
-    public async cancelValues() {
-        // no page values to reset, since all actions are file-based
-    }
-    public async saveValues() {
-        // no page values to save, since all actions are file-based
-    }
 
     // Export Settings as JSON
     private async exportSettings() {

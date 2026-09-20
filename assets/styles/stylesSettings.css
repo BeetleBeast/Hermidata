@@ -368,48 +368,27 @@ label {
 .active {
     background-color: var(--accent-active-dark);
 }
-.bottomFooter,
-footer {
-	position: fixed;
-	bottom: 0;
-	width: 70%;
-	height: 50px;
-	background-color: var(--bg);
-	border-top: 1px solid #ccc;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 50px;
+
+/* footer reset */
+
+.danger-zone { 
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
 }
-.footerBtn {
-	background-color: var(--bg);
-	color: var(--text);
-	border: 1px solid var(--surface-input);
-	border-radius: 4px;
-	padding: 8px 16px;
-	cursor: pointer;
-	transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-.footerBtn:hover {
-	background-color: var(--accent-hover-dark);
-}
-.footerBtn:active {
-	background-color: var(--accent-active-dark);
-	transition: none;
+#resetSettingsBtn {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 40%, transparent);
 }
 #resetSettingsBtn:hover {
-	background-color: var(--danger);
+    background-color: var(--danger);
     color: var(--text-dark);
-    border-color: var(--danger);
 }
-#cancelSettingsBtn:hover {
-	background: var(--accent-hover-dark);
-    border-color: var(--accent-hover-soft);
+
+/* import & export does not need a reset button */
+.Import_Export[data-active="true"] ~ #reset-footer {
+    display: none;
 }
-#saveSettingsBtn:hover {
-	background: var(--accent-hover-dark);
-    border-color: var(--accent-hover-soft);
-}
+
+/* footer reset end */
 .fullPage-btn {
     position: absolute;
     bottom: 15px;
@@ -531,16 +510,190 @@ select.autoInput {
     display: none;
 }
 
-/* if a fromIndented is a sibling of a input that is not checked, hide it */
-input:not(:checked) + .formIndented:has(input:disabled) {
-    opacity: 0;
+/* extension behavior */
+
+
+.section-content.Extension_Behavior[data-active="true"] {
+    display: flex;
+    flex-direction: column;
+}
+
+.Extension_Behavior {
+    gap: 16px;
+    max-width: 640px;
+    color: var(--text);
+}
+
+/* Cards */
+.Extension_Behavior .card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 20px;
+}
+.Extension_Behavior .card h3 {
+    margin: 16px 0 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.Extension_Behavior .card-note {
+    margin: 0 0 6px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.Extension_Behavior .card-note strong { color: var(--text); font-weight: 600; }
+
+/* Rows */
+.Extension_Behavior .setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+}
+.Extension_Behavior .card > .setting + .setting,
+.Extension_Behavior .sub > .setting + .setting {
+    border-top: 1px solid var(--border);
+}
+.Extension_Behavior .setting-text label {
+    font-weight: 500;
+    cursor: pointer;
+}
+.Extension_Behavior .setting-text p {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+/* Toggle switch (works on any input.switch checkbox) */
+.Extension_Behavior .switch {
+    appearance: none;
+    flex-shrink: 0;
+    position: relative;
+    width: 42px;
+    height: 24px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--track-off);
+    cursor: pointer;
+    transition: background 180ms ease;
+}
+.Extension_Behavior .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+    transition: transform 180ms ease;
+}
+.Extension_Behavior .switch:checked { background: var(--accent-active-soft); }
+.Extension_Behavior .switch:checked::after { transform: translateX(18px); }
+.Extension_Behavior .switch:focus-visible { outline: 2px solid var(--accent-active-soft); outline-offset: 2px; }
+.Extension_Behavior .switch:disabled { cursor: not-allowed; }
+
+/* Dim anything that's currently disabled, including its label text */
+.Extension_Behavior .setting:has(> input:disabled),
+.Extension_Behavior .choice:has(input:disabled) {
+    opacity: 0.45;
+}
+.Extension_Behavior .setting:has(> input:disabled) label { cursor: not-allowed; }
+
+/* Nested sub-settings (replaces .formIndented) */
+.Extension_Behavior .sub {
+    margin: 0 0 12px;
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+}
+
+/* Notification option tiles */
+.Extension_Behavior .choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 0 0 14px;
+    border-left: 0;
+    margin-top: -2px;
+}
+.Extension_Behavior .choice {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms, opacity 200ms;
+}
+.Extension_Behavior .choice input { position: absolute; opacity: 0; pointer-events: none; }
+.Extension_Behavior .choice span { font-size: 0.8rem; color: var(--muted); }
+.Extension_Behavior .choice:hover:not(:has(input:disabled)) { border-color: var(--accent-active-soft); }
+.Extension_Behavior .choice:has(input:checked) {
+    border-color: var(--accent-active-soft);
+    background: color-mix(in srgb, var(--accent-active-soft) 12%, transparent);
+}
+.Extension_Behavior .choice:has(input:focus-visible) { outline: 2px solid var(--accent-active-soft); outline-offset: 2px; }
+.Extension_Behavior .choice:has(input:disabled) { cursor: not-allowed; }
+
+/* Slider */
+.Extension_Behavior .slider-row { gap: 12px; }
+.Extension_Behavior .slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent-active-soft);
+}
+.Extension_Behavior .value-pill {
+    min-width: 3ch;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-active-soft) 16%, transparent);
+    color: var(--accent-active-soft);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* Badges */
+.Extension_Behavior .badge {
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    vertical-align: middle;
+}
+.Extension_Behavior .badge.good {
+    color: #3ecf8e;
+    border-color: color-mix(in srgb, #3ecf8e 40%, transparent);
+}
+
+.Extension_Behavior .badge.warn {
+    color: #f0b429;
+    border-color: color-mix(in srgb, #f0b429 40%, transparent);
 }
 
 
-.formIndented {
-    margin-left: 30px;
-    transition: opacity 200ms ease-in-out;
+@media (max-width: 480px) {
+    .Extension_Behavior .choices { grid-template-columns: 1fr; }
 }
+
+
+
+/* extension behavior end */
 
 .section-content[data-active="true"] {
     display: block;

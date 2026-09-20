@@ -9,7 +9,7 @@ import { getElement } from "../shared/utils/Selection";
 import { customConfirm } from "../popup/frontend/confirm";
 
 export class BuildController {
-    private currentSection: string = 'account-connection';
+    private currentSection: string = 'extension-behavior';
     private readonly initializedSections = new Set<string>();
 
     private readonly accountConnection = new Account_Connection();
@@ -37,8 +37,6 @@ export class BuildController {
     ]);
 
     private readonly resetBtn = getElement<HTMLButtonElement>("#resetSettingsBtn");
-    private readonly saveBtn = getElement<HTMLButtonElement>("#saveSettingsBtn");
-    private readonly cancelBtn = getElement<HTMLButtonElement>("#cancelSettingsBtn");
 
 
     private readonly openAccount_Connection = getElement<HTMLButtonElement>(`#open${this.navigations.get('account-connection')}`);
@@ -55,7 +53,7 @@ export class BuildController {
 
     public async init() {
         this.bindEvents();
-        await this.navigateTo(this.openAccount_Connection!, Array.from(this.navigations.keys())[0]);
+        await this.navigateTo(this.openExtension_Behavior!, this.currentSection);
     }
     
     private bindEvents() {
@@ -69,8 +67,6 @@ export class BuildController {
         this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, navStrings[6]));
 
         this.resetBtn?.addEventListener('click', () => this.resetPage(this.currentSection));
-        this.saveBtn?.addEventListener('click', () => this.savePage(this.currentSection));
-        this.cancelBtn?.addEventListener('click', () => this.cancelPage(this.currentSection));
     }
     private async navigateTo(e: PointerEvent | HTMLButtonElement, sectionId: string) {
         const target = e instanceof PointerEvent ? e.target as HTMLButtonElement : e;
@@ -119,56 +115,6 @@ export class BuildController {
                 break;
             case 'import-export':
                 await this.importAndExport.init();
-                break;
-        }
-    }
-    private async savePage(sectionId: string) {
-        switch (sectionId) {
-            case 'account-connection':
-                await this.accountConnection.saveValues();
-                break;
-            case 'extension-behavior':
-                await this.extensionBehavior.saveValues();
-                break;
-            case 'default-bookmarks':
-                await this.defaultBookmarkInputs.saveValues();
-                break;
-            case 'content-types':
-                await this.contentTypesAndStatuses.saveValues();
-                break;
-            case 'tag-management':
-                await this.tagManagement.saveValues();
-                break;
-            case 'folder-mapping':
-                await this.folderMapping.saveValues();
-                break;
-            case 'import-export':
-                await this.importAndExport.saveValues();
-                break;
-        }
-    }
-    private async cancelPage(sectionId: string) {
-        switch (sectionId) {
-            case 'account-connection':
-                await this.accountConnection.cancelValues();
-                break;
-            case 'extension-behavior':
-                await this.extensionBehavior.cancelValues();
-                break;
-            case 'default-bookmarks':
-                await this.defaultBookmarkInputs.cancelValues();
-                break;
-            case 'content-types':
-                await this.contentTypesAndStatuses.cancelValues();
-                break;
-            case 'tag-management':
-                await this.tagManagement.cancelValues();
-                break;
-            case 'folder-mapping':
-                await this.folderMapping.cancelValues();
-                break;
-            case 'import-export':
-                await this.importAndExport.cancelValues();
                 break;
         }
     }

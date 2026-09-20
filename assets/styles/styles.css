@@ -27,6 +27,10 @@
     --accent-active-soft: #5f7fbd; /* was --accent-active */
     --accent-active-dark: rgb(15, 34, 94); /* incorrect */
 
+    /* switches */
+    --track-off: #3a3d47;
+    --track-on: var(--accent-active-soft);
+
     /* Semantic states */
     --danger: #c85b5b;
     --danger-hover: #d66a6a;

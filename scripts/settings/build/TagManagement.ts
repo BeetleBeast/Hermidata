@@ -54,14 +54,6 @@ export class TagManagement extends Build {
         await this.setSettings(settings);
         await this.ReloadForms();
     }
-    public async cancelValues() {
-        // reset page values to current settings
-        await this.ReloadForms();
-    }
-    public async saveValues() {
-        // TODO: implement if needed, currently values are saved immediately on change
-        // no page values to save, since all actions are tag-based
-    }
 
     private populateUpdateRemoveTagForm() {
         if (!this.tagEditContainer) return;

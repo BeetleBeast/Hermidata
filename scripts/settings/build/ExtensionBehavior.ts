@@ -23,8 +23,7 @@ export class ExtensionBehavior extends Build {
     private readonly autoUpdateNovelStatusOnlyRSS = getElement<HTMLInputElement>("#autoUpdateNovelStatusOnlyRSS");
     private readonly autoUpdateNovelStatusAllValue = getElement<HTMLInputElement>("#autoUpdateNovelStatusAllValue");
 
-    private readonly saveTarget = getElement<HTMLInputElement>("#saveTarget");
-
+    private readonly saveTarget = document.querySelectorAll<HTMLInputElement>('input[name="SaveCollection"]')
 
     public async init() {
         const settings = await this.getSettings();
@@ -73,7 +72,7 @@ export class ExtensionBehavior extends Build {
         this.autoUpdateNovelStatusOnlyRSS?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'onlyRSS'));
         this.autoUpdateNovelStatusAllValue?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'allowAll'));
         
-        this.saveTarget?.addEventListener("change", (e) => this.SaveTarget(e));
+        this.saveTarget?.forEach(el => el?.addEventListener("change", (e) => this.SaveTarget(e)));
     }
     public async resetValues() {
         // reset all values from inputs to default
@@ -82,20 +81,6 @@ export class ExtensionBehavior extends Build {
         // reset settings in IndexedDB
         await this.setSettings(updatedSettings);
     }
-    public async cancelValues() {
-        // reset page values to current settings
-        const settings = await this.getSettings();
-        this.setValueOptionLightMode(settings);
-        this.setValueOptionContextMenu(settings);
-        this.setValueOptionNotification(settings);
-        this.setValueOptionKeyboardShortcuts(settings);
-        this.setValueOptionAutoSubscribe(settings);
-        this.setValueOptionSaveTarget(settings);
-    }
-    public async saveValues() {
-        // values are saved on input change, so no need to do anything here
-    }
-
 
     private setValueOptionLightMode(settings: Settings) {
         const isDarkMode = settings.ExtensionBehaviour.EnableLightMode;
@@ -140,13 +125,13 @@ export class ExtensionBehavior extends Build {
     }
     private setValueOptionAutoSubscribe(settings: Settings) {
         const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
-        setElement<HTMLInputElement>("#autoSubscribe", el => el.checked = autoSubscribe);
+        setElement<HTMLInputElement>("#enableAutoSubscribe", el => el.checked = autoSubscribe);
     }
     private setValueOptionSaveTarget(settings: Settings) {
         const googleSpreadsheet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
         const browserBookmark = settings.ExtensionBehaviour.SaveTarget.BrowserBookmark;
-        setElement<HTMLInputElement>("#saveToGoogleSpreadsheet", el => el.checked = googleSpreadsheet);
-        setElement<HTMLInputElement>("#saveToBrowserBookmark", el => el.checked = browserBookmark);
+        setElement<HTMLInputElement>("#SaveToGoogleSpreadsheet", el => el.checked = googleSpreadsheet);
+        setElement<HTMLInputElement>("#SaveToBrowserBookmark", el => el.checked = browserBookmark);
     }
 
     // Enable Light Mode
