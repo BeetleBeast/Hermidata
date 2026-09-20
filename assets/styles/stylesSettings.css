@@ -531,9 +531,15 @@ select.autoInput {
     display: none;
 }
 
+/* if a fromIndented is a sibling of a input that is not checked, hide it */
+input:not(:checked) + .formIndented:has(input:disabled) {
+    opacity: 0;
+}
+
 
 .formIndented {
     margin-left: 30px;
+    transition: opacity 200ms ease-in-out;
 }
 
 .section-content[data-active="true"] {
