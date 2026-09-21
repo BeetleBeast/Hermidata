@@ -4,8 +4,8 @@
     --surface: #121f31;
     --surface-raised: #202733;
     --surface-input: #28354b; /* was Btn ( rgb(63, 76, 96); ) */
-
-    --bg-disabled: #181c24; /* not deeded? */
+    --surface-disabled-dark: #181c24;
+    --surface-disabled-soft: rgba(255, 255, 255, 0.06);
 
     --text: #d3d3d3;
     --text-highlight: #fff;

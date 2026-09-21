@@ -49,7 +49,7 @@ button:focus-visible,
 button:disabled,
 .btn:disabled,
 .btn.disabled {
-    background: var(--bg-disabled);
+    background: var(--surface-disabled-dark);
     color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
@@ -142,7 +142,7 @@ input[type="radio"] {
 input:disabled,
 textarea:disabled,
 .input.disabled {
-    background: var(--bg-disabled);
+    background: var(--surface-disabled-dark);
     color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
@@ -186,7 +186,7 @@ input:invalid:not(:placeholder-shown) {
 }
 
 .file-btn.disabled {
-    background: var(--bg-disabled);
+    background: var(--surface-disable-dark);
     color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
@@ -232,7 +232,7 @@ input[type="color"]:focus {
 }
 
 input[type="color"]:disabled {
-    background: var(--bg-disabled);
+    background: var(--surface-disable-dark);
     border-color: var(--hr);
     cursor: not-allowed;
 }
@@ -284,7 +284,7 @@ select:focus {
 }
 
 select:disabled {
-    background-color: var(--bg-disabled);
+    background-color: var(--surface-disable-dark);
     color: var(--text-muted);
     border-color: var(--hr);
     cursor: not-allowed;
@@ -1007,7 +1007,7 @@ nav {
     overflow-x: auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.85rem;
-    background: var(--surface-input);
+    background: var(--surface-disabled-soft);
     border: 1px solid var(--border);
     border-radius: 9px;
 }
