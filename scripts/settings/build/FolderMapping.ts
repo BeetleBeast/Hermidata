@@ -169,11 +169,18 @@ export class FolderMapping extends Build {
             }
         });
     }
+    private async refresh(): Promise<void> {
+        const settings = await this.getSettings();
+        this.loadExistingAliases(settings);
+        this.loadExistingRules(settings);
+        this.populateAddAliases(settings);
+    }
     public async resetValues() {
         // reset settings in IndexedDB
         const settings = await this.getSettings();
         settings.FolderMapping = defaultSettings.FolderMapping;
         await this.setSettings(settings);
+        await this.refresh();
     }
     private cutSuggestion(suggestion: string, rule: string): string {
         // Normalize rule to ensure it doesn't end with /
@@ -231,30 +238,28 @@ export class FolderMapping extends Build {
             const suffix = this.add_NovelTypes_Subfolder_Suffix?.value;
             if (!NovelType || (!prefix && !suffix)) return;
             
-            let value;
-            if (!prefix && suffix) value = `${NovelType}/${suffix}`;
-            if (prefix && !suffix) value = `${prefix}/${NovelType}`;
+            let value: string;
             if (prefix && suffix) value = `${prefix}/${NovelType}/${suffix}`;
-            else return;
+            else if (prefix) value = `${prefix}/${NovelType}`;
+            else value = `${NovelType}/${suffix}`;
             this.setTypeAliases(NovelType, value);
         } else {
-            const ReadStatus = this.add_ReadStatuses_Subfolder_Prefix?.value as AnyReadStatus;
-            const prefix = this.add_NovelTypes_Subfolder_Prefix?.value || null;
+            const ReadStatus = this.add_ReadStatuses_Subfolder_To_Select?.value as AnyReadStatus;
+            const prefix = this.add_ReadStatuses_Subfolder_Prefix?.value || null;
             const suffix = this.add_ReadStatuses_Subfolder_Suffix?.value || null;
             if (!ReadStatus || (!prefix && !suffix)) return;
             
-            let value;
-            if (!prefix && suffix) value = `${ReadStatus}/${suffix}`;
-            if (prefix && !suffix) value = `${prefix}/${ReadStatus}`;
+            let value: string;
             if (prefix && suffix) value = `${prefix}/${ReadStatus}/${suffix}`;
-            else return;
+            else if (prefix) value = `${prefix}/${ReadStatus}`;
+            else value = `${ReadStatus}/${suffix}`;
             this.setStatusFolder(ReadStatus, value);
         }
     }
     private addNewRule() {
         const rule = this.addCustomRule?.value.trim();
-        const status = this.addCustomRuleToSelect_NovelType?.value.trim() as AnyReadStatus;
-        const type = this.addCustomRuleToSelect_ReadStatus?.value.trim() as AnyNovelType;
+        const status = this.addCustomRuleToSelect_ReadStatus?.value.trim() as AnyReadStatus;
+        const type = this.addCustomRuleToSelect_NovelType?.value.trim() as AnyNovelType;
         if (!rule) return;
         this.addFolderMappingRule(type, status, rule);
         this.temporaryStatus(`Saved: ${rule}`, this.saveStatusFolderMapping_newOverrides)
@@ -309,13 +314,14 @@ export class FolderMapping extends Build {
         if (existAlready === newAlias) return
 
         // add new alias
-        if (isANovelType && settings.FolderMapping.typeAliases) settings.FolderMapping.typeAliases.originalName = newAlias
+        if (isANovelType && settings.FolderMapping.typeAliases) settings.FolderMapping.typeAliases[originalName] = newAlias
         else if (isANovelType && !settings.FolderMapping.typeAliases) settings.FolderMapping.typeAliases = { [originalName]: newAlias }
 
         if (!isANovelType) settings.FolderMapping.statusFolders[originalName] = newAlias;
 
 
-        this.setSettings(settings);
+        await this.setSettings(settings);
+        await this.refresh();
     }
 
     public static resolveFolder( type: string, status: string, mapping: FolderMappingType ): string {
@@ -439,7 +445,7 @@ export class FolderMapping extends Build {
         row.append(label, edit, editBtn, removeBtn)
         return row
     }
-    private buildRuleRow(type: string, status: string, path: string): HTMLElement {
+    private buildRuleRow(type: string | undefined, status: string | undefined, path: string): HTMLElement {
         const row = document.createElement('div')
         row.className = 'folder-mapping-row'
         row.dataset.type = type
@@ -466,6 +472,8 @@ export class FolderMapping extends Build {
         editBtn.addEventListener('click', async () => {
             const updatedAlias = edit.value.trim();
             if (!updatedAlias) return;
+            type = type === 'any' ? undefined : type
+            status = status === 'any' ? undefined : status
             await this.addFolderMappingRule(type, status, updatedAlias);
             this.temporaryStatus(`Saved: ${type} + ${status} → ${updatedAlias}`, this.saveStatusFolderMapping_newAliases)
         })
@@ -491,7 +499,7 @@ export class FolderMapping extends Build {
 
         if (NovelTypes.length === 0) getElement("#AddAliasToNovelTypeContainer")!.style.display = 'none';
         if (ReadStatuses.length === 0) getElement("#AddAliasToReadStatusContainer")!.style.display = 'none';
-        if (NovelTypes.length === 0 && ReadStatuses.length === 0) getElement("#AddAliasContainer")!.style.display = 'none';
+        if (NovelTypes.length === 0 && ReadStatuses.length === 0) getElement(".card.FolderMapping_RenameOrAddAlias")!.style.display = 'none';
         this.populateSelect(this.addNovelTypeAliasToSelect, NovelTypes);
         this.populateSelect(this.addReadStatusAliasToSelect, ReadStatuses);
     }
@@ -551,7 +559,8 @@ export class FolderMapping extends Build {
 
             const updatedMapping: FolderMappingType = { ...mapping, overrides: [...(mapping.overrides ?? []), newRule] }
 
-            this.setSettings({ ...settings, FolderMapping: updatedMapping });
+            await this.setSettings({ ...settings, FolderMapping: updatedMapping });
+            await this.refresh();
 
             this.temporaryStatus( `Rule added: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`, this.saveStatusFolderMapping_newOverrides)
             console.log(`[FolderMapping] Added rule: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`)
@@ -567,7 +576,8 @@ export class FolderMapping extends Build {
             const mappingAlias = isNovelType ? settings.FolderMapping.typeAliases : settings.FolderMapping.statusFolders
 
             // Early checks to prevent unnecessary operations
-            if (!mappingAlias || !mappingAlias[OriginalName]) throw new Error('Alias not found')
+            if (!mappingAlias || !mappingAlias?.[OriginalName]) throw new Error('Alias not found')
+            delete mappingAlias[OriginalName];
 
             const before = Object.keys(mappingAlias).length ?? 0
             const filtered = Object.values(mappingAlias)?.filter(v => v !== OriginalName) ?? []
@@ -579,7 +589,8 @@ export class FolderMapping extends Build {
             else delete settings.FolderMapping.statusFolders[OriginalName]
             
 
-            this.setSettings(settings);
+            await this.setSettings(settings);
+            await this.refresh();
 
             this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overrides)
             console.log(`[FolderMapping] Removed rule: ${OriginalName}`)
@@ -602,6 +613,7 @@ export class FolderMapping extends Build {
             if (filtered.length === before) throw new Error(`No rule found for ${type ?? 'any'} + ${status ?? 'any'}`)
 
             await this.setSettings({ ...settings, FolderMapping: { ...mapping, overrides: filtered } });
+            await this.refresh();
 
             this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overrides)
 
@@ -621,7 +633,8 @@ export class FolderMapping extends Build {
 
             const settings = await this.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, typeAliases: { ...settings.FolderMapping.typeAliases, [folderName]: Alias.trim() }}};
-            this.setSettings(mergedData);
+            await this.setSettings(mergedData);
+            await this.refresh();
 
             this.temporaryStatus(`Saved: ${folderName} → ${Alias}`, this.saveStatusFolderMapping_newAliases)
         } catch (err) {
@@ -638,7 +651,8 @@ export class FolderMapping extends Build {
 
             const settings = await this.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, statusFolders: { ...settings.FolderMapping.statusFolders, [folderName]: Alias.trim() }}};
-            this.setSettings(mergedData);
+            await this.setSettings(mergedData);
+            await this.refresh();
 
             this.temporaryStatus(`Saved: ${folderName} → ${Alias}`, this.saveStatusFolderMapping_newAliases)
         } catch (err) {
@@ -654,7 +668,8 @@ export class FolderMapping extends Build {
 
             const settings = await this.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, defaultPath: path.trim() } };
-            this.setSettings(mergedData);
+            await this.setSettings(mergedData);
+            await this.refresh();
 
             this.temporaryStatus(`Saved: ${path}`, this.unsortedPathStatus)
 
@@ -671,7 +686,8 @@ export class FolderMapping extends Build {
 
             const settings = await this.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, root: path.trim() } };
-            this.setSettings(mergedData);
+            await this.setSettings(mergedData);
+            await this.refresh();
 
             this.temporaryStatus(`Saved: ${path}`, this.rootPathStatus)
         } catch (err) {
