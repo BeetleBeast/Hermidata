@@ -703,6 +703,9 @@ select.autoInput {
 }
 
 body {
+    display: grid;
+    grid-template-columns: 15% auto;
+    grid-template-areas: "sideBar main";
 	background-color: var(--bg);
 	color: var(--text);
 	margin-bottom: 15px;
@@ -712,6 +715,7 @@ body {
 }
 
 .sidebar {
+    grid-area: sidebar;
 	width: 10%;
 	background: transparent;
 	/* border-right: 1px solid #ddd; */
@@ -730,9 +734,12 @@ body {
 }
 
 .main.content {
+    grid-area: main;
 	margin-left: 20%;
 	border-left: 1px solid;
 }
+
+
 
 nav {
 	display: flex;
@@ -874,344 +881,307 @@ nav {
 
 
 /* folder mapping */
-/* explanation */
-.FolderMapping_Explanation {
-	position: absolute;
-	display: flex;
-	flex-direction: column;
-	top: 20px;
-	right: 20px;
-	border: 1px solid;
-	border-radius: 15px;
-	text-align: center;
-	width: 20%;
-	padding: 15px;
-    align-items: center;
+
+.FolderMapping[data-active="true"] {
+    display: flex;
 }
 
-#formulaOfFolderMapping {
-	border: 1px solid;
-	padding: 5px;
-    width: fit-content;
-}
-#formulaOfErrorFolderMapping {
-	border: 1px solid;
-	padding: 5px;
-	width: fit-content;
-}
-/* Remove or add Alias */
-.FolderMapping_RenameOrAddAlias {
-	width: fit-content;
-	border: 1px solid;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	border-radius: 15px;
-	padding: 15px;
-}
-#AddAliasToReadStatusContainer,
-#AddAliasToNovelTypeContainer {
+.FolderMapping {
     display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: flex-end;
-    align-items: center;
-    height: 2.5rem;
-    gap: 5px;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 720px;
+    color: var(--text);
 }
-#addReadStatusAliasBtn,
-#addNovelTypeAliasBtn {
-    height: inherit;
+
+/* ---------- Cards ---------- */
+.FolderMapping .card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+}
+.FolderMapping .card > h3 {
+    margin: 0 0 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.FolderMapping .card-desc,
+.FolderMapping .hint {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.FolderMapping code {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--surface-input);
+    font-size: 0.85em;
+}
+
+/* ---------- Inputs & buttons ---------- */
+.FolderMapping input[type="text"],
+.FolderMapping select {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--surface-input);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    transition: border-color 150ms;
+    margin: 0;
+}
+.FolderMapping input[type="text"]:focus-visible,
+.FolderMapping select:focus-visible {
+    outline: none;
+    border-color: var(--accent-dark);
+}
+.FolderMapping button {
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background-color 150ms, filter 150ms, transform 100ms;
+}
+.FolderMapping button:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.FolderMapping button:active { transform: scale(0.97); }
+.FolderMapping button:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+.FolderMapping .btn.primary {
+    color: #fff;
+    background: var(--accent-dark);
+    border-color: transparent;
+}
+.FolderMapping .btn.primary:hover { background: var(--accent-dark); filter: brightness(1.1); }
+
+.FolderMapping .status {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: var(--accent-dark);
+}
+.FolderMapping .status:empty { display: none; }
+
+.FolderMapping .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
     white-space: nowrap;
 }
 
-.FolderMapping_RenameOrAddAlias-child {
-	width: fit-content;
-	display: flex;
-	justify-content: center;
-	flex-direction: row;
-	align-items: center;
-	padding: 5px;
-	align-self: self-end;
+/* ---------- Explanation ---------- */
+.explain summary {
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
-#AddAliasContainer {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 5px;
-	padding: 5px;
+.explain summary::-webkit-details-marker { display: none; }
+.explain summary::after {
+    content: "";
+    width: 7px; height: 7px;
+    border-right: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
+    transform: rotate(45deg);
+    transition: transform 180ms;
 }
-/* DEFAULT  */
-/* custom Aliases */
-.FolderMapping_ActiveAliases {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	border: 1px solid;
-	border-radius: 15px;
-	padding: 15px;
-	width: 70%;
-	margin-top: 0;
-	
-	transition: all 0.5s ease-in-out;
+.explain[open] summary::after { transform: rotate(-135deg); }
+.explain #folderMappingExplanationContainer p { margin: 10px 0 14px; color: var(--text-muted); font-size: 0.9rem; }
+.explain .hint { margin: 0 0 6px; }
+.formula {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    background: var(--surface-input);
+    border: 1px solid var(--border);
+    border-radius: 9px;
 }
-/* TO small screen */
-@media only screen and (max-width: 1745px) {
-.FolderMapping_ActiveAliases {
-	width: 99%;
-	margin-top: 200px;
+.formula:last-child { margin-bottom: 0; }
+
+/* ---------- Base folder fields ---------- */
+.field + .field {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
 }
+.field > label { font-weight: 500; }
+.field .hint { margin: 2px 0 8px; }
+.field-row { display: flex; gap: 8px; }
+.field-row input { flex: 1; }
+
+/* ---------- Add alias / subfolder rows ---------- */
+.add-row,
+.subfolder-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
 }
-@media only screen and (max-width: 1100px) {
-.FolderMapping_ActiveAliases {
-	width: 99%;
-	margin-top: 260px;
+.add-row + .add-row,
+.subfolder-row + .subfolder-row {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
 }
+.add-tag {
+    flex: 1 0 100%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.add-row select { flex: 0 1 170px; }
+.add-row input[type="text"] { flex: 1 1 160px; }
+.add-row .arrow { color: var(--text-muted); }
+
+.path-builder {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 280px;
+    min-width: 0;
+}
+.path-builder input { flex: 1 1 90px; }
+.path-word {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    white-space: nowrap;
 }
 
-#AliasesHeader {
-	display: flex;
-	gap: 5px;
-	align-items: center;
-	flex-direction: row;
-	justify-content: space-around;
-	width: 100%;
+/* ---------- Active aliases & rules (rows are built in TS) ---------- */
+#activeAliasesContainer .group-title {
+    margin: 16px 0 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
 }
-#activeAliasesContainer {
-	display: flex;
-	align-items: baseline;
-	flex-direction: row;
-	gap: 5px;
-}
+#activeAliasesContainer .alias-group:first-child .group-title { margin-top: 12px; }
 
-
-#activeTypeAliases {
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-	align-items: end;
-	padding: 10px;
-	border: 1px solid;
-}
-#activeReadStatuses {
-	display: flex;
-	flex-direction: column;
-	align-items: end;
-	border: 1px solid;
-	padding: 10px;
-	gap: 5px;
-}
-
-.folder-mapping-edit-alias {
-	background-color: transparent;
-	color: var(--text);
-	align-self: normal;
-	border: none;
-	width: max-content;
-	text-align: center;
-}
-.folder-mapping-edit-override {
-	background-color: transparent;
-	color: var(--text);
-	align-self: normal;
-	border: none;
-	width: 40%;
-	text-align: left;
-}
-
-/* custom rules */
-.FolderMapping_ActiveCustomRules {
-	display: flex;
-	flex-direction: column;
-	border: 1px solid;
-	padding: 15px;
-	border-radius: 15px;
-	align-items: center;
-	justify-content: center;
-	width: 99%;
-}
-
-#activeCustomRulesContainer {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	width: 100%;
-}
+#activeTypeAliases,
+#activeReadStatuses,
 #activeCustomRules {
-	display: flex;
-	flex-direction: column;
-	align-items: end;
-	gap: 5px;
-	width: 70%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
-
 .folder-mapping-row {
-	display: flex;
-	flex-direction: row;
-	gap: 15px;
-	border: none;
-	text-align: center;
-	align-items: center;
-	justify-content: flex-end;
-	width: 100%;
+    display: grid;
+    grid-template-columns: minmax(90px, max-content) minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
 }
 .folder-mapping-label {
-	text-decoration: underline;
-	white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+.folder-mapping-edit-alias,
+.folder-mapping-edit-override { width: 100%; }
+
+/* Last button in a row is "Remove" */
+.folder-mapping-row button:last-child {
+    color: var(--danger);
+    border-color: transparent;
+}
+.folder-mapping-row button:last-child:hover {
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
 }
 
-#addCustomRule {
-	width: 100%;
-	font: small-caption;
+/* Hide the whole rules card when the TS hides its container (no rules) */
+.FolderMapping_ActiveCustomRules:has(#activeCustomRulesContainer[style*="display: none"]) {
+    display: none;
 }
-#addCustomRuleOptions_Inputs {
-	position: relative;
-	overflow: clip;
-	width: 55%;
-}
-#customRuleGhostText {
-	position: absolute;
-	top: 17px;
-	left: 10px;
-	pointer-events: none;
-	color: var(--text-muted);
-	opacity: 0.5;
-	white-space: nowrap;
-	overflow: visible;
-	font: small-caption;
-}
-/* advanced options */
+
+/* ---------- Advanced ---------- */
 #advancedOptionsBtn {
-	width: 30%;
-	background-color: transparent;
-	color: var(--text-highlight);
-	padding: 15px;
-	margin-top: 15px;
-	margin-bottom: 15px;
-	text-align: center;
-	margin-left: 35%;
-	margin-right: 35%;
+    align-self: flex-end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    color: var(--accent-soft);
+    background: none;
+    border: none;
 }
+#advancedOptionsBtn:hover { background: none; text-decoration: underline; }
+#advancedOptionsBtn::after {
+    content: "";
+    width: 7px; height: 7px;
+    margin-top: -3px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 180ms;
+}
+.FolderMapping:has(.FolderMapping_advancedOptions[style*="flex"]) #advancedOptionsBtn::after {
+    margin-top: 3px;
+    transform: rotate(-135deg);
+}
+/* your TS toggles style.display between 'flex' and 'none' */
 .FolderMapping_advancedOptions {
     display: none;
     flex-direction: column;
-    align-items: center;
-    border: 1px solid;
-    padding: 15px;
-    border-radius: 15px;
-    width: 99%;
+    gap: 16px;
 }
 
-/* sub-folders */
-.FolderMapping_advancedOptions_AddGeneralSubFolders {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-}
-#add_Subfolder_NovelTypes {
-	display: flex;
-	align-self: end;
-}
-#add_Subfolder_ReadStatuses {
-	display: flex;
-	align-self: end;
-}
-#add_NovelTypes_Subfolder_Options,
-#add_ReadStatuses_Subfolder_Options {
+/* Custom rule sentence */
+.rule-builder {
     display: flex;
-    flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
 }
-
-#add_NovelTypes_Subfolder_To_Select {
-	width: auto;
+.rule-builder .CustomRules { color: var(--text-muted); font-size: 0.9rem; }
+.ghost-wrap {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 180px;
+    background: var(--surface-input);
+    border-radius: 9px;
 }
-#add_ReadStatuses_Subfolder_To_Select {
-	width: auto;
+.ghost-wrap input {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    background: transparent !important;
 }
-
-#add_NovelTypes_Subfolder_Prefix {
-	margin: 10px 15px 10px 10px;
-	width: auto;
-}
-#add_ReadStatuses_Subfolder_Prefix {
-	margin: 10px 15px 10px 10px;
-	width: auto;
-}
-
-#add_NovelTypes_Subfolder_Suffix {
-	margin: 10px 15px 10px 10px;
-	width: auto;
-}
-
-#add_ReadStatuses_Subfolder_Suffix {
-	margin: 10px 15px 10px 10px;
-	width: auto;
-}
-
-
-
-#addCustomRule_Options {
+#customRuleGhostText {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
     display: flex;
-    flex-direction: row;
     align-items: center;
-    gap: 5px;
-	width: 100%;
-	justify-content: center;
+    padding: 0 11px;
+    overflow: hidden;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    color: var(--text-muted);
+    opacity: 0.7;
+    pointer-events: none;
 }
 
-.prefixAndSuffix {
-    background-color: transparent;
-	color: var(--text);
-	align-self: normal;
-	/* width: 70px; */
-	border: none;
+@media (max-width: 560px) {
+    .folder-mapping-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+    .folder-mapping-label { grid-column: 1 / -1; }
 }
 
-.prefixAndSuffix:hover,
-.prefixAndSuffix.highlighted {
-    background: transparent;
-    color: var(--text);
-}
-.prefixAndSuffix:focus {
-    outline: 1px invert var(--surface-input);
-}
-
-
-#add_NovelTypes_Subfolder_Options_Inputs {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    border-left: 1px solid var(--hr);
-}
-#add_ReadStatuses_Subfolder_Options_Inputs {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-	border-left: 1px solid var(--hr);
-}
-
-
-
-
-/* custom rules */
-
-.FolderMapping_advancedOptions_AddCustomRules {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	width: 100%;
-}
-
-#addCustomRuleToSelect_NovelType {
-	width: auto;
-}
-
-#addCustomRuleToSelect_ReadStatus {
-	width: auto;
-}
-
+/* folder mapping end */
 
 .massImportFromBookmarkFolder-item {
 	border: 1px solid;

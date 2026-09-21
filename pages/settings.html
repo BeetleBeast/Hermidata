@@ -324,141 +324,148 @@
         </section>
         <br>
         <section class="section-content FolderMapping" data-active="false">
-            <br>
-            <section class="FolderMapping_Explanation">
+            <!-- How it works -->
+            <details class="card explain" open>
+                <summary>How it works</summary>
                 <div id="folderMappingExplanationContainer">
-                    <h3><strong> How it works: </strong></h3>
-                    <br>
-                    <p>the extension will automatically 
-                        save your progress inside your
-                        browser bookmarks.</p>
-                        <p>However!</p>
-                    <p id="explainationOFolderMapping">
-                        it saves all your bookmarks using it's
-                        own formula on how each specific
-                        page is saved depending on the
-                        selection you choose during the saving
-                        moment.
-                    </p>
-                    <p>Here bellow is the formula.</p>
+                <p>Pages are saved into your browser bookmarks automatically. Each page's folder is
+                    built from a formula, using the type and status you pick when saving.</p>
                 </div>
-                <br>
-                <p id="formulaOfFolderMapping"></p>
-                <br>
-                <p id="explainationOFolderMappingError">Or if something went wrong</p>
-                <p id="formulaOfErrorFolderMapping"></p>
+                <p id="explainationOFolderMapping" class="hint">Standard path:</p>
+                <p id="formulaOfFolderMapping" class="formula"></p>
+                <p id="explainationOFolderMappingError" class="hint">If something goes wrong:</p>
+                <p id="formulaOfErrorFolderMapping" class="formula"></p>
+            </details>
+
+            <!-- Base folders -->
+            <section class="card FolderMapping_Paths">
+                <h3>Base folders</h3>
+
+                <div id="rootPathContainer" class="field">
+                <label for="rootPath">Root folder</label>
+                <p class="hint">Where all your saved bookmarks live.</p>
+                <div class="field-row">
+                    <input type="text" id="rootPath" />
+                    <button type="button" id="saveRootPathBtn" class="btn primary">Save</button>
+                </div>
+                <span id="rootPathStatus" class="status"></span>
+                </div>
+
+                <div id="defaultPathContainer" class="field">
+                <label for="unsortedPath">Unsorted folder</label>
+                <p class="hint">Fallback when no folder matches.</p>
+                <div class="field-row">
+                    <input type="text" id="unsortedPath" />
+                    <button type="button" id="saveUnsortedPathBtn" class="btn primary">Save</button>
+                </div>
+                <span id="unsortedPathStatus" class="status"></span>
+                </div>
             </section>
-            
-            <section class="FolderMapping_RenameOrAddAlias">
-                <h3><strong> Rename or Add Alias </strong></h3>
-                <div id="rootPathContainer" class="FolderMapping_RenameOrAddAlias-child">
-                    <label for="rootPath">root path: </label>
-                    <input type="text" id="rootPath"/>
-                    <button type="button" id="saveRootPathBtn">Save</button>
-                    <span id="rootPathStatus"></span>
+
+            <!-- Add alias -->
+            <section class="card FolderMapping_RenameOrAddAlias">
+                <h3>Rename folders</h3>
+                <p class="card-desc">Use a custom folder name instead of the default one.</p>
+
+                <div id="AddAliasContainer">
+                <div id="AddAliasToNovelTypeContainer" class="add-row">
+                    <span class="add-tag">Novel type</span>
+                    <select id="addNovelTypeAliasToSelect" title="AddAliasTo"><!-- dynamic items here --></select>
+                    <span class="arrow" aria-hidden="true">→</span>
+                    <label for="addNovelTypeAlias" class="sr-only">Alias</label>
+                    <input type="text" id="addNovelTypeAlias" placeholder="New folder name" />
+                    <button type="button" id="addNovelTypeAliasBtn" class="btn primary">Add</button>
                 </div>
-                <div id="defaultPathContainer" class="FolderMapping_RenameOrAddAlias-child">
-                    <label for="unsortedPath">unsorted path: </label>
-                    <input type="text" id="unsortedPath"/>
-                    <button type="button" id="saveUnsortedPathBtn">Save</button>
-                    <span id="unsortedPathStatus"></span>
+
+                <div id="AddAliasToReadStatusContainer" class="add-row">
+                    <span class="add-tag">Read status</span>
+                    <select id="addReadStatusAliasToSelect" title="AddAliasTo"><!-- dynamic items here --></select>
+                    <span class="arrow" aria-hidden="true">→</span>
+                    <label for="addReadStatusAlias" class="sr-only">Alias</label>
+                    <input type="text" id="addReadStatusAlias" placeholder="New folder name" />
+                    <button type="button" id="addReadStatusAliasBtn" class="btn primary">Add</button>
                 </div>
-                <br>
-                <div id="AddAliasContainer" class="FolderMapping_RenameOrAddAlias-child">
-                    <div id="AddAliasToNovelTypeContainer">
-                        <select id="addNovelTypeAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
-                        <label for="addNovelTypeAlias">Add Alias: </label>
-                        <input type="text" id="addNovelTypeAlias" placeholder="type here..." />
-                        <button type="button" id="addNovelTypeAliasBtn">Add Alias</button>
-                    </div>
-                    <br>
-                    <div id="AddAliasToReadStatusContainer">
-                        <select id="addReadStatusAliasToSelect" title="AddAliasTo"> <!-- dynamic items here --> </select>
-                        <label for="addReadStatusAlias">Add Alias: </label>
-                        <input type="text" id="addReadStatusAlias" placeholder="type here..." />
-                        <button type="button" id="addReadStatusAliasBtn">Add Alias</button>
-                    </div>
-                    <p id="saveStatus-folderMapping-new-aliases"></p>
+
+                <p id="saveStatus-folderMapping-new-aliases" class="status"></p>
                 </div>
-                <br>
             </section>
-            <br>
-            <section class="FolderMapping_ActiveAliases">
-                <h3><strong> Active Aliases </strong></h3>
-                <div id="AliasesHeader">
-                    <p id="activeAliasesHeader-NovelType">Active Type Aliases</p>
-                    <p id="activeAliasesHeader-ReadStatus">Active Read Statuses</p>
-                </div>
+
+            <!-- Active aliases -->
+            <section class="card FolderMapping_ActiveAliases">
+                <h3>Active aliases</h3>
                 <div id="activeAliasesContainer">
-                    <div id="activeTypeAliases"> <!-- dynamic items here --> </div>
-                    <div id="activeReadStatuses"> <!-- dynamic items here --> </div>
+                <div class="alias-group">
+                    <p id="activeAliasesHeader-NovelType" class="group-title">Novel types</p>
+                    <div id="activeTypeAliases"><!-- dynamic items here --></div>
                 </div>
-                <p id="saveStatus-folderMapping-aliases"></p>
-                <br>
+                <div class="alias-group">
+                    <p id="activeAliasesHeader-ReadStatus" class="group-title">Read statuses</p>
+                    <div id="activeReadStatuses"><!-- dynamic items here --></div>
+                </div>
+                </div>
+                <p id="saveStatus-folderMapping-aliases" class="status"></p>
             </section>
-            <br>
-            <section class="FolderMapping_ActiveCustomRules">
-                <h3><strong> Active Custom Rules </strong></h3>
+
+            <!-- Active custom rules -->
+            <section class="card FolderMapping_ActiveCustomRules">
+                <h3>Active custom rules</h3>
                 <div id="activeCustomRulesContainer">
-                    <div id="activeCustomRules"> <!-- dynamic items here --> </div>
-                    <p id="saveStatus-folderMapping-overides"></p>
+                <div id="activeCustomRules"><!-- dynamic items here --></div>
+                <p id="saveStatus-folderMapping-overrides" class="status"></p>
                 </div>
-                <br>
             </section>
-            <br>
-            <button type="button" id="advancedOptionsBtn">Advanced Options</button>
-            <br>
+
+            <!-- Advanced -->
+            <button type="button" id="advancedOptionsBtn">Advanced options</button>
+
             <section class="FolderMapping_advancedOptions hidden">
-                <section class="FolderMapping_advancedOptions_AddGeneralSubFolders">
-                    <h3><strong> Add General Subfolder's </strong></h3>
-                    <br>
-                    <div id="add_Subfolder_NovelTypes">
-                        <div id="add_NovelTypes_Subfolder_Options">
-                            <span for="add_NovelTypes_Subfolder">Novel Types: </span>
-                            <select id="add_NovelTypes_Subfolder_To_Select" title="AddSubfolderTo"> <!-- dynamic items here --> </select>
-                            <div id="add_NovelTypes_Subfolder_Options_Inputs">
-                                <input type="text" id="add_NovelTypes_Subfolder_Prefix" class="prefixAndSuffix" placeholder="type here..." />
-                                <span id="add_NovelTypes_Subfolder_Word"></span>
-                                <input type="text" id="add_NovelTypes_Subfolder_Suffix" class="prefixAndSuffix" placeholder="type here..." />
-                            </div>
-                            <button type="button" id="add_NovelTypes_Subfolder_Btn">Add Subfolder</button>
+                <section class="card FolderMapping_advancedOptions_AddGeneralSubFolders">
+                    <h3>General subfolders</h3>
+                    <p class="card-desc">Wrap a folder in extra levels, e.g. <code>prefix/Type/suffix</code>.</p>
+
+                    <div id="add_Subfolder_NovelTypes" class="subfolder-row">
+                        <label class="add-tag" for="add_NovelTypes_Subfolder_To_Select">Novel type</label>
+                        <select id="add_NovelTypes_Subfolder_To_Select" title="AddSubfolderTo"><!-- dynamic items here --></select>
+                        <div id="add_NovelTypes_Subfolder_Options_Inputs" class="path-builder">
+                        <input type="text" id="add_NovelTypes_Subfolder_Prefix" class="prefixAndSuffix" placeholder="prefix" />
+                        <span id="add_NovelTypes_Subfolder_Word" class="path-word"></span>
+                        <input type="text" id="add_NovelTypes_Subfolder_Suffix" class="prefixAndSuffix" placeholder="suffix" />
                         </div>
+                        <button type="button" id="add_NovelTypes_Subfolder_Btn" class="btn primary">Add</button>
                     </div>
-                    <div id="add_Subfolder_ReadStatuses">
-                        <div id="add_ReadStatuses_Subfolder_Options">
-                            <span for="add_ReadStatuses_Subfolder">Read Status: </span>
-                            <select id="add_ReadStatuses_Subfolder_To_Select" title="AddSubfolderTo"> <!-- dynamic items here --> </select>
-                            <div id="add_ReadStatuses_Subfolder_Options_Inputs">
-                                <input type="text" id="add_ReadStatuses_Subfolder_Prefix" class="prefixAndSuffix" placeholder="type here..." />
-                                <span id="add_ReadStatuses_Subfolder_Word"></span>
-                                <input type="text" id="add_ReadStatuses_Subfolder_Suffix" class="prefixAndSuffix" placeholder="type here..." />
-                            </div>
-                            <button type="button" id="add_ReadStatuses_Subfolder_Btn">Add Subfolder</button>
+
+                    <div id="add_Subfolder_ReadStatuses" class="subfolder-row">
+                        <label class="add-tag" for="add_ReadStatuses_Subfolder_To_Select">Read status</label>
+                        <select id="add_ReadStatuses_Subfolder_To_Select" title="AddSubfolderTo"><!-- dynamic items here --></select>
+                        <div id="add_ReadStatuses_Subfolder_Options_Inputs" class="path-builder">
+                        <input type="text" id="add_ReadStatuses_Subfolder_Prefix" class="prefixAndSuffix" placeholder="prefix" />
+                        <span id="add_ReadStatuses_Subfolder_Word" class="path-word"></span>
+                        <input type="text" id="add_ReadStatuses_Subfolder_Suffix" class="prefixAndSuffix" placeholder="suffix" />
                         </div>
+                        <button type="button" id="add_ReadStatuses_Subfolder_Btn" class="btn primary">Add</button>
                     </div>
-                    <br>
                 </section>
-                <br>
-                <section class="FolderMapping_advancedOptions_AddCustomRules">
-                    <h3><strong> Add Custom Rules </strong></h3>
-                    <br>
-                    <div id="addCustomRule_Options">
-                        <span class="CustomRules">When </span>
-                        <select id="addCustomRuleToSelect_NovelType" title="AddRuleTo"> <!-- dynamic items here --> </select>
-                        <span class="CustomRules"> is </span>
-                        <select id="addCustomRuleToSelect_ReadStatus" title="AddRuleTo"> <!-- dynamic items here --> </select>
-                        <span class="CustomRules"> Save to: </span>
-                        <div id="addCustomRuleOptions_Inputs">
-                            <input type="text" id="addCustomRule" placeholder="type here..." />
-                            <span id="customRuleGhostText"></span>
+
+                <section class="card FolderMapping_advancedOptions_AddCustomRules">
+                    <h3>Add custom rule</h3>
+                    <p class="card-desc">Send a specific type and status combination to its own folder.</p>
+
+                    <div id="addCustomRule_Options" class="rule-builder">
+                        <span class="CustomRules">When</span>
+                        <select id="addCustomRuleToSelect_NovelType" title="AddRuleTo"><!-- dynamic items here --></select>
+                        <span class="CustomRules">is</span>
+                        <select id="addCustomRuleToSelect_ReadStatus" title="AddRuleTo"><!-- dynamic items here --></select>
+                        <span class="CustomRules">save to</span>
+                        <div id="addCustomRuleOptions_Inputs" class="ghost-wrap">
+                        <input type="text" id="addCustomRule" placeholder="type a path…" />
+                        <span id="customRuleGhostText"></span>
                         </div>
-                        <button type="button" id="addCustomRuleBtn">Add Rule</button>
+                        <button type="button" id="addCustomRuleBtn" class="btn primary">Add rule</button>
                     </div>
-                    <p id="saveStatus-folderMapping-new-overides"></p>
-                    <br>
+                    <p class="hint">Press Tab or → to accept the suggestion.</p>
+                    <p id="saveStatus-folderMapping-new-overrides" class="status"></p>
                 </section>
             </section>
-            <br>
         </section>
         <section class="section-content Import_Export" data-active="false">
             <br>
