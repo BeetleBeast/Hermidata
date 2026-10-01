@@ -651,6 +651,7 @@ select.autoInput {
 .Extension_Behavior .slider-row input[type="range"] {
     flex: 1;
     accent-color: var(--accent-active-soft);
+    padding: 0;
 }
 .Extension_Behavior .value-pill {
     min-width: 3ch;
@@ -704,7 +705,7 @@ select.autoInput {
 
 body {
     display: grid;
-    grid-template-columns: 15% auto;
+    grid-template-columns: 25% auto;
     grid-template-areas: "sideBar main";
 	background-color: var(--bg);
 	color: var(--text);
@@ -715,27 +716,30 @@ body {
 }
 
 .sidebar {
-    grid-area: sidebar;
-	width: 10%;
+    grid-area: sideBar;
+	width: 20rem;
+    height: fit-content;
+
 	background: transparent;
-	/* border-right: 1px solid #ddd; */
+	border-right: 1px solid #ddd;
 	padding: 20px 0;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	color: var(--text-highlight);
-	position: absolute;
+	position: sticky;
 	top: 10%;
 	border: 1px solid;
 	margin-left: 5%;
 	margin-right: 5%;
 	padding-bottom: 50px;
 	overflow: clip;
+    align-self: baseline;
+    justify-self: center;
 }
 
 .main.content {
     grid-area: main;
-	margin-left: 20%;
 	border-left: 1px solid;
 }
 
@@ -819,7 +823,6 @@ nav {
 }
 .EditORemoveItem-removeBtn {
 	border-radius: 0 6px 6px 0 !important;
-	height: 2.5em !important;
 }
 
 .EditORemoveItem-input {

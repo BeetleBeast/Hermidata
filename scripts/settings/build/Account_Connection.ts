@@ -59,21 +59,21 @@ export class Account_Connection extends Build {
             this.status.textContent = "Testing...";
             const value = this.input.value.trim() || this.spreadsheetUrl;
             if (!value) {
-                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 500, "red");
+                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 1000, "red");
                 return;
             }
 
             const url = this.constructUrl(value);
             if (!url) { 
-                this.temporaryStatus("Invalid URL", "#statusSheetURL", 500, "red"); 
+                this.temporaryStatus("Invalid URL", "#statusSheetURL", 1000, "red"); 
                 throw new Error("Invalid URL");
             }
             const response = await fetch(url, { method: "HEAD" });
-            if (response.ok) this.temporaryStatus("connected!", "#statusSheetURL", 500);
-            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 500, "red");
+            if (response.ok) this.temporaryStatus("connected!", "#statusSheetURL", 1000);
+            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "red");
             
         } catch (error) {
-            this.temporaryStatus("Failed to connect", "#statusSheetURL", 500, "red");
+            this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "red");
         }
     }
     private constructUrl(url: string): string | null {
@@ -98,7 +98,7 @@ export class Account_Connection extends Build {
     private giveFeedback() {
         // give hint of how the link to google sheets needs to look like
         if (!this.input || !this.status) return;
-        if (!this.input.value) this.status.textContent = `Go to your spreadsheet and copy the url of the sheet. It should look like this: https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit?pli=1&gid=0#gid=0`;
+        if (!this.input.value) this.status.textContent = `Go to your spreadsheet and copy the url of the sheet. It should look like this: https://docs.google.com/spreadsheets/d/< your spreadsheet id >/edit?pli=1&gid=0#gid=0`;
         else this.status.textContent = "";
     }
 
