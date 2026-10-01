@@ -21,11 +21,14 @@ export class ImportsAndExports extends Build {
     private allAbsPath: string[] = [];
 
     private readonly massImportFromBookmarkFolderBtn = getElement<HTMLButtonElement>("#massImportFromBookmarkFolderBtn");
-    private readonly massImportFromBookmarkFolderCheckContainer = getElement<HTMLDivElement>("#massImportFromBookmarkFolderCheckContainer");
+    private readonly massImportFromBookmarkFolderCheckContainer = getElement<HTMLTableSectionElement>("#massImportFromBookmarkFolderCheckContainer");
+    private readonly massImportFromBookmarkFolderTable = getElement<HTMLTableElement>("#massImportFromBookmarkFolderContainer");
+    private readonly bookmarkImportEmptyState = getElement<HTMLParagraphElement>("#bookmarkImportEmptyState");
     private readonly massImportFromBookmarkFolder = getElement<HTMLInputElement>("#bookmarkFolder");
     private readonly massImportFromBookmarkFolderSaveAllBtn = getElement<HTMLButtonElement>("#massImportFromBookmarkFolder-saveAllBtn");
     private readonly massImportFromBookmarkFolderGhostText = getElement<HTMLParagraphElement>("#massImportFromBookmarkFolderGhostText");
     private readonly massImportFromBookmarkFolderStatus = getElement<HTMLDivElement>("#massImportFromBookmarkFolderStatus");
+    private eventsBound = false;
 
     constructor(devMode = false) {
         super();
@@ -34,19 +37,25 @@ export class ImportsAndExports extends Build {
 
     public async init() {
 
-        if (this.devMode) {
-            getElement("#exportRSSBtn")!.dataset.active = "true";
-            getElement("#importRSSBtn")!.dataset.active = "true";
+        const developerDataSection = getElement<HTMLElement>(".import-export-dev");
+        if (developerDataSection) developerDataSection.hidden = !this.devMode;
 
-            getElement("#exportSyncDataBtn")!.dataset.active = "true";
-            getElement("#importSyncDataBtn")!.dataset.active = "true";
-            getElement("#deleteSyncDataBtn")!.dataset.active = "true";
+        if (this.devMode) {
+            getElement<HTMLButtonElement>("#exportRSSBtn")?.setAttribute("data-active", "true");
+            getElement<HTMLInputElement>("#importRSSBtn")?.setAttribute("data-active", "true");
+
+            getElement<HTMLButtonElement>("#exportSyncDataBtn")?.setAttribute("data-active", "true");
+            getElement<HTMLInputElement>("#importSyncDataBtn")?.setAttribute("data-active", "true");
+            getElement<HTMLButtonElement>("#deleteSyncDataBtn")?.setAttribute("data-active", "true");
         }
 
         this.bindEvents();
     }
     
     private bindEvents() {
+        if (this.eventsBound) return;
+        this.eventsBound = true;
+
         getElement("#exportBtn")?.addEventListener("click", () => this.exportSettings());
         getElement("#importBtn")?.addEventListener("change", (e) => this.importSettings(e));
         
@@ -68,13 +77,18 @@ export class ImportsAndExports extends Build {
         this.massImportFromBookmarkFolder?.addEventListener('input', async () => {
             const rule = this.massImportFromBookmarkFolder?.value.trim();
             const ghostText = this.massImportFromBookmarkFolderGhostText;
-            if (!rule || !ghostText) return;
+            if (!ghostText) return;
+            ghostText.textContent = '';
+            this.massImportFromBookmarkFolderSuggestion = null;
+            if (!rule) return;
             const completeSuggestions = await this.getSuggestions(rule);
+            if (this.massImportFromBookmarkFolder?.value.trim() !== rule) return;
             const fullSuggestion = completeSuggestions.length > 0 ? completeSuggestions[0] : null;
             if (fullSuggestion) {
                 const suggestion = this.cutSuggestion(fullSuggestion, rule);
                 this.massImportFromBookmarkFolderSuggestion = suggestion;
                 this.massImportFromBookmarkFolderGhostText.textContent = suggestion;
+                this.positionGhostText(rule);
             }
         });
         // pressing tab on custom rule input autocompletes the ghost text
@@ -193,6 +207,23 @@ export class ImportsAndExports extends Build {
         this.massImportFromBookmarkFolderGhostText.textContent = "";
         this.massImportFromBookmarkFolder!.value = this.massImportFromBookmarkFolderSuggestion;
         this.massImportFromBookmarkFolderSuggestion = null;
+        this.updateBookmarkImportState();
+    }
+    private positionGhostText(value: string) {
+        const input = this.massImportFromBookmarkFolder;
+        const ghost = this.massImportFromBookmarkFolderGhostText;
+        if (!input || !ghost || !value) return;
+        const context = document.createElement('canvas').getContext('2d');
+        if (!context) return;
+        context.font = getComputedStyle(input).font;
+        const padding = Number.parseFloat(getComputedStyle(input).paddingLeft) || 0;
+        ghost.style.left = `${padding + context.measureText(value).width}px`;
+    }
+    private updateBookmarkImportState() {
+        const hasRows = Boolean(this.massImportFromBookmarkFolderCheckContainer?.children.length);
+        if (this.massImportFromBookmarkFolderTable) this.massImportFromBookmarkFolderTable.hidden = !hasRows;
+        if (this.massImportFromBookmarkFolderSaveAllBtn) this.massImportFromBookmarkFolderSaveAllBtn.hidden = !hasRows;
+        if (this.bookmarkImportEmptyState) this.bookmarkImportEmptyState.hidden = hasRows;
     }
     public async resetValues() {
         // no page values to reset, since all actions are file-based
@@ -603,6 +634,10 @@ export class ImportsAndExports extends Build {
     }
 
     private async massImportFromBookmarkFolderBtnClick() {
+        if (this.massImportFromBookmarkFolderCheckContainer) this.massImportFromBookmarkFolderCheckContainer.innerHTML = "";
+        this.finalAllHermidatas = {};
+        this.updateBookmarkImportState();
+
         // get all Hermidata
         const allHermidata = await this.getAllHermidata();
         const settings = await this.getSettings();
@@ -610,11 +645,20 @@ export class ImportsAndExports extends Build {
         
         // get folder path
         const folderPath = this.massImportFromBookmarkFolder?.value.trim() ?? null;
-        if (!folderPath) return;
+        if (!folderPath) {
+            this.temporaryStatus("Enter a bookmark folder path first.", this.massImportFromBookmarkFolderStatus);
+            this.updateBookmarkImportState();
+            return;
+        }
+        this.temporaryStatus("Searching bookmarks...", this.massImportFromBookmarkFolderStatus);
         // get all potential hermidata
         const importFromBookmarkFolder = new AutoSetAllHermidata(allHermidata, allNovelTypes);
         const newHermidatas = await importFromBookmarkFolder.getAllPotentialHermidata(folderPath, this.getBrowserRoot());
-        if (!newHermidatas?.length) return;
+        if (!newHermidatas?.length) {
+            this.temporaryStatus("No new bookmarks were found in that folder.", this.massImportFromBookmarkFolderStatus);
+            this.updateBookmarkImportState();
+            return;
+        }
         // set all values in settings to be reviewed
         const Hermidatas: Record<string, Hermidata> = newHermidatas.reduce((acc, hermidata) => ({ ...acc, [hermidata.id]: hermidata }), {});
         this.reviewAllHermidatas(Hermidatas, allNovelTypes);
@@ -632,6 +676,7 @@ export class ImportsAndExports extends Build {
             
             this.massImportFromBookmarkFolderCheckContainer.appendChild(item);
         }
+        this.updateBookmarkImportState();
     }
     private createHermidataReviewItem(hermidata: Hermidata, allNovelTypes: AnyNovelType[]): HTMLTableRowElement {
         const item = document.createElement('tr');
@@ -679,6 +724,7 @@ export class ImportsAndExports extends Build {
         removeBtn.addEventListener('click', () => {
             this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);
             delete this.finalAllHermidatas[hermidata.id];
+            this.updateBookmarkImportState();
         });
         removeBtnCell.appendChild(removeBtn);
         // create add button
@@ -697,6 +743,7 @@ export class ImportsAndExports extends Build {
             // remove from list to review
             this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);
             delete this.finalAllHermidatas[hermidata.id];
+            this.updateBookmarkImportState();
         });
         addBtnCell.appendChild(addBtn);
 
@@ -709,6 +756,7 @@ export class ImportsAndExports extends Build {
 
         await this.finalizeAllHermidatas(this.finalAllHermidatas);
         this.massImportFromBookmarkFolderCheckContainer!.innerHTML = '';
+        this.updateBookmarkImportState();
         this.temporaryStatus('Done', this.massImportFromBookmarkFolderStatus);
     }
     private async finalizeAllHermidatas(data: Record<string, Hermidata>) {

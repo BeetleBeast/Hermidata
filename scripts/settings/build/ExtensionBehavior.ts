@@ -24,6 +24,10 @@ export class ExtensionBehavior extends Build {
     private readonly autoUpdateNovelStatusAllValue = getElement<HTMLInputElement>("#autoUpdateNovelStatusAllValue");
 
     private readonly saveTarget = document.querySelectorAll<HTMLInputElement>('input[name="SaveCollection"]')
+    private readonly spreadsheetTarget = getElement<HTMLInputElement>("#SaveToGoogleSpreadsheet");
+    private readonly spreadsheetSetup = getElement<HTMLElement>("#spreadsheetSetup");
+    private readonly spreadsheetTargetReminder = getElement<HTMLElement>("#spreadsheetTargetReminder");
+    private readonly spreadsheetUrl = getElement<HTMLInputElement>("#spreadsheetUrl");
 
     public async init() {
         const settings = await this.getSettings();
@@ -47,6 +51,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionAutoSubscribeThresholdOnly();
         // Save Target
         this.setValueOptionSaveTarget(settings);
+        this.updateSpreadsheetSetup(settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, settings.AccountAndConnections.spreadsheetUrl);
         // Auto Update Novel Status
         this.setValueOptionAutoUpdateNovelStatus(settings);
 
@@ -276,7 +281,14 @@ export class ExtensionBehavior extends Build {
         const settingsTarget = target == "Spreadsheet" ? "GoogleSpreadsheet" : "BrowserBookmark";
         updatedSettings.ExtensionBehaviour.SaveTarget[settingsTarget] = isChecked;
 
+        if (target === "Spreadsheet") this.updateSpreadsheetSetup(isChecked, updatedSettings.AccountAndConnections.spreadsheetUrl);
         this.setSettings(updatedSettings);
+    }
+
+    private updateSpreadsheetSetup(enabled: boolean, url: string) {
+        if (this.spreadsheetSetup) this.spreadsheetSetup.hidden = !enabled;
+        if (this.spreadsheetTargetReminder) this.spreadsheetTargetReminder.hidden = !enabled || Boolean(url.trim());
+        if (this.spreadsheetUrl && url) this.spreadsheetUrl.value = url;
     }
 
     // Auto Update Novel Status

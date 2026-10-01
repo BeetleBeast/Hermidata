@@ -33,7 +33,8 @@ export class BuildController {
         ['content-types', 'ContentTypes_Statuses'],
         ['tag-management', 'TagManagement'],
         ['folder-mapping', 'FolderMapping'],
-        ['import-export', 'Import_Export']
+        ['import-export', 'Import_Export'],
+        ['browser-bookmark-import', 'BrowserBookmarkImport']
     ]);
 
     private readonly resetBtn = getElement<HTMLButtonElement>("#resetSettingsBtn");
@@ -46,6 +47,9 @@ export class BuildController {
     private readonly openTagManagement = getElement<HTMLButtonElement>(`#open${this.navigations.get('tag-management')}`);
     private readonly openFolderMapping = getElement<HTMLButtonElement>(`#open${this.navigations.get('folder-mapping')}`);
     private readonly openImport_Export = getElement<HTMLButtonElement>(`#open${this.navigations.get('import-export')}`);
+    private readonly openBrowserBookmarkImport = getElement<HTMLButtonElement>("#openBrowserBookmarkImport");
+    private readonly goToExtensionSettings = getElement<HTMLButtonElement>("#goToExtensionSettings");
+    private spreadsheetHighlightTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(devMode = false) {
         this.importAndExport = new ImportsAndExports(devMode);
@@ -53,23 +57,27 @@ export class BuildController {
 
     public async init() {
         this.bindEvents();
+        this.initializeSelectIndicators();
+        await this.accountConnection.init();
+        this.initializedSections.add('account-connection');
         await this.navigateTo(this.openExtension_Behavior!, this.currentSection);
     }
     
     private bindEvents() {
-        const navStrings = Array.from(this.navigations.keys());
-        this.openAccount_Connection?.addEventListener('click', (e) => this.navigateTo(e, navStrings[0]));
-        this.openExtension_Behavior?.addEventListener('click', (e) => this.navigateTo(e, navStrings[1]));
-        this.openDefaultBookmarkSettings?.addEventListener('click', (e) => this.navigateTo(e, navStrings[2]));
-        this.openContentTypes_Statuses?.addEventListener('click', (e) => this.navigateTo(e, navStrings[3]));
-        this.openTagManagement?.addEventListener('click', (e) => this.navigateTo(e, navStrings[4]));
-        this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, navStrings[5]));
-        this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, navStrings[6]));
+        this.openAccount_Connection?.addEventListener('click', (e) => this.navigateTo(e, 'account-connection'));
+        this.openExtension_Behavior?.addEventListener('click', (e) => this.navigateTo(e, 'extension-behavior'));
+        this.openDefaultBookmarkSettings?.addEventListener('click', (e) => this.navigateTo(e, 'default-bookmarks'));
+        this.openContentTypes_Statuses?.addEventListener('click', (e) => this.navigateTo(e, 'content-types'));
+        this.openTagManagement?.addEventListener('click', (e) => this.navigateTo(e, 'tag-management'));
+        this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, 'folder-mapping'));
+        this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, 'import-export'));
+        this.openBrowserBookmarkImport?.addEventListener('click', (e) => this.navigateTo(e, 'browser-bookmark-import'));
+        this.goToExtensionSettings?.addEventListener('click', () => this.openSpreadsheetSaveSettings());
 
         this.resetBtn?.addEventListener('click', () => this.resetPage(this.currentSection));
     }
-    private async navigateTo(e: PointerEvent | HTMLButtonElement, sectionId: string) {
-        const target = e instanceof PointerEvent ? e.target as HTMLButtonElement : e;
+    private async navigateTo(e: Event | HTMLButtonElement, sectionId: string) {
+        const target = e instanceof HTMLButtonElement ? e : e.currentTarget as HTMLButtonElement;
         if (target.dataset.active === "true") return; // already active, do nothing
         // Update current section
         this.currentSection = sectionId;
@@ -91,6 +99,30 @@ export class BuildController {
             await this.initializeSection(sectionId);
             this.initializedSections.add(sectionId);
         }
+    }
+
+    private async openSpreadsheetSaveSettings() {
+        if (!this.openExtension_Behavior) return;
+        await this.navigateTo(this.openExtension_Behavior, 'extension-behavior');
+
+        const target = getElement<HTMLInputElement>("#SaveToGoogleSpreadsheet");
+        const targetRow = target?.closest<HTMLElement>(".setting");
+        const setup = getElement<HTMLElement>("#spreadsheetSetup");
+        if (!target || !targetRow) return;
+
+        const highlightTargets = [targetRow, ...(target.checked && setup ? [setup] : [])];
+        highlightTargets.forEach(element => element.classList.add("settings-target-highlight"));
+        target.focus({ preventScroll: true });
+        targetRow.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            block: "center"
+        });
+
+        if (this.spreadsheetHighlightTimeout) clearTimeout(this.spreadsheetHighlightTimeout);
+        this.spreadsheetHighlightTimeout = setTimeout(() => {
+            highlightTargets.forEach(element => element.classList.remove("settings-target-highlight"));
+            this.spreadsheetHighlightTimeout = null;
+        }, 2400);
     }
     
     private async initializeSection(sectionId: string) {
@@ -116,7 +148,29 @@ export class BuildController {
             case 'import-export':
                 await this.importAndExport.init();
                 break;
+            case 'browser-bookmark-import':
+                await this.importAndExport.init();
+                break;
         }
+    }
+
+    private initializeSelectIndicators() {
+        const enhanceSelect = (select: HTMLSelectElement) => {
+            if (select.parentElement?.classList.contains('select-wrap')) return;
+            const wrapper = document.createElement('span');
+            wrapper.className = 'select-wrap';
+            select.parentNode?.insertBefore(wrapper, select);
+            wrapper.appendChild(select);
+        };
+
+        document.querySelectorAll<HTMLSelectElement>('select').forEach(enhanceSelect);
+        new MutationObserver((records) => {
+            records.forEach(record => record.addedNodes.forEach(node => {
+                if (!(node instanceof HTMLElement)) return;
+                if (node instanceof HTMLSelectElement) enhanceSelect(node);
+                node.querySelectorAll<HTMLSelectElement>('select').forEach(enhanceSelect);
+            }));
+        }).observe(document.body, { childList: true, subtree: true });
     }
     private async resetPage(sectionId: string) {
         // confirm reset

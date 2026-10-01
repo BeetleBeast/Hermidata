@@ -11,6 +11,7 @@ export class Account_Connection extends Build {
     private readonly testBtn = getElement<HTMLButtonElement>("#testSpreadsheetUrl");
     
     private readonly LogOutBtn = getElement<HTMLButtonElement>("#logOut");
+    private readonly accountAuthStatus = getElement<HTMLParagraphElement>("#accountAuthStatus");
 
     private spreadsheetUrl: string = "";
 
@@ -20,6 +21,7 @@ export class Account_Connection extends Build {
         // Load & populate page inputs and tables
         await this.loadSheetUrl();
 
+        this.loadAccountAuthStatus();
         this.bindEvents();
     }
     public async resetValues() {
@@ -50,7 +52,9 @@ export class Account_Connection extends Build {
             this.temporaryStatus("Please enter a URL", "#statusSheetURL");
             return;
         }
-        this.setSpreadsheetUrl(value);
+        await this.setSpreadsheetUrl(value);
+        const reminder = getElement<HTMLElement>("#spreadsheetTargetReminder");
+        if (reminder) reminder.hidden = true;
         this.temporaryStatus("Saved!", "#statusSheetURL");
     }
     private async TestSpreadsheetUrl() {
@@ -91,8 +95,43 @@ export class Account_Connection extends Build {
 
     }
     private async ResetLoginAuth() {
+        if (this.LogOutBtn) this.LogOutBtn.disabled = true;
         ext.storage.local.remove(["googleAccessToken", "googleTokenExpiry", "userEmail"], () => {
-            console.log("OAuth credentials cleared");
+            const error = ext.runtime.lastError;
+            if (error) {
+                if (this.accountAuthStatus) this.accountAuthStatus.textContent = `Could not sign out: ${error.message}`;
+                if (this.LogOutBtn) this.LogOutBtn.disabled = false;
+                return;
+            }
+
+            if (this.accountAuthStatus) {
+                this.accountAuthStatus.textContent = "Signed out. Google will reconnect automatically the next time you save to a spreadsheet.";
+                this.accountAuthStatus.dataset.state = "signed-out";
+            }
+            if (this.LogOutBtn) this.LogOutBtn.hidden = true;
+        });
+    }
+    private loadAccountAuthStatus() {
+        ext.storage.local.get(["googleAccessToken", "googleTokenExpiry", "userEmail"], (items: {
+            googleAccessToken?: string;
+            googleTokenExpiry?: number;
+            userEmail?: string;
+        }) => {
+            const error = ext.runtime.lastError;
+            if (error) {
+                if (this.accountAuthStatus) this.accountAuthStatus.textContent = `Could not check account status: ${error.message}`;
+                return;
+            }
+
+            const isConnected = Boolean(items.googleAccessToken && items.googleTokenExpiry && items.googleTokenExpiry > Date.now());
+            const hasStoredAccount = Boolean(items.googleAccessToken || items.userEmail);
+            if (this.accountAuthStatus) {
+                this.accountAuthStatus.dataset.state = isConnected ? "connected" : "signed-out";
+                this.accountAuthStatus.textContent = isConnected
+                    ? `Connected${items.userEmail ? ` as ${items.userEmail}` : ""}.`
+                    : "Not currently connected. Google sign-in happens automatically when saving to a spreadsheet.";
+            }
+            if (this.LogOutBtn) this.LogOutBtn.hidden = !hasStoredAccount;
         });
     }
     private giveFeedback() {

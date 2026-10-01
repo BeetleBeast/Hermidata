@@ -6,49 +6,42 @@
     <title>Hermidata Settings</title>
     <link rel="stylesheet" href="../assets/styles/styles.css">
     <link rel="stylesheet" href="../assets/styles/stylesSettings.css">
-    <style>
-        body {
-            font-family: sans-serif;
-            padding: 20px;
-        }
-        input {
-            width: fit-content;
-            padding: 8px;
-            margin: 10px 0;
-        }
-        button {
-            padding: 8px 16px;
-        }
-    </style>
 </head>
 <body>
-    <aside class="sidebar" class="sidebar">
+    <aside class="sidebar">
         <p class="sidebar-title" id="settings-title">Settings</p>
-        <br>
         <nav>
-            <button id="openAccount_Connection" class="openLink nav-item" data-active="false" type="button">Account & Connection</button>
             <button id="openExtension_Behavior" class="openLink nav-item" data-active="false" type="button">Extension Behavior</button>
+            <button id="openAccount_Connection" class="openLink nav-item" data-active="false" type="button">Account & Connection</button>
+            <span class="nav-group-title">Defaults</span>
             <button id="openDefaultBookmarkSettings" class="openLink nav-item" data-active="false" type="button">Default Bookmark Settings</button>
+            <span class="nav-group-title">Library organization</span>
             <button id="openContentTypes_Statuses" class="openLink nav-item" data-active="false" type="button">Content Types & Statuses</button>
             <button id="openTagManagement" class="openLink nav-item" data-active="false" type="button">Tag Management</button>
             <button id="openFolderMapping" class="openLink nav-item" data-active="false" type="button">Folder Mapping</button>
+            <span class="nav-group-title">Data</span>
             <button id="openImport_Export" class="openLink nav-item" data-active="false" type="button">Import & Export</button>
+            <button id="openBrowserBookmarkImport" class="openLink nav-item" data-active="false" type="button">Import from bookmarks</button>
         </nav>
     </aside>
     <main class="main content">
-        <h2>Settings</h2>
         <section class="section-content Account_Connection" data-active="false">
-            <br>
-            <label for="spreadsheetUrl">Google Spreadsheet URL:</label>
-            <input type="url" id="spreadsheetUrl" placeholder="Paste Google Sheet URL" />
-            <button id="saveSpreadsheetUrl" type="button">Save</button>
-            <p id="statusSheetURL"></p>
-            <br>
-            <button id="testSpreadsheetUrl" type="button">Test connection</button>
-            <hr>
-            <br>
-            <button type="button" id="logOut">Log-out</button>
-            <br>
+            <div class="card account-connection-card">
+                <div>
+                    <h3>Account & Connection</h3>
+                    <p>Google Spreadsheet setup is located with the save destination it configures.</p>
+                </div>
+                <button id="goToExtensionSettings" type="button">Open spreadsheet save settings</button>
+                <div class="account-connection-divider"></div>
+                <div class="account-connection-logout">
+                    <div>
+                        <h3>Account</h3>
+                        <p>Google sign-in is handled automatically when saving to a spreadsheet.</p>
+                    </div>
+                    <button type="button" id="logOut" class="btn-ghost">Sign out</button>
+                </div>
+                <p id="accountAuthStatus" class="account-auth-status" role="status" aria-live="polite"></p>
+            </div>
         </section>
         <section class="section-content Extension_Behavior" data-active="false">
             <!-- Appearance & general -->
@@ -157,9 +150,20 @@
                 <div class="setting">
                 <div class="setting-text">
                     <label for="SaveToGoogleSpreadsheet">Google Spreadsheet</label>
-                    <p>Sync entries to a spreadsheet.</p>
+                    <p>Sync entries to a spreadsheet. Configure its URL here.</p>
                 </div>
                 <input type="checkbox" id="SaveToGoogleSpreadsheet" class="switch" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
+                </div>
+                <div id="spreadsheetSetup" class="spreadsheet-setup" hidden>
+                    <label for="spreadsheetUrl">Google Spreadsheet URL</label>
+                    <div class="spreadsheet-url-row">
+                        <input type="url" id="spreadsheetUrl" placeholder="Paste Google Sheet URL" />
+                        <button id="saveSpreadsheetUrl" type="button">Save URL</button>
+                        <button id="testSpreadsheetUrl" type="button" class="btn-ghost">Test connection</button>
+                    </div>
+                    <p class="field-hint">Save the spreadsheet URL before expecting entries to sync.</p>
+                    <p id="statusSheetURL" role="status" aria-live="polite"></p>
+                    <p id="spreadsheetTargetReminder" class="spreadsheet-reminder" hidden>Google Sheets is selected, but no spreadsheet URL has been saved yet.</p>
                 </div>
             </div>
 
@@ -189,138 +193,99 @@
             </div>
         </section>
         <section class="section-content DefaultBookmarkSettings" data-active="false">
-            <br>
-            <h3>New Entry Defaults in popup</h3>
-            <br>
-            <table>change Default Input
-                <thead>
-                    <tr>
-                    <th>Type</th>
-                    <th>Read Status</th>
-                    <th>Novel Status</th>
-                    <th>Tags</th>
-                    <th>Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><select id="Type" type="text" title="Type" ></select></td>
-                        <td><select id="ReadStatus" type="text" title="Status"></select></td>
-                        <td><select id="NovelStatus" type="text" title="Status"></select></td>
-                        <td><input id="tags" type="text" placeholder="Tags" /></td>
-                        <td><input id="notes" type="text" placeholder="Notes" /></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button id="saveDefaultInput" type="button">Save</button>
-            <p id="statusSaveDefaultInput"></p>
-                <br>
-                <hr>
-                <br>
-                
-                <br>
-                <br>
-                <h4> New Entry Defaults in the context-menu </h4>
-                <br>
-            <table>change Default context-Menu Input
-                <thead>
-                    <tr>
-                    <th>Type</th>
-                    <th>Read Status</th>
-                    <th>Novel Status</th>
-                    <th>Tags</th>
-                    <th>Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><select id="TypeTextMenu" type="text" title="Type" ></select></td>
-                        <td><select id="ReadStatusTextMenu" type="text" title="Status"></select></td>
-                        <td><select id="NovelStatusTextMenu" type="text" title="Status"></select></td>
-                        <td><input id="tagsTextMenu" type="text" placeholder="Tags" /></td>
-                        <td><input id="notesTextMenu" type="text" placeholder="Notes" /></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button id="saveDefaultInputTextMenu" type="button">Save</button>
-            <p id="statusSaveDefaultInputInputTextMenu"></p>
-            <br>
+            <section class="card default-settings-card">
+                <h3>New entry defaults in the popup</h3>
+                <p>Choose the values prefilled when creating an entry from the popup.</p>
+                <div class="default-settings-grid">
+                    <div class="default-field"><label for="Type">Type</label><select id="Type" title="Type"></select></div>
+                    <div class="default-field"><label for="ReadStatus">Read status</label><select id="ReadStatus" title="Read status"></select></div>
+                    <div class="default-field"><label for="NovelStatus">Novel status</label><select id="NovelStatus" title="Novel status"></select></div>
+                    <div class="default-field"><label for="tags">Tags</label><div class="default-tag-input-container"><input id="tags" type="text" placeholder="Type to find a tag" /><span id="tagsDefaultGhost" aria-hidden="true"></span></div><small>Press Tab or Enter to complete a suggestion. Separate tags with commas.</small></div>
+                    <div class="default-field default-field-notes"><label for="notes">Notes</label><textarea id="notes" rows="3" placeholder="Optional notes"></textarea></div>
+                </div>
+                <button id="saveDefaultInput" type="button">Save</button>
+                <p id="statusSaveDefaultInput" role="status" aria-live="polite"></p>
+            </section>
+            <section class="card default-settings-card">
+                <h3>New entry defaults in the context menu</h3>
+                <p>Choose the values prefilled when creating an entry from the browser context menu.</p>
+                <div class="default-settings-grid">
+                    <div class="default-field"><label for="TypeTextMenu">Type</label><select id="TypeTextMenu" title="Type"></select></div>
+                    <div class="default-field"><label for="ReadStatusTextMenu">Read status</label><select id="ReadStatusTextMenu" title="Read status"></select></div>
+                    <div class="default-field"><label for="NovelStatusTextMenu">Novel status</label><select id="NovelStatusTextMenu" title="Novel status"></select></div>
+                    <div class="default-field"><label for="tagsTextMenu">Tags</label><div class="default-tag-input-container"><input id="tagsTextMenu" type="text" placeholder="Type to find a tag" /><span id="tagsTextMenuGhost" aria-hidden="true"></span></div><small>Press Tab or Enter to complete a suggestion. Separate tags with commas.</small></div>
+                    <div class="default-field default-field-notes"><label for="notesTextMenu">Notes</label><textarea id="notesTextMenu" rows="3" placeholder="Optional notes"></textarea></div>
+                </div>
+                <button id="saveDefaultInputTextMenu" type="button">Save</button>
+                <p id="statusSaveDefaultInputInputTextMenu" role="status" aria-live="polite"></p>
+            </section>
         </section>
         <section class="section-content ContentTypes_Statuses" data-active="false">
-            <br>
-            <h3><strong> Content Types and Statuses </strong></h3>
-            <br>
-            <!-- add new Novel Types -->
-            <label for="newNovelType">Add New Novel Type</label>
-            <input type="text" id="newNovelType" placeholder="type here..." />
-            <button type="submit" id="newNovelTypeBtn">Add</button>
-            <br>
-            <!-- add new Novel Statuses -->
-            <label for="newNovelStatus">Add New Novel Status</label>
-            <input type="text" id="newNovelStatus" placeholder="type here..." />
-            <button type="button" id="newNovelStatusBtn">Add</button>
-            <br>
-            <!-- add new Read Statuses -->
-            <label for="newReadStatus">Add New Read Status</label>
-            <input type="text" id="newReadStatus" placeholder="type here..." />
-            <button type="button" id="newReadStatusBtn">Add</button>
-            <br>
-            <hr>
-            <br>
-            <!-- Edit and remove existing... -->
-            <div id="EditAndRemoveContainer">
-                <div id="EditNovelType">
-                    <!-- dynamic items here -->
-                </div>
-                <div id="EditNovelStatuses">
-                    <!-- dynamic items here -->
-                </div>
-                <div id="EditReadStatuses">
-                    <!-- dynamic items here -->
-                </div>
+            <div class="list-management-grid">
+                <section class="card list-management-card">
+                    <h3>Content types</h3>
+                    <p>Organize the kinds of entries you save.</p>
+                    <div class="list-add-row">
+                        <label class="sr-only" for="newNovelType">New content type</label>
+                        <input type="text" id="newNovelType" placeholder="e.g. Novel" />
+                        <button type="button" id="newNovelTypeBtn">Add type</button>
+                    </div>
+                    <div id="EditNovelType"></div>
+                </section>
+                <section class="card list-management-card">
+                    <h3>Novel statuses</h3>
+                    <p>Statuses used to describe a novel's release state.</p>
+                    <div class="list-add-row">
+                        <label class="sr-only" for="newNovelStatus">New novel status</label>
+                        <input type="text" id="newNovelStatus" placeholder="e.g. Ongoing" />
+                        <button type="button" id="newNovelStatusBtn">Add status</button>
+                    </div>
+                    <div id="EditNovelStatuses"></div>
+                </section>
+                <section class="card list-management-card">
+                    <h3>Read statuses</h3>
+                    <p>Track your progress with each entry.</p>
+                    <div class="list-add-row">
+                        <label class="sr-only" for="newReadStatus">New read status</label>
+                        <input type="text" id="newReadStatus" placeholder="e.g. Reading" />
+                        <button type="button" id="newReadStatusBtn">Add status</button>
+                    </div>
+                    <div id="EditReadStatuses"></div>
+                </section>
             </div>
-            <br>
         </section>
         <section class="section-content TagManagement" data-active="false">
-            <br>
-            <h3><strong> Tag Management </strong></h3>
-            <hr>
-            <br>
-            <h4> Add New Tag </h4>
-            <br>
-            <label for="addTag">Add Tag</label>
-            <input type="text" id="addTag" placeholder="type here..." maxlength="60"/>
-            <button type="button" id="addTagBtn">Add</button>
-            <br>
-            <hr>
-            <br>
-            <h4> Edit Tags </h4>
-            <div id="tagEditContainer">
-                <!-- Edit AND Remove tags -->
-                <!-- dynamic items here -->
-            </div>
-            <br>
-            <button type="button" id="saveTagColoringBtn">save All Tag coloring</button>
-            <br>
-            <hr>
-            <br>
-            <h4> Merge tags </h4>
-            <sub>merge 2 tags into one</sub>
-            <br>
-            <section class="section TagMerge" id="tagMergeContainer">
-                <br>
-                <span> remove </span>
-                <select id="tagMergeSelect1" title="Tag 1">
-                    <!-- dynamic items here -->
-                </select>
-                <span> and merge with </span>
-                <select id="tagMergeSelect2" title="Tag 2">
-                    <!-- dynamic items here -->
-                </select>
-                <button type="button" id="mergeTags">merge</button>
-                <br>
+            <section class="card list-management-card">
+                <h3>Add a tag</h3>
+                <p>Add a tag here to make it available for organizing entries.</p>
+                <div class="list-add-row">
+                    <label class="sr-only" for="addTag">New tag</label>
+                    <input type="text" id="addTag" placeholder="e.g. Favorites" maxlength="60"/>
+                    <button type="button" id="addTagBtn">Add tag</button>
+                </div>
             </section>
-            <br>
+            <section class="card list-management-card">
+                <h3>Edit tags</h3>
+                <p>Rename, recolor, or remove tags.</p>
+                <div id="tagEditContainer"><!-- dynamic items here --></div>
+                <button type="button" id="saveTagColoringBtn">Save tag colors</button>
+            </section>
+            <section class="card list-management-card">
+                <h3>Merge tags</h3>
+                <p>Choose a source tag to remove and a destination tag to keep. Entries using the source tag will be updated to the destination tag.</p>
+                <div class="tag-merge-row" id="tagMergeContainer">
+                    <div class="tag-merge-field">
+                        <label for="tagMergeSelect1">Merge from</label>
+                        <select id="tagMergeSelect1" title="Source tag"></select>
+                    </div>
+                    <span class="tag-merge-arrow" aria-hidden="true">→</span>
+                    <div class="tag-merge-field">
+                        <label for="tagMergeSelect2">Merge into</label>
+                        <select id="tagMergeSelect2" title="Destination tag"></select>
+                    </div>
+                    <button type="button" id="mergeTags">Merge tags</button>
+                </div>
+            </section>
         </section>
         <br>
         <section class="section-content FolderMapping" data-active="false">
@@ -468,99 +433,111 @@
             </section>
         </section>
         <section class="section-content Import_Export" data-active="false">
-            <br>
-            <h3><strong> Import/Export options </strong></h3>
-            <br>
-            <button type="button" id="quickBackup">Quick Backup ( everything )</button>
-            <br>
-            <h3 id="importExportSettingsFormat">import/export Settings</h3>
-            <br>
-            <button type="button" id="exportBtn">Export Settings</button>
-            <label class="file-btn" for="importBtn">
-                <span class="file-btn-text" id="importBtnText">Import Settings</span>
-            </label>
-            <input type="file" accept=".json" id="importBtn" class="file-input-hidden"></input>
-            <br>
-            <h3 id="importExportHermidataFormat">import/export Hermidata</h3>
-            <br>
-            <button type="button" id="exportDataBtn">Export Hermidata</button>
-            <label class="file-btn" for="importDataBtn">
-                <span class="file-btn-text" id="importDataBtnText">Import Hermidata</span>
-            </label>
-            <input type="file" accept=".json" id="importDataBtn" class="file-input-hidden"></input>
-            <br>
-            <h3 id="importExportFolderMappingFormat">import/export Bookmarks Folder Mapping</h3>
-            <small>folder mapping of how bookmarks are saved inside the browser</small>
-            <br>
-            <br>
-            <button type="button" id="exportFolderMappingBtn">Export Folder Mapping</button>
-            <label class="file-btn" for="importFolderMappingBtn">
-                <span class="file-btn-text" id="importFolderMappingBtnText">Import Folder Mapping</span>
-            </label>
-            <input type="file" accept=".json" id="importFolderMappingBtn" class="file-input-hidden"></input>
-            <br>
-            <hr>
-            <br>
-            <h3 id="importExportToMALFormat">import/export To MAL format</h3>
-            <br>
-            <button type="button" id="exportToMALBtn">Export MAL</button>
-            <label class="file-btn" for="importToMALBtn">
-                <span class="file-btn-text" id="importToMALBtnText">Import MAL</span>
-            </label>
-            <input type="file" accept=".xml" id="importToMALBtn" class="file-input-hidden"></input>
-            <br>
-            <br>
-            <hr>
-            <br>
-            <button type="button" id="exportRSSBtn" data-active="false">Export RSS as JSON</button>
-            <label class="file-btn" for="importRSSBtn" data-active="false">
-                <span class="file-btn-text" id="importRSSBtnText">Import RSS data</span>
-            </label>
-            <input type="file" accept=".json" id="importRSSBtn" class="file-input-hidden" data-active="false"></input>
-            <br>
-            <br>
-            <button type="button" id="exportSyncDataBtn" data-active="false">Export browser sync data</button>
-            <label class="file-btn" for="importSyncDataBtn" data-active="false">
-                <span class="file-btn-text" id="importSyncDataBtnText">Import Sync Data</span>
-            </label>
-            <input type="file" accept=".json" id="importSyncDataBtn" class="file-input-hidden" data-active="false"></input>
-            <!-- <button type="button" id="deleteSyncDataBtn" style="background-color: red;" data-active="false">Delete browser sync data</button> -->
-            <br>
-            <br>
-            <h3 id="massImportFromBookmarkFolder">mass import new Hermidata from bookmark folder</h3>
-            <form class="formIndented">
-                <label for="bookmarkFolder">Write the bookmark path to the folder: </label>
-                <div id="bookmarkFolderInputContainer">
-                    <input type="text" id="bookmarkFolder" name="bookmarkFolder">
-                    <span id="massImportFromBookmarkFolderGhostText"></span>
-                </div>
-                <button type="button" id="massImportFromBookmarkFolderBtn">Import</button>
-            </form>
-            <br>
-            <div id="massImportFromBookmarkFolderStatus"></div>
-            <br>
-            <table id="massImportFromBookmarkFolderContainer">
-                <thead>
-                    <th id="massImportFromBookmarkFolder-title">Title</th>
-                    <th id="massImportFromBookmarkFolder-url">URL</th>
-                    <th id="massImportFromBookmarkFolder-typeSelect">Change Type</th>
-                    <th id="massImportFromBookmarkFolder-removeBtn">remove from list</th>
-                    <th id="massImportFromBookmarkFolder-addBtn">add separately</th>
-                </thead>
-                <tbody id="massImportFromBookmarkFolderCheckContainer"><!-- dynamic items here --></tbody>
-            </table>
-            <br>
-            <button id="massImportFromBookmarkFolder-saveAllBtn">Save All</button>
-            <br>
+            <div class="import-export-grid">
+                <section class="card import-export-card import-export-backup">
+                    <h3>Quick backup</h3>
+                    <p>Export a complete backup of your Hermidata data and settings.</p>
+                    <button type="button" id="quickBackup">Create quick backup</button>
+                </section>
+                <section class="card import-export-card">
+                    <h3 id="importExportSettingsFormat">Settings</h3>
+                    <p>Export or restore your extension preferences.</p>
+                    <div class="import-export-actions">
+                        <button type="button" id="exportBtn">Export settings</button>
+                        <label class="file-btn" for="importBtn">
+                            <span class="file-btn-text" id="importBtnText">Import settings</span>
+                        </label>
+                        <input type="file" accept=".json" id="importBtn" class="file-input-hidden">
+                    </div>
+                </section>
+                <section class="card import-export-card">
+                    <h3 id="importExportHermidataFormat">Hermidata entries</h3>
+                    <p>Export or import your saved entries.</p>
+                    <div class="import-export-actions">
+                        <button type="button" id="exportDataBtn">Export entries</button>
+                        <label class="file-btn" for="importDataBtn">
+                            <span class="file-btn-text" id="importDataBtnText">Import entries</span>
+                        </label>
+                        <input type="file" accept=".json" id="importDataBtn" class="file-input-hidden">
+                    </div>
+                </section>
+                <section class="card import-export-card">
+                    <h3 id="importExportFolderMappingFormat">Bookmark folder mapping</h3>
+                    <p>Back up or restore the rules that organize browser bookmarks into folders.</p>
+                    <div class="import-export-actions">
+                        <button type="button" id="exportFolderMappingBtn">Export mapping</button>
+                        <label class="file-btn" for="importFolderMappingBtn">
+                            <span class="file-btn-text" id="importFolderMappingBtnText">Import mapping</span>
+                        </label>
+                        <input type="file" accept=".json" id="importFolderMappingBtn" class="file-input-hidden">
+                    </div>
+                </section>
+                <section class="card import-export-card">
+                    <h3 id="importExportToMALFormat">MyAnimeList</h3>
+                    <p>Exchange your entries with MyAnimeList's XML format.</p>
+                    <div class="import-export-actions">
+                        <button type="button" id="exportToMALBtn">Export MAL</button>
+                        <label class="file-btn" for="importToMALBtn">
+                            <span class="file-btn-text" id="importToMALBtnText">Import MAL</span>
+                        </label>
+                        <input type="file" accept=".xml" id="importToMALBtn" class="file-input-hidden">
+                    </div>
+                </section>
+                <section class="card import-export-card import-export-dev">
+                    <h3>Developer data</h3>
+                    <p>Advanced backup and restore tools.</p>
+                    <div class="import-export-actions">
+                        <button type="button" id="exportRSSBtn" data-active="false">Export RSS as JSON</button>
+                        <label class="file-btn" for="importRSSBtn" data-active="false">
+                            <span class="file-btn-text" id="importRSSBtnText">Import RSS data</span>
+                        </label>
+                        <input type="file" accept=".json" id="importRSSBtn" class="file-input-hidden" data-active="false">
+                        <button type="button" id="exportSyncDataBtn" data-active="false">Export browser sync data</button>
+                        <label class="file-btn" for="importSyncDataBtn" data-active="false">
+                            <span class="file-btn-text" id="importSyncDataBtnText">Import sync data</span>
+                        </label>
+                        <input type="file" accept=".json" id="importSyncDataBtn" class="file-input-hidden" data-active="false">
+                    </div>
+                </section>
+            </div>
         </section>
-        <footer id="reset-footer" class="card danger-zone">
-            <br>
-            <div class="setting">
-                <div class="setting-text">
-                <label>Reset page settings</label>
-                <p>Restore everything on this page to its defaults.</p>
+        <section class="section-content BrowserBookmarkImport" data-active="false">
+            <div class="card browser-bookmark-import">
+                <h3 id="massImportFromBookmarkFolder">Import from browser bookmarks</h3>
+                <p>Import entries from a browser bookmark folder. Choose a folder path, review the entries, then save them to Hermidata.</p>
+                <form class="formIndented">
+                    <label for="bookmarkFolder">Bookmark folder path</label>
+                    <div id="bookmarkFolderInputContainer">
+                        <input type="text" id="bookmarkFolder" name="bookmarkFolder" placeholder="e.g. Reading/To Read">
+                        <span id="massImportFromBookmarkFolderGhostText" aria-hidden="true"></span>
+                    </div>
+                    <button type="button" id="massImportFromBookmarkFolderBtn">Find bookmarks</button>
+                </form>
+                <div id="massImportFromBookmarkFolderStatus" role="status" aria-live="polite"></div>
+                <p id="bookmarkImportEmptyState">No bookmarks to review yet. Enter a folder path and choose “Find bookmarks”.</p>
+                <table id="massImportFromBookmarkFolderContainer" hidden>
+                    <thead>
+                        <tr>
+                            <th id="massImportFromBookmarkFolder-title">Title</th>
+                            <th id="massImportFromBookmarkFolder-url">URL</th>
+                            <th id="massImportFromBookmarkFolder-typeSelect">Change Type</th>
+                            <th id="massImportFromBookmarkFolder-removeBtn">Remove from list</th>
+                            <th id="massImportFromBookmarkFolder-addBtn">Add separately</th>
+                        </tr>
+                    </thead>
+                    <tbody id="massImportFromBookmarkFolderCheckContainer"></tbody>
+                </table>
+                <button id="massImportFromBookmarkFolder-saveAllBtn" type="button" hidden>Save All</button>
+            </div>
+        </section>
+        <footer id="reset-footer" class="danger-zone">
+            <div class="reset-card">
+                <div class="reset-card-copy">
+                    <span class="reset-card-eyebrow">Danger zone</span>
+                    <h3>Reset this section</h3>
+                    <p>Restore the settings in the current section to their defaults. Your other settings and saved entries will not be affected.</p>
                 </div>
-                <button id="resetSettingsBtn" class="footerBtn" type="button">Reset</button>
+                <button id="resetSettingsBtn" class="footerBtn btn-danger" type="button">Reset section</button>
             </div>
         </footer>
     </main>

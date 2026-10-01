@@ -11,16 +11,16 @@ export class TagManagement extends Build {
     private readonly tagColoring: Record<string, string> = {}; // { tag: color }
 
 
-    private readonly addTag = getElement<HTMLButtonElement>("#addTag");
-    private readonly addTagBtn = getElement<HTMLInputElement>("#addTagBtn");
+    private readonly addTag = getElement<HTMLInputElement>("#addTag");
+    private readonly addTagBtn = getElement<HTMLButtonElement>("#addTagBtn");
     
     private readonly tagEditContainer = getElement<HTMLDivElement>("#tagEditContainer");
 
-    private readonly colorTagsBtn = getElement<HTMLInputElement>("#saveTagColoringBtn");
+    private readonly colorTagsBtn = getElement<HTMLButtonElement>("#saveTagColoringBtn");
 
     private readonly tagMergeSelect1 = getElement<HTMLSelectElement>("#tagMergeSelect1");
     private readonly tagMergeSelect2 = getElement<HTMLSelectElement>("#tagMergeSelect2");
-    private readonly mergeTagsBtn = getElement<HTMLInputElement>("#mergeTags");
+    private readonly mergeTagsBtn = getElement<HTMLButtonElement>("#mergeTags");
 
 
     private maxSetColorCount = 0;
@@ -41,7 +41,7 @@ export class TagManagement extends Build {
     syncTagMergeSelect() {
         if (!this.tagMergeSelect1 || !this.tagMergeSelect2) return;
         this.tagMergeSelect1.selectedIndex = 0;
-        this.tagMergeSelect2.selectedIndex = 1;
+        this.tagMergeSelect2.selectedIndex = this.tagMergeSelect2.options.length > 1 ? 1 : 0;
         this.syncBoth(this.tagMergeSelect1, this.tagMergeSelect2);
     }
     private async ReloadForms() {
@@ -106,6 +106,8 @@ export class TagManagement extends Build {
         return container;
     }
     private populateTagMergeSelect() {
+        this.tagMergeSelect1?.replaceChildren();
+        this.tagMergeSelect2?.replaceChildren();
         for (const tag of this.allTagsUsed.values()) {
             const option = document.createElement("option");
             option.classList = "tag-merge-select-option_1";
@@ -131,6 +133,7 @@ export class TagManagement extends Build {
         if (!selectA || !selectB) return;
         this.syncExclusion(selectA, selectB);
         this.syncExclusion(selectB, selectA);
+        if (this.mergeTagsBtn) this.mergeTagsBtn.disabled = selectA.options.length < 2;
     }
 
 
