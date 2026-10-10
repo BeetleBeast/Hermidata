@@ -37,7 +37,8 @@ export class BuildController {
         ['browser-bookmark-import', 'BrowserBookmarkImport']
     ]);
 
-    private readonly resetBtn = getElement<HTMLButtonElement>("#resetSettingsBtn");
+    private readonly resetBtn = getElement<HTMLButtonElement>("#reset-dialog-confirm");
+    private readonly cancelResetDialog = getElement<HTMLButtonElement>("#reset-dialog-cancel");
 
 
     private readonly openAccount_Connection = getElement<HTMLButtonElement>(`#open${this.navigations.get('account-connection')}`);
@@ -74,6 +75,7 @@ export class BuildController {
         this.openBrowserBookmarkImport?.addEventListener('click', (e) => this.navigateTo(e, 'browser-bookmark-import'));
         this.goToExtensionSettings?.addEventListener('click', () => this.openSpreadsheetSaveSettings());
 
+        this.cancelResetDialog?.addEventListener('click', () => this.closeResetDialog());
         this.resetBtn?.addEventListener('click', () => this.resetPage(this.currentSection));
     }
     private async navigateTo(e: Event | HTMLButtonElement, sectionId: string) {
@@ -172,10 +174,28 @@ export class BuildController {
             }));
         }).observe(document.body, { childList: true, subtree: true });
     }
+    private closeResetDialog() {
+        const resetDialog = document.querySelector<HTMLDivElement>('#reset-dialog');
+        if (!resetDialog) return;
+
+        if (resetDialog.matches(':popover-open')) {
+            resetDialog.hidePopover();
+        }
+    }
     private async resetPage(sectionId: string) {
         // confirm reset
-        const Confirmation = await customConfirm("Are you sure you want to reset all settings?", {accept: "Reset", reject: "Cancel"});
-        if (!Confirmation) return;
+        // const elements = {
+        //     container: getElement<HTMLDivElement>(".promptSection"),
+        //     label: getElement<HTMLDivElement>(".promptLabel"),
+        //     btn1: getElement<HTMLDivElement>(".genericButton1"),
+        //     btn2: getElement<HTMLDivElement>(".genericButton2"),
+        // }
+        // const Confirmation = await customConfirm("Are you sure you want to reset all settings?", {
+        //     accept: "Reset",
+        //     reject: "Cancel",
+        //     elements,
+        // });
+        
         // reset page values to current settings
         switch (sectionId) {
             case 'account-connection':

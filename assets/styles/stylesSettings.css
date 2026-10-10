@@ -7,6 +7,89 @@ body {
     margin-right: 5px;
     overflow: auto;
 }
+
+.genericPromptParent {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    width: 40%;
+    height: 20%;
+    align-items: center;
+    justify-content: center;
+}
+.genericInput {
+    display: none;
+}
+#genericInput-input {
+    display: none;
+}
+
+
+#reset-dialog {
+    background-color: var(--surface-raised);
+    padding: 15px;
+    border-radius: 15px;
+    border-color: var(--border);
+    width: 30%;
+    color: var(--text);
+}
+
+.reset-dialog-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.reset-dialog-text {
+    margin-bottom: 15px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.reset-dialog-actions {
+    display: flex;
+    gap: 50px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+}
+
+#reset-dialog-confirm {
+    background-color: var(--danger);
+    color: var(--text-dark);
+    border-color: var(--danger);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#reset-dialog-confirm:hover {
+    background-color: var(--danger-hover);
+    border-color: var(--danger-hover);
+}
+#reset-dialog-confirm:active {
+    background-color: var(--danger-active);
+    border-color: var(--danger-active);
+}
+#reset-dialog-cancel {
+    background-color: var(--surface-raised);
+    color: var(--text);
+    border-color: var(--border);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#reset-dialog-cancel:hover {
+    background-color: var(--surface-hover);
+    border-color: var(--border);
+}
+#reset-dialog-cancel:active {
+    background-color: var(--surface-active);
+    border-color: var(--border);
+}
+
 /* ============ BUTTONS ============ */
 
 button,
@@ -430,8 +513,11 @@ label {
     border-color: var(--danger);
 }
 
-/* import & export does not need a reset button */
+/* import & export and Browser bookmark import does not need a reset button */
 .Import_Export[data-active="true"] ~ #reset-footer {
+    display: none;
+}
+.BrowserBookmarkImport[data-active="true"] ~ #reset-footer {
     display: none;
 }
 
@@ -1270,14 +1356,6 @@ nav {
     max-width: 960px;
 }
 
-.Extension_Behavior {
-    max-width: 860px;
-}
-
-.Account_Connection {
-    max-width: 860px;
-}
-
 .Account_Connection .account-connection-card {
     display: grid;
     justify-items: start;
@@ -1520,7 +1598,7 @@ nav {
 
 .ContentTypes_Statuses,
 .TagManagement {
-    max-width: 920px;
+    max-width: 960px;
 }
 
 .list-management-grid {

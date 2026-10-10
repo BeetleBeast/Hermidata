@@ -385,7 +385,7 @@
 
             <section class="FolderMapping_advancedOptions hidden">
                 <section class="card FolderMapping_advancedOptions_AddGeneralSubFolders">
-                    <h3>General subfolders</h3>
+                    <h3>General sub-folders</h3>
                     <p class="card-desc">Wrap a folder in extra levels, e.g. <code>prefix/Type/suffix</code>.</p>
 
                     <div id="add_Subfolder_NovelTypes" class="subfolder-row">
@@ -537,16 +537,28 @@
                     <h3>Reset this section</h3>
                     <p>Restore the settings in the current section to their defaults. Your other settings and saved entries will not be affected.</p>
                 </div>
-                <button id="resetSettingsBtn" class="footerBtn btn-danger" type="button">Reset section</button>
+                <button id="resetSettingsBtn" class="footerBtn btn-danger" type="button" popovertargetaction="toggle" popovertarget="reset-dialog" >Reset section</button>
             </div>
         </footer>
+        <dialog id="reset-dialog" class="reset-dialog" popover>
+            <form method="dialog" class="reset-dialog-form">
+                <h3>Reset this section?</h3>
+                <p class="reset-dialog-text">Are you sure you want to reset the settings in this section? This action cannot be undone.</p>
+                <menu class="reset-dialog-actions">
+                    <button id="reset-dialog-cancel" type="reset" popovertargetaction="toggle" popovertarget="reset-dialog">Cancel</button>
+                    <button id="reset-dialog-confirm" type="submit">Reset</button>
+                </menu>
+            </form>
+        </dialog>
     </main>
     <section class="promptSection">
-        <label for="genericInput" class="genericLabel"></label>
-        <input class="genericInput" type="text" placeholder="genericInput"></input>
-        <div class="genericPromptBtns">
-            <button type="button" class="genericButton1 Btn" >Save</button>
-            <button type="button" class="genericButton2 Btn" >Cancel</button>
+        <div class="genericPromptParent">
+            <label for="genericInput" class="genericLabel"></label>
+            <input id="genericInput-input" class="genericInput" type="text" placeholder="genericInput"></input>
+            <div class="genericPromptBtns">
+                <button type="button" class="genericButton1 Btn" >Save</button>
+                <button type="button" class="genericButton2 Btn" >Cancel</button>
+            </div>
         </div>
     </section>
 </body>
