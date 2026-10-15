@@ -4,10 +4,12 @@ export class ColorPicker {
     private static colorPicker: iro.ColorPicker | null = null;
     private static hexColor: string | null = null;
     private static colorPickerDiv: HTMLDivElement | null = null;
+    private static colorPickerWheel: HTMLDivElement | null = null;
     private static currentCallback: ((color: string) => void) | null = null;
     private static isVisible: boolean = false;
+    private static activeAnchor: Element | null = null;
 
-    public static readonly dimensions = { width: 240, height: 240 };
+    public static readonly dimensions = { width: 180, height: 240 };
 
     /**
      * Converts any CSS color format to hex
@@ -48,6 +50,9 @@ export class ColorPicker {
     public static getHexColor(): string | null {
         return this.hexColor;
     }
+    public static isOpen(): boolean {
+        return this.isVisible;
+    }
     /** Creates the color picker DIV in the DOM */
     private static CreateColorPickerInDOM(): HTMLDivElement {
         if (this.colorPickerDiv) return this.colorPickerDiv;
@@ -55,10 +60,23 @@ export class ColorPicker {
         const element = document.createElement('div');
         element.className = 'colorPicker';
         element.id = 'ColorPicker';
-        element.style.display = 'none'; // Hidden by default
-        element.style.position = 'absolute';
-        element.style.zIndex = '10000';
-        
+        element.setAttribute('popover', 'manual');
+
+        const header = document.createElement('div');
+        header.className = 'colorPicker-header';
+        const title = document.createElement('span');
+        title.textContent = 'Choose color';
+        const wheel = document.createElement('div');
+        wheel.className = 'colorPicker-wheel';
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'colorPicker-close Btn';
+        closeButton.textContent = '×';
+        closeButton.setAttribute('aria-label', 'Close color picker');
+        closeButton.addEventListener('click', () => this.hide());
+        header.append(title, closeButton);
+        element.append(header, wheel);
+
         // Close on click outside
         element.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -66,6 +84,7 @@ export class ColorPicker {
         
         document.body.appendChild(element);
         this.colorPickerDiv = element;
+        this.colorPickerWheel = wheel;
         return element;
     }
     /** Creates the custom color picker in the DIV colorPicker */
@@ -81,10 +100,11 @@ export class ColorPicker {
             return;
         }
 
-        this.colorPicker = iro.ColorPicker(element, {
-            width: 200,
+        if (!this.colorPickerWheel) return;
+        this.colorPicker = iro.ColorPicker(this.colorPickerWheel, {
+            width: 160,
             color: hexColor,
-            layoutDirection: 'horizontal',
+            layoutDirection: 'vertical',
             layout: [
                 {
                     component: iro.ui.Wheel,
@@ -115,40 +135,55 @@ export class ColorPicker {
      * - Shows the color picker
      * @param defaultColor - Default color
      * @param callback - Callback function to be called when color is selected
-     * @param position - Position of the color picker
+     * @param position - Anchor element or fixed viewport coordinates for the color picker
      */
-    public static show( defaultColor: string = '#ffffff',  callback: (color: string) => void, position?: { x: number; y: number } ): void {
+    public static show( defaultColor: string = '#ffffff',  callback: (color: string) => void, position?: { x: number; y: number } | Element ): void {
         this.createColorPicker(defaultColor);
+        if (!this.colorPickerDiv) return;
+
+        if (this.isVisible) this.hide();
         this.currentCallback = callback;
-        
-        if (this.colorPickerDiv) {
-            this.colorPickerDiv.style.display = 'block';
-            this.isVisible = true;
+        this.activeAnchor = position instanceof Element ? position : null;
 
-            // Position near click or center
-            if (position) {
-                this.colorPickerDiv.style.left = `${position.x}px`;
-                this.colorPickerDiv.style.top = `${position.y}px`;
-            }
+        document.body.appendChild(this.colorPickerDiv);
+        this.colorPickerDiv.style.position = 'fixed';
+        if (!this.colorPickerDiv.matches(':popover-open')) this.colorPickerDiv.showPopover();
+        if (this.activeAnchor) {
+            this.positionBesideAnchor(this.activeAnchor);
+        } else if (position && !(position instanceof Element)) {
+            this.colorPickerDiv.style.left = `${position.x}px`;
+            this.colorPickerDiv.style.top = `${position.y}px`;
         }
-
-        // Add document click listener to close
-        setTimeout(() => {
-            document.addEventListener('click', this.handleDocumentClick);
-        }, 0);
+        this.isVisible = true;
     }
-    /** Hides the custom color picker */
-    private static handleDocumentClick = (): void => {
-        ColorPicker.hide();
-    };
+    private static positionBesideAnchor(anchor: Element): void {
+        if (!this.colorPickerDiv) return;
+        const anchorRect = anchor.getBoundingClientRect();
+        const pickerRect = this.colorPickerDiv.getBoundingClientRect();
+        const viewportWidth = document.documentElement.clientWidth;
+        const viewportHeight = document.documentElement.clientHeight;
+        const margin = 8;
+        const gap = 8;
+
+        let left = anchorRect.right + gap;
+        if (left + pickerRect.width > viewportWidth - margin) left = anchorRect.left - pickerRect.width - gap;
+        left = Math.max(margin, Math.min(left, viewportWidth - pickerRect.width - margin));
+
+        let top = anchorRect.top;
+        if (top + pickerRect.height > viewportHeight - margin) top = anchorRect.bottom - pickerRect.height;
+        top = Math.max(margin, Math.min(top, viewportHeight - pickerRect.height - margin));
+
+        this.colorPickerDiv.style.left = `${left}px`;
+        this.colorPickerDiv.style.top = `${top}px`;
+    }
     /** Hides the color picker including the callback */
     public static hide(): void {
         if (this.colorPickerDiv) {
-            this.colorPickerDiv.style.display = 'none';
+            if (this.colorPickerDiv.matches(':popover-open')) this.colorPickerDiv.hidePopover();
             this.isVisible = false;
         }
         this.currentCallback = null;
-        document.removeEventListener('click', this.handleDocumentClick);
+        this.activeAnchor = null;
     }
     /**
      * - Toggles the color picker
@@ -156,7 +191,7 @@ export class ColorPicker {
      * @param callback - Callback function to be called when color is selected
      * @param position - Position of the color picker
      */
-    public static toggle( defaultColor: string, callback: (color: string) => void, position?: { x: number; y: number } ): void {
+    public static toggle( defaultColor: string, callback: (color: string) => void, position?: { x: number; y: number } | Element ): void {
         if (this.isVisible) this.hide();
         else this.show(defaultColor, callback, position);
     }
@@ -172,9 +207,10 @@ export class ColorPicker {
             this.colorPickerDiv.remove();
             this.colorPickerDiv = null;
         }
+        this.colorPickerWheel = null;
         this.currentCallback = null;
+        this.activeAnchor = null;
         this.hexColor = null;
         this.isVisible = false;
-        document.removeEventListener('click', this.handleDocumentClick);
     }
 }

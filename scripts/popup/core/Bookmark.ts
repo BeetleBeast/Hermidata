@@ -4,17 +4,16 @@ import type { Bookmark } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { activateOther, customConfirm, deactivateOther } from "../frontend/confirm";
+import { customConfirm } from "../frontend/confirm";
 
 export class BookmarkController {
 
     private hermidata: HermidataModel;
     public bookmarkInUseID: string | null = null;
 
-    private bookmarkMenuContainerVisible: boolean = false;
-
     // img bookmark
-    private readonly imgBookmark = getElement<HTMLImageElement>('.imgBookmark');
+    private readonly imgBookmark = getElement<SVGSVGElement>('.imgBookmark');
+    private readonly bookmarkMenuTrigger = getElement<HTMLButtonElement>('#openBookmarkMenu');
 
     // add new bookmark
     private readonly AddNewBookmarkContainer = getElement<HTMLDivElement>('.AddNewBookmark');
@@ -22,12 +21,10 @@ export class BookmarkController {
     private readonly bookmarkChapterInput = getElement<HTMLInputElement>('#bookmarkChapterInput');
     private readonly bookmarkNotesInput = getElement<HTMLInputElement>('#bookmarkNotesInput');
     private readonly bookmarkColorInput = getElement<HTMLButtonElement>('#bookmarkColorInput');
-    private readonly cancelBookmarkBtn = getElement<HTMLButtonElement>('#cancelBookmarkBtn');
     private readonly saveBookmarkBtn = getElement<HTMLButtonElement>('#saveBookmarkBtn');
 
     // bookmark menu manager
     private readonly bookmarkMenuManagerContainer = getElement<HTMLDivElement>('.bookmarkMenuManagerContainer');
-    private readonly cancelBookmarkMenuBtn = getElement<HTMLButtonElement>('#cancelBookmarkMenuBtn');
     private readonly bookmarkMenuManager = getElement<HTMLDivElement>('#bookmarkMenuManager');
     
     // bookmark menu ( on click of bookmark menu button )
@@ -38,6 +35,8 @@ export class BookmarkController {
     private readonly bookmarkMenuBtn = getElement<HTMLButtonElement>('.bookmarkMenuBtn'); // open bookmark menu manager
 
     private readonly isNewHermidata: boolean;
+    private readonly markerPopovers = document.querySelectorAll<HTMLDivElement | HTMLElement>('.markerPopover[popover]');
+    private popupBaseHeight = 0;
 
     constructor(hermidata: HermidataModel, isNew: boolean = false) {
         this.hermidata = hermidata;
@@ -45,122 +44,143 @@ export class BookmarkController {
     }
     public init(): void {
         this.setAllToDefault();
+        this.popupBaseHeight = document.body.scrollHeight;
 
         this.imgBookmark!.style.fill = this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].color;
 
         this.bindEvents();
     }
     private bindEvents() {
-        // open bookmark menu
-        this.imgBookmark?.addEventListener('click', (e) => {
-            e.stopPropagation()
-            this.openBookmarkMenu()
-        });
-        // open new bookmark form
-        for (const btn of this.addNewBookmarkBtn) btn?.addEventListener('click', () => this.addNewBookmarkForm());
-        // open bookmark menu manager
-        this.bookmarkMenuBtn?.addEventListener('click', () => this.openBookmarkMenuManager() );
-
-        // Close bookmark menu when clicking outside (on HDClassic)
-        getElement('.HDClassic')?.addEventListener('click', this.closeBookmarkMenu );
+        // add listener to open bookmark menu button
+        this.openBookmarkMenuEvent();
+        // add listener to open add new bookmark button
+        this.openAddNewBookmarkEvent();
+        // add listener to open bookmark menu manager button
+        this.openBookmarkMenuManagerEvent();
+        // add listener to open color picker button
+        this.openColorPickerEvent();
+        // add listener to resize popup height when marker popover is opened or closed
+        this.resizePopupHeight();
+        // add listener to close popovers when clicking outside of them or pressing escape
+        document.addEventListener('click', this.handleOutsideMarkerClick);
+        document.addEventListener('keydown', this.handleMarkerEscape);
         // save new bookmark
         this.saveBookmarkBtn?.addEventListener('click', () => this.saveNewBookmark() );
-
-        // close bookmark menu manager
-        this.cancelBookmarkMenuBtn?.addEventListener('click', () => this.closeBookmarkMenuManager() );
-        // close add new bookmark
-        this.cancelBookmarkBtn?.addEventListener('click', () => this.closeAddBookmark() );
     }
-    private setAllToDefault(): void {
-        // set all elements to default
-        this.bookmarkInUseID = null;
-        this.AddNewBookmarkContainer!.style.display = 'none';
-        this.bookmarkMenuContainer!.style.display = 'none';
-        this.bookmarkMenuManagerContainer!.style.display = 'none';
+    private openBookmarkMenuEvent(): void {
+        this.bookmarkMenuTrigger?.addEventListener('click', () => {
+            ColorPicker.hide();
+            this.closeOtherMarkerPopovers(this.bookmarkMenuContainer);
+            this.openBookmarkMenu();
+        });
     }
-    private handleOutsideClick = (e: MouseEvent): void => {
-        const menu = this.bookmarkMenuManager;
-        if (menu && !menu.contains(e.target as Node)) {
-            this.closeBookmarkMenu();
+    private openAddNewBookmarkEvent(): void {
+        for (const btn of this.addNewBookmarkBtn) {
+            btn.addEventListener('click', () => {
+                ColorPicker.hide();
+                this.closeOtherMarkerPopovers(this.AddNewBookmarkContainer);
+                this.addNewBookmarkForm();
+            });
         }
+    }
+    private openBookmarkMenuManagerEvent(): void {
+        this.bookmarkMenuBtn?.addEventListener('click', () => {
+            ColorPicker.hide();
+            this.closeOtherMarkerPopovers(this.bookmarkMenuManagerContainer);
+            this.openBookmarkMenuManager();
+        });
+    }
+    private openColorPickerEvent(): void {
+        this.bookmarkColorInput?.addEventListener('click', () => {
+            const defaultColor = '#fcfcfc';
+            ColorPicker.show(
+                ColorPicker.getHexColor() ?? defaultColor,
+                () => {
+                    this.bookmarkColorInput!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
+                },
+                this.bookmarkColorInput!
+            );
+        });
+    }
+    private resizePopupHeight(): void {
+        for (const popover of this.markerPopovers) {
+            popover?.addEventListener('toggle', () => {
+                if (popover.matches(':popover-open')) requestAnimationFrame(() => this.fitPopupToMarkerPanel(popover));
+                else {
+                    if (popover === this.AddNewBookmarkContainer || popover === this.bookmarkMenuManagerContainer) ColorPicker.destroy();
+                    requestAnimationFrame(() => this.resetPopupHeightIfNoMarkerPanel());
+                }
+            });
+        }
+    }
+
+    private handleOutsideMarkerClick = (event: MouseEvent): void => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest('.markerPopover, #ColorPicker, [popovertarget]')) return;
+        this.closeOtherMarkerPopovers();
+        ColorPicker.hide();
     };
-    /**
-     * - open or close bookmark menu depending on where the mouse points
-     * @param e - event of where the mouse points to
-     */
-    private openBookmarkMenu(): void {
-        // Prevent the open click from immediately closing the menu
-        setTimeout(() => {
-            document.addEventListener('click', this.handleOutsideClick);
-        }, 0);
-        if (!this.bookmarkMenuContainer) return;
-        if (this.bookmarkMenuContainerVisible) {
-            this.closeBookmarkMenu();
+    private handleMarkerEscape = (event: KeyboardEvent): void => {
+        if (event.key !== 'Escape') return;
+        if (ColorPicker.isOpen()) {
+            ColorPicker.hide();
+            event.preventDefault();
             return;
         }
-        this.bookmarkMenuContainer.style.display = 'block';
-        this.bookmarkMenuContainerVisible = true;
-        this.bookmarkMenu!.innerHTML = '';
+        this.closeOtherMarkerPopovers();
+    };
+    private setAllToDefault(): void {
+        this.bookmarkInUseID = null;
+        this.closeOtherMarkerPopovers();
+    }
+    private closeOtherMarkerPopovers(exception?: HTMLElement | null): void {
+        for (const popover of this.markerPopovers) {
+            if (popover !== exception && popover.matches(':popover-open')) popover.hidePopover();
+        }
+    }
+    private fitPopupToMarkerPanel(popover: HTMLElement): void {
+        if (!popover.matches(':popover-open')) return;
+        const panelBottom = Math.ceil(popover.getBoundingClientRect().bottom);
+        document.body.style.height = `${Math.max(this.popupBaseHeight, panelBottom + 12)}px`;
+    }
+    private resetPopupHeightIfNoMarkerPanel(): void {
+        if ([...this.markerPopovers].some(popover => popover.matches(':popover-open'))) return;
+        document.body.style.height = '';
+    }
+    /** Populate the marker list before its native popover trigger opens it. */
+    private openBookmarkMenu(): void {
+        if (!this.bookmarkMenu) return;
+        this.bookmarkMenu.innerHTML = '';
         // only create new bookmarks
         for (const [key, value] of Object.entries(this.hermidata.chapter.bookmarks)) {
             this.createBookmarkMenu(key, value);
-            this.bookmarkMenu?.appendChild( document.createElement('hr') );
         }
-        const extraMargin = 20;
-        const newSize = this.bookmarkMenuContainer.clientHeight + this.bookmarkMenuContainer.offsetTop + extraMargin;
-        if (newSize >= document.body.clientHeight) document.body.style.height = `${newSize}px`;
-        const maxSize = 600;
-        if (newSize >= maxSize + 10) (document.body as HTMLBodyElement).style.overflowY = 'scroll';
     }
     /** open add new bookmark */
     private addNewBookmarkForm(): void {
-        this.closeBookmarkMenu();
-        this.closeBookmarkMenuManager();
         if (!this.AddNewBookmarkContainer) return;
-        deactivateOther(this.AddNewBookmarkContainer);
-        this.AddNewBookmarkContainer.style.display = 'block';
         this.setAddNewBookmarkFormData();
     }
-    /** open bookmark menu manager */
+    /** Populate the manager before its native popover trigger opens it. */
     private openBookmarkMenuManager(): void {
-        if (!this.bookmarkMenuManagerContainer) return;
-        this.closeBookmarkMenu();
-        deactivateOther(this.bookmarkMenuManagerContainer);
-        this.bookmarkMenuManagerContainer.style.display = 'block';
+        if (!this.bookmarkMenuManagerContainer || !this.bookmarkMenuManager) return;
         this.bookmarkMenuManager!.innerHTML = '';
 
         for (const [key, value] of Object.entries(this.hermidata.chapter.bookmarks)) {
             this.createBookmarkMenuManager(key, value);
         }
-        const extraMargin = 20;
-        const newSize = this.bookmarkMenuManagerContainer.clientHeight + this.bookmarkMenuManagerContainer.offsetTop + extraMargin;
-        if (newSize >= document.body.clientHeight) document.body.style.height = `${newSize}px`;
-        const maxSize = 600;
-        if (newSize >= maxSize + 10) (document.body as HTMLBodyElement).style.overflowY = 'scroll';
+        requestAnimationFrame(() => this.fitPopupToMarkerPanel(this.bookmarkMenuManagerContainer!));
     }
     /** close bookmark menu */
     private closeBookmarkMenu = (): void => {
-        if (!this.bookmarkMenuContainer) return;
-        this.bookmarkMenuContainer.style.display = 'none';
-        this.bookmarkMenuContainerVisible = false;
-        activateOther();
-        // Remove the listener when menu closes
-        getElement('.HDClassic')?.removeEventListener('click', this.closeBookmarkMenu );
-        document.removeEventListener('click', this.handleOutsideClick);
+        if (this.bookmarkMenuContainer?.matches(':popover-open')) this.bookmarkMenuContainer.hidePopover();
     }
     /** close add bookmark */
     private closeAddBookmark(): void {
         if (!this.AddNewBookmarkContainer) return;
-        this.AddNewBookmarkContainer.style.display = 'none';
+        if (this.AddNewBookmarkContainer.matches(':popover-open')) this.AddNewBookmarkContainer.hidePopover();
         ColorPicker.destroy();
-        activateOther();
-    }
-    /** close bookmark menu manager */
-    private closeBookmarkMenuManager(): void {
-        if (!this.bookmarkMenuManagerContainer) return;
-        this.bookmarkMenuManagerContainer.style.display = 'none';
-        ColorPicker.destroy();
-        activateOther();
     }
     /** create bookmark menu */
     private async createBookmarkMenu(key: string, bookmark: Bookmark): Promise<void> {
@@ -170,6 +190,7 @@ export class BookmarkController {
         const isActiveBookmark = this.hermidata.chapter.bookmarkInUse === key;
 
         bookmarkContainer.dataset.active = isActiveBookmark.toString();
+        bookmarkContainer.style.setProperty('--marker-color', bookmark.color);
         const bookmarkLabel = document.createElement('div');
         bookmarkLabel.className = 'bookmarkLabel';
         bookmarkLabel.textContent = bookmark.label;
@@ -200,18 +221,7 @@ export class BookmarkController {
         ColorPicker.updateColor(defaultColor);
         this.bookmarkColorInput!.style.backgroundColor = 'var(--surface-raised)';
         this.bookmarkChapterInput!.value = currentChapter.toString();
-        this.bookmarkNotesInput!.textContent = currentNotes ?? '';
-
-        const rect = document.body.getBoundingClientRect();
-
-        this.bookmarkColorInput!.addEventListener('click', () => {
-            ColorPicker.show( ColorPicker.getHexColor() ?? defaultColor,
-                async () => {
-                    this.bookmarkColorInput!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
-                },
-                { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
-            );
-        });
+        this.bookmarkNotesInput!.value = currentNotes ?? '';
     }
     /** create bookmark menu manager */
     private createBookmarkMenuManager(key: string, value: Bookmark): void {
@@ -305,7 +315,6 @@ export class BookmarkController {
             e.preventDefault();
             
             const currentColor = this.hermidata.chapter.bookmarks[key].color;
-            const rect = document.body.getBoundingClientRect();
             ColorPicker.show( ColorPicker.getHexColor() ?? currentColor,
                 async (newColor) => {
                     svg.style.fill = newColor;
@@ -317,7 +326,7 @@ export class BookmarkController {
                         console.error('Failed to save bookmark color:', error);
                     }
                 },
-                { x: (rect.right / 4 + rect.right / 2) - 80, y: (rect.bottom / 2) - 100 }
+                svg
             );
         });
     }
@@ -342,7 +351,7 @@ export class BookmarkController {
     }
     private async saveNewBookmark(): Promise<void> {
         const labelValue = this.bookmarkLabelInput?.value;
-        const chapterValue = this.bookmarkChapterInput?.value;
+        const chapterValue = this.bookmarkChapterInput?.valueAsNumber;
         const notesValue = this.bookmarkNotesInput?.value;
         const colorValue = ColorPicker.getHexColor();
 
