@@ -88,7 +88,7 @@ export type elementInput = {
     ReadStatus: HTMLSelectElement | null;
     NovelStatus: HTMLSelectElement | null;
     tags: HTMLInputElement | null;
-    notes: HTMLInputElement | null;
+    notes: HTMLInputElement | HTMLTextAreaElement | null;
     saveButton: HTMLButtonElement | null;
 }
 export type elementMenu = {
@@ -96,27 +96,13 @@ export type elementMenu = {
     ReadStatus: HTMLSelectElement | null;
     NovelStatus: HTMLSelectElement | null;
     tags: HTMLInputElement | null;
-    notes: HTMLInputElement | null;
+    notes: HTMLInputElement | HTMLTextAreaElement | null;
     saveButton: HTMLButtonElement | null;
 }
 
 export type elementsInputAndMenu = elementInput |  elementMenu;
 
 export interface ElementsWithInputAndMenu {
-    input: {
-        Type: HTMLSelectElement | null,
-        ReadStatus: HTMLSelectElement | null,
-        NovelStatus: HTMLSelectElement | null,
-        tags: HTMLInputElement | null,
-        notes: HTMLInputElement | null,
-        saveButton: HTMLButtonElement | null
-    },
-    menu: {
-        Type: HTMLSelectElement | null,
-        ReadStatus: HTMLSelectElement | null,
-        NovelStatus: HTMLSelectElement | null,
-        tags: HTMLInputElement | null,
-        notes: HTMLInputElement | null,
-        saveButton: HTMLButtonElement | null
-    }
+    input: elementInput;
+    menu: elementInput;
 }
