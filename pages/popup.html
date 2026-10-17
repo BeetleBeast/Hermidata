@@ -139,20 +139,44 @@
 </section>
 <section id="bookmark-manager" class="bookmarkMenuManagerContainer markerPopover" popover="manual">
     <div class="bookmarkMenuManager-header">
+        <div id="bookmarkManagerSortControls" class="marker-sort-controls" role="group" aria-label="Sort markers">
+            <select id="bookmarkManagerSort" class="marker-sort" aria-label="Sort markers by">
+                <option value="updatedAt">Last edited</option>
+                <option value="createdAt">Created</option>
+            </select>
+            <button type="button" id="bookmarkManagerSortDirection" class="marker-sort-direction Btn" aria-label="Change sort direction; currently descending" title="Sort descending">↑</button>
+        </div>
         <h4 class="bookmarkMenuManager-title">Manage markers</h4>
         <button type="button" id="cancelBookmarkMenuBtn" class="markerPopover-close" popovertarget="bookmark-manager" popovertargetaction="hide" aria-label="Close marker manager">×</button>
     </div>
     <div id="bookmarkMenuManager"> <!-- Dynamic load Bookmarks --> </div>
+    <nav id="bookmarkManagerPagination" class="marker-pagination" aria-label="Manage markers pages" hidden>
+        <button type="button" class="marker-page-previous Btn">Previous</button>
+        <span class="marker-page-status" aria-live="polite"></span>
+        <button type="button" class="marker-page-next Btn">Next</button>
+    </nav>
     <button type="button" class="addNewBookmarkBtn" id="addNewBookmarkBtn-manager" popovertarget="bookmark-add-marker" popovertargetaction="show">Add Marker</button>
     <br>
-    <sub class="bookmarkMenuManager-sub">Tip: Primary Marker cannot be removed.</sub>
+    <small class="bookmarkMenuManager-sub">Tip: Primary Marker cannot be removed.</small>
 </section>
 <section id="bookmark-menu" class="bookmarkMenuContainer markerPopover" popover="manual">
     <div class="markerPopover-header">
+        <div id="bookmarkMenuSortControls" class="marker-sort-controls" role="group" aria-label="Sort markers">
+            <select id="bookmarkMenuSort" class="marker-sort" aria-label="Sort markers by">
+                <option value="updatedAt">Last edited</option>
+                <option value="createdAt">Created</option>
+            </select>
+            <button type="button" id="bookmarkMenuSortDirection" class="marker-sort-direction Btn" aria-label="Change sort direction; currently descending" title="Sort descending">↑</button>
+        </div>
         <h4>Markers</h4>
         <button type="button" class="markerPopover-close" popovertarget="bookmark-menu" popovertargetaction="hide" aria-label="Close marker menu">×</button>
     </div>
     <div class="bookmarkMenu"> <!-- Dynamic load Bookmark label + chapter current --> </div>
+    <nav id="bookmarkMenuPagination" class="marker-pagination" aria-label="Markers pages" hidden>
+        <button type="button" class="marker-page-previous Btn">Previous</button>
+        <span class="marker-page-status" aria-live="polite"></span>
+        <button type="button" class="marker-page-next Btn">Next</button>
+    </nav>
     <button type="button" class="addNewBookmarkBtn" id="addNewBookmarkBtn-Menu" popovertarget="bookmark-add-marker" popovertargetaction="show">Add Marker</button>
     <hr>
     <button type="button" class="bookmarkMenuBtn Btn" popovertarget="bookmark-manager" popovertargetaction="show">Marker Manager</button>

@@ -625,6 +625,61 @@ input[type=number]::-webkit-inner-spin-button {
 	background: color-mix(in srgb, var(--danger) 12%, transparent);
 	border-color: var(--danger);
 }
+.marker-sort-controls {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+	margin-right: auto;
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	overflow: hidden;
+	background: var(--surface-raised);
+}
+.marker-sort-controls[hidden] {
+	display: none;
+}
+.marker-sort {
+	max-width: 106px;
+	height: 26px;
+	padding: 3px 5px;
+	border: 0;
+	border-radius: 0;
+	background: var(--surface-raised);
+	color: var(--text);
+	color-scheme: dark;
+	font: inherit;
+	font-size: 11px;
+	cursor: pointer;
+}
+.marker-sort option {
+	background: var(--surface-raised);
+	color: var(--text);
+}
+.marker-sort-direction {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	min-width: 26px;
+	padding: 0;
+	border: 0;
+	border-left: 1px solid var(--border);
+	border-radius: 0;
+	background: transparent;
+	color: var(--text);
+	font-size: 15px;
+	line-height: 1;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.marker-sort-direction:hover {
+	background: var(--accent-hover-dark);
+	border-color: var(--accent-soft);
+	color: var(--text-highlight);
+}
+.marker-sort-direction:focus-visible {
+	outline: 2px solid var(--accent-soft);
+	outline-offset: 2px;
+}
 .bookmarkMenu {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -666,6 +721,32 @@ input[type=number]::-webkit-inner-spin-button {
 }
 .bookmarkMenu-item[data-active="false"] {
 	background-color: transparent;
+}
+.marker-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 6px 0;
+	padding-top: 8px;
+	border-top: 1px solid var(--border);
+}
+.marker-pagination[hidden] {
+	display: none;
+}
+.marker-pagination button {
+	min-width: 72px;
+	padding: 5px 8px;
+	font-size: 11px;
+}
+.marker-pagination button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+.marker-page-status {
+	color: var(--text-muted);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
 }
 
 .markerPopover .addNewBookmarkBtn,
@@ -718,6 +799,9 @@ hr {
 }
 .bookmarkMenuManager-header {
 	min-height: 34px;
+}
+#bookmarkManagerPagination {
+	margin-bottom: 8px;
 }
 #bookmarkMenuManager {
 	display: grid;
