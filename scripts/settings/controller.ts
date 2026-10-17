@@ -11,6 +11,7 @@ import { customConfirm } from "../popup/frontend/confirm";
 export class BuildController {
     private currentSection: string = 'extension-behavior';
     private readonly initializedSections = new Set<string>();
+    private readonly sectionInitializationPromises = new Map<string, Promise<void>>();
 
     private readonly accountConnection = new Account_Connection();
     
@@ -78,7 +79,7 @@ export class BuildController {
     }
     private async navigateTo(e: Event | HTMLButtonElement, sectionId: string) {
         const target = e instanceof HTMLButtonElement ? e : e.currentTarget as HTMLButtonElement;
-        if (target.dataset.active === "true") return; // already active, do nothing
+        if (target.dataset.active === "true" && this.initializedSections.has(sectionId)) return;
         // Update current section
         this.currentSection = sectionId;
         
@@ -96,8 +97,35 @@ export class BuildController {
         
         // Initialize section on first visit
         if (!this.initializedSections.has(sectionId)) {
-            await this.initializeSection(sectionId);
-            this.initializedSections.add(sectionId);
+            let initialization = this.sectionInitializationPromises.get(sectionId);
+            if (!initialization) {
+                initialization = this.initializeSection(sectionId);
+                this.sectionInitializationPromises.set(sectionId, initialization);
+            }
+
+            try {
+                await initialization;
+                if (this.sectionInitializationPromises.get(sectionId) === initialization) {
+                    this.sectionInitializationPromises.delete(sectionId);
+                }
+                this.initializedSections.add(sectionId);
+                container?.querySelector(".section-load-error")?.remove();
+            } catch (error) {
+                if (this.sectionInitializationPromises.get(sectionId) === initialization) {
+                    this.sectionInitializationPromises.delete(sectionId);
+                }
+                console.error(`Failed to initialize settings section "${sectionId}":`, error);
+                if (container) {
+                    let errorMessage = container.querySelector<HTMLParagraphElement>(".section-load-error");
+                    if (!errorMessage) {
+                        errorMessage = document.createElement("p");
+                        errorMessage.className = "section-load-error";
+                        errorMessage.setAttribute("role", "alert");
+                        container.prepend(errorMessage);
+                    }
+                    errorMessage.textContent = "Could not load this section. Click its navigation item to retry.";
+                }
+            }
         }
     }
 

@@ -72,46 +72,29 @@ export class FolderMapping extends Build {
 
 
     async init() {
-        // get current OR a default settings
-        try {
-            const settings = await this.getSettings();
-            
+        this.setFormulaOfFolderMapping();
+        const settings = await this.ensureSettingsUpToDate();
 
-            // set formula
-            this.setFormulaOfFolderMapping();
-            
-            // set current values to inputs
-            this.setRootPathValue(settings.FolderMapping.root);
-            this.setDefaultPathValue(settings.FolderMapping.defaultPath);
-            
-            // populate add aliases
-            this.populateAddAliases(settings);
+        // set current values to inputs
+        this.setRootPathValue(settings.FolderMapping.root);
+        this.setDefaultPathValue(settings.FolderMapping.defaultPath);
 
-            // load existing aliases
-            this.loadExistingAliases(settings);
-            // load existing override rules
-            this.loadExistingRules(settings);
+        // populate add aliases
+        this.populateAddAliases(settings);
 
-            // -- advanced settings --
+        // load existing aliases
+        this.loadExistingAliases(settings);
+        // load existing override rules
+        this.loadExistingRules(settings);
 
-            // populate sub-folders
-            this.populateSubFolders(settings);
-            // populate folder mappings custom rules ( override )
-            this.populateFolderMappingsCustomRules(settings);
+        // -- advanced settings --
 
-            this.bindEvents();
-            
-        } catch (error: any) {
-            console.error("Full error object:", error);
-            console.error("Error message:", error?.message);
-            console.error("Error stack:", error?.stack);
-            console.error("Error name:", error?.name);
-            
-            // If it's a custom error, it might have other properties
-            console.error("Raw error:", JSON.stringify(error, null, 2));
-            console.error(error);
-        }
-        
+        // populate sub-folders
+        this.populateSubFolders(settings);
+        // populate folder mappings custom rules ( override )
+        this.populateFolderMappingsCustomRules(settings);
+
+        this.bindEvents();
     }
     private bindEvents() {
         // set root path

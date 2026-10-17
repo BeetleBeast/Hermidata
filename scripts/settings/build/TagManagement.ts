@@ -1,6 +1,6 @@
 
 import { defaultSettings } from "../../shared/constants";
-import { type Hermidata } from "../../shared/types";
+import { type Hermidata, type Settings } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
@@ -26,10 +26,11 @@ export class TagManagement extends Build {
     private maxSetColorCount = 0;
 
     public async init() {
+        const settings = await this.ensureSettingsUpToDate();
         this.allTagsUsed = await this.getAllTagsUsed();
 
         // color tags
-        await this.loadTagColoring();
+        await this.loadTagColoring(settings);
         // update/remove tag
         this.populateUpdateRemoveTagForm();
         // merge tags
@@ -227,8 +228,7 @@ export class TagManagement extends Build {
     }
 
 
-    private async loadTagColoring() {
-        const Settings = await this.getSettings();
+    private async loadTagColoring(Settings: Settings) {
         const defaultTagColoring = await this.createDefaultTagColor();
         const storedTagColoring = Object.keys(Settings.TagManagement.tagColoring).length > 0 ? Settings.TagManagement.tagColoring : defaultTagColoring;
         Object.assign(this.tagColoring, storedTagColoring);
