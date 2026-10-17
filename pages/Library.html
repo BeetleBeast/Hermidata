@@ -114,16 +114,15 @@
           <h4>Release Date</h4>
           <button id="ReleaseDate-filter" class="filter-button" title="Release Date" type="button" data-filter-type="Release Date" popovertargetaction="toggle" popovertarget="ReleaseDate-dialog">Any</button>
           
-          <div id="ReleaseDate-dialog" class="filter-dialog" popover>
-          </div>
+          <div id="ReleaseDate-dialog" class="filter-dialog" popover></div>
 
         </div>
         <div id="ChapterCompletion-filter-container" class="filter-container">
           <h4>Minimum chapters read</h4>
-          <input id="ChapterCompletion-filter" class="filter-button" title="minimum completion percentage" type="number" min="0" placeholder="0" oninput="this.value = this.value.replace(/[^0-9.-]/g, '');"value=""/>
+          <input id="ChapterCompletion-filter" class="filter-button" title="minimum completion percentage" type="number" min="0" placeholder="0" oninput="this.value = this.value.replace(/[^0-9.-]/g, '');" value=""/>
         </div>
         <div id="ResetFilters" class="filter-container">
-          <h4 id="resetFilters-label-hidden" >0</h4>
+          <h4 id="resetFilters-label-hidden">0</h4>
           <button type="button" id="resetFilters" class="filter-button" class="Btn">Reset Filters</button>
         </div>
       </div>
