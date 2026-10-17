@@ -1,3 +1,4 @@
+import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { getAllHermidata, getHermidataViaKey, getSettings } from "../../shared/db/Storage";
 import { TrimTitle, findByTitleOrAlt, returnHashedTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
@@ -117,7 +118,7 @@ export class PastHermidata {
         const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
 
         return getHermidataViaKey(key).catch(error => {
-            console.error('Extension error: Failed Premise getHermidata: ',error);
+            logConsoleError('Extension error: Failed Premise getHermidata: ',error);
             console.log('Key',key,'\n', '\n','this.hermidata', this.hermidata);
             return null;
         })

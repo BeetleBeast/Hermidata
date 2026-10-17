@@ -8,6 +8,7 @@ import { AutoSetAllHermidata } from "../../shared/utils/AutoSetAllHermidata";
 import { levenshteinDistance } from "../../popup/core/Past";
 import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 
 declare const browser: typeof chrome | undefined;
 
@@ -33,6 +34,13 @@ export class ImportsAndExports extends Build {
     constructor(devMode = false) {
         super();
         this.devMode = devMode;
+    }
+
+    private reportFileReadError(fileDescription: string, error: DOMException | null): void {
+        new ErrorMessage(`Could not read the selected ${fileDescription}.`, undefined, {
+            consoleLevel: "error",
+            details: [error]
+        }).sendMessage();
     }
 
     public async init() {
@@ -259,8 +267,10 @@ export class ImportsAndExports extends Build {
 
             alert("Settings imported successfully!");
         } catch (err) {
-            console.error("Failed to parse JSON:", err);
-            alert("Invalid JSON format.");
+            new ErrorMessage("Could not import settings. Check the selected file and try again.", undefined, {
+                consoleLevel: "error",
+                details: ["Settings import failed", err]
+            }).sendMessage();
         }
     };
 
@@ -280,7 +290,10 @@ export class ImportsAndExports extends Build {
             a.remove();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Extension error: Failed exportHermidata: ", error)
+            new ErrorMessage("Could not export Hermidata data.", undefined, {
+                consoleLevel: "error",
+                details: ["Hermidata export failed", error]
+            }).sendMessage();
         }
     }
 
@@ -290,6 +303,7 @@ export class ImportsAndExports extends Build {
         if (!file) return;
 
         const reader = new FileReader();
+        reader.onerror = () => this.reportFileReadError("Hermidata file", reader.error);
         reader.onload = async (e) => {
             try {
                 const target = e.target ?? null;
@@ -306,7 +320,10 @@ export class ImportsAndExports extends Build {
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
-                console.error("Extension error: Failed importHermidata:", error);
+                new ErrorMessage("Could not import Hermidata data.", undefined, {
+                    consoleLevel: "error",
+                    details: ["Hermidata import failed", error]
+                }).sendMessage();
             }
         };
         reader.readAsText(file);
@@ -318,6 +335,7 @@ export class ImportsAndExports extends Build {
         if (!file) return;
 
         const reader = new FileReader();
+        reader.onerror = () => this.reportFileReadError("RSS file", reader.error);
         reader.onload = async (e) => {
             try {
                 const target = e.target ?? null;
@@ -334,7 +352,10 @@ export class ImportsAndExports extends Build {
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
-                console.error("Extension error: Failed importHermidata:", error);
+                new ErrorMessage("Could not import RSS feeds.", undefined, {
+                    consoleLevel: "error",
+                    details: ["RSS import failed", error]
+                }).sendMessage();
             }
         };
         reader.readAsText(file);
@@ -357,7 +378,10 @@ export class ImportsAndExports extends Build {
             a.remove();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Extension error: Failed exportHermidata: ", error)
+            new ErrorMessage("Could not export RSS feeds.", undefined, {
+                consoleLevel: "error",
+                details: ["RSS export failed", error]
+            }).sendMessage();
         }
     }
 
@@ -378,7 +402,10 @@ export class ImportsAndExports extends Build {
             a.remove();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Extension error: Failed exportFolderMapping: ", error)
+            new ErrorMessage("Could not export folder mappings.", undefined, {
+                consoleLevel: "error",
+                details: ["Folder mapping export failed", error]
+            }).sendMessage();
         }
     }
 
@@ -388,6 +415,7 @@ export class ImportsAndExports extends Build {
         if (!file) return;
 
         const reader = new FileReader();
+        reader.onerror = () => this.reportFileReadError("folder mapping file", reader.error);
         reader.onload = async (e) => {
             try {
                 const target = e.target ?? null;
@@ -406,7 +434,10 @@ export class ImportsAndExports extends Build {
 
                 console.log("FolderMapping import + merge complete!");
             } catch (error) {
-                console.error("Extension error: Failed FolderMapping import:", error);
+                new ErrorMessage("Could not import folder mappings.", undefined, {
+                    consoleLevel: "error",
+                    details: ["Folder mapping import failed", error]
+                }).sendMessage();
             }
         };
         reader.readAsText(file);
@@ -431,7 +462,10 @@ export class ImportsAndExports extends Build {
             a.remove();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Extension error: Failed exportSyncData: ", error)
+            new ErrorMessage("Could not export sync data.", undefined, {
+                consoleLevel: "error",
+                details: ["Sync data export failed", error]
+            }).sendMessage();
         }
     }
     // delete sync
@@ -440,7 +474,10 @@ export class ImportsAndExports extends Build {
             await ext.storage.sync.clear();
             console.log("SyncData deleted!");
         } catch (error) {
-            console.error("Extension error: Failed deleteSyncData: ", error)
+            new ErrorMessage("Could not delete sync data.", undefined, {
+                consoleLevel: "error",
+                details: ["Sync data deletion failed", error]
+            }).sendMessage();
         }
     }
     // import sync
@@ -450,6 +487,7 @@ export class ImportsAndExports extends Build {
         if (!file) return;
 
         const reader = new FileReader();
+        reader.onerror = () => this.reportFileReadError("sync data file", reader.error);
         reader.onload = async (e) => {
             try {
                 const target = e.target ?? null;
@@ -466,7 +504,10 @@ export class ImportsAndExports extends Build {
 
                 console.log("FolderMapping import + merge complete!");
             } catch (error) {
-                console.error("Extension error: Failed FolderMapping import:", error);
+                new ErrorMessage("Could not import sync data.", undefined, {
+                    consoleLevel: "error",
+                    details: ["Sync data import failed", error]
+                }).sendMessage();
             }
         };
         reader.readAsText(file);
@@ -502,7 +543,10 @@ export class ImportsAndExports extends Build {
             a.remove();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Extension error: Failed quickBackup: ", error)
+            new ErrorMessage("Could not create a backup.", undefined, {
+                consoleLevel: "error",
+                details: ["Quick backup failed", error]
+            }).sendMessage();
         }
     }
     private async importFromMAL(event: Event) {
@@ -511,6 +555,7 @@ export class ImportsAndExports extends Build {
         if (!file) return;
 
         const reader = new FileReader();
+        reader.onerror = () => this.reportFileReadError("MyAnimeList file", reader.error);
         reader.onload = async (e) => {
             try {
                 const target = e.target ?? null;
@@ -527,7 +572,10 @@ export class ImportsAndExports extends Build {
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
-                console.error("Extension error: Failed importHermidata:", error);
+                new ErrorMessage("Could not import MyAnimeList data.", undefined, {
+                    consoleLevel: "error",
+                    details: ["MyAnimeList import failed", error]
+                }).sendMessage();
             }
         };
         reader.readAsText(file);
@@ -549,7 +597,10 @@ export class ImportsAndExports extends Build {
             a.remove();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Extension error: Failed quickBackup: ", error)
+            new ErrorMessage("Could not export MyAnimeList data.", undefined, {
+                consoleLevel: "error",
+                details: ["MyAnimeList export failed", error]
+            }).sendMessage();
         }
     }
     private escapeXml(str: string): string {

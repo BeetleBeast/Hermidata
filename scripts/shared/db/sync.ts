@@ -1,3 +1,4 @@
+import { logConsoleError } from "../utils/ErrorMessage";
 // shared/sync.ts
 import { ext } from '../utils/BrowserCompat'
 import { putHermidata, isHermidataV10 } from './db'
@@ -80,7 +81,7 @@ export async function pushToSync(entry: Hermidata): Promise<void> {
             [entry.id]: { ...entry, _syncedBy: await getDeviceId() }
         })
     } catch (err) {
-        console.error('[Sync] Failed to push entry:', err)
+        logConsoleError('[Sync] Failed to push entry:', err)
     }
 }
 
@@ -89,7 +90,7 @@ export async function removeFromSync(id: string): Promise<void> {
     try {
         await ext.storage.sync.remove(id)
     } catch (err) {
-        console.error('[Sync] Failed to remove entry:', err)
+        logConsoleError('[Sync] Failed to remove entry:', err)
     }
 }
 

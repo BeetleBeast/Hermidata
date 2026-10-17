@@ -1,3 +1,4 @@
+import { logConsoleError } from "../utils/ErrorMessage";
 import { ext } from '../utils/BrowserCompat';
 import { getHermidataByKey, putHermidata, deleteHermidata,
     getAllHermidata as dbGetAllHermidata,
@@ -42,7 +43,7 @@ export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Pr
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Saved ${entry.title}`);
     } catch (err) {
-        console.error('[Storage] saveHermidata:', err);
+        logConsoleError('[Storage] saveHermidata:', err);
         throw err;
     }
 }
@@ -64,7 +65,7 @@ export async function updateHermidata(oldKey: string, newKey: string, entry: Onl
         console.log(`Migrated from ${oldKey} → ${newKey}`);
         console.log(`[HermidataV3] Updated ${entry.title}`);
     } catch (err) {
-        console.error('[Storage] updateHermidata:', err);
+        logConsoleError('[Storage] updateHermidata:', err);
     }
 }
 
@@ -76,7 +77,7 @@ export async function removeHermidata(id: string): Promise<void> {
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Removed ${id}`);
     } catch (err) {
-        console.error('[Storage] removeHermidata:', err);
+        logConsoleError('[Storage] removeHermidata:', err);
     }
 }
 
@@ -88,7 +89,7 @@ export async function getAllHermidata(): Promise<Record<string, OnlyPlainHermida
         else console.log(`[Storage] Total entries: ${count}`);
         return all;
     } catch (err) {
-        console.error('[Storage] getAllHermidata:', err);
+        logConsoleError('[Storage] getAllHermidata:', err);
         return {};
     }
 }
@@ -98,7 +99,7 @@ export async function setAllHermidata(hermidata: OnlyPlainHermidata[]): Promise<
         const count = Object.keys(hermidata).length;
         console.log(`[Storage] set ${count} total entries`);
     } catch (err) {
-        console.error('[Storage] setAllHermidata:', err);
+        logConsoleError('[Storage] setAllHermidata:', err);
     }
 }
 // ============================================================
@@ -145,7 +146,7 @@ export async function getAllRawFeeds(): Promise<Record<string, RawFeed>> {
     try {
         return await dbGetAllRawFeeds();
     } catch (err) {
-        console.error('[Storage] getAllRawFeeds:', err);
+        logConsoleError('[Storage] getAllRawFeeds:', err);
         return {};
     }
 }
@@ -154,7 +155,7 @@ export async function setAllRawFeeds(feeds: RawFeed[]): Promise<void> {
     try {
         await putAllRawFeeds(feeds);
     } catch (err) {
-        console.error('[Storage] setAllRawFeeds:', err);
+        logConsoleError('[Storage] setAllRawFeeds:', err);
     }
 }
 
@@ -164,7 +165,7 @@ export async function getRawFeedByTitle(title: string): Promise<RawFeed | null> 
         const all = await dbGetAllRawFeeds();
         return Object.values(all).find(f => f.title === title) ?? null;
     } catch (err) {
-        console.error('[Storage] getRawFeedByTitle:', err);
+        logConsoleError('[Storage] getRawFeedByTitle:', err);
         return null;
     }
 }
@@ -174,7 +175,7 @@ export async function removeRawFeedByUrl(url: string): Promise<boolean> {
         await deleteRawFeed(url);
         return true;
     } catch (err) {
-        console.error('[Storage] removeRawFeedByUrl:', err);
+        logConsoleError('[Storage] removeRawFeedByUrl:', err);
         return false;
     }
 }
@@ -187,7 +188,7 @@ export async function saveImage(id: string, blob: Blob): Promise<boolean> {
         await dbSaveImage(id, blob);
         return true;
     } catch (err) {
-        console.error('[Storage] saveImage:', err);
+        logConsoleError('[Storage] saveImage:', err);
         return false;
     }
 }
@@ -196,7 +197,7 @@ export async function getImage(id: string): Promise<Blob | null> {
         const image = await dbGetImage(id);
         return image ?? null;
     } catch (err) {
-        console.error('[Storage] getImage:', err);
+        logConsoleError('[Storage] getImage:', err);
         return null;
     }
 }
@@ -205,7 +206,7 @@ export async function saveAllImages(blobs: Record<string, Blob>): Promise<boolea
         await dbSaveAllImages(blobs);
         return true;
     } catch (err) {
-        console.error('[Storage] saveAllImages:', err);
+        logConsoleError('[Storage] saveAllImages:', err);
         return false;
     }
 }
@@ -214,7 +215,7 @@ export async function getAllImages(): Promise<Blob[]> {
     try {
         return await dbGetAllImages();
     } catch (err) {
-        console.error('[Storage] getAllImages:', err);
+        logConsoleError('[Storage] getAllImages:', err);
         return [];
     }
 }
@@ -224,7 +225,7 @@ export async function removeImage(id: string): Promise<boolean> {
         await dbDeleteImage(id);
         return true;
     } catch (err) {
-        console.error('[Storage] removeImage:', err);
+        logConsoleError('[Storage] removeImage:', err);
         return false;
     }
 }
@@ -234,7 +235,7 @@ export async function updateImageKey(oldId: string, newId: string): Promise<bool
         await dbUpdateImageKey(oldId, newId);
         return true;
     } catch (err) {
-        console.error('[Storage] updateImageKey:', err);
+        logConsoleError('[Storage] updateImageKey:', err);
         return false;
     }
 }
@@ -261,7 +262,7 @@ export async function getSettings(): Promise<Settings> {
             });
         });
     } catch (err) {
-        console.error('[Storage] getSettings:', err);
+        logConsoleError('[Storage] getSettings:', err);
         return defaultSettings;
     }
 }
@@ -272,7 +273,7 @@ export async function setSettings(settings: Settings): Promise<void> {
         await ext.storage.sync.set({ Settings: settings });    // sync for cross-device
         console.log('[Storage] Settings saved');
     } catch (err) {
-        console.error('[Storage] setSettings:', err);
+        logConsoleError('[Storage] setSettings:', err);
     }
 }
 // For development/testing: reset to default settings (does not affect Hermidata or Feeds)
@@ -286,12 +287,12 @@ export async function resetSettings(): Promise<void> {
             return;
         }
         else {
-            console.error('[Storage] resetSettings: wrong version');
+            logConsoleError('[Storage] resetSettings: wrong version');
             await putSettings(defaultSettings);                            // IndexedDB
             console.log('[Storage] Settings reset');
         }
     } catch (err) {
-        console.error('[Storage] resetSettings:', err);
+        logConsoleError('[Storage] resetSettings:', err);
     }
 }
 // migrate old settings to new format (called on extension update)
@@ -306,12 +307,12 @@ export async function migrateSettings(_settings: Settings | undefined = undefine
         // if settings has no version ( version 4 or earlier), or version is less than latest, migrate it
         // if settings are not up-to-date, migrate them
         if (settingsVersion < latestVersion || !settingsVersion) {
-            console.error('[Storage] migrateSettings: wrong version');
+            logConsoleError('[Storage] migrateSettings: wrong version');
             await SettingsMigration.migrateSettingsToLatest(settings as unknown, settingsVersion);
             console.log('[Storage] Settings migrated');
         }
     } catch (err) {
-        console.error('[Storage] migrateSettings:', err);
+        logConsoleError('[Storage] migrateSettings:', err);
     }
 }
 
@@ -336,7 +337,7 @@ async function getSpreadsheetUrl(): Promise<string> {
 
         return urlFromSync;
     } catch (err) {
-        console.error('[Storage] getSpreadsheetUrl:', err);
+        logConsoleError('[Storage] getSpreadsheetUrl:', err);
         return '';
     }
 }
@@ -350,7 +351,7 @@ export async function getGoogleSheetURL(): Promise<string> {
         if (googleSpreadsheet) return sheetUrlInput();
         return '';
     } catch (error) {
-        console.error('[Storage] getGoogleSheetURL:', error);
+        logConsoleError('[Storage] getGoogleSheetURL:', error);
         return sheetUrlInput();
     }
 }
@@ -398,7 +399,7 @@ export async function getLocalNotificationItem(key: string): Promise<boolean> {
             });
         });
     } catch (err) {
-        console.error('[Storage] getLocalNotificationItem:', key, err);
+        logConsoleError('[Storage] getLocalNotificationItem:', key, err);
         return false;
     }
 }
@@ -415,7 +416,7 @@ export async function setNotificationList(key: string, value = true): Promise<Re
             });
         });
     } catch (err) {
-        console.error('[Storage] setNotificationList:', err);
+        logConsoleError('[Storage] setNotificationList:', err);
         return {};
     }
 }
@@ -433,7 +434,7 @@ export async function getLastFilter(): Promise<Filters | undefined> {
             });
         });
     } catch (err) {
-        console.error('[Storage] getLastFilter:', err);
+        logConsoleError('[Storage] getLastFilter:', err);
         return undefined;
     }
 }
@@ -447,7 +448,7 @@ export async function setLastFilter(lastFilter: Filters): Promise<boolean> {
             });
         });
     } catch (err) {
-        console.error('[Storage] setLastFilter:', err);
+        logConsoleError('[Storage] setLastFilter:', err);
         return false;
     }
 }
@@ -461,7 +462,7 @@ export async function getLastLibraryFilters(): Promise<LibraryFilters | undefine
             });
         });
     } catch (err) {
-        console.error('[Storage] getLastLibraryFilters:', err);
+        logConsoleError('[Storage] getLastLibraryFilters:', err);
         return undefined;
     }
 }
@@ -475,7 +476,7 @@ export async function setLastLibraryFilters(lastFilter: LibraryFilters): Promise
             });
         });
     } catch (err) {
-        console.error('[Storage] setLastLibraryFilters:', err);
+        logConsoleError('[Storage] setLastLibraryFilters:', err);
         return false;
     }
 }
@@ -485,7 +486,7 @@ export async function getLastSortOption(): Promise<AllSortsType | undefined> {
         const filter = await getLastFilter();
         return filter?.sort ?? undefined;
     } catch (err) {
-        console.error('[Storage] getLastSortOption:', err);
+        logConsoleError('[Storage] getLastSortOption:', err);
         return undefined;
     }
 }
@@ -499,7 +500,7 @@ export async function setLastSortOption(lastSortOption: AllSortsType): Promise<b
             sort: lastSortOption,
         });
     } catch (err) {
-        console.error('[Storage] setLastSortOption:', err);
+        logConsoleError('[Storage] setLastSortOption:', err);
         return false;
     }
 }
@@ -509,7 +510,7 @@ export async function getLastLibrarySortOption(): Promise<LibraryAllSortsType | 
         const filter = await getLastLibraryFilters();
         return filter?.sort ?? undefined;
     } catch (err) {
-        console.error('[Storage] getLastLibrarySortOption:', err);
+        logConsoleError('[Storage] getLastLibrarySortOption:', err);
         return undefined;
     }
 }
@@ -523,7 +524,7 @@ export async function setLastLibrarySortOption(lastSortOption: LibraryAllSortsTy
             sort: lastSortOption,
         });
     } catch (err) {
-        console.error('[Storage] setLastLibrarySortOption:', err);
+        logConsoleError('[Storage] setLastLibrarySortOption:', err);
         return false;
     }
 }
@@ -588,7 +589,7 @@ export class dbAccess {
             console.log(`Migrated from ${oldKey} → ${newKey}`);
             console.log(`[Hermidata] Updated ${entry.title}`);
         } catch (err) {
-            console.error('[Storage -|- db Access] updateHermidata:', err);
+            logConsoleError('[Storage -|- db Access] updateHermidata:', err);
         }
     }
 
@@ -604,7 +605,7 @@ export class dbAccess {
                 });
             });
         } catch (error) {
-            console.error(error);
+            logConsoleError(error);
             throw error;
         }
     }
@@ -620,7 +621,7 @@ export class dbAccess {
                 });
             });
         } catch (error) {
-            console.error(error);
+            logConsoleError(error);
             throw error;
         }
     }

@@ -1,3 +1,4 @@
+import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ext } from "../shared/utils/BrowserCompat";
 import { defaultSettings } from "../shared/constants";
 import { type Hermidata, type RawFeed, type Settings } from "../shared/types";
@@ -45,13 +46,13 @@ export abstract class Build {
 
     protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000, color: string = 'var(--success)'): void {
         if (!elementTag) {
-            console.error(`Error in temporaryStatus: status element not found`);
+            logConsoleError(`Error in temporaryStatus: status element not found`);
             return;
         }
         const statusElement = elementTag instanceof HTMLElement ? elementTag : getElement<HTMLParagraphElement>(elementTag);
         
         if (!statusElement) {
-            console.error(`Error in temporaryStatus: status element not found`);
+            logConsoleError(`Error in temporaryStatus: status element not found`);
             return;
         }
 
@@ -116,7 +117,7 @@ export abstract class Build {
                 });
             });
         } catch (error) {
-            console.error(error);
+            logConsoleError(error);
             throw error;
         }
     }

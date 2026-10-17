@@ -169,6 +169,21 @@ export class ConsoleMessage extends Messaging {
     }
 }
 
+/** Writes an existing console error through the shared console message formatter. */
+export function logConsoleError(...values: unknown[]): void {
+    const [first, ...details] = values;
+    const message = first instanceof Error
+        ? first.message
+        : typeof first === 'string'
+            ? first
+            : String(first);
+    const outputDetails = typeof first === 'string' ? details : [first, ...details];
+    new ConsoleMessage(message, undefined, {
+        consoleLevel: 'error',
+        details: outputDetails
+    }).sendMessage();
+}
+
 class BuildElement {
     private readonly dialog: HTMLDialogElement;
     public readonly container: HTMLDivElement;

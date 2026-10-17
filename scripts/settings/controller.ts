@@ -1,3 +1,4 @@
+import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ImportsAndExports } from "./build/ImportsAndExports";
 import { ExtensionBehavior } from "./build/ExtensionBehavior";
 import { DefaultBookmarkInputs } from "./build/DefaultBookmarkInputs";
@@ -114,7 +115,7 @@ export class BuildController {
                 if (this.sectionInitializationPromises.get(sectionId) === initialization) {
                     this.sectionInitializationPromises.delete(sectionId);
                 }
-                console.error(`Failed to initialize settings section "${sectionId}":`, error);
+                logConsoleError(`Failed to initialize settings section "${sectionId}":`, error);
                 if (container) {
                     let errorMessage = container.querySelector<HTMLParagraphElement>(".section-load-error");
                     if (!errorMessage) {

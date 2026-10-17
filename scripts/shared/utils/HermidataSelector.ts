@@ -1,3 +1,4 @@
+import { logConsoleError } from "./ErrorMessage";
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
@@ -349,8 +350,8 @@ export class HermidataModel implements Hermidata {
     }
     // -- helpers --
     private ForceCreateNewHermidata(): void {
-        console.error(`[Hermidata Selector] Missing required data.`, this);
-        console.error(`[Hermidata Selector] forcing to creating new hermidata.`);
+        logConsoleError(`[Hermidata Selector] Missing required data.`, this);
+        logConsoleError(`[Hermidata Selector] forcing to creating new hermidata.`);
         const brokenHermidata: Partial<Hermidata> = this.toJSON();
         // minimum required
         // title, novelType, url
@@ -361,7 +362,7 @@ export class HermidataModel implements Hermidata {
             url: brokenHermidata.chapter?.bookmarks?.[brokenHermidata.chapter.bookmarkInUse]?.url ?? brokenHermidata.rss?.latestItem.link ?? null,
         }
         if (!alternativeRequired.title || !alternativeRequired.novelType || !alternativeRequired.url) {
-            console.error(`[Hermidata Selector] Missing required data.`, alternativeRequired, brokenHermidata);
+            logConsoleError(`[Hermidata Selector] Missing required data.`, alternativeRequired, brokenHermidata);
             return;
         }
         const trimmedTitle = TrimTitle.trimTitle(alternativeRequired.title, alternativeRequired.url);

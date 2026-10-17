@@ -1,3 +1,4 @@
+import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { levenshteinDistance } from "../../popup/core/Past";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { defaultSettings } from "../../shared/constants";
@@ -549,7 +550,7 @@ export class FolderMapping extends Build {
             console.log(`[FolderMapping] Added rule: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
-            console.error('[FolderMapping] addFolderMappingRule:', message)
+            logConsoleError('[FolderMapping] addFolderMappingRule:', message)
             this.temporaryStatus(  `Error: ${message}`, this.saveStatusFolderMapping_newOverrides, 3000)
         }
     }
@@ -579,7 +580,7 @@ export class FolderMapping extends Build {
             console.log(`[FolderMapping] Removed rule: ${OriginalName}`)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
-            console.error('[FolderMapping] removeAliasFromFolderMapping:', message)
+            logConsoleError('[FolderMapping] removeAliasFromFolderMapping:', message)
             this.temporaryStatus(`Error: ${message}`, this.saveStatusFolderMapping_newAliases, 3000)
         }
     }
@@ -604,7 +605,7 @@ export class FolderMapping extends Build {
 
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
-            console.error('[FolderMapping] removeFolderMappingRule:', message)
+            logConsoleError('[FolderMapping] removeFolderMappingRule:', message)
             this.temporaryStatus(`Error: ${message}`, this.saveStatusFolderMapping_overrides, 3000)
         }
     }
@@ -622,7 +623,7 @@ export class FolderMapping extends Build {
             this.temporaryStatus(`Saved: ${folderName} → ${Alias}`, this.saveStatusFolderMapping_newAliases)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
-            console.error('[FolderMapping] setTypeAliases:', message)
+            logConsoleError('[FolderMapping] setTypeAliases:', message)
             this.temporaryStatus(`Error: ${message}`, this.saveStatusFolderMapping_newAliases, 3000)
         }
     }
@@ -640,7 +641,7 @@ export class FolderMapping extends Build {
             this.temporaryStatus(`Saved: ${folderName} → ${Alias}`, this.saveStatusFolderMapping_newAliases)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
-            console.error('[FolderMapping] setStatusFolder:', message)
+            logConsoleError('[FolderMapping] setStatusFolder:', message)
             this.temporaryStatus(`Error: ${message}`, this.saveStatusFolderMapping_newAliases, 3000)
         }
     }
@@ -658,7 +659,7 @@ export class FolderMapping extends Build {
 
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
-            console.error('[FolderMapping] setDefaultPath:', message)
+            logConsoleError('[FolderMapping] setDefaultPath:', message)
             this.temporaryStatus(`Error: ${message}`, this.unsortedPathStatus, 3000)
         }
     }
@@ -675,7 +676,7 @@ export class FolderMapping extends Build {
             this.temporaryStatus(`Saved: ${path}`, this.rootPathStatus)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error'
-            console.error('[FolderMapping] setRootPath:', message)
+            logConsoleError('[FolderMapping] setRootPath:', message)
             this.temporaryStatus( `Error: ${message}`, this.rootPathStatus, 3000)
         }
     }

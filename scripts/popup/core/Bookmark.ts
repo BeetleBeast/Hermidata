@@ -5,7 +5,7 @@ import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { customConfirm } from "../frontend/confirm";
-import { ConsoleMessage, ErrorMessage } from "../../shared/utils/ErrorMessage";
+import { ConsoleMessage, ErrorMessage, logConsoleError} from "../../shared/utils/ErrorMessage";
 
 export class BookmarkController {
 
@@ -444,7 +444,7 @@ export class BookmarkController {
                     try {
                         if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
                     } catch (error) {
-                        console.error('Failed to save bookmark color:', error);
+                        logConsoleError('Failed to save bookmark color:', error);
                     }
                 },
                 svg

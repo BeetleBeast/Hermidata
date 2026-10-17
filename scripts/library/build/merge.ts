@@ -1,3 +1,4 @@
+import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import type { Hermidata, Settings, MergeAnalysis } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
@@ -81,7 +82,7 @@ export class HermidataMerge extends LibraryBuilder {
                 this.buildFirstStepMerger(records);
                 break;
             case undefined:
-                console.error("No items selected found");
+                logConsoleError("No items selected found");
                 break;
             default:
                 this.buildIncompleteMerger('tooMany', amountOfSelectedItems);

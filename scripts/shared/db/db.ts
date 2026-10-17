@@ -1,3 +1,4 @@
+import { logConsoleError } from "../utils/ErrorMessage";
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { type Hermidata, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
 import { ext } from '../utils/BrowserCompat';
@@ -101,7 +102,7 @@ export async function getDb(): Promise<IDBPDatabase<HermidataSchema>> {
         },
         terminated() {
             _db = null;
-            console.error('[Hermidata DB] Connection terminated unexpectedly');
+            logConsoleError('[Hermidata DB] Connection terminated unexpectedly');
         },
     });
 
@@ -187,7 +188,7 @@ export async function getHermidataByKey(key: string): Promise<Hermidata | null> 
         const db = await getDb();
         return await db.get('hermidata', key) ?? null;
     } catch (err) {
-        console.error('[DB] getHermidataByKey:', err);
+        logConsoleError('[DB] getHermidataByKey:', err);
         return null;
     }
 }
@@ -199,7 +200,7 @@ export async function getAllHermidata(): Promise<Record<string, Hermidata>> {
         const all = await db.getAll('hermidata');
         return Object.fromEntries(all.map(h => [h.id, h]));
     } catch (err) {
-        console.error('[DB] getAllHermidata:', err);
+        logConsoleError('[DB] getAllHermidata:', err);
         return {};
     }
 }
@@ -211,7 +212,7 @@ export async function putHermidata(entry: Hermidata, sync: boolean = true): Prom
         await db.put('hermidata', entry);
         if (sync) await pushToSync(entry);
     } catch (err) {
-        console.error('[DB] putHermidata:', err);
+        logConsoleError('[DB] putHermidata:', err);
     }
 }
 
@@ -225,7 +226,7 @@ export async function putAllHermidata(entries: Hermidata[]): Promise<void> {
             tx.done,
         ]);
     } catch (err) {
-        console.error('[DB] putAllHermidata:', err);
+        logConsoleError('[DB] putAllHermidata:', err);
     }
 }
 
@@ -236,7 +237,7 @@ export async function deleteHermidata(key: string, sync: boolean = true): Promis
         await db.delete('hermidata', key);
         if (sync) await removeFromSync(key);
     } catch (err) {
-        console.error('[DB] deleteHermidata:', err);
+        logConsoleError('[DB] deleteHermidata:', err);
     }
 }
 
@@ -250,7 +251,7 @@ export async function getHermidataByType(type: AnyNovelType): Promise<Hermidata[
         const db = await getDb();
         return await db.getAllFromIndex('hermidata', 'by-type', type);
     } catch (err) {
-        console.error('[DB] getHermidataByType:', err);
+        logConsoleError('[DB] getHermidataByType:', err);
         return [];
     }
 }
@@ -261,7 +262,7 @@ export async function getHermidataByStatus(status: AnyReadStatus): Promise<Hermi
         const db = await getDb();
         return await db.getAllFromIndex('hermidata', 'by-status', status);
     } catch (err) {
-        console.error('[DB] getHermidataByStatus:', err);
+        logConsoleError('[DB] getHermidataByStatus:', err);
         return [];
     }
 }
@@ -272,7 +273,7 @@ export async function getHermidataBySource(source: string): Promise<Hermidata[]>
         const db = await getDb();
         return await db.getAllFromIndex('hermidata', 'by-source', source);
     } catch (err) {
-        console.error('[DB] getHermidataBySource:', err);
+        logConsoleError('[DB] getHermidataBySource:', err);
         return [];
     }
 }
@@ -285,7 +286,7 @@ export async function getAllHermidataWithRss(preAll: Record<string, OnlyPlainHer
             Object.entries(all).filter(([_, h]) => h.rss !== null)
         )
     } catch (err) {
-        console.error('[DB] getAllHermidataWithRss:', err);
+        logConsoleError('[DB] getAllHermidataWithRss:', err);
         return {};
     }
 }
@@ -300,7 +301,7 @@ export async function getRawFeedByUrl(url: string): Promise<RawFeed | null> {
         const db = await getDb();
         return await db.getFromIndex('feeds', 'by-url', url) ?? null;
     } catch (err) {
-        console.error('[DB] getRawFeedByUrl:', err);
+        logConsoleError('[DB] getRawFeedByUrl:', err);
         return null;
     }
 }
@@ -312,7 +313,7 @@ export async function getAllRawFeeds(): Promise<Record<string, RawFeed>> {
         const all = await db.getAll('feeds');
         return Object.fromEntries(all.map(f => [f.url, f]));
     } catch (err) {
-        console.error('[DB] getAllRawFeeds:', err);
+        logConsoleError('[DB] getAllRawFeeds:', err);
         return {};
     }
 }
@@ -323,7 +324,7 @@ export async function getRawFeedsByDomain(domain: string): Promise<RawFeed[]> {
         const db = await getDb();
         return await db.getAllFromIndex('feeds', 'by-domain', domain);
     } catch (err) {
-        console.error('[DB] getRawFeedsByDomain:', err);
+        logConsoleError('[DB] getRawFeedsByDomain:', err);
         return [];
     }
 }
@@ -334,7 +335,7 @@ export async function putRawFeed(feed: RawFeed): Promise<void> {
         const db = await getDb();
         await db.put('feeds', feed);
     } catch (err) {
-        console.error('[DB] putRawFeed:', err);
+        logConsoleError('[DB] putRawFeed:', err);
     }
 }
 
@@ -348,7 +349,7 @@ export async function putAllRawFeeds(feeds: RawFeed[]): Promise<void> {
             tx.done,
         ]);
     } catch (err) {
-        console.error('[DB] putAllRawFeeds:', err);
+        logConsoleError('[DB] putAllRawFeeds:', err);
     }
 }
 
@@ -358,7 +359,7 @@ export async function deleteRawFeed(url: string): Promise<void> {
         const db = await getDb();
         await db.delete('feeds', url);
     } catch (err) {
-        console.error('[DB] deleteRawFeed:', err);
+        logConsoleError('[DB] deleteRawFeed:', err);
     }
 }
 
@@ -367,7 +368,7 @@ export async function removeRawFeeds(urls: string[]): Promise<void> {
         const db = await getDb();
         await Promise.all(urls.map(url => db.delete('feeds', url)));
     } catch (err) {
-        console.error('[DB] removeRawFeeds:', err);
+        logConsoleError('[DB] removeRawFeeds:', err);
     }
 }
 // ============================================================
@@ -380,7 +381,7 @@ export async function dbSaveImage(id: string, blob: Blob): Promise<void> {
         
         await db.put('images', blob, id);
     } catch (err) {
-        console.error('[DB] saveImage:', err);
+        logConsoleError('[DB] saveImage:', err);
     }
 }
 /** save multiple images in a single transaction */
@@ -394,7 +395,7 @@ export async function dbSaveAllImages(blobs: Record<string, Blob>): Promise<void
             tx.done,
         ]);
     } catch (err) {
-        console.error('[DB] saveAllImages:', err);
+        logConsoleError('[DB] saveAllImages:', err);
     }
 }
 
@@ -403,7 +404,7 @@ export async function dbGetImage(id: string): Promise<Blob | undefined> {
         const db = await getDb();
         return await db.get('images', id);
     } catch (err) {
-        console.error('[DB] getImage:', err);
+        logConsoleError('[DB] getImage:', err);
         return undefined;
     }
 }
@@ -420,7 +421,7 @@ export async function dbGetAllImages(ids?: string[]): Promise<Blob[]> {
         const images = await Promise.all(allImages);
         return images.filter(image => image !== undefined);
     } catch (err) {
-        console.error('[DB] getAllImages:', err);
+        logConsoleError('[DB] getAllImages:', err);
         return [];
     }
 }
@@ -441,7 +442,7 @@ export async function dbUpdateImageKey(oldId: string, newId: string): Promise<vo
         store.put(blob, newId);
         store.delete(oldId);
     } catch (err) {
-        console.error('[DB] updateImageKey:', err);
+        logConsoleError('[DB] updateImageKey:', err);
     }
     
     
@@ -452,7 +453,7 @@ export async function dbDeleteImage(id: string): Promise<void> {
         const db = await getDb();
         await db.delete('images', id);
     } catch (err) {
-        console.error('[DB] deleteImage:', err);
+        logConsoleError('[DB] deleteImage:', err);
     }
 }
 
@@ -466,7 +467,7 @@ export async function getSettings(): Promise<Settings | null> {
         const db = await getDb();
         return await db.get('settings', SETTINGS_KEY) ?? null;
     } catch (err) {
-        console.error('[DB] getSettings:', err);
+        logConsoleError('[DB] getSettings:', err);
         return null;
     }
 }
@@ -476,7 +477,7 @@ export async function putSettings(settings: Settings): Promise<void> {
         const db = await getDb();
         await db.put('settings', settings, SETTINGS_KEY);
     } catch (err) {
-        console.error('[DB] putSettings:', err);
+        logConsoleError('[DB] putSettings:', err);
     }
 }
 
