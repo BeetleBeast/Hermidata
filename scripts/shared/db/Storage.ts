@@ -596,7 +596,6 @@ export class dbAccess {
         try {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, call }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (response === undefined) reject(new Error('No response from background script'));
                     if (!response) reject(new Error('No response from background script'));
                     if (response.error?.includes('DataError')) reject(new Error(response.error + `\n Store: ${store} Call: ${ JSON.stringify(call)}`));
                     if (!response?.success) reject(new Error(response.error));
@@ -612,7 +611,6 @@ export class dbAccess {
         try {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({ type: 'SYNC_OPERATION', call }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (response === undefined) reject(new Error('No response from background script'));
                     if (!response) reject(new Error('No response from background script'));
                     if (response.error?.includes('DataError')) reject(new Error(response.error + `\n Call: ${ JSON.stringify(call)}`));
                     if (!response?.success) reject(new Error(response.error));
