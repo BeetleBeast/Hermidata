@@ -3,39 +3,70 @@ import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
 import { ext } from './BrowserCompat';
 
+
+
+
+
+/** 
+ * Converts basic CJK numerals (0-99) to ASCII digits
+ * @example 
+ * 1. "五" -> "5"
+ * 2. "十二" -> "12" 
+ */
+function convertCjkNumerals(str: string): string {
+    const cjkDigits: Record<string, number> = {
+        '零': 0, '〇': 0, '一': 1, '二': 2, '三': 3, '四': 4,
+        '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+    };
+    return str.replace(/[零〇一二三四五六七八九十]+/g, (match) => {
+        let result: number;
+        if (match.length === 1) {
+            result = cjkDigits[match];
+        } else if (match.includes('十')) {
+            const [tensPart, onesPart] = match.split('十');
+            const tens = tensPart === '' ? 1 : (cjkDigits[tensPart] ?? 1);
+            const ones = onesPart ? (cjkDigits[onesPart] ?? 0) : 0;
+            result = tens * 10 + ones;
+        } else {
+            result = cjkDigits[match[0]];
+        }
+        return (result === undefined || Number.isNaN(result)) ? match : String(result);
+    });
+}
+
 export function getChapterFromTitle(title: string | undefined, url: string): number {
     if (!title) return Number.NaN;
-    // Regex to find the first number (optionally after "chapter", "chap", "ch")
-    const chapterNumberRegex = /(?:Episode|chapter|chap|ch)[-.\s]*?(\d+[A-Z]*)|(\d+[A-Z]*)/i;
 
-    // create chapter based on URL
-    const parts = url?.split("/") || [];
-    const chapterPartV1 = new RegExp(/[\d.]+/).exec(parts.at(-1) ?? '')?.[0] || ''
-    // create chapter based on title
-    const titleParts = title?.split(/[-–—|:]/).map(p => p.trim());
-    const chapterPartV2 = titleParts.find(p => /^\d+(\.\d+)?$/.test(p)) || '';
-    // create chapter based on title regex
-    const chapterPartV3 = (titleParts
-    .find(p => chapterNumberRegex.test(p)) || ""
-    ).replaceAll(/([A-Z])/gi, '').replaceAll(/[^\d.]/g, '').trim();
-    // create chapter based on title regex & chapter keywords position
-    const chapterKeywords = ['episode', 'chapter', 'chap', 'ch'];
-    const chapterKeywordPattern = chapterKeywords.join('|');
-    const chapterRemoveRegexV3 = new RegExp(
-        String.raw`(\b\d{1,5}(?:\.\d+)?[A-Z]*\b\s*)?` + // group 1: optional leading number [ id 2]
-        String.raw`(\b(?:${chapterKeywordPattern})\b\.?\s*)` + // group 2: keyword (required) [ id 1]
-        String.raw`(\b\d{1,5}(?:\.\d+)?[A-Z]*\b)?`,         // group 3: optional trailing number [ id 3]
-        'gi'
+    const normalized = convertCjkNumerals(title.normalize('NFKC'));
+
+    const numberToken = String.raw`\d+(?:\.\d+)?`;
+    const keywordNumberToken = String.raw`\d+(?:\.\d+)?(?:[eE][+-]?\d+)?`;
+    const chapterKeywordPattern = '(?:episode|chapter|chap|ch)';
+
+    // 1. Keyword directly attached to a number (highest confidence), ONLY in Keyword → number order. 
+    const keywordAdjacentRegex = new RegExp(
+        String.raw`\b${chapterKeywordPattern}\b\.?\s*(${keywordNumberToken})`,
+        'i'
     );
-    const chapterPartV4List = chapterRemoveRegexV3.exec(title) || '';
-    const chapterPartV4 = chapterPartV4List[3] || chapterPartV4List[2] || '';
-    // parse string to int
-    const chapterNumberPartV1 = Number.parseFloat(chapterPartV1);
-    const chapterNumberPartV2 = Number.parseFloat(chapterPartV2);
-    const chapterNumberPartV3 = Number.parseFloat(chapterPartV3);
-    const chapterNumberPartV4 = Number.parseFloat(chapterPartV4);
+    const chapterPartV4 = keywordAdjacentRegex.exec(normalized)?.[1] ?? '';
 
-    const candidates = [chapterNumberPartV4, chapterNumberPartV2, chapterNumberPartV3, chapterNumberPartV1];
+    // 2. From the URL's last non-empty path segment
+    const parts = (url?.split('/') || []).filter(Boolean);
+    const lastSegment = parts.at(-1) ?? '';
+    const chapterPartV1 = new RegExp(numberToken).exec(lastSegment)?.[0] || '';
+
+    // 3. A title segment that IS just a number once split on separators
+    const titleParts = normalized.split(/[-–—|:]/).map(p => p.trim());
+    const exactNumberRegex = new RegExp(`^${numberToken}$`);
+    const chapterPartV2 = titleParts.find(p => exactNumberRegex.test(p)) || '';
+
+    // 4. Bare fallback: only safe with exactly one number-like token in the title
+    const allNumberTokens = normalized.match(new RegExp(numberToken, 'g')) || [];
+    const chapterPartV3 = allNumberTokens.length === 1 ? allNumberTokens[0] : '';
+
+    const candidates = [chapterPartV4, chapterPartV2, chapterPartV3, chapterPartV1]
+        .map(s => Number.parseFloat(s));
+
     return candidates.find(n => !Number.isNaN(n) && n >= 0) ?? Number.NaN;
 }
 
