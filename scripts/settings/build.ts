@@ -1,7 +1,7 @@
 import { ext } from "../shared/utils/BrowserCompat";
 import { defaultSettings } from "../shared/constants";
 import { type Hermidata, type RawFeed, type Settings } from "../shared/types";
-import { getElement, setElement } from "../shared/utils/Selection";
+import { getElement } from "../shared/utils/Selection";
 import { dbAccess } from "../shared/db/Storage";
 
 
@@ -16,6 +16,7 @@ export abstract class Build {
 
 
     private readonly dbAccess = new dbAccess();
+    private readonly temporaryStatusTimeouts = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
     protected getSettings(): Promise<Settings> {
         return this.dbAccess.getSettings();
@@ -42,7 +43,7 @@ export abstract class Build {
         return this.dbAccess.putAllFeeds(data);
     }
 
-    protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000, color: string = 'green'): void {
+    protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000, color: string = 'var(--success)'): void {
         if (!elementTag) {
             console.error(`Error in temporaryStatus: status element not found`);
             return;
@@ -53,9 +54,19 @@ export abstract class Build {
             console.error(`Error in temporaryStatus: status element not found`);
             return;
         }
+
+        const previousTimeout = this.temporaryStatusTimeouts.get(statusElement);
+        if (previousTimeout) clearTimeout(previousTimeout);
+
         statusElement.style.color = color;
         statusElement.textContent = status;
-        setTimeout(() => elementTag instanceof HTMLElement ? elementTag.textContent = "" : setElement(`${elementTag}`, el => el.textContent = ""), timeout);
+        const statusTimeout = setTimeout(() => {
+            if (this.temporaryStatusTimeouts.get(statusElement) !== statusTimeout) return;
+            statusElement.textContent = "";
+            statusElement.style.color = "";
+            this.temporaryStatusTimeouts.delete(statusElement);
+        }, timeout);
+        this.temporaryStatusTimeouts.set(statusElement, statusTimeout);
     }
 
     protected async ensureSettingsUpToDate(): Promise<Settings> {
@@ -65,7 +76,7 @@ export abstract class Build {
 
         let updated = false;
 
-        this.deepMerge(storedSettings, defaultSettings);
+        updated = this.deepMerge(storedSettings, defaultSettings);
 
         if (updated) {
             await this.setSettings(storedSettings);

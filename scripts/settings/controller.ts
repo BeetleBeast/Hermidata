@@ -59,8 +59,6 @@ export class BuildController {
     public async init() {
         this.bindEvents();
         this.initializeSelectIndicators();
-        await this.accountConnection.init();
-        this.initializedSections.add('account-connection');
         await this.navigateTo(this.openExtension_Behavior!, this.currentSection);
     }
     

@@ -37,7 +37,7 @@ export class DefaultBookmarkInputs extends Build {
 
     public async init() {
 
-        const settings = await this.getSettings();
+        const settings = await this.ensureSettingsUpToDate();
 
         // set values to inputs based on settings
         await this.LoadAndPopulate(settings);

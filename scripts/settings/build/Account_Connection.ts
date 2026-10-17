@@ -63,21 +63,21 @@ export class Account_Connection extends Build {
             this.status.textContent = "Testing...";
             const value = this.input.value.trim() || this.spreadsheetUrl;
             if (!value) {
-                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 1000, "red");
+                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 1000, "var(--danger)");
                 return;
             }
 
             const url = this.constructUrl(value);
             if (!url) { 
-                this.temporaryStatus("Invalid URL", "#statusSheetURL", 1000, "red"); 
+                this.temporaryStatus("Invalid URL", "#statusSheetURL", 1000, "var(--danger)");
                 throw new Error("Invalid URL");
             }
             const response = await fetch(url, { method: "HEAD" });
             if (response.ok) this.temporaryStatus("connected!", "#statusSheetURL", 1000);
-            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "red");
+            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "var(--danger)");
             
         } catch (error) {
-            this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "red");
+            this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "var(--danger)");
         }
     }
     private constructUrl(url: string): string | null {
