@@ -58,6 +58,31 @@ body {
     /*width: minmax(360px, 400px, 700px);*/
 	transition: height 0.6s ease;
 }
+
+/* --- error message --- */
+.error-message-dialog::backdrop {
+    background: var(--overlay, rgba(0, 0, 0, 0.45));
+}
+
+.error-message-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.error-message-button {
+    background-color: var(--surface-raised, #202733);
+    transition: background-color 0.3s ease;
+}
+
+.error-message-button:hover {
+    background-color: var(--accent-hover-dark);
+}
+
+.error-message-button:active:not(:disabled) {
+    background-color: var(--accent-active-dark);
+    transition: none;
+}
+
 /* --- buttons --- */
 
 .Btn {

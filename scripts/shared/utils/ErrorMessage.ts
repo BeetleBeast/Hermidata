@@ -18,7 +18,9 @@ export interface ErrorElements {
 }
 
 const DEFAULT_MESSAGE = 'An error occurred, please try again.';
-const DEFAULT_COLOR = '#374151';
+const DEFAULT_COLOR = 'var(--accent-soft, #7896d2)';
+let defaultMessageBuilder: BuildElement | undefined;
+let messageId = 0;
 
 abstract class Messaging {
     protected message: string;
@@ -52,7 +54,7 @@ abstract class Messaging {
         if (this.options.notifyUser) {
             if (typeof document === 'undefined' || !document.body) throw new Error('Cannot show a user message before the document body is available.');
 
-            this.messageBuilder ??= new BuildElement(this.elements);
+            this.messageBuilder ??= this.elements ? new BuildElement(this.elements) : (defaultMessageBuilder ??= new BuildElement());
             this.messageBuilder.show(this.message, this.options.color, this.options.severity);
         }
     }
@@ -112,7 +114,7 @@ export class WarningMessage extends Messaging {
             notifyUser: true,
             consoleLevel: 'warn',
             severity: 'warning',
-            color: '#b54708'
+            color: 'var(--warning, #caa35a)'
         });
     }
 
@@ -133,7 +135,7 @@ export class ErrorMessage extends Messaging {
             notifyUser: true,
             consoleLevel: 'error',
             severity: 'error',
-            color: '#b42318'
+            color: 'var(--danger, #c85b5b)'
         });
     }
 
@@ -153,7 +155,7 @@ export class ConsoleMessage extends Messaging {
             notifyUser: false,
             consoleLevel: 'warn',
             severity: 'warning',
-            color: '#b54708'
+            color: 'var(--warning, #caa35a)'
         });
     }
 
@@ -168,36 +170,53 @@ export class ConsoleMessage extends Messaging {
 }
 
 class BuildElement {
+    private readonly dialog: HTMLDialogElement;
     public readonly container: HTMLDivElement;
     public readonly message: HTMLDivElement;
     public readonly accept_Button: HTMLButtonElement;
 
     /** Creates or adopts the notification elements and configures their basic styles and dismissal. */
     constructor(elements?: Partial<ErrorElements>) {
+        this.dialog = document.createElement('dialog');
+        this.dialog.classList.add('error-message-dialog');
+        this.dialog.addEventListener('click', (event) => event.stopPropagation());
         this.container = elements?.container ?? this.createElement('div', 'error-message-container');
         this.message = elements?.message ?? this.createElement('div', 'error-message-text');
         this.accept_Button = elements?.accept_Button ?? this.createElement('button', 'error-message-button');
 
         if (!this.container.contains(this.message)) this.container.append(this.message);
         if (!this.container.contains(this.accept_Button)) this.container.append(this.accept_Button);
+        this.dialog.append(this.container);
+        this.message.id ||= `error-message-${++messageId}`;
+        this.dialog.setAttribute('aria-labelledby', this.message.id);
 
         this.accept_Button.type = 'button';
         this.accept_Button.textContent ||= 'Accept';
         this.accept_Button.addEventListener('click', () => this.hide());
+
+        this.container.classList.add('error-message-container');
         this.container.setAttribute('role', 'status');
         this.container.setAttribute('aria-live', 'polite');
-        this.container.style.position = 'fixed';
-        this.container.style.right = '1rem';
-        this.container.style.bottom = '1rem';
-        this.container.style.zIndex = '2147483647';
-        this.container.style.display = 'none';
+        this.dialog.style.position = 'fixed';
+        this.dialog.style.padding = '0';
+        this.dialog.style.border = '0';
+        this.dialog.style.background = 'transparent';
+        this.dialog.style.overflow = 'visible';
         this.container.style.maxWidth = 'min(28rem, calc(100vw - 2rem))';
         this.container.style.padding = '1rem';
-        this.container.style.backgroundColor = '#fff';
+        this.container.style.backgroundColor = 'var(--surface, #121f31)';
+        this.container.style.color = 'var(--text, #d3d3d3)';
         this.container.style.borderRadius = '0.5rem';
-        this.container.style.boxShadow = '0 4px 16px rgb(0 0 0 / 20%)';
+        this.container.style.boxShadow = '0 4px 16px var(--shadow, rgb(0 0 0 / 25%))';
         this.container.style.fontFamily = 'system-ui, sans-serif';
         this.container.style.gap = '0.75rem';
+        this.container.style.border = 'solid 1px var(--accent-hover-dark)';
+
+        this.accept_Button.style.padding = '0.35rem 0.75rem';
+        this.accept_Button.style.color = 'var(--text, #d3d3d3)';
+        this.accept_Button.style.border = '1px solid var(--border, #46556e)';
+        this.accept_Button.style.borderRadius = 'var(--radius, 6px)';
+        this.accept_Button.style.cursor = 'pointer';
     }
 
     /** Adds the notification to the page if needed, updates its content, and makes it visible. */
@@ -205,19 +224,42 @@ class BuildElement {
         if (typeof document === 'undefined' || !document.body) throw new Error('Cannot show a user message before the document body is available.');
 
         this.message.textContent = message;
+        this.message.style.whiteSpace = 'pre-line';
         this.message.style.color = color;
         this.container.style.borderLeft = `4px solid ${color}`;
         this.container.setAttribute('role', severity === 'error' ? 'alert' : 'status');
         this.container.setAttribute('aria-live', severity === 'error' ? 'assertive' : 'polite');
 
-        if (!this.container.isConnected) document.body.append(this.container);
-        this.container.style.display = 'flex';
-        this.container.style.flexDirection = 'column';
+        if (!this.dialog.isConnected) document.body.append(this.dialog);
+        if (this.dialog.open) this.dialog.close();
+        if (severity === 'error') {
+            this.dialog.style.inset = '0';
+            this.dialog.style.width = '100%';
+            this.dialog.style.height = '100%';
+            this.dialog.style.maxWidth = 'none';
+            this.dialog.style.maxHeight = 'none';
+            this.dialog.style.margin = '0';
+            this.dialog.style.transform = '';
+            this.container.style.margin = '1rem auto 0';
+            this.dialog.showModal();
+        } else {
+            this.dialog.style.inset = 'auto';
+            this.dialog.style.top = '1rem';
+            this.dialog.style.left = '50%';
+            this.dialog.style.width = 'fit-content';
+            this.dialog.style.height = 'auto';
+            this.dialog.style.maxWidth = 'min(28rem, calc(100vw - 2rem))';
+            this.dialog.style.maxHeight = 'none';
+            this.dialog.style.margin = '0';
+            this.dialog.style.transform = 'translateX(-50%)';
+            this.container.style.margin = '0';
+            this.dialog.show();
+        }
     }
 
     /** Hides the notification without removing it from the document. */
     public hide(): void {
-        this.container.style.display = 'none';
+        if (this.dialog.open) this.dialog.close();
     }
 
     /** Creates a notification element and gives it the shared notification CSS classes. */

@@ -5,6 +5,7 @@ import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { customConfirm } from "../frontend/confirm";
+import { ConsoleMessage, ErrorMessage } from "../../shared/utils/ErrorMessage";
 
 export class BookmarkController {
 
@@ -131,7 +132,7 @@ export class BookmarkController {
 
     private handleOutsideMarkerClick = (event: MouseEvent): void => {
         const target = event.target;
-        if (!(target instanceof Element)) return;
+        if (!(target instanceof Element)) return new ConsoleMessage('target is not an Element', undefined, { consoleLevel: 'log' }).sendMessage();
         if (target.closest('.markerPopover, #ColorPicker, [popovertarget]')) return;
         this.closeOtherMarkerPopovers();
         ColorPicker.hide();
@@ -191,7 +192,7 @@ export class BookmarkController {
         });
     }
     private updateSortDirectionButton(button: HTMLButtonElement | null): void {
-        if (!button) return;
+        if (!button) return new ConsoleMessage('Sort direction button not found').sendMessage();
         const isAscending = this.markerSortDirection === 'asc';
         button.textContent = isAscending ? '↓' : '↑';
         button.title = `Sort ${this.markerSortDirection}`;
@@ -240,12 +241,12 @@ export class BookmarkController {
     }
     /** Populate the marker list before its native popover trigger opens it. */
     private openBookmarkMenu(): void {
-        if (!this.bookmarkMenu) return;
+        if (!this.bookmarkMenu) return new ConsoleMessage('Bookmark menu not found').sendMessage();
         this.bookmarkMenuPage = 0;
         this.renderBookmarkMenu();
     }
     private renderBookmarkMenu(): void {
-        if (!this.bookmarkMenu) return;
+        if (!this.bookmarkMenu) return new ConsoleMessage('Bookmark menu not found').sendMessage();
         this.bookmarkMenu.innerHTML = '';
         const markers = this.getSortedMarkers();
         this.bookmarkMenuPage = this.updatePagination(this.bookmarkMenuPagination, this.bookmarkMenuPage, markers.length);
@@ -257,17 +258,17 @@ export class BookmarkController {
     }
     /** open add new bookmark */
     private addNewBookmarkForm(): void {
-        if (!this.AddNewBookmarkContainer) return;
+        if (!this.AddNewBookmarkContainer) return new ConsoleMessage('Add new bookmark not found').sendMessage();
         this.setAddNewBookmarkFormData();
     }
     /** Populate the manager before its native popover trigger opens it. */
     private openBookmarkMenuManager(): void {
-        if (!this.bookmarkMenuManagerContainer || !this.bookmarkMenuManager) return;
+        if (!this.bookmarkMenuManagerContainer || !this.bookmarkMenuManager) return new ConsoleMessage('Bookmark menu manager not found').sendMessage();
         this.bookmarkManagerPage = 0;
         this.renderBookmarkMenuManager();
     }
     private renderBookmarkMenuManager(): void {
-        if (!this.bookmarkMenuManagerContainer || !this.bookmarkMenuManager) return;
+        if (!this.bookmarkMenuManagerContainer || !this.bookmarkMenuManager) return new ConsoleMessage('Bookmark menu manager not found').sendMessage();
         this.bookmarkMenuManager!.innerHTML = '';
         const markers = this.getSortedMarkers();
         this.bookmarkManagerPage = this.updatePagination(this.bookmarkManagerPagination, this.bookmarkManagerPage, markers.length);
@@ -293,7 +294,7 @@ export class BookmarkController {
     }
     /** close add bookmark */
     private closeAddBookmark(): void {
-        if (!this.AddNewBookmarkContainer) return;
+        if (!this.AddNewBookmarkContainer) return new ConsoleMessage('AddNewBookmarkContainer is null').sendMessage();
         if (this.AddNewBookmarkContainer.matches(':popover-open')) this.AddNewBookmarkContainer.hidePopover();
         ColorPicker.destroy();
     }
@@ -317,7 +318,7 @@ export class BookmarkController {
 
         const lastChapter = bookmark?.history?.at(-1)?.chapter || bookmark.current;
 
-        if (typeof lastChapter !== 'number') return; // safety check to ensure lastChapter is a number before proceeding
+        if (typeof lastChapter !== 'number') return new ConsoleMessage('lastChapter is not a number').sendMessage(); // safety check to ensure lastChapter is a number before proceeding
 
         bookmarkChapter.textContent = 'Ch. ' + String(lastChapter);
 
@@ -477,7 +478,14 @@ export class BookmarkController {
 
         const IsNotNumber = Number.isNaN(chapterValue);
 
-        if (!labelValue || IsNotNumber || !colorValue) return;
+        const validationErrors: string[] = [];
+        if (!labelValue) validationErrors.push('Please enter a valid label');
+        if (IsNotNumber) validationErrors.push('Please enter a valid chapter number');
+        if (!colorValue) validationErrors.push('Please select a color');
+        if (!labelValue || IsNotNumber || !colorValue) {
+            new ErrorMessage(validationErrors.join('\n')).sendMessage();
+            return;
+        }
 
         const hash = returnBookmarkHash(labelValue);
 
@@ -508,7 +516,7 @@ export class BookmarkController {
         this.closeAddBookmark();
     }
     private async saveBookmarkLabel(key: string, label: string): Promise<void> {
-        if (!this.hermidata.chapter.bookmarks[key]) return;
+        if (!this.hermidata.chapter.bookmarks[key]) return new ErrorMessage('Bookmark not found').sendMessage();
         if (label === this.hermidata.chapter.bookmarks[key].label) return;
 
         this.hermidata.chapter.bookmarks[key].label = label;
