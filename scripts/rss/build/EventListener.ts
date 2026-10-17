@@ -60,10 +60,12 @@ export class EventListener extends RssBuild {
         const optionsNotification: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
             { label: "Open latest marker in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open latest marker in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest marker in new tab", action: () => this.openInNewTab(e.target as HTMLDivElement) },
+            { label: "Open latest marker in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
             "separator",
             { label: "Open marker in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
-            { label: "Open marker in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
+            { label: "Open marker in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewTab") },
+            { label: "Open marker in new window", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "Clear notification", action: () => this.clearNotification(e.target as HTMLDivElement) },
             "separator",
@@ -77,10 +79,12 @@ export class EventListener extends RssBuild {
         const optionsAllItems: MenuOptions[] = [
             { label: "Copy title", action: () => this.copyTitle(e.target as HTMLDivElement) },
             { label: "Open latest marker in this tab", action: () => this.openInPage(e.target as HTMLDivElement) },
-            { label: "Open latest marker in new tab", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
+            { label: "Open latest marker in new tab", action: () => this.openInNewTab(e.target as HTMLDivElement) },
+            { label: "Open latest marker in new window", action: () => this.openInNewWindow(e.target as HTMLDivElement) },
             "separator",
             { label: "Open marker in this tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InPage" ) },
-            { label: "Open marker in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
+            { label: "Open marker in new tab", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewTab") },
+            { label: "Open marker in new window", options: this.setAllBookmarksMenuOptions(e.target as HTMLDivElement, "InNewWindow") },
             "separator",
             { label: "pick element(s) to add as alt title", action: async () => await this.pickElement(e.target as HTMLDivElement) },
             { label: "add alt title", action: async () => await this.addAltTitle(e.target as HTMLDivElement) },
@@ -287,14 +291,18 @@ export class EventListener extends RssBuild {
         }
         return entry
     }
-    private setAllBookmarksMenuOptions(target: HTMLDivElement | null, pageTypeOpener: "InPage" | "InNewWindow"): subMenu["options"] {
+    private setAllBookmarksMenuOptions(target: HTMLDivElement | null, pageTypeOpener: "InPage" | "InNewWindow" | "InNewTab"): subMenu["options"] {
         const entry = this.getEntryFromTarget(target);
         if (!entry || !target) return [];
 
         const bookmarkMenu: subMenu["options"] = [];
 
         for (const value of Object.values(entry.chapter.bookmarks)) {
-            bookmarkMenu.push({ label: value.label, action: () => pageTypeOpener == 'InPage' ?  this.openInPage(target, value.id) : this.openInNewWindow(target, value.id) });
+            bookmarkMenu.push({ label: value.label, action: () => {
+                if (pageTypeOpener == 'InPage') this.openInPage(target, value.id)
+                else if (pageTypeOpener == 'InNewWindow') this.openInNewWindow(target, value.id)
+                else this.openInNewTab(target, value.id)
+            }});
         }
         return bookmarkMenu
     }
@@ -325,6 +333,23 @@ export class EventListener extends RssBuild {
         if (!currentUrl || !currentScrollPosition) return; 
         
         await openLink(currentUrl, 'sameTab', currentScrollPosition);
+    }
+
+    private async openInNewTab(target: HTMLDivElement | null, id: string | null = null) {
+        if (!target) return;
+        const item = this.getEntriesItem(target) || this.getNotificationItem(target);
+        if (!item || !target) return;
+        const hashItem = this.GetHashItem(item);
+        const entry = new HermidataModel(this.AllHermidata[hashItem]);
+        if (!entry) {
+            console.warn("Entry not found for hash:", hashItem);
+            return;
+        }
+        const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
+        const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
+        if (!currentUrl || !currentScrollPosition) return; 
+        
+        await openLink(currentUrl, 'newTab', currentScrollPosition);
     }
     
     private async openInNewWindow(target: HTMLDivElement | null, id: string | null = null) {
