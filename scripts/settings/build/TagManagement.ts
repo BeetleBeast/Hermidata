@@ -1,6 +1,6 @@
 
 import { defaultSettings } from "../../shared/constants";
-import { type Hermidata, type Settings } from "../../shared/types";
+import { type Hermidata } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 
@@ -11,26 +11,25 @@ export class TagManagement extends Build {
     private readonly tagColoring: Record<string, string> = {}; // { tag: color }
 
 
-    private readonly addTag = getElement<HTMLInputElement>("#addTag");
-    private readonly addTagBtn = getElement<HTMLButtonElement>("#addTagBtn");
+    private readonly addTag = getElement<HTMLButtonElement>("#addTag");
+    private readonly addTagBtn = getElement<HTMLInputElement>("#addTagBtn");
     
     private readonly tagEditContainer = getElement<HTMLDivElement>("#tagEditContainer");
 
-    private readonly colorTagsBtn = getElement<HTMLButtonElement>("#saveTagColoringBtn");
+    private readonly colorTagsBtn = getElement<HTMLInputElement>("#saveTagColoringBtn");
 
     private readonly tagMergeSelect1 = getElement<HTMLSelectElement>("#tagMergeSelect1");
     private readonly tagMergeSelect2 = getElement<HTMLSelectElement>("#tagMergeSelect2");
-    private readonly mergeTagsBtn = getElement<HTMLButtonElement>("#mergeTags");
+    private readonly mergeTagsBtn = getElement<HTMLInputElement>("#mergeTags");
 
 
     private maxSetColorCount = 0;
 
     public async init() {
-        const settings = await this.ensureSettingsUpToDate();
         this.allTagsUsed = await this.getAllTagsUsed();
 
         // color tags
-        await this.loadTagColoring(settings);
+        await this.loadTagColoring();
         // update/remove tag
         this.populateUpdateRemoveTagForm();
         // merge tags
@@ -42,7 +41,7 @@ export class TagManagement extends Build {
     syncTagMergeSelect() {
         if (!this.tagMergeSelect1 || !this.tagMergeSelect2) return;
         this.tagMergeSelect1.selectedIndex = 0;
-        this.tagMergeSelect2.selectedIndex = this.tagMergeSelect2.options.length > 1 ? 1 : 0;
+        this.tagMergeSelect2.selectedIndex = 1;
         this.syncBoth(this.tagMergeSelect1, this.tagMergeSelect2);
     }
     private async ReloadForms() {
@@ -54,6 +53,14 @@ export class TagManagement extends Build {
         settings.TagManagement = defaultSettings.TagManagement;
         await this.setSettings(settings);
         await this.ReloadForms();
+    }
+    public async cancelValues() {
+        // reset page values to current settings
+        await this.ReloadForms();
+    }
+    public async saveValues() {
+        // TODO: implement if needed, currently values are saved immediately on change
+        // no page values to save, since all actions are tag-based
     }
 
     private populateUpdateRemoveTagForm() {
@@ -107,8 +114,6 @@ export class TagManagement extends Build {
         return container;
     }
     private populateTagMergeSelect() {
-        this.tagMergeSelect1?.replaceChildren();
-        this.tagMergeSelect2?.replaceChildren();
         for (const tag of this.allTagsUsed.values()) {
             const option = document.createElement("option");
             option.classList = "tag-merge-select-option_1";
@@ -134,7 +139,6 @@ export class TagManagement extends Build {
         if (!selectA || !selectB) return;
         this.syncExclusion(selectA, selectB);
         this.syncExclusion(selectB, selectA);
-        if (this.mergeTagsBtn) this.mergeTagsBtn.disabled = selectA.options.length < 2;
     }
 
 
@@ -228,7 +232,8 @@ export class TagManagement extends Build {
     }
 
 
-    private async loadTagColoring(Settings: Settings) {
+    private async loadTagColoring() {
+        const Settings = await this.getSettings();
         const defaultTagColoring = await this.createDefaultTagColor();
         const storedTagColoring = Object.keys(Settings.TagManagement.tagColoring).length > 0 ? Settings.TagManagement.tagColoring : defaultTagColoring;
         Object.assign(this.tagColoring, storedTagColoring);

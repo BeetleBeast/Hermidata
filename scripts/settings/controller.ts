@@ -10,9 +10,8 @@ import { getElement } from "../shared/utils/Selection";
 import { customConfirm } from "../popup/frontend/confirm";
 
 export class BuildController {
-    private currentSection: string = 'extension-behavior';
+    private currentSection: string = 'account-connection';
     private readonly initializedSections = new Set<string>();
-    private readonly sectionInitializationPromises = new Map<string, Promise<void>>();
 
     private readonly accountConnection = new Account_Connection();
     
@@ -35,12 +34,12 @@ export class BuildController {
         ['content-types', 'ContentTypes_Statuses'],
         ['tag-management', 'TagManagement'],
         ['folder-mapping', 'FolderMapping'],
-        ['import-export', 'Import_Export'],
-        ['browser-bookmark-import', 'BrowserBookmarkImport']
+        ['import-export', 'Import_Export']
     ]);
 
-    private readonly resetBtn = getElement<HTMLButtonElement>("#reset-dialog-confirm");
-    private readonly cancelResetDialog = getElement<HTMLButtonElement>("#reset-dialog-cancel");
+    private readonly resetBtn = getElement<HTMLButtonElement>("#resetSettingsBtn");
+    private readonly saveBtn = getElement<HTMLButtonElement>("#saveSettingsBtn");
+    private readonly cancelBtn = getElement<HTMLButtonElement>("#cancelSettingsBtn");
 
 
     private readonly openAccount_Connection = getElement<HTMLButtonElement>(`#open${this.navigations.get('account-connection')}`);
@@ -50,9 +49,6 @@ export class BuildController {
     private readonly openTagManagement = getElement<HTMLButtonElement>(`#open${this.navigations.get('tag-management')}`);
     private readonly openFolderMapping = getElement<HTMLButtonElement>(`#open${this.navigations.get('folder-mapping')}`);
     private readonly openImport_Export = getElement<HTMLButtonElement>(`#open${this.navigations.get('import-export')}`);
-    private readonly openBrowserBookmarkImport = getElement<HTMLButtonElement>("#openBrowserBookmarkImport");
-    private readonly goToExtensionSettings = getElement<HTMLButtonElement>("#goToExtensionSettings");
-    private spreadsheetHighlightTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(devMode = false) {
         this.importAndExport = new ImportsAndExports(devMode);
@@ -60,27 +56,26 @@ export class BuildController {
 
     public async init() {
         this.bindEvents();
-        this.initializeSelectIndicators();
-        await this.navigateTo(this.openExtension_Behavior!, this.currentSection);
+        await this.navigateTo(this.openAccount_Connection!, Array.from(this.navigations.keys())[0]);
     }
     
     private bindEvents() {
-        this.openAccount_Connection?.addEventListener('click', (e) => this.navigateTo(e, 'account-connection'));
-        this.openExtension_Behavior?.addEventListener('click', (e) => this.navigateTo(e, 'extension-behavior'));
-        this.openDefaultBookmarkSettings?.addEventListener('click', (e) => this.navigateTo(e, 'default-bookmarks'));
-        this.openContentTypes_Statuses?.addEventListener('click', (e) => this.navigateTo(e, 'content-types'));
-        this.openTagManagement?.addEventListener('click', (e) => this.navigateTo(e, 'tag-management'));
-        this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, 'folder-mapping'));
-        this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, 'import-export'));
-        this.openBrowserBookmarkImport?.addEventListener('click', (e) => this.navigateTo(e, 'browser-bookmark-import'));
-        this.goToExtensionSettings?.addEventListener('click', () => this.openSpreadsheetSaveSettings());
+        const navStrings = Array.from(this.navigations.keys());
+        this.openAccount_Connection?.addEventListener('click', (e) => this.navigateTo(e, navStrings[0]));
+        this.openExtension_Behavior?.addEventListener('click', (e) => this.navigateTo(e, navStrings[1]));
+        this.openDefaultBookmarkSettings?.addEventListener('click', (e) => this.navigateTo(e, navStrings[2]));
+        this.openContentTypes_Statuses?.addEventListener('click', (e) => this.navigateTo(e, navStrings[3]));
+        this.openTagManagement?.addEventListener('click', (e) => this.navigateTo(e, navStrings[4]));
+        this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, navStrings[5]));
+        this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, navStrings[6]));
 
-        this.cancelResetDialog?.addEventListener('click', () => this.closeResetDialog());
         this.resetBtn?.addEventListener('click', () => this.resetPage(this.currentSection));
+        this.saveBtn?.addEventListener('click', () => this.savePage(this.currentSection));
+        this.cancelBtn?.addEventListener('click', () => this.cancelPage(this.currentSection));
     }
-    private async navigateTo(e: Event | HTMLButtonElement, sectionId: string) {
-        const target = e instanceof HTMLButtonElement ? e : e.currentTarget as HTMLButtonElement;
-        if (target.dataset.active === "true" && this.initializedSections.has(sectionId)) return;
+    private async navigateTo(e: PointerEvent | HTMLButtonElement, sectionId: string) {
+        const target = e instanceof PointerEvent ? e.target as HTMLButtonElement : e;
+        if (target.dataset.active === "true") return; // already active, do nothing
         // Update current section
         this.currentSection = sectionId;
         
@@ -129,30 +124,6 @@ export class BuildController {
             }
         }
     }
-
-    private async openSpreadsheetSaveSettings() {
-        if (!this.openExtension_Behavior) return;
-        await this.navigateTo(this.openExtension_Behavior, 'extension-behavior');
-
-        const target = getElement<HTMLInputElement>("#SaveToGoogleSpreadsheet");
-        const targetRow = target?.closest<HTMLElement>(".setting");
-        const setup = getElement<HTMLElement>("#spreadsheetSetup");
-        if (!target || !targetRow) return;
-
-        const highlightTargets = [targetRow, ...(target.checked && setup ? [setup] : [])];
-        highlightTargets.forEach(element => element.classList.add("settings-target-highlight"));
-        target.focus({ preventScroll: true });
-        targetRow.scrollIntoView({
-            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-            block: "center"
-        });
-
-        if (this.spreadsheetHighlightTimeout) clearTimeout(this.spreadsheetHighlightTimeout);
-        this.spreadsheetHighlightTimeout = setTimeout(() => {
-            highlightTargets.forEach(element => element.classList.remove("settings-target-highlight"));
-            this.spreadsheetHighlightTimeout = null;
-        }, 2400);
-    }
     
     private async initializeSection(sectionId: string) {
         switch (sectionId) {
@@ -177,52 +148,62 @@ export class BuildController {
             case 'import-export':
                 await this.importAndExport.init();
                 break;
-            case 'browser-bookmark-import':
-                await this.importAndExport.init();
+        }
+    }
+    private async savePage(sectionId: string) {
+        switch (sectionId) {
+            case 'account-connection':
+                await this.accountConnection.saveValues();
+                break;
+            case 'extension-behavior':
+                await this.extensionBehavior.saveValues();
+                break;
+            case 'default-bookmarks':
+                await this.defaultBookmarkInputs.saveValues();
+                break;
+            case 'content-types':
+                await this.contentTypesAndStatuses.saveValues();
+                break;
+            case 'tag-management':
+                await this.tagManagement.saveValues();
+                break;
+            case 'folder-mapping':
+                await this.folderMapping.saveValues();
+                break;
+            case 'import-export':
+                await this.importAndExport.saveValues();
                 break;
         }
     }
-
-    private initializeSelectIndicators() {
-        const enhanceSelect = (select: HTMLSelectElement) => {
-            if (select.parentElement?.classList.contains('select-wrap')) return;
-            const wrapper = document.createElement('span');
-            wrapper.className = 'select-wrap';
-            select.parentNode?.insertBefore(wrapper, select);
-            wrapper.appendChild(select);
-        };
-
-        document.querySelectorAll<HTMLSelectElement>('select').forEach(enhanceSelect);
-        new MutationObserver((records) => {
-            records.forEach(record => record.addedNodes.forEach(node => {
-                if (!(node instanceof HTMLElement)) return;
-                if (node instanceof HTMLSelectElement) enhanceSelect(node);
-                node.querySelectorAll<HTMLSelectElement>('select').forEach(enhanceSelect);
-            }));
-        }).observe(document.body, { childList: true, subtree: true });
-    }
-    private closeResetDialog() {
-        const resetDialog = document.querySelector<HTMLDivElement>('#reset-dialog');
-        if (!resetDialog) return;
-
-        if (resetDialog.matches(':popover-open')) {
-            resetDialog.hidePopover();
+    private async cancelPage(sectionId: string) {
+        switch (sectionId) {
+            case 'account-connection':
+                await this.accountConnection.cancelValues();
+                break;
+            case 'extension-behavior':
+                await this.extensionBehavior.cancelValues();
+                break;
+            case 'default-bookmarks':
+                await this.defaultBookmarkInputs.cancelValues();
+                break;
+            case 'content-types':
+                await this.contentTypesAndStatuses.cancelValues();
+                break;
+            case 'tag-management':
+                await this.tagManagement.cancelValues();
+                break;
+            case 'folder-mapping':
+                await this.folderMapping.cancelValues();
+                break;
+            case 'import-export':
+                await this.importAndExport.cancelValues();
+                break;
         }
     }
     private async resetPage(sectionId: string) {
         // confirm reset
-        // const elements = {
-        //     container: getElement<HTMLDivElement>(".promptSection"),
-        //     label: getElement<HTMLDivElement>(".promptLabel"),
-        //     btn1: getElement<HTMLDivElement>(".genericButton1"),
-        //     btn2: getElement<HTMLDivElement>(".genericButton2"),
-        // }
-        // const Confirmation = await customConfirm("Are you sure you want to reset all settings?", {
-        //     accept: "Reset",
-        //     reject: "Cancel",
-        //     elements,
-        // });
-        
+        const Confirmation = await customConfirm("Are you sure you want to reset all settings?", {accept: "Reset", reject: "Cancel"});
+        if (!Confirmation) return;
         // reset page values to current settings
         switch (sectionId) {
             case 'account-connection':
