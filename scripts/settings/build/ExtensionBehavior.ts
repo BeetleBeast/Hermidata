@@ -23,8 +23,11 @@ export class ExtensionBehavior extends Build {
     private readonly autoUpdateNovelStatusOnlyRSS = getElement<HTMLInputElement>("#autoUpdateNovelStatusOnlyRSS");
     private readonly autoUpdateNovelStatusAllValue = getElement<HTMLInputElement>("#autoUpdateNovelStatusAllValue");
 
-    private readonly saveTarget = getElement<HTMLInputElement>("#saveTarget");
-
+    private readonly saveTarget = document.querySelectorAll<HTMLInputElement>('input[name="SaveCollection"]')
+    private readonly spreadsheetTarget = getElement<HTMLInputElement>("#SaveToGoogleSpreadsheet");
+    private readonly spreadsheetSetup = getElement<HTMLElement>("#spreadsheetSetup");
+    private readonly spreadsheetTargetReminder = getElement<HTMLElement>("#spreadsheetTargetReminder");
+    private readonly spreadsheetUrl = getElement<HTMLInputElement>("#spreadsheetUrl");
 
     public async init() {
         const settings = await this.getSettings();
@@ -48,6 +51,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionAutoSubscribeThresholdOnly();
         // Save Target
         this.setValueOptionSaveTarget(settings);
+        this.updateSpreadsheetSetup(settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, settings.AccountAndConnections.spreadsheetUrl);
         // Auto Update Novel Status
         this.setValueOptionAutoUpdateNovelStatus(settings);
 
@@ -73,7 +77,7 @@ export class ExtensionBehavior extends Build {
         this.autoUpdateNovelStatusOnlyRSS?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'onlyRSS'));
         this.autoUpdateNovelStatusAllValue?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'allowAll'));
         
-        this.saveTarget?.addEventListener("change", (e) => this.SaveTarget(e));
+        this.saveTarget?.forEach(el => el?.addEventListener("change", (e) => this.SaveTarget(e)));
     }
     public async resetValues() {
         // reset all values from inputs to default
@@ -82,20 +86,6 @@ export class ExtensionBehavior extends Build {
         // reset settings in IndexedDB
         await this.setSettings(updatedSettings);
     }
-    public async cancelValues() {
-        // reset page values to current settings
-        const settings = await this.getSettings();
-        this.setValueOptionLightMode(settings);
-        this.setValueOptionContextMenu(settings);
-        this.setValueOptionNotification(settings);
-        this.setValueOptionKeyboardShortcuts(settings);
-        this.setValueOptionAutoSubscribe(settings);
-        this.setValueOptionSaveTarget(settings);
-    }
-    public async saveValues() {
-        // values are saved on input change, so no need to do anything here
-    }
-
 
     private setValueOptionLightMode(settings: Settings) {
         const isDarkMode = settings.ExtensionBehaviour.EnableLightMode;
@@ -140,13 +130,13 @@ export class ExtensionBehavior extends Build {
     }
     private setValueOptionAutoSubscribe(settings: Settings) {
         const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
-        setElement<HTMLInputElement>("#autoSubscribe", el => el.checked = autoSubscribe);
+        setElement<HTMLInputElement>("#enableAutoSubscribe", el => el.checked = autoSubscribe);
     }
     private setValueOptionSaveTarget(settings: Settings) {
         const googleSpreadsheet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
         const browserBookmark = settings.ExtensionBehaviour.SaveTarget.BrowserBookmark;
-        setElement<HTMLInputElement>("#saveToGoogleSpreadsheet", el => el.checked = googleSpreadsheet);
-        setElement<HTMLInputElement>("#saveToBrowserBookmark", el => el.checked = browserBookmark);
+        setElement<HTMLInputElement>("#SaveToGoogleSpreadsheet", el => el.checked = googleSpreadsheet);
+        setElement<HTMLInputElement>("#SaveToBrowserBookmark", el => el.checked = browserBookmark);
     }
 
     // Enable Light Mode
@@ -291,7 +281,14 @@ export class ExtensionBehavior extends Build {
         const settingsTarget = target == "Spreadsheet" ? "GoogleSpreadsheet" : "BrowserBookmark";
         updatedSettings.ExtensionBehaviour.SaveTarget[settingsTarget] = isChecked;
 
+        if (target === "Spreadsheet") this.updateSpreadsheetSetup(isChecked, updatedSettings.AccountAndConnections.spreadsheetUrl);
         this.setSettings(updatedSettings);
+    }
+
+    private updateSpreadsheetSetup(enabled: boolean, url: string) {
+        if (this.spreadsheetSetup) this.spreadsheetSetup.hidden = !enabled;
+        if (this.spreadsheetTargetReminder) this.spreadsheetTargetReminder.hidden = !enabled || Boolean(url.trim());
+        if (this.spreadsheetUrl && url) this.spreadsheetUrl.value = url;
     }
 
     // Auto Update Novel Status
