@@ -11,17 +11,18 @@
     <aside class="sidebar">
         <p class="sidebar-title" id="settings-title">Settings</p>
         <nav>
+            <div role="group" aria-labelledby="nav-group-title" title="General" class="nav-group-title">General</div>
             <button id="openExtension_Behavior" class="openLink nav-item" data-active="false" type="button">Extension Behavior</button>
             <button id="openAccount_Connection" class="openLink nav-item" data-active="false" type="button">Account & Connection</button>
-            <span class="nav-group-title">Defaults</span>
+            <div role="group" aria-labelledby="nav-group-title" title="Defaults" class="nav-group-title">Defaults</div>
             <button id="openDefaultBookmarkSettings" class="openLink nav-item" data-active="false" type="button">Default Bookmark Settings</button>
-            <span class="nav-group-title">Library organization</span>
+            <div role="group" aria-labelledby="nav-group-title" title="Library organization" class="nav-group-title">Library organization</div>
             <button id="openContentTypes_Statuses" class="openLink nav-item" data-active="false" type="button">Content Types & Statuses</button>
             <button id="openTagManagement" class="openLink nav-item" data-active="false" type="button">Tag Management</button>
             <button id="openFolderMapping" class="openLink nav-item" data-active="false" type="button">Folder Mapping</button>
-            <span class="nav-group-title">Data</span>
+            <div role="group" aria-labelledby="nav-group-title" title="Data" class="nav-group-title">Data</div>
             <button id="openImport_Export" class="openLink nav-item" data-active="false" type="button">Import & Export</button>
-            <button id="openBrowserBookmarkImport" class="openLink nav-item" data-active="false" type="button">Import from bookmarks</button>
+            <button id="openBrowserBookmarkImport" class="openLink nav-item" data-active="false" type="button">Import from Browser bookmarks</button>
         </nav>
     </aside>
     <main class="main content">
@@ -47,85 +48,83 @@
             <!-- Appearance & general -->
             <div class="card">
                 <div class="setting">
-                <div class="setting-text">
-                    <label for="enableLightMode">Light mode</label>
-                    <p>Use a light theme for the extension.</p>
-                </div>
-                <input id="enableLightMode" class="switch" type="checkbox" title="Enable Light Mode" disabled>
-                </div>
-
-                <div class="setting">
-                <div class="setting-text">
-                    <label for="AllowContextMenu">Context menu</label>
-                    <p>Show extension actions in the right-click menu.</p>
-                </div>
-                <input id="AllowContextMenu" class="switch" type="checkbox" title="Allow context menu" checked>
+                    <div class="setting-text">
+                        <label for="enableLightMode">Light mode</label>
+                        <p>Use a light theme for the extension.</p>
+                    </div>
+                    <input id="enableLightMode" class="switch" type="checkbox" title="Enable Light Mode" disabled>
                 </div>
 
                 <div class="setting">
-                <div class="setting-text">
-                    <label for="enableKeyboardShortcuts">Keyboard shortcuts <span class="badge">Beta</span></label>
-                    <p>Trigger common actions with hotkeys.</p>
+                    <div class="setting-text">
+                        <label for="AllowContextMenu">Context menu</label>
+                        <p>Show extension actions in the right-click menu.</p>
+                    </div>
+                    <input id="AllowContextMenu" class="switch" type="checkbox" title="Allow context menu" checked>
                 </div>
-                <input id="enableKeyboardShortcuts" class="switch" type="checkbox" title="Enable Keyboard Shortcuts" disabled>
+
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="enableKeyboardShortcuts">Keyboard shortcuts <span class="badge">Beta</span></label>
+                        <p>Trigger common actions with hotkeys.</p>
+                    </div>
+                    <input id="enableKeyboardShortcuts" class="switch" type="checkbox" title="Enable Keyboard Shortcuts" disabled>
                 </div>
             </div>
 
             <!-- Notifications -->
             <div class="card">
                 <div class="setting">
-                <div class="setting-text">
-                    <label for="enableNotification">Notifications</label>
-                    <p>Get alerted when something changes.</p>
-                </div>
-                <input id="enableNotification" class="switch" type="checkbox" title="Enable Notification">
+                    <div class="setting-text">
+                        <label for="enableNotification">Notifications</label>
+                        <p>Get alerted when something changes.</p>
+                    </div>
+                    <input id="enableNotification" class="switch" type="checkbox" title="Enable Notification">
                 </div>
 
                 <div class="sub choices">
-                <label class="choice" for="notificationBadge">
-                    <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
-                    <strong>Badge</strong>
-                    <span>Icon badge only</span>
-                </label>
-                <label class="choice" for="notificationMessageMinimum">
-                    <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With minimum description" value="MessageMinimum">
-                    <strong>Minimal</strong>
-                    <span>Short message</span>
-                </label>
-                <label class="choice" for="notificationMessageFull">
-                    <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
-                    <strong>Full</strong>
-                    <span>Complete details</span>
-                </label>
+                    <label class="choice" for="notificationBadge">
+                        <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
+                        <strong>Badge</strong>
+                        <span>Icon badge only</span>
+                    </label>
+                    <label class="choice" for="notificationMessageMinimum">
+                        <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With minimum description" value="MessageMinimum">
+                        <strong>Minimal</strong>
+                        <span>Short message</span>
+                    </label>
+                    <label class="choice" for="notificationMessageFull">
+                        <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
+                        <strong>Full</strong>
+                        <span>Complete details</span>
+                    </label>
                 </div>
             </div>
 
             <!-- Auto subscribe -->
             <div class="card">
                 <div class="setting">
-                <div class="setting-text">
-                    <label for="enableAutoSubscribe">Auto-subscribe bookmarks</label>
-                    <p>Automatically subscribe to bookmarked novels.</p>
-                </div>
-                <input id="enableAutoSubscribe" class="switch" type="checkbox" title="Enable Auto-subscribe Bookmarks">
+                    <div class="setting-text">
+                        <label for="enableAutoSubscribe">Auto-subscribe bookmarks</label>
+                        <p>Automatically subscribe to bookmarked novels.</p>
+                    </div>
+                    <input id="enableAutoSubscribe" class="switch" type="checkbox" title="Enable Auto-subscribe Bookmarks">
                 </div>
 
                 <div class="sub">
-                <div class="setting">
-                    <div class="setting-text">
-                    <label for="enableAutoSubscribeThreshold">Similarity threshold</label>
-                    <p>Only subscribe when titles are similar enough.</p>
+                    <div class="setting">
+                        <div class="setting-text">
+                            <label for="enableAutoSubscribeThreshold">Similarity threshold</label>
+                            <p>Only subscribe when titles are similar enough.</p>
+                        </div>
+                        <input id="enableAutoSubscribeThreshold" class="switch" type="checkbox" name="enableAutoSubscribeThreshold" title="enable auto subscribe threshold" value="false" disabled>
                     </div>
-                    <input id="enableAutoSubscribeThreshold" class="switch" type="checkbox" name="enableAutoSubscribeThreshold"
-                        title="enable auto subscribe threshold" value="false" disabled>
-                </div>
 
-                <div class="setting slider-row">
-                    <label for="autoSubscribeThreshold">Threshold</label>
-                    <input type="range" id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold"
-                        min="0.9" max="1" step="0.01" value="1" disabled>
-                    <span id="autoSubscribeThresholdValue" class="value-pill">1.0</span>
-                </div>
+                    <div class="setting slider-row">
+                        <label for="autoSubscribeThreshold">Threshold</label>
+                        <input type="range" id="autoSubscribeThreshold" name="autoSubscribeThreshold" title="auto subscribe threshold" min="0.9" max="1" step="0.01" value="1" disabled>
+                        <span id="autoSubscribeThresholdValue" class="value-pill">1.0</span>
+                    </div>
                 </div>
             </div>
 
@@ -134,25 +133,25 @@
                 <h3 id="saveTarget">Save target</h3>
 
                 <div class="setting">
-                <div class="setting-text">
-                    <label for="InternalCollection">Internal collection</label>
-                    <p>Always on. Stored inside the extension.</p>
-                </div>
-                <input type="checkbox" id="InternalCollection" class="switch" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
-                </div>
-                <div class="setting">
-                <div class="setting-text">
-                    <label for="SaveToBrowserBookmark">Browser bookmark</label>
-                    <p>Also save as a bookmark in your browser.</p>
-                </div>
-                <input type="checkbox" id="SaveToBrowserBookmark" class="switch" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
+                    <div class="setting-text">
+                        <label for="InternalCollection">Internal collection</label>
+                        <p>Always on. Stored inside the extension.</p>
+                    </div>
+                    <input type="checkbox" id="InternalCollection" class="switch" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
                 </div>
                 <div class="setting">
-                <div class="setting-text">
-                    <label for="SaveToGoogleSpreadsheet">Google Spreadsheet</label>
-                    <p>Sync entries to a spreadsheet. Configure its URL here.</p>
+                    <div class="setting-text">
+                        <label for="SaveToBrowserBookmark">Browser bookmark</label>
+                        <p>Also save as a bookmark in your browser.</p>
+                    </div>
+                    <input type="checkbox" id="SaveToBrowserBookmark" class="switch" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
                 </div>
-                <input type="checkbox" id="SaveToGoogleSpreadsheet" class="switch" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="SaveToGoogleSpreadsheet">Google Spreadsheet</label>
+                        <p>Sync entries to a spreadsheet. Configure its URL here.</p>
+                    </div>
+                    <input type="checkbox" id="SaveToGoogleSpreadsheet" class="switch" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
                 </div>
                 <div id="spreadsheetSetup" class="spreadsheet-setup" hidden>
                     <label for="spreadsheetUrl">Google Spreadsheet URL</label>
@@ -197,11 +196,30 @@
                 <h3>New entry defaults in the popup</h3>
                 <p>Choose the values prefilled when creating an entry from the popup.</p>
                 <div class="default-settings-grid">
-                    <div class="default-field"><label for="Type">Type</label><select id="Type" title="Type"></select></div>
-                    <div class="default-field"><label for="ReadStatus">Read status</label><select id="ReadStatus" title="Read status"></select></div>
-                    <div class="default-field"><label for="NovelStatus">Novel status</label><select id="NovelStatus" title="Novel status"></select></div>
-                    <div class="default-field"><label for="tags">Tags</label><div class="default-tag-input-container"><input id="tags" type="text" placeholder="Type to find a tag" /><span id="tagsDefaultGhost" aria-hidden="true"></span></div><small>Press Tab or Enter to complete a suggestion. Separate tags with commas.</small></div>
-                    <div class="default-field default-field-notes"><label for="notes">Notes</label><textarea id="notes" rows="3" placeholder="Optional notes"></textarea></div>
+                    <div class="default-field">
+                        <label for="Type">Type</label>
+                        <select id="Type" title="Type"></select>
+                    </div>
+                    <div class="default-field">
+                        <label for="ReadStatus">Read status</label>
+                        <select id="ReadStatus" title="Read status"></select>
+                    </div>
+                    <div class="default-field">
+                        <label for="NovelStatus">Novel status</label>
+                        <select id="NovelStatus" title="Novel status"></select>
+                    </div>
+                    <div class="default-field">
+                        <label for="tags">Tags</label>
+                        <div class="default-tag-input-container">
+                            <input id="tags" type="text" placeholder="Type to find a tag"/>
+                            <span id="tagsDefaultGhost" aria-hidden="true"></span>
+                        </div>
+                        <small>Press Tab or Enter to complete a suggestion. Separate tags with commas.</small>
+                    </div>
+                    <div class="default-field default-field-notes">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" rows="3" placeholder="Optional notes"></textarea>
+                    </div>
                 </div>
                 <button id="saveDefaultInput" type="button">Save</button>
                 <p id="statusSaveDefaultInput" role="status" aria-live="polite"></p>
@@ -210,11 +228,30 @@
                 <h3>New entry defaults in the context menu</h3>
                 <p>Choose the values prefilled when creating an entry from the browser context menu.</p>
                 <div class="default-settings-grid">
-                    <div class="default-field"><label for="TypeTextMenu">Type</label><select id="TypeTextMenu" title="Type"></select></div>
-                    <div class="default-field"><label for="ReadStatusTextMenu">Read status</label><select id="ReadStatusTextMenu" title="Read status"></select></div>
-                    <div class="default-field"><label for="NovelStatusTextMenu">Novel status</label><select id="NovelStatusTextMenu" title="Novel status"></select></div>
-                    <div class="default-field"><label for="tagsTextMenu">Tags</label><div class="default-tag-input-container"><input id="tagsTextMenu" type="text" placeholder="Type to find a tag" /><span id="tagsTextMenuGhost" aria-hidden="true"></span></div><small>Press Tab or Enter to complete a suggestion. Separate tags with commas.</small></div>
-                    <div class="default-field default-field-notes"><label for="notesTextMenu">Notes</label><textarea id="notesTextMenu" rows="3" placeholder="Optional notes"></textarea></div>
+                    <div class="default-field">
+                        <label for="TypeTextMenu">Type</label>
+                        <select id="TypeTextMenu" title="Type"></select>
+                    </div>
+                    <div class="default-field">
+                        <label for="ReadStatusTextMenu">Read status</label>
+                        <select id="ReadStatusTextMenu" title="Read status"></select>
+                    </div>
+                    <div class="default-field">
+                        <label for="NovelStatusTextMenu">Novel status</label>
+                        <select id="NovelStatusTextMenu" title="Novel status"></select>
+                    </div>
+                    <div class="default-field">
+                        <label for="tagsTextMenu">Tags</label>
+                        <div class="default-tag-input-container">
+                            <input id="tagsTextMenu" type="text" placeholder="Type to find a tag"/>
+                            <span id="tagsTextMenuGhost" aria-hidden="true"></span>
+                        </div>
+                        <small>Press Tab or Enter to complete a suggestion. Separate tags with commas.</small>
+                    </div>
+                    <div class="default-field default-field-notes">
+                        <label for="notesTextMenu">Notes</label>
+                        <textarea id="notesTextMenu" rows="3" placeholder="Optional notes"></textarea>
+                    </div>
                 </div>
                 <button id="saveDefaultInputTextMenu" type="button">Save</button>
                 <p id="statusSaveDefaultInputInputTextMenu" role="status" aria-live="polite"></p>
@@ -227,7 +264,7 @@
                     <p>Organize the kinds of entries you save.</p>
                     <div class="list-add-row">
                         <label class="sr-only" for="newNovelType">New content type</label>
-                        <input type="text" id="newNovelType" placeholder="e.g. Novel" />
+                        <input type="text" id="newNovelType" placeholder="e.g. Novel"/>
                         <button type="button" id="newNovelTypeBtn">Add type</button>
                     </div>
                     <div id="EditNovelType"></div>
@@ -237,7 +274,7 @@
                     <p>Statuses used to describe a novel's release state.</p>
                     <div class="list-add-row">
                         <label class="sr-only" for="newNovelStatus">New novel status</label>
-                        <input type="text" id="newNovelStatus" placeholder="e.g. Ongoing" />
+                        <input type="text" id="newNovelStatus" placeholder="e.g. Ongoing"/>
                         <button type="button" id="newNovelStatusBtn">Add status</button>
                     </div>
                     <div id="EditNovelStatuses"></div>
@@ -247,7 +284,7 @@
                     <p>Track your progress with each entry.</p>
                     <div class="list-add-row">
                         <label class="sr-only" for="newReadStatus">New read status</label>
-                        <input type="text" id="newReadStatus" placeholder="e.g. Reading" />
+                        <input type="text" id="newReadStatus" placeholder="e.g. Reading"/>
                         <button type="button" id="newReadStatusBtn">Add status</button>
                     </div>
                     <div id="EditReadStatuses"></div>
@@ -293,8 +330,7 @@
             <details class="card explain" open>
                 <summary>How it works</summary>
                 <div id="folderMappingExplanationContainer">
-                <p>Pages are saved into your browser bookmarks automatically. Each page's folder is
-                    built from a formula, using the type and status you pick when saving.</p>
+                    <p>Pages are saved into your browser bookmarks automatically. Each page's folder is built from a formula, using the type and status you pick when saving.</p>
                 </div>
                 <p id="explainationOFolderMapping" class="hint">Standard path:</p>
                 <p id="formulaOfFolderMapping" class="formula"></p>
@@ -307,23 +343,23 @@
                 <h3>Base folders</h3>
 
                 <div id="rootPathContainer" class="field">
-                <label for="rootPath">Root folder</label>
-                <p class="hint">Where all your saved bookmarks live.</p>
-                <div class="field-row">
-                    <input type="text" id="rootPath" />
-                    <button type="button" id="saveRootPathBtn" class="btn primary">Save</button>
-                </div>
-                <span id="rootPathStatus" class="status"></span>
+                    <label for="rootPath">Root folder</label>
+                    <p class="hint">Where all your saved bookmarks live.</p>
+                    <div class="field-row">
+                        <input type="text" id="rootPath" />
+                        <button type="button" id="saveRootPathBtn" class="btn primary">Save</button>
+                    </div>
+                    <span id="rootPathStatus" class="status"></span>
                 </div>
 
                 <div id="defaultPathContainer" class="field">
-                <label for="unsortedPath">Unsorted folder</label>
-                <p class="hint">Fallback when no folder matches.</p>
-                <div class="field-row">
-                    <input type="text" id="unsortedPath" />
-                    <button type="button" id="saveUnsortedPathBtn" class="btn primary">Save</button>
-                </div>
-                <span id="unsortedPathStatus" class="status"></span>
+                    <label for="unsortedPath">Unsorted folder</label>
+                    <p class="hint">Fallback when no folder matches.</p>
+                    <div class="field-row">
+                        <input type="text" id="unsortedPath" />
+                        <button type="button" id="saveUnsortedPathBtn" class="btn primary">Save</button>
+                    </div>
+                    <span id="unsortedPathStatus" class="status"></span>
                 </div>
             </section>
 
@@ -333,25 +369,25 @@
                 <p class="card-desc">Use a custom folder name instead of the default one.</p>
 
                 <div id="AddAliasContainer">
-                <div id="AddAliasToNovelTypeContainer" class="add-row">
-                    <span class="add-tag">Novel type</span>
-                    <select id="addNovelTypeAliasToSelect" title="AddAliasTo"><!-- dynamic items here --></select>
-                    <span class="arrow" aria-hidden="true">→</span>
-                    <label for="addNovelTypeAlias" class="sr-only">Alias</label>
-                    <input type="text" id="addNovelTypeAlias" placeholder="New folder name" />
-                    <button type="button" id="addNovelTypeAliasBtn" class="btn primary">Add</button>
-                </div>
+                    <div id="AddAliasToNovelTypeContainer" class="add-row">
+                        <span class="add-tag">Novel type</span>
+                        <select id="addNovelTypeAliasToSelect" title="AddAliasTo"><!-- dynamic items here --></select>
+                        <span class="arrow" aria-hidden="true">→</span>
+                        <label for="addNovelTypeAlias" class="sr-only">Alias</label>
+                        <input type="text" id="addNovelTypeAlias" placeholder="New folder name" />
+                        <button type="button" id="addNovelTypeAliasBtn" class="btn primary">Add</button>
+                    </div>
 
-                <div id="AddAliasToReadStatusContainer" class="add-row">
-                    <span class="add-tag">Read status</span>
-                    <select id="addReadStatusAliasToSelect" title="AddAliasTo"><!-- dynamic items here --></select>
-                    <span class="arrow" aria-hidden="true">→</span>
-                    <label for="addReadStatusAlias" class="sr-only">Alias</label>
-                    <input type="text" id="addReadStatusAlias" placeholder="New folder name" />
-                    <button type="button" id="addReadStatusAliasBtn" class="btn primary">Add</button>
-                </div>
+                    <div id="AddAliasToReadStatusContainer" class="add-row">
+                        <span class="add-tag">Read status</span>
+                        <select id="addReadStatusAliasToSelect" title="AddAliasTo"><!-- dynamic items here --></select>
+                        <span class="arrow" aria-hidden="true">→</span>
+                        <label for="addReadStatusAlias" class="sr-only">Alias</label>
+                        <input type="text" id="addReadStatusAlias" placeholder="New folder name" />
+                        <button type="button" id="addReadStatusAliasBtn" class="btn primary">Add</button>
+                    </div>
 
-                <p id="saveStatus-folderMapping-new-aliases" class="status"></p>
+                    <p id="saveStatus-folderMapping-new-aliases" class="status"></p>
                 </div>
             </section>
 
@@ -359,14 +395,14 @@
             <section class="card FolderMapping_ActiveAliases">
                 <h3>Active aliases</h3>
                 <div id="activeAliasesContainer">
-                <div class="alias-group">
-                    <p id="activeAliasesHeader-NovelType" class="group-title">Novel types</p>
-                    <div id="activeTypeAliases"><!-- dynamic items here --></div>
-                </div>
-                <div class="alias-group">
-                    <p id="activeAliasesHeader-ReadStatus" class="group-title">Read statuses</p>
-                    <div id="activeReadStatuses"><!-- dynamic items here --></div>
-                </div>
+                    <div class="alias-group">
+                        <p id="activeAliasesHeader-NovelType" class="group-title">Novel types</p>
+                        <div id="activeTypeAliases"><!-- dynamic items here --></div>
+                    </div>
+                    <div class="alias-group">
+                        <p id="activeAliasesHeader-ReadStatus" class="group-title">Read statuses</p>
+                        <div id="activeReadStatuses"><!-- dynamic items here --></div>
+                    </div>
                 </div>
                 <p id="saveStatus-folderMapping-aliases" class="status"></p>
             </section>
@@ -375,8 +411,8 @@
             <section class="card FolderMapping_ActiveCustomRules">
                 <h3>Active custom rules</h3>
                 <div id="activeCustomRulesContainer">
-                <div id="activeCustomRules"><!-- dynamic items here --></div>
-                <p id="saveStatus-folderMapping-overrides" class="status"></p>
+                    <div id="activeCustomRules"><!-- dynamic items here --></div>
+                    <p id="saveStatus-folderMapping-overrides" class="status"></p>
                 </div>
             </section>
 
@@ -392,9 +428,9 @@
                         <label class="add-tag" for="add_NovelTypes_Subfolder_To_Select">Novel type</label>
                         <select id="add_NovelTypes_Subfolder_To_Select" title="AddSubfolderTo"><!-- dynamic items here --></select>
                         <div id="add_NovelTypes_Subfolder_Options_Inputs" class="path-builder">
-                        <input type="text" id="add_NovelTypes_Subfolder_Prefix" class="prefixAndSuffix" placeholder="prefix" />
-                        <span id="add_NovelTypes_Subfolder_Word" class="path-word"></span>
-                        <input type="text" id="add_NovelTypes_Subfolder_Suffix" class="prefixAndSuffix" placeholder="suffix" />
+                            <input type="text" id="add_NovelTypes_Subfolder_Prefix" class="prefixAndSuffix" placeholder="prefix" />
+                            <span id="add_NovelTypes_Subfolder_Word" class="path-word"></span>
+                            <input type="text" id="add_NovelTypes_Subfolder_Suffix" class="prefixAndSuffix" placeholder="suffix" />
                         </div>
                         <button type="button" id="add_NovelTypes_Subfolder_Btn" class="btn primary">Add</button>
                     </div>
@@ -403,9 +439,9 @@
                         <label class="add-tag" for="add_ReadStatuses_Subfolder_To_Select">Read status</label>
                         <select id="add_ReadStatuses_Subfolder_To_Select" title="AddSubfolderTo"><!-- dynamic items here --></select>
                         <div id="add_ReadStatuses_Subfolder_Options_Inputs" class="path-builder">
-                        <input type="text" id="add_ReadStatuses_Subfolder_Prefix" class="prefixAndSuffix" placeholder="prefix" />
-                        <span id="add_ReadStatuses_Subfolder_Word" class="path-word"></span>
-                        <input type="text" id="add_ReadStatuses_Subfolder_Suffix" class="prefixAndSuffix" placeholder="suffix" />
+                            <input type="text" id="add_ReadStatuses_Subfolder_Prefix" class="prefixAndSuffix" placeholder="prefix" />
+                            <span id="add_ReadStatuses_Subfolder_Word" class="path-word"></span>
+                            <input type="text" id="add_ReadStatuses_Subfolder_Suffix" class="prefixAndSuffix" placeholder="suffix" />
                         </div>
                         <button type="button" id="add_ReadStatuses_Subfolder_Btn" class="btn primary">Add</button>
                     </div>
@@ -422,8 +458,8 @@
                         <select id="addCustomRuleToSelect_ReadStatus" title="AddRuleTo"><!-- dynamic items here --></select>
                         <span class="CustomRules">save to</span>
                         <div id="addCustomRuleOptions_Inputs" class="ghost-wrap">
-                        <input type="text" id="addCustomRule" placeholder="type a path…" />
-                        <span id="customRuleGhostText"></span>
+                            <input type="text" id="addCustomRule" placeholder="type a path…" />
+                            <span id="customRuleGhostText"></span>
                         </div>
                         <button type="button" id="addCustomRuleBtn" class="btn primary">Add rule</button>
                     </div>
@@ -537,7 +573,7 @@
                     <h3>Reset this section</h3>
                     <p>Restore the settings in the current section to their defaults. Your other settings and saved entries will not be affected.</p>
                 </div>
-                <button id="resetSettingsBtn" class="footerBtn btn-danger" type="button" popovertargetaction="toggle" popovertarget="reset-dialog" >Reset section</button>
+                <button id="resetSettingsBtn" class="footerBtn btn-danger" type="button" popovertargetaction="toggle" popovertarget="reset-dialog">Reset section</button>
             </div>
         </footer>
         <dialog id="reset-dialog" class="reset-dialog" popover>
@@ -556,8 +592,8 @@
             <label for="genericInput" class="genericLabel"></label>
             <input id="genericInput-input" class="genericInput" type="text" placeholder="genericInput"></input>
             <div class="genericPromptBtns">
-                <button type="button" class="genericButton1 Btn" >Save</button>
-                <button type="button" class="genericButton2 Btn" >Cancel</button>
+                <button type="button" class="genericButton1 Btn">Save</button>
+                <button type="button" class="genericButton2 Btn">Cancel</button>
             </div>
         </div>
     </section>
