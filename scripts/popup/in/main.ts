@@ -1,3 +1,4 @@
+import { ErrorMessage, logConsoleError, WarningMessage } from "../../shared/utils/ErrorMessage";
 
 import { ext } from '../../shared/utils/BrowserCompat';
 import { getChapterFromTitle, returnHashedTitle } from '../../shared/utils/StringOutput';
@@ -42,7 +43,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     await controller.init();
 
     // After popup init — start quietly in the background
-    await controller.RSS?.preloadRSS();
+    await controller.RSS?.preloadRSS().catch(error => {
+        new ErrorMessage("Could not prepare the RSS view.", undefined, {
+            consoleLevel: 'error',
+            details: [error]
+        }).sendMessage();
+    });
 
     setTimeout( async () => checkSyncQuota(), 500);
 });
@@ -214,7 +220,10 @@ class HermidataController {
 
         getElement('.openSettings')?.addEventListener('click', () => {
             ext.runtime.openOptionsPage()
-            .catch((error) => console.error('Extension error trying open Extension settings: ',error)); 
+            .catch((error) => new ErrorMessage("Could not open settings.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage());
         });
 
         
@@ -227,14 +236,14 @@ class HermidataController {
                 let capitalizeFirstLetterOfStringLetterType = capitalizeFirstLetterOfString(this.pastHermidata.novelType)
                 if ( novelTypes.includes(capitalizeFirstLetterOfStringLetterType) ) this.pastHermidata.novelType = capitalizeFirstLetterOfStringLetterType
                 else {
-                    console.warn('type can\'t be found in past', this.pastHermidata.novelType)
+                    new WarningMessage(`The saved item uses an unavailable content type: ${this.pastHermidata.novelType}.`).sendMessage();
                 }
             }
             if (!readStatus.includes(this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus)) {
                 let capitalizeFirstLetterOfStringLetterStatus = capitalizeFirstLetterOfString(this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus)
                 if ( readStatus.includes(capitalizeFirstLetterOfStringLetterStatus) ) this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus = capitalizeFirstLetterOfStringLetterStatus
                 else {
-                    console.warn('status can\'t be found in past', this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus)
+                    new WarningMessage(`The saved item uses an unavailable reading status: ${this.pastHermidata.chapter.bookmarks[this.pastHermidata.chapter.bookmarkInUse].readStatus}.`).sendMessage();
                 }
             }
         } else console.log('[Main Popup] no past hermidata')
@@ -302,14 +311,17 @@ class HermidataController {
         const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
 
         if (!confirmed) {
-            console.error('new Hermidata has different novel type and user declined to merge');
+            logConsoleError('new Hermidata has different novel type and user declined to merge');
             return false;
         }
         // 2. merge
         const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
 
         if (merged instanceof Error) {
-            console.error('failed to merge two hermidatas', merged);
+            new ErrorMessage("Could not merge the existing item.", undefined, {
+                consoleLevel: 'error',
+                details: [merged]
+            }).sendMessage();
             return false;
         }
         // 3. return
@@ -326,8 +338,16 @@ class HermidataController {
                     allowedSendSHeet: allowed.allowedSendSHeet, 
                     allowedSendBookmark: allowed.allowedSendBookmark
                 },
-            }) as boolean;
-            return saved
+            }) as boolean | { success: false; errors: string[] };
+            if (saved === true) return true;
+
+            const errors = typeof saved === 'object' && saved !== null ? saved.errors : [];
+            new ErrorMessage(
+                errors.length ? `Some save targets failed:\n${errors.join('\n')}` : "Could not save to the selected targets.",
+                undefined,
+                { consoleLevel: 'error', details: errors }
+            ).sendMessage();
+            return false;
         }
         return true
     }

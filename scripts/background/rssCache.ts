@@ -1,3 +1,4 @@
+import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/utils/BrowserCompat"
 import { dbUpdateImageKey, getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
@@ -46,7 +47,7 @@ export async function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet:
             const token = await getToken();
             await writeToSheet(token, hermidata);
         } catch (err) {
-            console.error('[Background] Sheet write failed:', err);
+            logConsoleError('[Background] Sheet write failed:', err);
             errors.push(`Sheet sync failed: ${err instanceof Error ? err.message : String(err)}`);
         }
     }
@@ -54,14 +55,14 @@ export async function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet:
         try {
             writeToBookmarks(hermidata);
         } catch (err) {
-            console.error('[Background] Bookmark write failed:', err);
+            logConsoleError('[Background] Bookmark write failed:', err);
             errors.push(`Bookmark save failed: ${err instanceof Error ? err.message : String(err)}`);
         }
     }
     try {
         updateCurrentBookmarkAndIcon(hermidata.getBookmark().color, hermidata.GetUrl());
     } catch (err) {
-        console.error('[Background] Icon update failed:', err);
+        logConsoleError('[Background] Icon update failed:', err);
     }
 
     console.log('[Background] SAVE_NOVEL complete', errors.length ? { errors } : '');
@@ -283,7 +284,7 @@ async function putAll(store: DbStore, data: Record<string, Hermidata> | RawFeed[
             ]);
         }
     } catch (err) {
-        console.error(`[DB] put${store.at(0)?.toUpperCase()}All:`, err);
+        logConsoleError(`[DB] put${store.at(0)?.toUpperCase()}All:`, err);
     }
 }
 
@@ -316,7 +317,7 @@ function findPaths(node: chrome.bookmarks.BookmarkTreeNode, currentPath = ''): s
 }
 export function handleLocalFilterReset(sendResponse: (r: unknown) => void): true {
     ext.storage.local.get('lastFilter', (result: { lastFilter: Filters }) => {
-        if (ext.runtime.lastError) return console.error(ext.runtime.lastError.message);
+        if (ext.runtime.lastError) return logConsoleError(ext.runtime.lastError.message);
         if (result.lastFilter) ext.storage.local.remove('lastFilter');
     })
     sendResponse({ status: 'ok' });

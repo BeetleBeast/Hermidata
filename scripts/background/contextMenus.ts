@@ -1,3 +1,4 @@
+import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ext } from "../shared/utils/BrowserCompat";
 import type { Settings } from "../shared/types/index";
 import { getCurrentDate } from "./feeds";
@@ -11,7 +12,7 @@ export function initContextMenus() {
         if (info.menuItemId === "Hermidata") {
             getSettings().then(settings => {
                 if (settings.ExtensionBehaviour.AllowContextMenu) createContextMenu(info, settings);
-            })
+            }).catch(err => logConsoleError('[Background - Context Menu] Failed to load settings:', err));
         }
     })
 }
@@ -39,7 +40,10 @@ function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Sett
             // set the values from the tab
         Hermidata.SetFromTab({ currentChapter: chapter, pageTitle: title ?? "", url: url });
         Hermidata.SetDefaultContextMenuValues(date, tags, notes);
-        handleSaveNovel(Hermidata, { allowedSendSHeet: spreadSheetTarget, allowedSendBookmark: bookmarkTarget }, () => console.log("[Background - Context Menu]: Saved"));
+        handleSaveNovel(Hermidata, { allowedSendSHeet: spreadSheetTarget, allowedSendBookmark: bookmarkTarget }, response => {
+            if (response === true) console.log("[Background - Context Menu]: Saved");
+            else logConsoleError("[Background - Context Menu] Save failed:", response);
+        });
     })
-    .catch(err => console.error("Failed to resolve redirect:", err));
+    .catch(err => logConsoleError("Failed to resolve redirect:", err));
 }

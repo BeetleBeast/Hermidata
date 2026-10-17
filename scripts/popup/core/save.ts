@@ -1,3 +1,4 @@
+import { ErrorMessage, logConsoleError } from "../../shared/utils/ErrorMessage";
 
 import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/utils/StringOutput";
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
@@ -29,7 +30,10 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         }
     
         if (!entry) {
-            console.warn(`[HermidataV3] No entry found for ${hermidata.title}`);
+            new ErrorMessage("Could not find the saved item to update its chapter progress.", undefined, {
+                consoleLevel: 'error',
+                details: [hermidata.title]
+            }).sendMessage();
             return false;
         }
     
@@ -44,12 +48,18 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         }
         if (needsToMigrate) {
             const past = new PastHermidata(hermidata);
-            await past.init().catch(error => console.error(error));
+            await past.init().catch(error => new ErrorMessage("Could not migrate the saved item before updating its progress.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage());
             return false
         }
         return true
     } catch (error) {
-        console.error('[HermidataV3] updateChapterProgress failed:', error);
+        new ErrorMessage("Could not save the chapter progress.", undefined, {
+            consoleLevel: 'error',
+            details: [error]
+        }).sendMessage();
         return false;
     }
 }
@@ -68,7 +78,7 @@ export async function getPagePosition(): Promise<chrome.scripting.InjectionResul
         return result;
     }
     catch (error) {
-        console.error(error);
+        logConsoleError(error);
     }
 }
 

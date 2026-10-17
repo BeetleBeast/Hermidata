@@ -1,3 +1,4 @@
+import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ImportsAndExports } from "./build/ImportsAndExports";
 import { ExtensionBehavior } from "./build/ExtensionBehavior";
 import { DefaultBookmarkInputs } from "./build/DefaultBookmarkInputs";
@@ -92,8 +93,35 @@ export class BuildController {
         
         // Initialize section on first visit
         if (!this.initializedSections.has(sectionId)) {
-            await this.initializeSection(sectionId);
-            this.initializedSections.add(sectionId);
+            let initialization = this.sectionInitializationPromises.get(sectionId);
+            if (!initialization) {
+                initialization = this.initializeSection(sectionId);
+                this.sectionInitializationPromises.set(sectionId, initialization);
+            }
+
+            try {
+                await initialization;
+                if (this.sectionInitializationPromises.get(sectionId) === initialization) {
+                    this.sectionInitializationPromises.delete(sectionId);
+                }
+                this.initializedSections.add(sectionId);
+                container?.querySelector(".section-load-error")?.remove();
+            } catch (error) {
+                if (this.sectionInitializationPromises.get(sectionId) === initialization) {
+                    this.sectionInitializationPromises.delete(sectionId);
+                }
+                logConsoleError(`Failed to initialize settings section "${sectionId}":`, error);
+                if (container) {
+                    let errorMessage = container.querySelector<HTMLParagraphElement>(".section-load-error");
+                    if (!errorMessage) {
+                        errorMessage = document.createElement("p");
+                        errorMessage.className = "section-load-error";
+                        errorMessage.setAttribute("role", "alert");
+                        container.prepend(errorMessage);
+                    }
+                    errorMessage.textContent = "Could not load this section. Click its navigation item to retry.";
+                }
+            }
         }
     }
     

@@ -1,3 +1,4 @@
+import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ext } from "../shared/utils/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
 import { getAllHermidata, getAllRawFeeds, getSettings, setAllHermidata, setAllRawFeeds } from "../shared/db/Storage";
@@ -64,14 +65,14 @@ export async function checkFeedsForUpdates() {
                 saveFeedMetaData(feed, meta);
 
             } catch (err) {
-                console.error(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
+                logConsoleError(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
             }
         }
 
         setState.lastAutoFeedCheck(Date.now());
         await setAllRawFeeds(Object.values(savedFeeds));
     } catch (err) {
-        console.error(`[Hermidata] [✕] Failed to check feeds:`, err);
+        logConsoleError(`[Hermidata] [✕] Failed to check feeds:`, err);
     }
 }
 

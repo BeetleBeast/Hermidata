@@ -1,3 +1,4 @@
+import { logConsoleError } from "../shared/utils/ErrorMessage";
 type RawScrappedFeed = {
     title: string;
     url: string;
@@ -57,7 +58,7 @@ export class FeedDetection {
                 data: normalized
             });
         } catch (err) {
-            console.error('[Hermidata] addFeedToGlobalMain failed:', err);
+            logConsoleError('[Hermidata] addFeedToGlobalMain failed:', err);
         }
     }
     // ============================================================

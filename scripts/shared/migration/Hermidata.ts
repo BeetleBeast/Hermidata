@@ -1,3 +1,4 @@
+import { logConsoleError } from "../utils/ErrorMessage";
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
@@ -155,7 +156,7 @@ export class HermidataMigration {
             await updateHermidata(older.id, merged.id, merged);
             console.log(`Merged "${older.title}" into "${newer.title}"`);
         } else {
-            console.error(`Merge failed for:`, older.title, newer.title);
+            logConsoleError(`Merge failed for:`, older.title, newer.title);
         }
     }
 
@@ -289,7 +290,7 @@ export class HermidataMigration {
             try {
                 await HermidataMigration.mergeTwoHermidata(newer, older, 'YES');
             } catch (err) {
-                console.error(`Migration failed for ${entry.title}:`, err);
+                logConsoleError(`Migration failed for ${entry.title}:`, err);
             }
         }
 
@@ -681,7 +682,7 @@ export class HermidataMigration {
 
             return { merged: true, removedIds: removedIds, addedId: merged.id };
         } catch (err) {
-            console.error("Failed to merge Hermidata:", err);
+            logConsoleError("Failed to merge Hermidata:", err);
             return { merged: false, removedIds: [], addedId: null };
         }
     }

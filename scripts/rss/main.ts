@@ -1,3 +1,4 @@
+import { ErrorMessage, logConsoleError } from "../shared/utils/ErrorMessage";
 import { PastHermidata } from "../popup/core/Past";
 import type { RSSData, RssDOM } from "../shared/types/index";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
@@ -81,7 +82,10 @@ export class RSS {
             this.changeLoadingBar(100);
             setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
         } catch (error) {
-            console.error(error);
+            new ErrorMessage("Could not open the RSS view.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage();
         }
     }
     public changePageToClassic() {
@@ -138,7 +142,7 @@ export class RSS {
             return rssPreloadPromise;
         }
         catch (error) {
-            console.error(error);
+            logConsoleError(error);
             throw error;
         }
     }
@@ -160,7 +164,10 @@ export class RSS {
             allSec.appendChild(dom.allItems.header.cloneNode(true));
             allSec.appendChild(dom.allItems.items.cloneNode(true));
         } catch (error) {
-            console.error('Failed to insert RSS page',error);
+            new ErrorMessage("Could not display the RSS entries.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage();
         }
     }
 
