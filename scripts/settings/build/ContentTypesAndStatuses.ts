@@ -45,13 +45,6 @@ export class ContentTypesAndStatuses extends Build {
         await this.setSettings(settings);
         await this.populateSelects();
     }
-    public async cancelValues() {
-        // reset page values to current settings
-        await this.populateSelects();
-    }
-    public async saveValues() {
-        // values are saved on input change, so no need to do anything here
-    }
 
     private async populateSelects() {
         this.settings = await this.getSettings();

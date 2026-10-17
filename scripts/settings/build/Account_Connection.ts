@@ -11,6 +11,7 @@ export class Account_Connection extends Build {
     private readonly testBtn = getElement<HTMLButtonElement>("#testSpreadsheetUrl");
     
     private readonly LogOutBtn = getElement<HTMLButtonElement>("#logOut");
+    private readonly accountAuthStatus = getElement<HTMLParagraphElement>("#accountAuthStatus");
 
     private spreadsheetUrl: string = "";
 
@@ -20,6 +21,7 @@ export class Account_Connection extends Build {
         // Load & populate page inputs and tables
         await this.loadSheetUrl();
 
+        this.loadAccountAuthStatus();
         this.bindEvents();
     }
     public async resetValues() {
@@ -33,9 +35,6 @@ export class Account_Connection extends Build {
         await this.loadSheetUrl();
         if (this.input) this.input.value = "";
         if (this.status) this.status.textContent = "";
-    }
-    public async saveValues() {
-        this.SetSpreadsheetUrl();
     }
     private bindEvents() {
         this.saveBtn?.addEventListener("click", () => this.SetSpreadsheetUrl());
@@ -53,7 +52,9 @@ export class Account_Connection extends Build {
             this.temporaryStatus("Please enter a URL", "#statusSheetURL");
             return;
         }
-        this.setSpreadsheetUrl(value);
+        await this.setSpreadsheetUrl(value);
+        const reminder = getElement<HTMLElement>("#spreadsheetTargetReminder");
+        if (reminder) reminder.hidden = true;
         this.temporaryStatus("Saved!", "#statusSheetURL");
     }
     private async TestSpreadsheetUrl() {
@@ -62,21 +63,21 @@ export class Account_Connection extends Build {
             this.status.textContent = "Testing...";
             const value = this.input.value.trim() || this.spreadsheetUrl;
             if (!value) {
-                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 500, "red");
+                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 1000, "var(--danger)");
                 return;
             }
 
             const url = this.constructUrl(value);
             if (!url) { 
-                this.temporaryStatus("Invalid URL", "#statusSheetURL", 500, "red"); 
+                this.temporaryStatus("Invalid URL", "#statusSheetURL", 1000, "var(--danger)");
                 throw new Error("Invalid URL");
             }
             const response = await fetch(url, { method: "HEAD" });
-            if (response.ok) this.temporaryStatus("connected!", "#statusSheetURL", 500);
-            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 500, "red");
+            if (response.ok) this.temporaryStatus("connected!", "#statusSheetURL", 1000);
+            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "var(--danger)");
             
         } catch (error) {
-            this.temporaryStatus("Failed to connect", "#statusSheetURL", 500, "red");
+            this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "var(--danger)");
         }
     }
     private constructUrl(url: string): string | null {
@@ -94,14 +95,49 @@ export class Account_Connection extends Build {
 
     }
     private async ResetLoginAuth() {
+        if (this.LogOutBtn) this.LogOutBtn.disabled = true;
         ext.storage.local.remove(["googleAccessToken", "googleTokenExpiry", "userEmail"], () => {
-            console.log("OAuth credentials cleared");
+            const error = ext.runtime.lastError;
+            if (error) {
+                if (this.accountAuthStatus) this.accountAuthStatus.textContent = `Could not sign out: ${error.message}`;
+                if (this.LogOutBtn) this.LogOutBtn.disabled = false;
+                return;
+            }
+
+            if (this.accountAuthStatus) {
+                this.accountAuthStatus.textContent = "Signed out. Google will reconnect automatically the next time you save to a spreadsheet.";
+                this.accountAuthStatus.dataset.state = "signed-out";
+            }
+            if (this.LogOutBtn) this.LogOutBtn.hidden = true;
+        });
+    }
+    private loadAccountAuthStatus() {
+        ext.storage.local.get(["googleAccessToken", "googleTokenExpiry", "userEmail"], (items: {
+            googleAccessToken?: string;
+            googleTokenExpiry?: number;
+            userEmail?: string;
+        }) => {
+            const error = ext.runtime.lastError;
+            if (error) {
+                if (this.accountAuthStatus) this.accountAuthStatus.textContent = `Could not check account status: ${error.message}`;
+                return;
+            }
+
+            const isConnected = Boolean(items.googleAccessToken && items.googleTokenExpiry && items.googleTokenExpiry > Date.now());
+            const hasStoredAccount = Boolean(items.googleAccessToken || items.userEmail);
+            if (this.accountAuthStatus) {
+                this.accountAuthStatus.dataset.state = isConnected ? "connected" : "signed-out";
+                this.accountAuthStatus.textContent = isConnected
+                    ? `Connected${items.userEmail ? ` as ${items.userEmail}` : ""}.`
+                    : "Not currently connected. Google sign-in happens automatically when saving to a spreadsheet.";
+            }
+            if (this.LogOutBtn) this.LogOutBtn.hidden = !hasStoredAccount;
         });
     }
     private giveFeedback() {
         // give hint of how the link to google sheets needs to look like
         if (!this.input || !this.status) return;
-        if (!this.input.value) this.status.textContent = `Go to your spreadsheet and copy the url of the sheet. It should look like this: https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit?pli=1&gid=0#gid=0`;
+        if (!this.input.value) this.status.textContent = `Go to your spreadsheet and copy the url of the sheet. It should look like this: https://docs.google.com/spreadsheets/d/< your spreadsheet id >/edit?pli=1&gid=0#gid=0`;
         else this.status.textContent = "";
     }
 
