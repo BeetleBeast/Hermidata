@@ -475,7 +475,9 @@ export class BookmarkController {
         const notesValue = this.bookmarkNotesInput?.value;
         const colorValue = ColorPicker.getHexColor();
 
-        if (!labelValue || !chapterValue || !colorValue) return;
+        const IsNotNumber = Number.isNaN(chapterValue);
+
+        if (!labelValue || IsNotNumber || !colorValue) return;
 
         const hash = returnBookmarkHash(labelValue);
 
