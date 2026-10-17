@@ -20,6 +20,7 @@ export class HermidataModel implements Hermidata {
     version: number;
 
     private latestVersion = 11;
+    private readonly locale: string = navigator.language; // e.g. "fr-FR", "en-US", "ja-JP"
 
     constructor(data: Hermidata) {
         this.id = data.id;
@@ -585,9 +586,55 @@ export class HermidataModel implements Hermidata {
         return { id, title, novelType, source, chapter, rss, import: imp, meta, version };
     }
 
+    private isoToLocal(rawDate: string, locale?: string): string {
+        const isoDate = rawDate.includes('T') ? rawDate : rawDate + 'T00:00:00';
+        if (isoDate.includes('/')) {
+            console.trace('slash found');
+            const isoDateWithoutSlash = isoDate.replaceAll('/', '-');
+            const list = isoDateWithoutSlash.split('T')[0].split('-').map(String);
+            // reverse order
+            list.reverse();
+            // if second or third is only 1 char long, pad with 0
+            list[1] = String(list[1]).padStart(2, '0');
+            list[2] = String(list[2]).padStart(2, '0');
+            // stich back
+
+            const trueIsoDate = list.join('-') + 'T' + isoDateWithoutSlash.split('T')[1];
+            const d = new Date(trueIsoDate); // avoid TZ shift
+            return new Intl.DateTimeFormat(locale ?? this.locale).format(d);
+        }
+        const d = new Date(isoDate); // avoid TZ shift
+        return new Intl.DateTimeFormat(locale ?? this.locale).format(d);
+    }
+    private getDateOrder(locale?: string): (keyof Intl.DateTimeFormatPartTypesRegistry)[] {
+        const parts = new Intl.DateTimeFormat(locale ?? this.locale).formatToParts(new Date(2026, 0, 2)); 
+        const result = parts
+            .filter(p => ["day", "month", "year"].includes(p.type))
+            .map(p => p.type);
+        return result
+    }
+    private localToISO(str: string, locale?: string, withTime = true): string {
+        const order = this.getDateOrder(locale ?? this.locale);
+        const separators = /[\/\-\.]/;
+        const values = str.split(separators).map(Number);
+        const map: Partial<Intl.DateTimeFormatPartTypesRegistry> = {};
+
+        order.forEach((field, i) => map[field] = values[i]);
+        
+        const yyyy = String(map.year).padStart(4, '0');
+        const mm = String(map.month).padStart(2, '0');
+        const dd = String(map.day).padStart(2, '0');
+
+        const date = `${yyyy}-${mm}-${dd}`;
+
+        if(!withTime) return date;
+        else return `${date}T00:00:00`;
+    }
+
     private normalizeTagsForSheet(dataArray: InputArrayType | InputArraySheetType): InputArraySheetType {
-        const tags = (Array.isArray(dataArray[6]) ? dataArray[6].join(", ") : dataArray[6])
-        return [dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], dataArray[5], tags, dataArray[7]]
+        const tags = (Array.isArray(dataArray[6]) ? dataArray[6].join(", ") : dataArray[6]);
+        const localeDates = this.isoToLocal(dataArray[5]);
+        return [dataArray[0], dataArray[1], dataArray[2], dataArray[3], dataArray[4], localeDates, tags, dataArray[7]]
     }
     private toInputArrayRow(): InputArrayType;
     private toInputArrayRow(bookmarkInUseId: string): InputArrayType;
