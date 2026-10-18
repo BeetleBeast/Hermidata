@@ -330,7 +330,7 @@ export class EventListener extends RssBuild {
         }
         const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
-        if (!currentUrl || !currentScrollPosition) return; 
+        if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
         await openLink(currentUrl, 'sameTab', currentScrollPosition);
     }
@@ -347,7 +347,7 @@ export class EventListener extends RssBuild {
         }
         const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
-        if (!currentUrl || !currentScrollPosition) return; 
+        if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
         await openLink(currentUrl, 'newTab', currentScrollPosition);
     }
@@ -364,9 +364,12 @@ export class EventListener extends RssBuild {
         }
         const currentUrl = id ? entry.GetUrl(id) : entry.GetUrl();
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
-        if (!currentUrl || !currentScrollPosition) return; 
+        if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
         await openLink(currentUrl, 'newWindow', currentScrollPosition);
+    }
+    private isNumber(number: number) {
+        return !isNaN(number) && number !== undefined;
     }
     
     private clearNotification(target: HTMLDivElement | null) {
