@@ -513,12 +513,17 @@ label {
     color: var(--text-dark);
     border-color: var(--danger);
 }
-
-/* import & export and Browser bookmark import does not need a reset button */
+/* Elements that don't need a reset button */
+/* import & export */
 .Import_Export[data-active="true"] ~ #reset-footer {
     display: none;
 }
+/* Browser bookmark import */
 .BrowserBookmarkImport[data-active="true"] ~ #reset-footer {
+    display: none;
+}
+/* Account connection */
+.Account_Connection[data-active="true"] ~ #reset-footer {
     display: none;
 }
 
