@@ -72,7 +72,7 @@ export class Subscribe extends RssBuild {
         const currentType = getElement<HTMLInputElement>('#Type_HDRss')?.value as AnyNovelType || this.hermidata.novelType;
         const currentTitle = getElement<HTMLInputElement>('#title_HDRss')?.value || this.hermidata.title;
 
-        linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed);
+        await linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed);
         await this.reloadContent(notificationSection, allItemSection);
         console.log('Linked RSS to extension');
     }
@@ -133,7 +133,7 @@ export class Subscribe extends RssBuild {
                 continue;
             }
             // 5. link matching feed
-            linkRSSFeed(Hermidata.title, Hermidata.novelType, Hermidata.GetUrl(), RawFeed);
+            await linkRSSFeed(Hermidata.title, Hermidata.novelType, Hermidata.GetUrl(), RawFeed);
         }
         return true;
     }
