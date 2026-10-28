@@ -3,7 +3,16 @@ import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
 import { ext } from './BrowserCompat';
 
+const CHAPTER_KEYWORDS = ['episode', 'chapter', 'chap', 'ch'] as const;
+const VOLUME_KEYWORDS = ['vol', 'volume'] as const;
+// Only trusted inside URL slugs, where they're delimited by - _ /
+const URL_ONLY_CHAPTER_KEYWORDS = ['ep', 'eps', 'chapitre', 'capitulo', 'cap', 'kapitel', 'bab', 'chuong', 'capitolo'];
 
+const URL_KEYWORDS = new Set<string>([...CHAPTER_KEYWORDS, ...URL_ONLY_CHAPTER_KEYWORDS]);
+const URL_NUMBER = String.raw`\d{1,5}(?:\.\d+)?`; // 1-5 digits, so DB ids like 9817342 are rejected
+const urlAttachedRegex = new RegExp(String.raw`^(?:${[...URL_KEYWORDS].join('|')})(${URL_NUMBER})$`); // "ch12", "chapter154"
+const urlPureNumberRegex = new RegExp(`^${URL_NUMBER}$`);
+const isUrlKeyword = (t?: string) => !!t && URL_KEYWORDS.has(t.replace(/s$/, '')); // "chapters" -> "chapter"
 
 
 
@@ -34,40 +43,81 @@ function convertCjkNumerals(str: string): string {
     });
 }
 
-export function getChapterFromTitle(title: string | undefined, url: string): number {
-    if (!title) return Number.NaN;
+export function getChapterFromUrl(url: string): string {
+    let path: string;
+    try { path = decodeURIComponent(new URL(url).pathname); }
+    catch { path = (url ?? '').split(/[?#]/)[0]; }
+
+    const segs = path
+        .split('/')
+        .filter(Boolean)
+        .map(s => s.replace(/\.(?:html?|php|aspx?)$/i, '').toLowerCase());
+
+    const last = segs.at(-1);
+    if (!last) return '';
+    const tokens = last.split(/[-_\s]+/).filter(Boolean);
+
+    for (let i = 0; i < tokens.length; i++) {
+        // "chapter154", "ch12"
+        const attached = urlAttachedRegex.exec(tokens[i])?.[1];
+        if (attached) return attached;
+
+        // "chapter-154", "ep_7"
+        if (isUrlKeyword(tokens[i]) && urlPureNumberRegex.test(tokens[i + 1] ?? '')) return tokens[i + 1];
+    }
+
+    // "/chapter/154" or "/chapters/154"
+    if (tokens.length === 1 && urlPureNumberRegex.test(tokens[0]) && isUrlKeyword(segs.at(-2))) {
+        return tokens[0];
+    }
+    return '';
+}
+export type ChapterSource = 'titleKeyword' | 'titleSegment' | 'urlKeyword' | 'titleSingleNumber' | 'none';
+export interface ChapterResult { chapter: number; source: ChapterSource }
+
+export function detectChapter(title: string | undefined, url: string): ChapterResult {
+    if (!title) return { chapter: Number.NaN, source: 'none' };
 
     const normalized = convertCjkNumerals(title.normalize('NFKC'));
 
     const numberToken = String.raw`\d+(?:\.\d+)?`;
     const keywordNumberToken = String.raw`\d+(?:\.\d+)?(?:[eE][+-]?\d+)?`;
-    const chapterKeywordPattern = '(?:episode|chapter|chap|ch)';
+    const chapterKeywordPattern = `(?:${CHAPTER_KEYWORDS.join('|')})`;
 
-    // 1. Keyword directly attached to a number (highest confidence), ONLY in Keyword → number order. 
+    // Highest: keyword directly attached to a number in the title
     const keywordAdjacentRegex = new RegExp(
-        String.raw`\b${chapterKeywordPattern}\b\.?\s*(${keywordNumberToken})`,
-        'i'
+        String.raw`\b${chapterKeywordPattern}\b\.?\s*(${keywordNumberToken})`, 'i'
     );
-    const chapterPartV4 = keywordAdjacentRegex.exec(normalized)?.[1] ?? '';
+    const titleKeyword = keywordAdjacentRegex.exec(normalized)?.[1] ?? '';
 
-    // 2. From the URL's last non-empty path segment
-    const parts = (url?.split('/') || []).filter(Boolean);
-    const lastSegment = parts.at(-1) ?? '';
-    const chapterPartV1 = new RegExp(numberToken).exec(lastSegment)?.[0] || '';
-
-    // 3. A title segment that IS just a number once split on separators
-    const titleParts = normalized.split(/[-–—|:]/).map(p => p.trim());
+    // A title segment that IS just a number once split on separators
     const exactNumberRegex = new RegExp(`^${numberToken}$`);
-    const chapterPartV2 = titleParts.find(p => exactNumberRegex.test(p)) || '';
+    const titleSegment = normalized.split(/[-–—|:]/).map(p => p.trim()).find(p => exactNumberRegex.test(p)) ?? '';
 
-    // 4. Bare fallback: only safe with exactly one number-like token in the title
-    const allNumberTokens = normalized.match(new RegExp(numberToken, 'g')) || [];
-    const chapterPartV3 = allNumberTokens.length === 1 ? allNumberTokens[0] : '';
+    // URL, only when a chapter word backs the number up
+    const urlKeyword = getChapterFromUrl(url);
 
-    const candidates = [chapterPartV4, chapterPartV2, chapterPartV3, chapterPartV1]
-        .map(s => Number.parseFloat(s));
+    // Weakest: the only number in the title
+    const allNumberTokens = normalized.match(new RegExp(numberToken, 'g')) ?? [];
+    const titleSingleNumber = allNumberTokens.length === 1 ? allNumberTokens[0] : '';
 
-    return candidates.find(n => !Number.isNaN(n) && n >= 0) ?? Number.NaN;
+    // Ordered from most to least trusted. The old "any digits in the URL" rule is gone.
+    const candidates: [ChapterSource, string][] = [
+        ['titleKeyword', titleKeyword],
+        ['titleSegment', titleSegment],
+        ['urlKeyword', urlKeyword],
+        ['titleSingleNumber', titleSingleNumber],
+    ];
+
+    for (const [source, raw] of candidates) {
+        const n = Number.parseFloat(raw);
+        if (!Number.isNaN(n) && n >= 0) return { chapter: n, source };
+    }
+    return { chapter: Number.NaN, source: 'none' };
+}
+
+export function getChapterFromTitle(title: string | undefined, url: string): number {
+    return detectChapter(title, url).chapter;
 }
 
 export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number | undefined, url: string): number {
@@ -298,7 +348,7 @@ export function getTitleAndChapterFromUrl(url: string): { title: string | null, 
     
     const titleSlug = possibleTitleSlug.includes('chapter') ? parts[1] : possibleTitleSlug;
 
-    const chapter = parts.at(-1)?.includes('chapter') ? Number.parseFloat(parts.at(-1)?.replace('chapter-', '') || '0') : Number.NaN;
+    const chapter = Number.parseFloat(getChapterFromUrl(url)); // '' -> NaN
     
     if (!titleSlug) return { title: null, chapter };
     
@@ -392,7 +442,7 @@ export class TrimTitle {
     }
     private static setRegexConfig(siteName: string): RegexConfig {
         // Keep words lowercase; the /gi flag handles case-insensitive matching.
-        const chapterKeywords = ['episode', 'chapter', 'chap', 'ch', 'vol', 'volume'];
+        const chapterKeywords = [...CHAPTER_KEYWORDS, ...VOLUME_KEYWORDS];
         const chapterKeywordPattern = chapterKeywords.join('|');
 
         const junkKeyWords = ['all page', 'bin', 'page'];
