@@ -398,10 +398,12 @@ export class TrimTitle {
         // or starts with a known keyword. A continuation tends to be long prose.
         const SHORT_THRESHOLD = 30; // chars — tune as needed
         const chapterLike  = /^\s*(?:episode|chapter|chap|ch|vol|volume)[\s.]*\d+/i;
+        const chapterInside = /\b(?:episode|chapter|chap|ch|vol|volume)[\s.]*\d+/i; // anywhere
         const numberOnly   = /^\d+(\.\d+)?[A-Z]?$/i;
 
         // If either side is clearly chapter/volume info, it's a real boundary
         if (chapterLike.test(curr) || chapterLike.test(prev)) return false;
+        if (chapterInside.test(curr)) return false;   // <- new: "Read X Chapter 544" is a boundary
         if (numberOnly.test(curr)  || numberOnly.test(prev))  return false;
 
         // If the second part is very short it's probably a tag/label, not a continuation
