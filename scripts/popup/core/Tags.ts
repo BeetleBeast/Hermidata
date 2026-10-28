@@ -3,6 +3,9 @@ import { type AllHermidata, type Settings } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
 import { levenshteinDistance, PastHermidata } from "./Past";
 
+type Colour = string;
+type TagName = string;
+
 export class TagAutocomplete {
     private AllTags: Map<string, number> = new Map();
 
@@ -55,13 +58,11 @@ export class TagsSystem {
     private input = getElement<HTMLInputElement>('#tags');
     private ghostInput = getElement<HTMLSpanElement>('.autocomplete-ghost');
 
-    public get tags(): string[] { return this._tags; }
+    public get tags(): string[] { return Array.from(this._tags.keys()); }
 
-    private _tags: string[] = [];
+    private _tags: Map<TagName, Colour> = new Map();
 
     private readonly DEFAULT_AUTOCOMPLETE_TAG_COLOR: string = '#3c5ca6';
-    private readonly DEFAULT_CUSTOM_TAG_COLOR: string = '#4191b1';
-    private readonly DEFAULT_MISSING_TAG_COLOR: string = '#5541b1';
 
     private AllTagsWithColors: Record<string, string> = {};
 
@@ -87,7 +88,7 @@ export class TagsSystem {
     }
 
     public CreatePill(tag: string, color?: string): HTMLDivElement {
-        if (color === undefined) color = this.AllTagsWithColors[tag] ?? this.DEFAULT_MISSING_TAG_COLOR;
+        if (color === undefined) color = this.AllTagsWithColors[tag] ?? this.generateRandomColour(Object.values(this.AllTagsWithColors));
         // pill container
         const pill = document.createElement("div");
         pill.classList.add(`tag-pill`);
@@ -117,13 +118,13 @@ export class TagsSystem {
 
         removeButton.addEventListener("click", () => {
             pill.remove();
-            this._tags = this._tags.filter(t => t !== tag);
+            this._tags.delete(tag);
         });
 
         pill.appendChild(pillText);
         pill.appendChild(removeButton);
 
-        this._tags.push(tag);
+        this._tags.set(tag, color);
 
         this.shrinkFontToFit(pill, pillText);
 
@@ -161,7 +162,7 @@ export class TagsSystem {
             const inputValue = input.value.toLowerCase();
             const ghostValue = ghostInput.textContent?.toLowerCase();
             // Disallow suggestion if the input/ghost text already exists as a tag
-            const alreadyExists = this._tags.some(t => t.toLowerCase() === inputValue || t.toLowerCase() === ghostValue );
+            const alreadyExists = this.tags.some(t => t.toLowerCase() === inputValue || t.toLowerCase() === ghostValue );
             if ((e.key === 'Enter' || e.key === 'Tab') && !alreadyExists) {
                 e.preventDefault();
                 this.acceptSuggestion(input, ghostInput);
@@ -261,17 +262,38 @@ export class TagsSystem {
             .join(' ');
     }
     public async saveTags(settings: Settings | null): Promise<void> {
-        if (!this._tags.length) return;
+        if (!this._tags.size) return;
 
         settings = settings ?? await getSettings();
         const allExistingTags = settings.TagManagement.tagColoring ? settings.TagManagement.tagColoring : {};
-        for (const tag of this._tags) {
+        for (const [tag, colour] of this._tags) {
             if (allExistingTags[tag]) continue; // ignore existing tags
 
-            settings.TagManagement.tagColoring[tag] = this.DEFAULT_AUTOCOMPLETE_TAG_COLOR;
+            settings.TagManagement.tagColoring[tag] = colour;
         }
         
         await setSettings(settings);
     }
+    private generateRandomColour(usedColours: string[]): string {
+        let colour = getRandomColor();
 
+        const maxTries = 100;
+        let tries = 0;
+        while (usedColours.includes(colour) && tries < maxTries) {
+            colour = getRandomColor();
+            tries++;
+        }
+
+        if (tries === maxTries) return this.DEFAULT_AUTOCOMPLETE_TAG_COLOR; // fallback to first colour
+        return colour;
+    }
+}
+
+function getRandomColor(): string {
+    const letters = '0123456789ABCDEF';
+    let colour = '#';
+    for (let i = 0; i < 6; i++) {
+        colour += letters[Math.floor(Math.random() * 16)];
+    }
+    return colour;
 }
