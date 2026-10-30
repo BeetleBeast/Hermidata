@@ -487,12 +487,15 @@ export class HermidataModel implements Hermidata {
         const activeBookmarkId = bookmarkInUseId ?? this.chapter.bookmarkInUse;
         const savedBookmark = this.getBookmark(activeBookmarkId);
         const savedHistory = savedBookmark.history ?? [];
-        if (this.rss && savedHistory.length === 0 && Number.isFinite(savedBookmark.current)) {
-            const newSingleHistory = {
-                chapter: savedBookmark.current,
-                at: savedBookmark.updatedAt || this.meta.updated
-            }
-            this.SetHistory([newSingleHistory]);
+
+        const savedLastRead = this.GetLatestReadChapter(activeBookmarkId) || savedBookmark.current;
+        const tabChapter = hermidataCopy.GetChapter(activeBookmarkId);
+        const wouldBeClobbered = this.rss != null || tabChapter > this.chapter.latest || this.chapter.latest < savedBookmark.current;
+
+
+
+        if (savedHistory.length === 0 && wouldBeClobbered && Number.isFinite(savedBookmark.current) && savedLastRead > 0) {
+            this.PushHistory(savedBookmark.current, savedBookmark.updatedAt || this.meta.updated);
         }
 
         if (bookmarkInUseId) {

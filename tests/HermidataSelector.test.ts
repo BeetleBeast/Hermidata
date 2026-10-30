@@ -78,4 +78,84 @@ describe('HermidataModel.SetPast', () => {
         expect(merged.GetLatestReadChapter()).toBe(9);
         expect(merged.GetHistory()).toEqual([]);
     });
+    it('seeds read history from the saved chapter for an old non-RSS record with no history and latest = 0', async () => {
+        const saved = new HermidataModel({ // set true data that has the bug
+            "id": "5722706019",
+            "title": "Salvos (A Monster Evolution LitRPG)",
+            "novelType": "Manga",
+            "source": "mangafire.to",
+            "rss": null,
+            "import": null,
+            "chapter": {
+                "bookmarks": {
+                "1349887458": {
+                    "version": 5,
+                    "id": "1349887458",
+                    "current": 75,
+                    "history": [],
+                    "label": "Primary",
+                    "color": "blue",
+                    "createdAt": "2025-09-14T22:00:00.000Z",
+                    "updatedAt": "2026-05-11T15:30:39.540Z",
+                    "note": "",
+                    "isPrimary": true,
+                    "readStatus": "viewing",
+                    "scrollPosition": 0,
+                    "url": "https://mangafire.to/read/salvos-a-monster-evolution-litrpgg.mvjvv/en/chapter-75"
+                }
+                },
+                "revisitingCount": 0,
+                "latest": 0,
+                "lastChecked": "2025-09-14T22:00:00.000Z",
+                "bookmarkInUse": "1349887458",
+                "releaseSchedule": "Unknown"
+            },
+            "meta": {
+                "tags": [],
+                "notes": "",
+                "altTitles": [
+                "Salvos (A Monster Evolution LitRPG)"
+                ],
+                "altSources": [
+                "mangafire.to"
+                ],
+                "added": "2025-09-14T22:00:00.000Z",
+                "updated": "2025-10-22T16:33:40.348Z",
+                "originalRelease": null,
+                "novelStatus": "Ongoing",
+                "contentRating": "Safe",
+                "contentWarnings": [],
+                "starRating": 5,
+                "image": "../../../assets/icon/icon48.png",
+                "readingQueue": false,
+                "relations": "None"
+            },
+            "version": 11
+            })
+        const merged = await mergeSavedHermidata(saved, 78);
+
+        expect(merged.GetChapter()).toBe(78)
+        expect(merged.GetLatestReadChapter()).toBe(75);
+        expect(merged.GetHistory()).toEqual([
+            { chapter: 75, at: '2026-05-11T15:30:39.540Z' },
+        ]);
+    })
+    it('keeps the saved latest chapter as last-read when the open tab is behind it (non-RSS, no history)', async () => {
+        const saved = createHermidata(5, [], false);
+        saved.chapter.latest = 9;
+
+        const merged = await mergeSavedHermidata(saved, 3);
+
+        expect(merged.GetChapter()).toBe(3);
+        expect(merged.GetLatestReadChapter()).toBe(9);
+    })
+    it('falls back to the saved current chapter as last-read when latest is 0 (non-RSS, no history)', async () => {
+        const saved = createHermidata(75, [], false);
+        saved.chapter.latest = 0;
+
+        const merged = await mergeSavedHermidata(saved, 3);
+
+        expect(merged.GetChapter()).toBe(3);
+        expect(merged.GetLatestReadChapter()).toBe(75);
+    })
 });
