@@ -263,6 +263,11 @@ body {
     border-radius: 5px;
 }
 
+span.loading-bar-label {
+    font-size: small;
+    font-family: monospace;
+}
+
 
 /* temp */
 .loading-bar:hover {
