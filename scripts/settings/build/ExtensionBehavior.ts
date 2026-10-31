@@ -27,7 +27,13 @@ export class ExtensionBehavior extends Build {
     private readonly spreadsheetTarget = getElement<HTMLInputElement>("#SaveToGoogleSpreadsheet");
     private readonly spreadsheetSetup = getElement<HTMLElement>("#spreadsheetSetup");
     private readonly spreadsheetTargetReminder = getElement<HTMLElement>("#spreadsheetTargetReminder");
-    private readonly spreadsheetUrl = getElement<HTMLInputElement>("#spreadsheetUrl");
+
+    private readonly spreadsheetInput = getElement<HTMLInputElement>("#spreadsheetUrl"); // was input
+    private readonly saveBtn = getElement<HTMLButtonElement>("#saveSpreadsheetUrl");
+    private readonly testBtn = getElement<HTMLButtonElement>("#testSpreadsheetUrl");
+    private readonly status = getElement<HTMLParagraphElement>("#statusSheetURL");
+
+    private spreadsheetUrl: string = "";
 
     public async init() {
         const settings = await this.getSettings();
@@ -78,6 +84,14 @@ export class ExtensionBehavior extends Build {
         this.autoUpdateNovelStatusAllValue?.addEventListener("change", (e) => this.AutoUpdateNovelStatus(e, 'allowAll'));
         
         this.saveTarget?.forEach(el => el?.addEventListener("change", (e) => this.SaveTarget(e)));
+
+        this.saveBtn?.addEventListener("click", () => this.SetSpreadsheetUrl());
+
+        this.spreadsheetInput?.addEventListener("change", () => this.giveFeedback());
+
+        this.testBtn?.addEventListener("click", () => this.TestSpreadsheetUrl());
+
+
     }
     public async resetValues() {
         // reset all values from inputs to default
@@ -85,6 +99,73 @@ export class ExtensionBehavior extends Build {
         const updatedSettings: Settings = { ...settings, ExtensionBehaviour: { ...defaultSettings.ExtensionBehaviour } };
         // reset settings in IndexedDB
         await this.setSettings(updatedSettings);
+
+        this.cancelValues();
+    }
+
+    private async cancelValues() {
+        if (this.spreadsheetInput) this.spreadsheetInput.value = "";
+        if (this.status) this.status.textContent = "";
+    }
+
+    private async SetSpreadsheetUrl() {
+        if (!this.spreadsheetInput || !this.status) return;
+        const value = this.spreadsheetInput.value.trim();
+        if (!value) {
+            this.temporaryStatus("Please enter a URL", "#statusSheetURL");
+            return;
+        }
+        await this.setSpreadsheetUrl(value);
+        const reminder = getElement<HTMLElement>("#spreadsheetTargetReminder");
+        if (reminder) reminder.hidden = true;
+        this.temporaryStatus("Saved!", "#statusSheetURL");
+    }
+    private async TestSpreadsheetUrl() {
+        try {
+            if (!this.spreadsheetInput || !this.status) return;
+            this.status.textContent = "Testing...";
+            const value = this.spreadsheetInput.value.trim() || this.spreadsheetUrl;
+            if (!value) {
+                this.temporaryStatus("Please enter a URL", "#statusSheetURL", 1000, "var(--danger)");
+                return;
+            }
+
+            const url = this.constructUrl(value);
+            if (!url) { 
+                this.temporaryStatus("Invalid URL", "#statusSheetURL", 1000, "var(--danger)");
+                throw new Error("Invalid URL");
+            }
+            const response = await fetch(url, { method: "HEAD" });
+            if (response.ok) this.temporaryStatus("connected!", "#statusSheetURL", 1000);
+            else this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "var(--danger)");
+            
+        } catch (error) {
+            this.temporaryStatus("Failed to connect", "#statusSheetURL", 1000, "var(--danger)");
+        }
+    }
+    private constructUrl(url: string): string | null {
+        let newUrl = "";
+        // 1. Check if url has http:// or https://
+        if (!url.startsWith("http://") && !url.startsWith("https://")) newUrl = "https://" + url;
+        else newUrl = url;
+        // 2. Check if url has a dot and a web type
+        if (!newUrl.includes(".")) return null;
+        // 3. Check if url has trailing slash
+        if (!newUrl.endsWith("/")) newUrl += "/";
+        
+        
+        return newUrl;
+    }
+    private giveFeedback() {
+        // give hint of how the link to google sheets needs to look like
+        if (!this.spreadsheetInput || !this.status) return;
+        if (!this.spreadsheetInput.value) this.status.textContent = `Go to your spreadsheet and copy the url of the sheet. It should look like this: https://docs.google.com/spreadsheets/d/< your spreadsheet id >/edit?pli=1&gid=0#gid=0`;
+        else this.status.textContent = "";
+    }
+    private async setSpreadsheetUrl(url: string): Promise<void> {
+        const settings = await this.getSettings();
+        settings.AccountAndConnections.spreadsheetUrl = url;
+        await this.setSettings(settings);
     }
 
     private setValueOptionLightMode(settings: Settings) {
@@ -288,7 +369,7 @@ export class ExtensionBehavior extends Build {
     private updateSpreadsheetSetup(enabled: boolean, url: string) {
         if (this.spreadsheetSetup) this.spreadsheetSetup.hidden = !enabled;
         if (this.spreadsheetTargetReminder) this.spreadsheetTargetReminder.hidden = !enabled || Boolean(url.trim());
-        if (this.spreadsheetUrl && url) this.spreadsheetUrl.value = url;
+        if (this.spreadsheetInput && url) this.spreadsheetInput.value = url;
     }
 
     // Auto Update Novel Status

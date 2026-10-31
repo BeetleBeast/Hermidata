@@ -135,6 +135,36 @@ describe('getChapterFromTitle', () => {
     })
 })
 
+describe('getChapterFromTitle URL chapter detection', () => {
+    it('prefers an explicit chapter in the title over unrelated URL digits', () => {
+        expect(getChapterFromTitle(
+            'Series - Chapter 12',
+            'https://example.com/chapters/9817342',
+        )).toBe(12);
+    });
+
+    it('detects a chapter from a structured chapter URL', () => {
+        expect(getChapterFromTitle(
+            'Series',
+            'https://example.com/series/chapter-154',
+        )).toBe(154);
+    });
+
+    it.fails('does not interpret the leading digits of an opaque chapter ID as the chapter', () => {
+        expect(getChapterFromTitle(
+            'Series',
+            'https://weebcentral.com/chapters/01KHYAF03QVF3MSD15Z2861F8Q',
+        )).toBeNaN();
+    });
+
+    it.fails('does not interpret incidental numbers in an opaque URL segment as the chapter', () => {
+        expect(getChapterFromTitle(
+            'Series',
+            'https://example.com/series/reader-154-page-3',
+        )).toBeNaN();
+    });
+});
+
 describe('getTitleAndChapterFromUrl', () => {
     it.each([
         ['https://mangafire.to/read/sss-class-suicide-hunterr.krq9/en/chapter-154',{ title: 'Sss Class Suicide Hunter', chapter: 154 }],

@@ -5,8 +5,9 @@ import { ext } from "../shared/utils/BrowserCompat";
 import { findByTitleOrAlt, getChapterFromTitle, getChapterFromTitleReturn, returnHashedFeedId, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidata } from "../shared/db/Storage";
-import { getAllHermidataWithRss } from "../shared/db/db";
+import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
+import { ConsoleMessage } from "../shared/utils/ErrorMessage";
 
 /*
 
@@ -18,6 +19,44 @@ import { HermidataModel } from "../shared/utils/HermidataSelector";
 
 
 */
+
+/** - cull raw feeds when it hits the threshold */
+export async function cullRawFeeds(AllHermidata: Record<string, Hermidata>, thresholdAboveAllHermidata: number = 10) {
+    const amountOfHermidata = Object.keys(AllHermidata).length;
+    const threshold = amountOfHermidata + thresholdAboveAllHermidata;
+
+    const rawFeeds: Record<string, RawFeed> = await getAllRawFeeds();
+    const rawFeedsValues = Object.values(rawFeeds);
+
+    // No need to cull
+    if (rawFeedsValues.length < threshold) return;
+
+    // unique domains that are still in use by any Hermidata entry
+    const domainsInUse = new Set<string>();
+    for (const novel of Object.values(AllHermidata)) {
+        const sources = novel.meta.altSources ?? [novel.source];
+        for (const source of sources) domainsInUse.add(source);
+    }
+
+    // collect the url's of feeds whose domain no Hermidata uses
+    const feedIdsToRemove: string[] = [];
+    for (const rawFeed of rawFeedsValues) {
+        if (domainsInUse.has(rawFeed.domain)) continue;
+        feedIdsToRemove.push(rawFeed.url);
+    }
+    // No need to cull
+    if (feedIdsToRemove.length === 0) return;
+
+    // log the culling
+    new ConsoleMessage(`[RSS] Culling ${feedIdsToRemove.length} raw feeds...`, undefined, {
+        consoleLevel: 'log',
+        severity: 'info',
+        color: 'var(--gradient, #175cd3)'
+    }).sendMessage();
+
+    // remove the raw feeds
+    await removeRawFeeds(feedIdsToRemove);
+}
 
 async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
     const rawFeeds: Record<string, RawFeed> = await getAllRawFeeds();

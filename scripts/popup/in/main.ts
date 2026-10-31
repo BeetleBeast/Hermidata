@@ -7,7 +7,7 @@ import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
 import { getPagePosition, updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
-import { getSettings } from '../../shared/db/Storage';
+import { getAllHermidata, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
@@ -58,7 +58,7 @@ class HermidataController {
 
     private past: PastHermidata;
 
-    public RSS: RSS;
+    public RSS: RSS | null = null;
 
     private bookmarkSystem: BookmarkController;
 
@@ -78,8 +78,6 @@ class HermidataController {
 
         this.forceSetClassic();
 
-        // initialize RSS mode
-        this.RSS = new RSS(this.hermidata);
         // initialize bookmark system
         this.bookmarkSystem = new BookmarkController(this.hermidata, this.pastHermidata === null);
         this.bookmarkSystem.init();
@@ -95,6 +93,9 @@ class HermidataController {
         this.bindEvents();
         // initialize tags system
         await this.tagsSystem.init(settings);
+
+        // initialize RSS mode
+        this.RSS = new RSS(this.hermidata, await getAllHermidata());
 
         // log a table of all potential duplicates
         // set it up in the background

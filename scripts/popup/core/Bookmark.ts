@@ -5,7 +5,7 @@ import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { customConfirm } from "../frontend/confirm";
-import { ConsoleMessage, ErrorMessage, logConsoleError} from "../../shared/utils/ErrorMessage";
+import { ConsoleMessage, ErrorMessage, logConsoleError, WarningMessage} from "../../shared/utils/ErrorMessage";
 
 export class BookmarkController {
 
@@ -487,6 +487,9 @@ export class BookmarkController {
             return;
         }
 
+        // if a label has already the same name, give warning message
+        if (Object.values(this.hermidata.chapter.bookmarks).some(b => b.label === labelValue)) return new WarningMessage('Bookmark with same name already exists').sendMessage();
+
         const hash = returnBookmarkHash(labelValue);
 
         this.hermidata.chapter.bookmarks[hash] = {
@@ -518,6 +521,9 @@ export class BookmarkController {
     private async saveBookmarkLabel(key: string, label: string): Promise<void> {
         if (!this.hermidata.chapter.bookmarks[key]) return new ErrorMessage('Bookmark not found').sendMessage();
         if (label === this.hermidata.chapter.bookmarks[key].label) return;
+
+        // if a label has already the same name, give warning message
+        if (Object.values(this.hermidata.chapter.bookmarks).some(b => b.label === label)) return new WarningMessage('Bookmark with same name already exists').sendMessage();
 
         this.hermidata.chapter.bookmarks[key].label = label;
         this.hermidata.chapter.bookmarks[key].updatedAt = new Date().toISOString();

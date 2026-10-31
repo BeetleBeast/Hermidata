@@ -484,6 +484,20 @@ export class HermidataModel implements Hermidata {
         this.Replace(pastHermidata);
 
         // add changes with the past as a template
+        const activeBookmarkId = bookmarkInUseId ?? this.chapter.bookmarkInUse;
+        const savedBookmark = this.getBookmark(activeBookmarkId);
+        const savedHistory = savedBookmark.history ?? [];
+
+        const savedLastRead = this.GetLatestReadChapter(activeBookmarkId) || savedBookmark.current;
+        const tabChapter = hermidataCopy.GetChapter(activeBookmarkId);
+        const wouldBeClobbered = this.rss != null || tabChapter > this.chapter.latest || this.chapter.latest < savedBookmark.current;
+
+
+
+        if (savedHistory.length === 0 && wouldBeClobbered && Number.isFinite(savedBookmark.current) && savedLastRead > 0) {
+            this.PushHistory(savedBookmark.current, savedBookmark.updatedAt || this.meta.updated);
+        }
+
         if (bookmarkInUseId) {
             this.SetUrl(hermidataCopy.GetUrl(bookmarkInUseId), bookmarkInUseId);
             this.SetChapter(hermidataCopy.GetChapter(bookmarkInUseId), bookmarkInUseId);
