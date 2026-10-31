@@ -1,6 +1,6 @@
 import { ErrorMessage, logConsoleError } from "../shared/utils/ErrorMessage";
 import { PastHermidata } from "../popup/core/Past";
-import type { RSSData, RssDOM } from "../shared/types/index";
+import type { Hermidata, RSSData, RssDOM } from "../shared/types/index";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
@@ -28,8 +28,8 @@ export class RSS {
 
     private readonly BuildRSS: BuildRSSController;
 
-    constructor(hermidata: HermidataModel) {
-        this.BuildRSS = new BuildRSSController(hermidata);
+    constructor(hermidata: HermidataModel, allHermidata: Record<string, Hermidata>) {
+        this.BuildRSS = new BuildRSSController(hermidata, allHermidata);
     }
 
     public openClassic(e: PointerEvent) {
@@ -43,6 +43,15 @@ export class RSS {
 
     public async openRSS(e: PointerEvent) {
         try {
+
+            const reportBackgroundError = (error: unknown) => {
+                new ErrorMessage("Could not finish the RSS subscribe setup.", undefined, {
+                    consoleLevel: 'error',
+                    details: [error]
+                }).sendMessage();
+            };
+
+
             this.changePageToRSS(e);
             const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
             const notification = getElement<HTMLDivElement>("#RSS-Notification");
@@ -52,40 +61,42 @@ export class RSS {
 
             this.showLoadingAnimation();
 
-            // If preloaded, use it instantly
-            const dom = await (rssPreloadPromise ?? this.preloadRSS());
-
             notification.innerHTML = "";
             allSec.innerHTML = "";
             
-            await this.BuildRSS.makeSubscribeBtn();
-            this.changeLoadingBar(10);
+            const subscribeBtn = this.BuildRSS.makeSubscribeBtn().catch(reportBackgroundError); // makeSubscribeBtn is async and can take a while
+            this.changeLoadingBar(5, 'assigning subscribe button');
             
+            this.changeLoadingBar(10, 'assigning feed header');
             await this.BuildRSS.makeFeedHeader(notification);
-            this.changeLoadingBar(15);
             
+            this.changeLoadingBar(50, 'inserting RSS items');
+            // If preloaded, use it instantly
+            const dom = await (rssPreloadPromise ?? this.preloadRSS());
             this.insertRSSPage(dom, {notificationSec: notification, allSec: allSec});
-            this.changeLoadingBar(50);
             
+            this.changeLoadingBar(20, 'making sort section');
             await this.BuildRSS.makeSortSection(sortSection);
-            this.changeLoadingBar(70);
 
+            this.changeLoadingBar(5, 'attaching event listeners');
             await this.BuildRSS.attachEventListeners()
-            this.changeLoadingBar(80);
 
+            this.changeLoadingBar(5, 'adding footer');
             await this.BuildRSS.makeFooterSection();
-            this.changeLoadingBar(90);
 
-            await this.BuildRSS.activateAutoSubscribe();
-            this.changeLoadingBar(95);
+            this.changeLoadingBar(4, 'adding flutters'); // autoSubscribe is optional so it should't always be shown to the user
+            const autoSubscribe = this.BuildRSS.activateAutoSubscribe().catch(reportBackgroundError); // autoSubscribe is async and can take a while
 
-            this.changeLoadingBar(100);
+            this.changeLoadingBar(1, 'finished');
             setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
+
+
         } catch (error) {
             new ErrorMessage("Could not open the RSS view.", undefined, {
                 consoleLevel: 'error',
                 details: [error]
             }).sendMessage();
+            this.hideLoadingAnimation();
         }
     }
     public changePageToClassic() {
@@ -204,8 +215,6 @@ export class RSS {
 
         });
         setElement('.material-symbols-outlinedContainer', el => el.style.display = 'flex');
-
-        this.setLoadingBar();
     }
     private hideLoadingAnimation() {
         setElement(".HDClassic", el => {
@@ -223,12 +232,16 @@ export class RSS {
         });
         setElement('.material-symbols-outlinedContainer', el => el.style.display = 'none');
     }
-    private setLoadingBar() {
-        this.changeLoadingBar(5);
-    }
-    private changeLoadingBar(percent: number) {
-        if (percent < 0 || percent > 100) return;
+    private percent: number = 0;
+
+    private changeLoadingBar(adding: number, label?: string) {
+        //if (this.percent > 100) return;
+
+        this.percent += adding;
+        const percent = this.percent > 100 ? 100 : this.percent;
+
         setElement('.loading-bar', el => el.style.width = `${percent}%`);
+        if (label) setElement('.loading-bar-label', el => el.innerHTML = label);
     }
 
 }

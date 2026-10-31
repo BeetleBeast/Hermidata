@@ -5,6 +5,8 @@ import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/db/sync'
 import { migrationSteps } from '../shared/migration'
+import { getAllHermidata } from '../shared/db/Storage'
+import { scheduleCull } from './culling'
 
 /*
 ./background/
@@ -26,14 +28,18 @@ import { migrationSteps } from '../shared/migration'
     migrationSettings()    ← migrate from old settings to new version
 */
 
+let syncInProgress: boolean = false;
+
 (async () => {
     await migrationSteps();
-
+    
     initRssCache();
     initTabs();
     initMessaging();
     initContextMenus();
     initFeeds();
+    const allHermidataCashed = await getAllHermidata();
+    scheduleCull(() => allHermidataCashed, () => syncInProgress);
     initInstalled();
     initSync();
 })();
