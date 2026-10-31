@@ -9,6 +9,7 @@ import { customConfirm } from "../../popup/frontend/confirm";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 
 type match = {
     Hermidata: Hermidata,
@@ -16,6 +17,9 @@ type match = {
 }
 type AtLeastPointNine = number & { readonly __brand: 'AtLeastPointNine' };
 export class Subscribe extends RssBuild {
+
+
+    private autoSubscriberHasFoundFeed: boolean = false;
 
     private matchedFeed: RawFeed | null = null;
 
@@ -44,9 +48,21 @@ export class Subscribe extends RssBuild {
             return;
         }
 
+        // if auto subscriber has found a feed, disable button and return
+        if (this.autoSubscriberHasFoundFeed) {
+            subscribeBtn.className = "Btn";
+            subscribeBtn.textContent = "Already Subscribed to RSS Feed";
+            subscribeBtn.disabled = true;
+            subscribeBtn.title = "Already subscribed to RSS feed";
+            subscribeBtn.ariaLabel = "Already subscribed to RSS feed";
+            return;
+        }
+
         const currentTitle = getElement<HTMLInputElement>("#title_HDRss")?.value || this.hermidata.title;
 
         this.matchedFeed = await this.findMatchingFeed( feedListGlobal,  allHermidata,  currentTitle );
+
+        if (this.autoSubscriberHasFoundFeed) return; // re-check after every async call
 
         if (this.matchedFeed) {
             console.log('found matching feed:', this.matchedFeed);
@@ -69,12 +85,21 @@ export class Subscribe extends RssBuild {
     private async onSubscribeClick( notificationSection: HTMLElement, allItemSection: HTMLElement ): Promise<void> {
         if (!this.matchedFeed) return;
 
-        const currentType = getElement<HTMLInputElement>('#Type_HDRss')?.value as AnyNovelType || this.hermidata.novelType;
-        const currentTitle = getElement<HTMLInputElement>('#title_HDRss')?.value || this.hermidata.title;
+        try {
+            const currentType = getElement<HTMLInputElement>('#Type_HDRss')?.value as AnyNovelType || this.hermidata.novelType;
+            const currentTitle = getElement<HTMLInputElement>('#title_HDRss')?.value || this.hermidata.title;
 
-        await linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed);
-        await this.reloadContent(notificationSection, allItemSection);
-        console.log('Linked RSS to extension');
+            await linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed);
+            await this.reloadContent(notificationSection, allItemSection);
+            console.log('Linked RSS to extension');
+
+        } catch (e) {
+            console.error(e);
+            new ErrorMessage("Failed to link RSS to extension", undefined, { 
+                notifyUser: false,
+                consoleLevel: 'error'
+            }).sendMessage();
+        }
     }
     /**
      * - take all raw feeds and all hermidata with no rss link and find matching feed 
@@ -107,6 +132,9 @@ export class Subscribe extends RssBuild {
         // 3. find matching feed
         const matchingFeeds = await this.findMatchingFeeds(allRawFeeds, allHermidataWithNoRSSRecord, allowSimilarityScanning, autoSubscribeThreshold);
         if (!matchingFeeds || matchingFeeds.length === 0) return false;
+
+
+        this.autoSubscriberHasFoundFeed = true;
         
         for (const { RawFeed, Hermidata: value } of matchingFeeds) {
             const Hermidata = new HermidataModel(value);

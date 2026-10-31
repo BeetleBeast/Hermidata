@@ -1,6 +1,6 @@
 import { ErrorMessage, logConsoleError } from "../shared/utils/ErrorMessage";
 import { PastHermidata } from "../popup/core/Past";
-import type { RSSData, RssDOM } from "../shared/types/index";
+import type { Hermidata, RSSData, RssDOM } from "../shared/types/index";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
@@ -28,8 +28,8 @@ export class RSS {
 
     private readonly BuildRSS: BuildRSSController;
 
-    constructor(hermidata: HermidataModel) {
-        this.BuildRSS = new BuildRSSController(hermidata);
+    constructor(hermidata: HermidataModel, allHermidata: Record<string, Hermidata>) {
+        this.BuildRSS = new BuildRSSController(hermidata, allHermidata);
     }
 
     public openClassic(e: PointerEvent) {
@@ -58,7 +58,7 @@ export class RSS {
             notification.innerHTML = "";
             allSec.innerHTML = "";
             
-            await this.BuildRSS.makeSubscribeBtn();
+            const subscribeBtn = this.BuildRSS.makeSubscribeBtn(); // makeSubscribeBtn is async and can take a while
             this.changeLoadingBar(10);
             
             await this.BuildRSS.makeFeedHeader(notification);
@@ -76,16 +76,25 @@ export class RSS {
             await this.BuildRSS.makeFooterSection();
             this.changeLoadingBar(90);
 
-            await this.BuildRSS.activateAutoSubscribe();
+            const autoSubscribe = this.BuildRSS.activateAutoSubscribe(); // autoSubscribe is async and can take a while
             this.changeLoadingBar(95);
 
             this.changeLoadingBar(100);
             setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
+
+            // Wait for autoSubscribe to finish and makes it not take resources from the main thread
+            setTimeout(async () => {
+                await subscribeBtn;
+                await autoSubscribe;
+            }, 0);
+
+
         } catch (error) {
             new ErrorMessage("Could not open the RSS view.", undefined, {
                 consoleLevel: 'error',
                 details: [error]
             }).sendMessage();
+            this.hideLoadingAnimation();
         }
     }
     public changePageToClassic() {

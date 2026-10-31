@@ -45,7 +45,7 @@ export abstract class RssBuild {
         const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
         if (!sortSection) throw new Error('sort section not found');
 
-        const BuildRSS = new BuildRSSController(this.hermidata);
+        const BuildRSS = new BuildRSSController(this.hermidata, this.AllHermidata);
 
         await BuildRSS.makeSortSection(sortSection);
 

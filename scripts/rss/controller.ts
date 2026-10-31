@@ -1,7 +1,4 @@
 import type { Hermidata } from "../shared/types/index";
-
-import { RssBuild } from "./build";
-
 import { Subscribe } from "./build/Subscribe";
 import { FeedItem } from "./build/feed";
 import { Footer } from "./build/footer";
@@ -15,20 +12,39 @@ import type { HermidataModel } from "../shared/utils/HermidataSelector";
 export class BuildRSSController {
     private readonly hermidata: HermidataModel;
 
-    constructor(hermidata: HermidataModel) {
+    private allHermidata: Record<string, Hermidata>;
+
+
+    private subscriber: Subscribe;
+    private SortOption: SortOption;
+    private sortLogic: SortLogic;
+    private feedItem: FeedItem;
+    private eventListener: EventListener;
+    private footer: Footer;
+
+    constructor(hermidata: HermidataModel, allHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;
+        this.allHermidata = allHermidata;
+
+        this.subscriber = new Subscribe(this.hermidata, this.allHermidata);
+        this.SortOption = new SortOption(this.hermidata, this.allHermidata);
+        this.sortLogic = new SortLogic(this.hermidata, this.allHermidata);
+        this.feedItem = new FeedItem(this.allHermidata);
+        this.eventListener = new EventListener(this.hermidata, this.allHermidata);
+        this.footer = new Footer(this.hermidata, this.allHermidata);
     }
+
     public async makeSubscribeBtn(): Promise<void> {
-        new Subscribe(this.hermidata,  await RssBuild.init()).makeSubscribeBtn();
+        return this.subscriber.makeSubscribeBtn();
     }
-    public async activateAutoSubscribe(): Promise<void> {
-        new Subscribe(this.hermidata,  await RssBuild.init()).autoSubscribe();
+    public async activateAutoSubscribe(): Promise<boolean> {
+        return this.subscriber.autoSubscribe();
     }
 
     public async makeSortSection(sortSection: HTMLElement): Promise<void> {
         
         // makeSortHeader(sortSection);
-        await new SortOption(this.hermidata,  await RssBuild.init()).makeSortOptions(sortSection);
+        await this.SortOption.makeSortOptions(sortSection);
 
         // needs to be after sort options and before notification are hidden
         updatePolygons();
@@ -47,27 +63,27 @@ export class BuildRSSController {
             if (Header) Header.textContent = 'No saved items';
         }
 
-        await new SortLogic(this.hermidata,  await RssBuild.init()).sortOptionLogic(sortSection);
+        await this.sortLogic.sortOptionLogic(sortSection);
     }
 
     public async makeFeedHeader(parent_section: HTMLElement): Promise<void> {
-        new FeedItem( await RssBuild.init()).makeFeedHeader(parent_section);
+        this.feedItem.makeFeedHeader(parent_section);
     }
     
     public async makeItemHeader(): Promise<Node> {
-        return new FeedItem( await RssBuild.init()).makeItemHeader();
+        return this.feedItem.makeItemHeader();
     }
     
     public async makeFeedItem(HermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
-        return new FeedItem( await RssBuild.init()).makeFeedItem(HermidataList, isRSSItem, sortByLastUpdated);
+        return this.feedItem.makeFeedItem(HermidataList, isRSSItem, sortByLastUpdated);
     }
     
     public async makeFooterSection(): Promise<void> {
-        new Footer(this.hermidata,  await RssBuild.init()).makeFooterSection();
+        this.footer.makeFooterSection();
     }
 
     public async attachEventListeners(): Promise<void> {
-        new EventListener(this.hermidata,  await RssBuild.init()).attachEventListeners();
+        this.eventListener.attachEventListeners();
     }
     private trimTagOverflowBatch(items: HTMLElement[]): void {
         interface Update {
