@@ -43,6 +43,15 @@ export class RSS {
 
     public async openRSS(e: PointerEvent) {
         try {
+
+            const reportBackgroundError = (error: unknown) => {
+                new ErrorMessage("Could not finish the RSS subscribe setup.", undefined, {
+                    consoleLevel: 'error',
+                    details: [error]
+                }).sendMessage();
+            };
+
+
             this.changePageToRSS(e);
             const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
             const notification = getElement<HTMLDivElement>("#RSS-Notification");
@@ -58,7 +67,7 @@ export class RSS {
             notification.innerHTML = "";
             allSec.innerHTML = "";
             
-            const subscribeBtn = this.BuildRSS.makeSubscribeBtn(); // makeSubscribeBtn is async and can take a while
+            const subscribeBtn = this.BuildRSS.makeSubscribeBtn().catch(reportBackgroundError); // makeSubscribeBtn is async and can take a while
             this.changeLoadingBar(10);
             
             await this.BuildRSS.makeFeedHeader(notification);
@@ -76,17 +85,11 @@ export class RSS {
             await this.BuildRSS.makeFooterSection();
             this.changeLoadingBar(90);
 
-            const autoSubscribe = this.BuildRSS.activateAutoSubscribe(); // autoSubscribe is async and can take a while
+            const autoSubscribe = this.BuildRSS.activateAutoSubscribe().catch(reportBackgroundError); // autoSubscribe is async and can take a while
             this.changeLoadingBar(95);
 
             this.changeLoadingBar(100);
             setTimeout(() => this.hideLoadingAnimation(), 100); // slight delay so that any async calls have a chance to finish
-
-            // Wait for autoSubscribe to finish and makes it not take resources from the main thread
-            setTimeout(async () => {
-                await subscribeBtn;
-                await autoSubscribe;
-            }, 0);
 
 
         } catch (error) {

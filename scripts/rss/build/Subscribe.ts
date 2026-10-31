@@ -85,6 +85,9 @@ export class Subscribe extends RssBuild {
     private async onSubscribeClick( notificationSection: HTMLElement, allItemSection: HTMLElement ): Promise<void> {
         if (!this.matchedFeed) return;
 
+        const subscribeBtn = getElement<HTMLButtonElement>("#subscribeBtn");
+        if (subscribeBtn) subscribeBtn.disabled = true; // prevent double clicks
+
         try {
             const currentType = getElement<HTMLInputElement>('#Type_HDRss')?.value as AnyNovelType || this.hermidata.novelType;
             const currentTitle = getElement<HTMLInputElement>('#title_HDRss')?.value || this.hermidata.title;
@@ -94,11 +97,12 @@ export class Subscribe extends RssBuild {
             console.log('Linked RSS to extension');
 
         } catch (e) {
-            console.error(e);
-            new ErrorMessage("Failed to link RSS to extension", undefined, { 
-                notifyUser: false,
-                consoleLevel: 'error'
+            new ErrorMessage("Failed to link RSS to extension. Please try again.", undefined, { 
+                notifyUser: true,
+                consoleLevel: 'error',
+                details: [e]
             }).sendMessage();
+            if (subscribeBtn) subscribeBtn.disabled = false; // restore so the user can retry
         }
     }
     /**
@@ -197,7 +201,10 @@ export class Subscribe extends RssBuild {
             if (Object.keys(RSSIdsNotAllowed).includes(matchedEntry?.id ?? '')) continue;
 
             // add to matches
-            if (matchedEntry) matches.push({ RawFeed, Hermidata: matchedEntry });
+            if (matchedEntry) {
+                matches.push({ RawFeed, Hermidata: matchedEntry });
+                continue; // exact match has priority, so skip the fuzzy scan for this feed
+            }
             // if title is too short, skip similarity scanning as the similarity score will result in false positives
             if (rawFeedTitleTrimmed.length < 6 && allowSimilarityScanning) continue;
             // if similarity scanning is enabled and threshold is at least 90%

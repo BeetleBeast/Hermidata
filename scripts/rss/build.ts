@@ -25,37 +25,41 @@ export abstract class RssBuild {
     protected async reloadContent(NotificationSection: HTMLElement,AllItemSection: HTMLElement) {
 
         this.showLoadingAnimation();
+        try {
 
-        this.removeAllChildNodes(NotificationSection) // clear front-end
-        this.removeAllChildNodes(AllItemSection) // clear front-end
+            this.removeAllChildNodes(NotificationSection) // clear front-end
+            this.removeAllChildNodes(AllItemSection) // clear front-end
 
-        new FeedItem(this.AllHermidata).makeFeedHeader(NotificationSection);
+            new FeedItem(this.AllHermidata).makeFeedHeader(NotificationSection);
 
-        await chrome.runtime.sendMessage({ type: 'INVALIDATE_RSS' });
+            await chrome.runtime.sendMessage({ type: 'INVALIDATE_RSS' });
 
-        const [feeds, hermidata] = await Promise.all([
-            getHermidataWithRssFromBackground(),
-            PastHermidata.getAllHermidata()
-        ]);
-    
-        NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(feeds, false));
-        AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());
-        AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(hermidata, true));
+            const [feeds, hermidata] = await Promise.all([
+                getHermidataWithRssFromBackground(),
+                PastHermidata.getAllHermidata()
+            ]);
+        
+            NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(feeds, false));
+            AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());
+            AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(hermidata, true));
 
-        const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
-        if (!sortSection) throw new Error('sort section not found');
+            const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
+            if (!sortSection) throw new Error('sort section not found');
 
-        const BuildRSS = new BuildRSSController(this.hermidata, this.AllHermidata);
+            const BuildRSS = new BuildRSSController(this.hermidata, this.AllHermidata);
 
-        await BuildRSS.makeSortSection(sortSection);
+            await BuildRSS.makeSortSection(sortSection);
 
-        await BuildRSS.attachEventListeners()
+            await BuildRSS.attachEventListeners()
 
-        await BuildRSS.makeFooterSection();
+            await BuildRSS.makeFooterSection();
 
-        await BuildRSS.activateAutoSubscribe();
+            await BuildRSS.activateAutoSubscribe();
 
-        this.hideLoadingAnimation();
+
+        } finally {
+            this.hideLoadingAnimation();
+        }
     }
     private showLoadingAnimation() {
             setElement(".HDClassic", el => {
