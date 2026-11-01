@@ -412,8 +412,14 @@ export class TrimTitle {
         // Both sides are long prose → continuation dash
         return true;
     }
-    private static splitTitleByCommonSeparators(title: string): string[] {
+    private static splitTitleByCommonSeparators(title: string, regexUsed: RegexConfig): string[] {
         const cleanString = TrimTitle.CleanString(title);
+
+        // chapterRegex is global, so use replace() (which resets lastIndex) instead of test()
+        const stripChapter = (s: string) => s.replace(regexUsed.chapterRegex, '').trim();
+        const isBareChapter = (s: string) => stripChapter(s) === '' && s.trim() !== '';
+        const hasChapter = (s: string) => stripChapter(s) !== s.trim();
+
 
         // Split only on strong separators first (em-dash, pipe, colon, hash, comma)
         // Leave plain ' - ' for a second pass with smarter logic
@@ -438,7 +444,17 @@ export class TrimTitle {
                     merged.push(curr);
                 }
             }
-            result.push(...merged);
+            
+            // "MookHyang - Dark Lady - Chapter 293": a trailing bare chapter marker after
+            // 2+ plain segments means those segments together are the title.
+            const last = merged[merged.length - 1];
+            const lead = merged.slice(0, -1);
+            const isAboveMergeLength = merged.length >= 3;
+            const hasNoChapterInLead = !lead.some(p => hasChapter(p) || urlPureNumberRegex.test(p));
+
+            if ( isAboveMergeLength && isBareChapter(last) && hasNoChapterInLead ) result.push(lead.join(' - '), last);
+            else result.push(...merged);
+
         }
         return result;
     }
@@ -661,7 +677,7 @@ export class TrimTitle {
         const regexUsed: RegexConfig = TrimTitle.setRegexConfig(siteName);
 
         // spilt title
-        const parts = TrimTitle.splitTitleByCommonSeparators(title);
+        const parts = TrimTitle.splitTitleByCommonSeparators(title, regexUsed);
         
         // Remove junk and site name
         const filtered = TrimTitle.removeJunkAndSiteName(parts, regexUsed);

@@ -42,6 +42,7 @@ describe('trimTitle', () => {
         ["the generic title Chapter 3 English online <site>", "the generic title"],
         ["Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
         ["the generic title Chapter 3 English online", "the generic title"],
+        ["MookHyang - Dark Lady - Chapter 293", "MookHyang - Dark Lady"],
     ])('TrimTitle.trimTitle(%s) → %s', (input, expected) => {
         expect(TrimTitle.trimTitle(input, '').title).toBe(expected)
     })
