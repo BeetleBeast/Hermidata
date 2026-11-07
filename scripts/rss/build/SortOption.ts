@@ -127,7 +127,7 @@ export class SortOption extends Sort {
 
         const innerList = document.createElement('div');
         innerList.className = 'rss-filter-list';
-        innerList.dataset.filterItems = JSON.stringify(filterItems);
+        (innerList as HTMLDivElement & { filterItems: string[] }).filterItems = filterItems;
         popover.appendChild(innerList);
         section.append(header, button, popover);
         return section;

@@ -23,6 +23,11 @@ export class SortLogic extends Sort {
                     }
                 }, 0);
             });
+
+            const optionCount = (popover.querySelector<HTMLDivElement>(".rss-filter-list") as (HTMLDivElement & { filterItems?: string[] }) | null)?.filterItems?.length;
+            if (optionCount !== undefined && optionCount <= 36) {
+                this.populateFilterPopover(popover, filters);
+            }
         }
 
         parent_section.addEventListener("click", event => {
@@ -61,12 +66,14 @@ export class SortLogic extends Sort {
         const title = section?.querySelector(".filter-header-text")?.textContent?.trim();
         if (!list || !title) return;
 
-        const items: string[] = JSON.parse(list.dataset.filterItems || "[]");
+        const items = (list as HTMLDivElement & { filterItems?: string[] }).filterItems;
+        if (!items) throw new Error("RSS filter options were not attached to the list");
         const appendItems = () => {
             const start = Number(list.dataset.nextItemIndex || "0");
-            const end = Math.min(start + 80, items.length);
+            const end = Math.min(start + 36, items.length);
             const fragment = document.createDocumentFragment();
-            for (const value of items.slice(start, end)) {
+            for (let index = start; index < end; index++) {
+                const value = items[index];
                 const item = document.createElement("div");
                 item.className = "filter-item-list";
 
