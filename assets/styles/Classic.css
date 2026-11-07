@@ -767,7 +767,7 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 .bookmarkMenu-item:hover {
-	background-color: var(--surface-raised);
+	background-color: var(--accent-hover-dark);
 }
 .markerPopover .addNewBookmarkBtn:hover,
 .markerPopover .bookmarkMenuBtn:hover {
@@ -853,6 +853,7 @@ hr {
 	background-color: transparent;
 	color: var(--text);
 	border: none;
+	transition: transform 0.15s ease, border-color 0.15s ease;
 }
 .bookmarkLastUpdated {
 	color: var(--text-disabled);
@@ -880,6 +881,34 @@ hr {
 	color: var(--text-muted);
 	font-size: 12px;
 }
+.bookmarkMenuManager-item .bookmarkLabel:hover,
+#bookmarkNotesInput:hover,
+#bookmarkChapterInput:hover,
+#bookmarkLabelInput:hover {
+	transform: translateY(-1px);
+	border-color: var(--accent-soft);
+}
+
+.bookmarkMenuManager-item .bookmarkLabel:hover {
+	border: 1px solid var(--accent-soft);
+}
+
+
+.bookmarkMenuManager-item-icon-container:hover {
+	border: 1px var(--border-subtle) solid;
+	border-radius: 5px;
+	background-color: var(--surface-disabled-soft);
+	transform: translateY(-1px);
+}
+
+.bookmarkMenuManager-item-icon-container {
+	grid-area: svg;
+	width: 35px;
+	height: 31px;
+	transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+
 #bookmarkLabelInput {
 	width: 100%;
 	height: 34px;
@@ -890,6 +919,7 @@ hr {
 	border: 1px solid var(--border);
 	border-radius: 4px;
 	color: var(--text);
+	transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 #bookmarkChapterContainer {
@@ -933,6 +963,7 @@ label {
 	background-color: var(--surface-raised);
 	color: var(--text);
 	padding: 6px 8px;
+	transition: transform 0.15s ease, border-color 0.15s ease;
 }
 .buttonContainer {
 	display: flex;
@@ -1030,6 +1061,7 @@ label {
 	background-color: var(--surface-raised);
 	color: var(--text);
 	padding: 6px 8px;
+	transition: transform 0.15s ease, border-color 0.15s ease;
 }
 #bookmarkColorInput-label {
 	height: auto;
