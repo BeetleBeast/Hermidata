@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { PastHermidata } from '../scripts/popup/core/Past';
+import { returnHashedTitle } from '../scripts/shared/utils/StringOutput';
 
 function createHermidata(chapter: number, history: { chapter: number; at: string }[] = [], withRss = true): HermidataModel {
     const hermidata = HermidataModel.from('Manga', 'Viewing', 'Ongoing');
@@ -166,6 +167,20 @@ describe('HermidataModel.SetPast', () => {
 
         expect(merged.GetChapter()).toBe(78);
         expect(merged.GetLatestReadChapter()).toBe(70);
+    });
+});
+
+describe('HermidataModel.Update ID', () => {
+    it('updates the entry ID and type together when given the new key', () => {
+        const saved = createHermidata(5);
+        const changed = createHermidata(12);
+        changed.novelType = 'Anime';
+        const newId = returnHashedTitle(saved.title, changed.novelType);
+        saved.Update(newId, changed, 12);
+
+        expect(saved.novelType).toBe('Anime');
+        expect(saved.id).toBe(newId);
+        expect(saved.id).toBe(returnHashedTitle(saved.title, saved.novelType));
     });
 });
 
