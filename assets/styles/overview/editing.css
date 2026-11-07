@@ -1,0 +1,374 @@
+/* new wrapper takes over the old row-layout responsibilities */
+.hermidata-marker-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    position: relative; /* so .hermidata-marker-color's absolute positioning still anchors here */
+    border: 1px solid;
+    border-radius: 10px;
+    border-color: var(--accent-dark);
+    cursor: pointer;
+}
+
+.hermidata-marker-row:hover {
+	text-emphasis-color: var(--surface-input);
+	accent-color: var(--text);
+	outline: 1px solid var(--accent-dark);
+	transform: scale(1.005);
+	transition: transform 0.2s ease-in-out;
+}
+
+.hermidata-marker-notes {
+	display: grid;
+	grid-template-rows: 0fr;
+	transition: grid-template-rows 0.2s ease-in-out, align-items 0.2s ease-in-out;
+    width: 98%;
+    align-self: end;
+}
+
+.hermidata-marker-notes-inner {
+    overflow: hidden;
+    min-height: 0;
+    padding-left: 10px;
+}
+
+.hermidata-marker-container:hover > .hermidata-marker-notes {
+	grid-template-rows: 1fr;
+	background-color: var(--surface-input);
+	border-radius: 5px;
+    align-items: center;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.hermidata-alternative-title-button-arrow {
+    transition: transform 0.2s ease-in-out;
+    color: var(--text); /* or whatever fits */
+
+    display: flex;
+	align-content: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+}
+
+.hermidata-alternative-title-button-arrow[data-closed="true"] {
+    transform: rotate(-90deg);
+}
+
+.hermidata-alternative-title-button-arrow[data-closed="false"] {
+    transform: rotate(90deg);
+}
+
+/* tags in edit mode */
+
+.hermidata-tag-pill {
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:13px;
+    cursor:pointer;
+}
+.hermidata-tag-pill[data-is-selected="false"] {
+    border:0.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+}
+
+.hermidata-tag-pill[data-is-selected="true"] {
+    border:0.5px solid var(--accent-dark);
+    background: var(--accent-dark);
+    color: var(--bg);
+}
+
+.selected-tag-container[data-editing="true"] {
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 6px; 
+    min-height: 28px; 
+    padding: 8px; 
+    border: 0.5px solid var(--border); 
+    margin-bottom: 10px;
+}
+
+.filterInput[data-editing="false"] {
+    display: none;
+}
+
+.tag-pill-removeX {
+	border: medium;
+	background: none;
+	cursor: pointer;
+	color: var(--text);
+	padding: 0px;
+	line-height: 1;
+	font-size: 14px;
+
+    display: block;
+	margin-bottom: 8px;
+	cursor: pointer;
+	transition: transform 0.15s ease;
+	transition: color 0.15s ease;
+	padding: 0;
+	width: fit-content;
+	height: fit-content;
+	border-radius: 5px;
+}
+.tag-pill-removeX:hover {
+    background-color: var(--accent-dark);
+    transform: scale(1.2);
+	color: var(--danger);
+}
+
+.filterInput[data-editing="true"] {
+    border:0.5px solid var(--border);
+    background: var(--surface-raised);
+    outline:none; width:100%;
+    font-size:13px;
+    height:32px;
+    padding: 0 10px;
+    border-radius: var(--radius);
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.filter-allTags-container[data-editing="false"] {
+    display: none;
+}
+
+.filter-allTags-container[data-editing="true"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+
+/* marker editing */
+
+
+.hermidata-marker > [data-editing="true"] {
+    background-color: var(--surface-input);
+    height: 40px;
+}
+
+.hermidata-marker-chapter[data-editing="true"] {
+	height: 30px;
+	padding: 0;
+	margin: 0;
+	background-color: transparent;
+	border: none;
+	outline: none;
+    -webkit-appearance: textfield;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.hermidata-marker-label[data-editing="true"] {
+	padding: 0;
+	margin: 0;
+	background-color: transparent;
+	border: none;
+}
+
+.hermidata-marker-row[data-editing="true"] {
+    cursor: default;
+}
+
+.hermidata-marker-color[data-editing="true"] {
+    cursor: pointer;
+}
+
+.hermidata-marker-color[data-editing="true"],
+.hermidata-marker[data-editing="true"] {
+    height: 45px;
+}
+
+.hermidata-marker-readStatus[data-editing="true"] {
+	height: 35px;
+    width: auto;
+}
+
+.hermidata-marker-notes[data-editing="true"] {
+    grid-template-rows: 1fr;
+    background-color: var(--surface-input);
+    border-radius: 5px;
+    align-items: center;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.hermidata-marker-notes-inner[data-editing="true"] {
+	display: initial;
+	width: auto;
+	height: auto;
+	background-color: transparent;
+	border: none;
+	padding: 0;
+	padding-left: 20px;
+	font-size: initial;
+}
+
+
+
+
+/* image changer */
+
+.image-changer-popover {
+    border: 1px solid var(--accent-dark);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--surface-raised);
+    width: 280px;
+}
+
+#imageChanger-dialog[popover] {
+    position-area: center;
+}
+
+/* popovers are display:none by default until [popover] shown; this is just inner layout */
+.image-changer-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--accent-dark);
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: var(--surface-input);
+}
+
+.image-changer-panel {
+    display: flex;
+    gap: 6px;
+}
+
+#imageChanger-url {
+    flex: 1;
+}
+
+[hidden] {
+    display: none;
+}
+
+button#hermidata-img {
+	width: -webkit-fill-available;
+	height: -webkit-fill-available;
+}
+
+
+/* delete section */
+
+
+/* delete dialog */
+
+[popover] {
+    position-area: initial;
+    
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
+    border-radius: 0;
+}
+
+:popover-open {
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
+    border-radius: 0;
+    position: relative;
+    inset: 0;
+    
+}
+
+
+.delete-dialog {
+    /* hidden state */
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+    transition: 
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+#delete-label {
+    align-items: center;
+    justify-content: center;
+    width: 80%;
+    color: var(--text);
+    text-align: center;
+    word-wrap: unset;
+    gap: 10px;
+    font-size: large;
+    font-weight: 600;
+}
+#delete-info-btn[data-editing="true"] {
+    opacity: 1;
+}
+#delete-info-btn[data-editing="false"] {
+    opacity: 0;
+}
+
+#delete-info-btn {
+    display: flex;
+    background: var(--danger);
+    color: var(--text-dark);
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease-in-out;
+}
+#delete-info-btn:hover {
+    background: var(--danger-hover);
+}
+#delete-info-btn:active {
+    background: var(--danger-active);
+}
+
+#customPrompt-button-delete {
+    background-color: var(--bg);
+    color: var(--text);
+}
+#customPrompt-button-cancel {
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+
+
+.delete-dialog:popover-open {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	justify-content: center;
+	align-items: center;
+    padding: 10px;
+    padding-left: 10px;
+    
+    width: 20%;
+    height: 10%;
+
+    border-radius: 5px;
+    box-shadow: var(--overlay) 0px 18px 40px -12px, var(--shadow) 0px 2px 6px;
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+/* starting point for the "open" transition (before it animates in) */
+@starting-style {
+    .delete-dialog:popover-open {
+        opacity: 0;
+        transform: scale(0.95) translateY(-8px);
+    }
+}

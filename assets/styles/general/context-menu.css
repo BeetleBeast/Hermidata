@@ -1,0 +1,48 @@
+/* --- custom context-menu --- */
+
+.custom-context-menu {
+    position: absolute;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 4px 0;
+    box-shadow: 0 2px 8px var(--shadow-soft);
+    z-index: 10000;
+    min-width: 180px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-self: center;
+    width: fit-content;
+    flex-flow: column;
+    border: 1px solid var(--border);
+}
+.context-menu-item-container {
+    width: 100%;
+}
+.menu-item {
+    padding: 8px 12px;
+    padding-left: 25px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.menu-item[data-danger= "true"]:hover {
+    color: var(--danger);
+    background-color: var(--danger);
+
+}
+
+.menu-item:hover {
+    background: var(--surface-raised);
+}
+
+.menu-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+    width: 100%;
+}
+
+

@@ -1,0 +1,23 @@
+/* --- buttons --- */
+
+.Btn {
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--surface-input);
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.Btn:hover {
+    background-color: var(--accent-hover-dark);
+}
+.Btn:active:not(:disabled) {
+    background-color: var(--accent-active-dark);
+    transition: none;
+}
+
+.active {
+    background-color: var(--accent-active-dark);
+}
+

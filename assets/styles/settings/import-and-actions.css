@@ -1,0 +1,46 @@
+
+.massImportFromBookmarkFolder-item {
+	border: 1px solid;
+	border-radius: 15px;
+	display: table-row;
+}
+
+.tableCell-MIfBF {
+	padding: 10px;
+}
+
+.massImportFromBookmarkFolder-label {
+	grid-area: title;
+	text-align: center;
+}
+
+.massImportFromBookmarkFolder-link {
+	grid-area: url;
+}
+.massImportFromBookmarkFolder-NovelTypeChanger {
+	grid-area: select;
+}
+.massImportFromBookmarkFolder-removeBtn {
+	grid-area: btn;
+}
+
+#bookmarkFolder {
+	width: -moz-available;
+}
+
+
+/* success btns */
+#newNovelTypeBtn:hover,
+#newNovelStatusBtn:hover,
+#newReadStatusBtn:hover,
+#saveDefaultInputTextMenu:hover,
+#saveDefaultInput:hover {
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
+}
+
+
+#addTagBtn:hover {
+	background: var(--accent-hover-dark);
+    border-color: var(--accent-hover-soft);
+}

@@ -1,4 +1,9 @@
 
+.rss-subscribe-confirmation-image {
+    width: 45px;
+    height: auto;
+}
+
 .hermidata-item {
     border: 1px solid var(--surface-input);
     background-color: var(--bg);
