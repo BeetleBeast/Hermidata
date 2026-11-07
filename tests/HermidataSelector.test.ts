@@ -158,4 +158,13 @@ describe('HermidataModel.SetPast', () => {
         expect(merged.GetChapter()).toBe(3);
         expect(merged.GetLatestReadChapter()).toBe(75);
     })
+    it('ignores a placeholder chapter 0 history entry and keeps the saved current chapter as last-read (RSS)', async () => {
+        const saved = createHermidata(70, [{ chapter: 0, at: '2026-01-27T17:08:46.848Z' }]);
+        saved.chapter.latest = 78;
+
+        const merged = await mergeSavedHermidata(saved, 78);
+
+        expect(merged.GetChapter()).toBe(78);
+        expect(merged.GetLatestReadChapter()).toBe(70);
+    });
 });

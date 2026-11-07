@@ -115,7 +115,8 @@ export class HermidataModel implements Hermidata {
         return '../../../assets/icon/icon48.png';
     }
     GetLatestReadChapter(bookmarkInUseId?: string): number {
-        const latestHistory = this.GetHistory(bookmarkInUseId)?.at(-1);
+        // ignore placeholder entries (e.g. the chapter 0 seeded at bookmark creation)
+        const latestHistory = this.GetHistory(bookmarkInUseId).filter(history => history.chapter > 0)?.at(-1);
 
         const latestChapter = this.chapter.latest;
         const allowedTakeLatestChapter = this.rss == null;
@@ -492,9 +493,9 @@ export class HermidataModel implements Hermidata {
         const tabChapter = hermidataCopy.GetChapter(activeBookmarkId);
         const wouldBeClobbered = this.rss != null || tabChapter > this.chapter.latest || this.chapter.latest < savedBookmark.current;
 
+        const hasNoReadHistory = !savedHistory.some(entry => Number.isFinite(entry.chapter) && entry.chapter > 0);
 
-
-        if (savedHistory.length === 0 && wouldBeClobbered && Number.isFinite(savedBookmark.current) && savedLastRead > 0) {
+        if (hasNoReadHistory && wouldBeClobbered && Number.isFinite(savedBookmark.current) && savedLastRead > 0) {
             this.PushHistory(savedBookmark.current, savedBookmark.updatedAt || this.meta.updated);
         }
 

@@ -42,10 +42,78 @@ describe('trimTitle', () => {
         ["the generic title Chapter 3 English online <site>", "the generic title"],
         ["Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
         ["the generic title Chapter 3 English online", "the generic title"],
+        ["MookHyang - Dark Lady - Chapter 293", "MookHyang - Dark Lady"],
     ])('TrimTitle.trimTitle(%s) → %s', (input, expected) => {
         expect(TrimTitle.trimTitle(input, '').title).toBe(expected)
     })
 })
+
+const trim = (input: string, url = '') => TrimTitle.trimTitle(input, url);
+
+describe('trimTitle: title words colliding with keyword/junk lists', () => {
+    it.each([
+        // trailingJunkRegex runs on each part before chapter removal, so a title ending in "Online" loses it
+        ["Sword Art Online - Chapter 5", "Sword Art Online"],
+        // cleanTitleKeywordStart strips a leading "comic"/"manga"/"novel"/"anime"
+        ["Comic Girls Chapter 5", "Comic Girls"],
+        // junkRegex drops the whole part if it contains the word "page" or "bin"
+        ["The Page Turner Chapter 3 | Asura Scans", "The Page Turner"],
+        // chapterRemoveRegexV3 spans from the FIRST keyword match to the LAST
+        ["The Last Chapter of My Life Chapter 4", "The Last Chapter of My Life"],
+        // group 1 (leading number) swallows a number that belongs to the title
+        ["Mob Psycho 100 Chapter 5", "Mob Psycho 100"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
+
+describe('trimTitle: titles that start with a number', () => {
+    it.each([
+        // the "remove leading numbers if followed by text" replace in makeTitle
+        ["7 Seeds Chapter 12", "7 Seeds"],
+        ["12 Monkeys - Chapter 3", "12 Monkeys"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
+
+describe('trimTitle: regressions from the rejoin rule I gave you', () => {
+    it('keeps title when a site name sits in the middle', () => {
+        // rejoined to "Solo Leveling - MangaDex", then siteNameRegex drops the whole part
+        expect(trim("Solo Leveling - MangaDex - Chapter 5", "https://mangadex.org/chapter/abc").title)
+.toBe("Solo Leveling");
+    });
+    it.each([
+        ["Solo Leveling - Read Online - Chapter 5", "Solo Leveling"],
+        ["Berserk - Berserk - Chapter 3", "Berserk"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
+
+describe('trimTitle: note output (currently untested)', () => {
+    it('captures a chapter subtitle', () => {
+        expect(trim("Berserk Chapter 83.5 - Lost Children")).toEqual({ title: "Berserk", note: "Chapter Title: Lost Children" });
+    });
+    it('does not lose a subtitle after a chapter part', () => {
+        expect(trim("Solo Leveling - Chapter 5 - The Hunter").note).toBe("Chapter Title: The Hunter");
+    });
+    it('does not put the site name in the note when the domain has a subdomain', () => {
+        // extractDomainFromUrl takes the first label, so siteName = "m", not "mangakakalot"
+        expect(trim("Solo Leveling Chapter 5 - MangaKakalot", "https://m.mangakakalot.com/chapter/1").note).toBe("");
+    });
+});
+
+describe('trimTitle: other gaps', () => {
+    it.each([
+        ["   ", ""],
+        ["Solo Leveling Chapter5", "Solo Leveling"],
+        ["Solo Leveling Chapitre 5", "Solo Leveling"],
+        ["進撃の巨人 第5話", "進撃の巨人"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
 
 describe('trimtitle notes', () => {
     it.each([
@@ -156,15 +224,15 @@ describe('getTitleAndChapterFromUrl', () => {
         const isATitle = /^(?![A-Z0-9]+$).+/;;
 
         it.each([
-            ['Sss Class Suicide Hunter', true],
-            ['Nano Machine', true],
-            ['Solo Leveling 2', true],
-            ['01KHYAF03QVF3MSD15Z2861F8Q', false],
-            ['ABC123XYZ', false],
-            ['HELLOWORLD', false],
-            ['HelloWorld', true],
+['Sss Class Suicide Hunter', true],
+['Nano Machine', true],
+['Solo Leveling 2', true],
+['01KHYAF03QVF3MSD15Z2861F8Q', false],
+['ABC123XYZ', false],
+['HELLOWORLD', false],
+['HelloWorld', true],
         ])('"%s" → %s', (input, expected) => {
-            expect(isATitle.test(input)).toBe(expected);
+expect(isATitle.test(input)).toBe(expected);
         });
     });
 });
