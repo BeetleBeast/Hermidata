@@ -1,8 +1,11 @@
 import type { Filters, NormalSortsType } from "../../shared/types/index";
-import { getLastFilter, setLastFilter, setLastSortOption } from "../../shared/db/Storage";
+import { getLastFilter, setLastFilter } from "../../shared/db/Storage";
 import { Sort } from "./Sort";
 
+type RSSFilterOptionList = HTMLDivElement & { filterItems?: string[] };
+
 export class SortLogic extends Sort {
+    private readonly entryFilterValues = new WeakMap<HTMLDivElement, Record<string, string[]>>();
 
     public async sortOptionLogic(parent_section: HTMLElement): Promise<void> {
         // state object for filters
@@ -13,55 +16,136 @@ export class SortLogic extends Sort {
             sort: ''
         };
     
-        // find all custom checkboxes
-        const checkboxes = parent_section.querySelectorAll<HTMLInputElement>(".custom-checkbox");
-    
-        for (const cb of checkboxes) {
-            cb.removeEventListener("click", () => this.eventOnClick(cb, filters));
-            cb.addEventListener("click", () => this.eventOnClick(cb, filters));
-        };
-        const makeActiveState = (cb: HTMLInputElement) => {
-            const label = cb.nextElementSibling?.textContent?.trim();
-            const section = cb.closest(".filter-section")?.firstChild?.textContent?.trim();
-            let state = 0;
-    
-            if (!label || !section) return state;
-    
-            const includeSelection = filters?.include?.[section] || [];
-            const excludeSelection = filters?.exclude?.[section] || [];
-            if ( includeSelection.length === 0 && excludeSelection.length === 0 && filters?.sort === undefined) return state;
-            
-            if ( includeSelection.includes(label) ) state = 1;
-            else if ( excludeSelection.includes(label) ) state = 2;
-            else if ( filters?.sort === label ) state = 1;
-            return state;
+        // Keep setup steps separate: large menus render after opening; small menus are ready immediately.
+        this.attachPopoverListeners(parent_section, filters);
+        this.populateSmallFilterPopovers(parent_section, filters);
+        this.attachFilterOptionListener(parent_section, filters);
+
+        // Restore the compact button labels independently of when each menu's options are rendered.
+        for (const section of parent_section.querySelectorAll<HTMLElement>(".filter-section")) {
+            this.updateFilterButton(section, filters);
         }
-        // apply filters from local storage Visually
-        for (const cb of checkboxes) {
-            cb.dataset.state = String(makeActiveState(cb));
-        };
-        const hasAnyFilters = (filters: Filters) => {
-            return (
-                Object.values(filters.include || {}).some(v => v.length > 0) ||
-                Object.values(filters.exclude || {}).some(v => v.length > 0) ||
-                !!filters.sort
-            );
-        }
-    
-        // apply filters from local storage Logically
-        setTimeout(() => {
-            if (hasAnyFilters(filters)) {
-                this.applyFilterToEntries(filters);
-                if (filters.sort) {
-                    this.applySortToEntries(filters.sort);
-                    this.applySortToNotification()
-                }
-            }
-        }, 300);
-    
+
+        this.applySavedFilters(filters);
     }
 
-    private eventOnClick(cb: HTMLInputElement, filters: Filters) {
+    private attachPopoverListeners(parentSection: HTMLElement, filters: Filters): void {
+        const popovers = parentSection.querySelectorAll<HTMLElement>(".rss-filter-dialog");
+        for (const popover of popovers) {
+            popover.addEventListener("toggle", event => this.handlePopoverToggle(popover, event, filters));
+        }
+    }
+
+    private populateSmallFilterPopovers(parentSection: HTMLElement, filters: Filters): void {
+        const popovers = parentSection.querySelectorAll<HTMLElement>(".rss-filter-dialog");
+        for (const popover of popovers) {
+            const list = popover.querySelector<RSSFilterOptionList>(".rss-filter-list");
+            if (list?.filterItems && list.filterItems.length <= 36) {
+                this.populateFilterPopover(popover, filters);
+            }
+        }
+    }
+
+    private attachFilterOptionListener(parentSection: HTMLElement, filters: Filters): void {
+        // A single delegated listener also handles options appended later while scrolling.
+        parentSection.addEventListener("click", event => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const item = target.closest<HTMLElement>(".filter-item-list");
+            const checkbox = item?.querySelector<HTMLDivElement>(".custom-checkbox");
+            if (checkbox) this.eventOnClick(checkbox, filters);
+        });
+    }
+
+    private handlePopoverToggle(popover: HTMLElement, event: Event, filters: Filters): void {
+        if ((event as ToggleEvent).newState !== "open" || popover.dataset.populated) return;
+
+        // Yield one task so Chrome can paint the native popover before a large menu is built.
+        window.setTimeout(() => {
+            if (popover.matches(":popover-open") && !popover.dataset.populated) {
+                this.populateFilterPopover(popover, filters);
+            }
+        }, 0);
+    }
+
+    private applySavedFilters(filters: Filters): void {
+        const hasFilters = Object.values(filters.include || {}).some(values => values.length > 0)
+            || Object.values(filters.exclude || {}).some(values => values.length > 0)
+            || Boolean(filters.sort);
+        if (!hasFilters) return;
+
+        this.applyFilterToEntries(filters);
+        if (!filters.sort) return;
+
+        this.applySortToEntries(filters.sort);
+        this.applySortToNotification();
+    }
+
+    private populateFilterPopover(popover: HTMLElement, filters: Filters): void {
+        const list = popover.querySelector<HTMLDivElement>(".rss-filter-list");
+        const section = popover.closest<HTMLElement>(".filter-section");
+        const title = section?.querySelector(".filter-header-text")?.textContent?.trim();
+        if (!list || !title) return;
+
+        const items = (list as RSSFilterOptionList).filterItems;
+        if (!items) throw new Error("RSS filter options were not attached to the list");
+        this.appendFilterOptions(list, items, title, filters);
+        list.addEventListener("scroll", () => this.handleFilterListScroll(list, items, title, filters));
+        popover.dataset.populated = "true";
+    }
+
+    private appendFilterOptions(list: HTMLDivElement, items: string[], title: string, filters: Filters): void {
+        const start = Number(list.dataset.nextItemIndex || "0");
+        const end = Math.min(start + 36, items.length);
+        const fragment = document.createDocumentFragment();
+        const checkboxes: HTMLDivElement[] = [];
+
+        for (let index = start; index < end; index++) {
+            const item = document.createElement("div");
+            item.className = "filter-item-list";
+
+            const checkbox = document.createElement("div");
+            checkbox.className = "filter-item-checkbox custom-checkbox";
+            checkbox.dataset.state = "0";
+            checkboxes.push(checkbox);
+
+            const label = document.createElement("span");
+            label.className = "filter-item-label";
+            label.textContent = items[index];
+
+            item.append(checkbox, label);
+            fragment.appendChild(item);
+        }
+
+        // Append the batch in one DOM write, then restore saved include/exclude states.
+        list.appendChild(fragment);
+        for (let index = 0; index < checkboxes.length; index++) {
+            checkboxes[index].dataset.state = this.getFilterState(title, items[start + index], filters);
+        }
+        list.dataset.nextItemIndex = String(end);
+    }
+
+    private handleFilterListScroll(list: HTMLDivElement, items: string[], title: string, filters: Filters): void {
+        const nextIndex = Number(list.dataset.nextItemIndex || "0");
+        const nearBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 120;
+        // Add another small batch only when the user approaches the end of the current list.
+        if (nextIndex < items.length && nearBottom) {
+            this.appendFilterOptions(list, items, title, filters);
+        }
+    }
+
+    private getFilterState(section: string, label: string, filters: Filters): string {
+        if (section === "Sort") {
+            if (filters.sort === label) return "1";
+            if (filters.sort === `Reverse-${label}`) return "2";
+            return "0";
+        }
+        if (filters.include[section]?.includes(label)) return "1";
+        if (filters.exclude[section]?.includes(label)) return "2";
+        return "0";
+    }
+
+    private eventOnClick(cb: HTMLDivElement, filters: Filters) {
         let state = Number.parseInt(cb.dataset.state || "0");
 
         // cycle 0→1→2→0
@@ -77,7 +161,7 @@ export class SortLogic extends Sort {
         if (section === "Sort") {
             // Reset all sort checkboxes first
             filters.sort = ''
-            const sortCheckboxes = cb.closest(".filter-section")?.querySelectorAll<HTMLInputElement>(".custom-checkbox");
+            const sortCheckboxes = cb.closest(".filter-section")?.querySelectorAll<HTMLDivElement>(".custom-checkbox");
             if (!sortCheckboxes) return
             for (const otherCb of sortCheckboxes) otherCb.dataset.state = "0";
 
@@ -91,11 +175,13 @@ export class SortLogic extends Sort {
             }
 
             // apply and persist
+            setLastFilter(filters);
             if (filters.sort) {
-                setLastSortOption(filters.sort);
                 this.applySortToEntries(filters.sort);
                 this.applySortToNotification();
             }
+            const filterSection = cb.closest<HTMLElement>(".filter-section");
+            if (filterSection) this.updateFilterButton(filterSection, filters);
             return;
         }
 
@@ -110,78 +196,68 @@ export class SortLogic extends Sort {
         // apply new state
         if (state === 1) filters.include[section].push(label);
         else if (state === 2) filters.exclude[section].push(label);
+        const filterSection = cb.closest<HTMLElement>(".filter-section");
+        if (filterSection) this.updateFilterButton(filterSection, filters);
         // trigger filtering logic here
         this.applyFilterToEntries(filters);
         setLastFilter(filters);
     };
 
+    private updateFilterButton(section: HTMLElement, filters: Filters): void {
+        const title = section.querySelector(".filter-header-text")?.textContent?.trim();
+        const button = section.querySelector<HTMLButtonElement>(".filter-button");
+        if (!title || !button) return;
+
+        if (title === "Sort") {
+            button.textContent = filters.sort || "Alphabet";
+            return;
+        }
+
+        const selected = new Set([
+            ...(filters.include[title] || []),
+            ...(filters.exclude[title] || [])
+        ]);
+        const optionCount = button.dataset.optionCount;
+        button.textContent = selected.size
+            ? `${selected.size} of ${optionCount}`
+            : `Any · ${optionCount}`;
+    }
+
     private applyFilterToEntries(filters: Filters) {
         const entries = document.querySelectorAll<HTMLDivElement>(`.hermidata-item[data-is-notification-item="false"]`);
+        const include = Object.entries(filters.include)
+            .filter(([, values]) => values.length > 0)
+            .map(([section, values]) => [section, new Set(values)] as const);
+        const exclude = Object.entries(filters.exclude)
+            .filter(([, values]) => values.length > 0)
+            .map(([section, values]) => [section, new Set(values)] as const);
 
         for (const entry of entries) {
-            this.applyIndividualFilterToEntries(entry, filters);
+            const values = this.getEntryFilterValues(entry);
+            const included = include.every(([section, selected]) => values[section]?.some(value => selected.has(value)) ?? false);
+            const excluded = exclude.some(([section, selected]) => values[section]?.some(value => selected.has(value)));
+            const visible = included && !excluded;
+            entry.style.display = visible ? "" : "none";
+            entry.dataset.searchable = visible ? "true" : "false";
         }
     }
 
-    private applyIndividualFilterToEntries(entry: HTMLDivElement, filters: Filters): void {
+    private getEntryFilterValues(entry: HTMLDivElement): Record<string, string[]> {
+        const cached = this.entryFilterValues.get(entry);
+        if (cached) return cached;
+
+        // Entry metadata is stable for the lifetime of these RSS card nodes.
         const hashItem = this.GetHashItem(entry);
         const entryData = this.AllHermidata[hashItem];
-        const Type = entryData.novelType;
-        const ReadStatus = entryData.chapter.bookmarks[entryData.chapter.bookmarkInUse].readStatus;
-        const NovelStatus = entryData.meta?.novelStatus
-        const Source = entryData.source;
-        const Tag = entryData.meta.tags || "";
-        const DateFilter = this.getYearBucket(entryData.meta.added);
-
-        const inputs = [Type, ReadStatus, Source, NovelStatus, Tag, DateFilter];
-
-
-        let visible = true;
-
-        // Check all include filters — must match at least one in each group
-        visible = this.matchingFilter(filters, inputs, 'include');
-
-        // Check exclude filters — hide if matches any
-        if (visible) {
-            visible = this.matchingFilter(filters, inputs, 'exclude');
-        }
-
-        entry.style.display = visible ? "" : "none";
-        entry.dataset.searchable= visible ? 'true' : 'false';
-    };
-
-    private matchingFilter(filters: Filters, inputs: (string | string[])[], filterType: 'include' | 'exclude'): boolean {
-        const isInclude = filterType === 'include';
-        const loopEntries = isInclude ? filters.include : filters.exclude;
-
-        let visible = true;
-
-        for (const [, values] of Object.entries(loopEntries)) {
-            if (values.length === 0) continue;
-
-                    
-            const val = this.setState(values, inputs) ?? 'none'; // error here
-            
-            const match = Array.isArray(val)
-                ? val.some(v => values.includes(v))
-                : values.includes(val);
-
-            if ((!match && isInclude) ||( match && !isInclude)) {
-                visible = false;
-                break;
-            }
-        }
-        return visible
-    }
-    private setState(values: string[], input: (string | string[])[] ): string | void {
-        for (const value of values) { // value is the filter value
-            for (const type of input) {
-                if (value === type) {
-                    return type
-                } else if (Array.isArray(type) && type.includes(value)) {
-                    return type[type.indexOf(value)];
-                }
-            }
-        }
+        const values: Record<string, string[]> = {
+            Type: [entryData.novelType],
+            "Read-Status": [entryData.chapter.bookmarks[entryData.chapter.bookmarkInUse].readStatus],
+            "Novel-Status": [entryData.meta?.novelStatus].filter((value): value is string => Boolean(value)),
+            Source: Array.from(new Set([entryData.source, ...(entryData.meta.altSources || [])].filter(Boolean))),
+            Tag: entryData.meta.tags || [],
+            Date: [this.getYearBucket(entryData.meta.added)]
+        };
+        this.entryFilterValues.set(entry, values);
+        return values;
     }
 }
