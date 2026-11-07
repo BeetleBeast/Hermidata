@@ -14,6 +14,8 @@ import { pushToSync, removeFromSync } from "../shared/db/sync"
 
 let rssCache: Record<string, Hermidata> | null = null
 let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
+type SaveNovelResponse = true | { success: false; errors: string[] }
+const pendingNovelSaves = new Map<string, Promise<SaveNovelResponse>>()
 
 export function initRssCache() {
     rssCachePromise = getHermidataWithRss().then(result => {
@@ -38,7 +40,33 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
     return true
 }
 
-export async function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): Promise<true> {
+export function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): true {
+    const pendingSave = pendingNovelSaves.get(data.id);
+    if (pendingSave) {
+        pendingSave.then(sendResponse, error => {
+            logConsoleError('[Background] Save failed:', error);
+            sendResponse({ success: false, errors: [error instanceof Error ? error.message : String(error)] });
+        });
+        return true;
+    }
+
+    const savePromise = saveNovel(data, args);
+    pendingNovelSaves.set(data.id, savePromise);
+    savePromise.then(
+        result => {
+            if (pendingNovelSaves.get(data.id) === savePromise) pendingNovelSaves.delete(data.id);
+            sendResponse(result);
+        },
+        error => {
+            if (pendingNovelSaves.get(data.id) === savePromise) pendingNovelSaves.delete(data.id);
+            logConsoleError('[Background] Save failed:', error);
+            sendResponse({ success: false, errors: [error instanceof Error ? error.message : String(error)] });
+        }
+    );
+    return true;
+}
+
+async function saveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }): Promise<SaveNovelResponse> {
     const hermidata = new HermidataModel(data);
     const errors: string[] = [];
     
@@ -53,22 +81,20 @@ export async function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet:
     }
     if (args.allowedSendBookmark) {
         try {
-            writeToBookmarks(hermidata);
+            await writeToBookmarks(hermidata);
         } catch (err) {
             logConsoleError('[Background] Bookmark write failed:', err);
             errors.push(`Bookmark save failed: ${err instanceof Error ? err.message : String(err)}`);
         }
     }
     try {
-        updateCurrentBookmarkAndIcon(hermidata.getBookmark().color, hermidata.GetUrl());
+        await updateCurrentBookmarkAndIcon(hermidata.getBookmark().color, hermidata.GetUrl());
     } catch (err) {
         logConsoleError('[Background] Icon update failed:', err);
     }
 
     console.log('[Background] SAVE_NOVEL complete', errors.length ? { errors } : '');
-    sendResponse(errors.length === 0 ? true : { success: false, errors });
-
-    return true
+    return errors.length === 0 ? true : { success: false, errors };
 }
 
 export function handleReloadRss(): true {

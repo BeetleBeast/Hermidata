@@ -423,6 +423,30 @@ input[type=number]::-webkit-inner-spin-button {
     margin-top: 10px;
 }
 
+#save[data-saving="true"] {
+    cursor: wait;
+}
+
+#save .save-spinner {
+    display: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: save-spinner-rotation 0.7s linear infinite;
+}
+
+#save[data-saving="true"] .save-spinner {
+    display: inline-block;
+}
+
+@keyframes save-spinner-rotation {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 #isNewHermidata {
     margin: 0;
     text-wrap: nowrap;
@@ -500,6 +524,5 @@ input[type=number]::-webkit-inner-spin-button {
 	font-family: inherit;
 	line-height: inherit;
 }
-
 
 

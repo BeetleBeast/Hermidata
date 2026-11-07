@@ -66,6 +66,8 @@ class HermidataController {
 
     private duplicate: HermidataMigration = new HermidataMigration();
 
+    private isSaving = false;
+
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
     public pageTitle: string | undefined;
@@ -250,36 +252,61 @@ class HermidataController {
         } else console.log('[Main Popup] no past hermidata')
     }
 
-    private async saveSheet(): Promise<void> { 
+    private async saveSheet(): Promise<void> {
+        if (this.isSaving) return;
+        this.isSaving = true;
+        this.setSaveInProgress(true);
+        let closeAfterSave = false;
 
-        // update this.hermidata with latest values
-        this.updateHermidata();
+        try {
+            // update this.hermidata with latest values
+            this.updateHermidata();
 
 
-        // if new novel type, then merge the old to new
-        const hasMergedNovelType = await this.updateNovelType();
-        if (!hasMergedNovelType) return; // if merge failed/ declined then exit saving
+            // if new novel type, then merge the old to new
+            const hasMergedNovelType = await this.updateNovelType();
+            if (!hasMergedNovelType) return;
 
-        // TODO: check if it works
-        // migrate if duplicate
-        const hasMigrated = await this.migrateIfDuplicate();
-        if (hasMigrated) console.info('migration plan activated');
-        
-        const settings = await getSettings();
-        const allowedSendSHeet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
-        const allowedSendBookmark = settings.ExtensionBehaviour.SaveTarget.BrowserBookmark;
-        // update settings ( add new tags if new added in UI )
-        await this.updateSettings(settings);
+            // migrate if duplicate
+            const hasMigrated = await this.migrateIfDuplicate();
+            if (hasMigrated) console.info('migration plan activated');
 
-        // get page position
-        await this.setScrollPosition();
+            const settings = await getSettings();
+            const allowedSendSHeet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
+            const allowedSendBookmark = settings.ExtensionBehaviour.SaveTarget.BrowserBookmark;
+            
+            // update settings ( add new tags if new added in UI )
+            await this.updateSettings(settings);
+            await this.setScrollPosition();
 
-        // save to Browser in JSON format
-        const savedInStorage = await updateChapterProgress(this.hermidata);
-        // save to google sheet
-        const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet});
+            const savedInStorage = await updateChapterProgress(this.hermidata);
+            const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet});
 
-        if (!this.Testing && savedInStorage && saved ) setTimeout( () => window.close(), 400);
+            if (!this.Testing && savedInStorage && saved) {
+                closeAfterSave = true;
+                setTimeout(() => window.close(), 400);
+            }
+        } catch (error) {
+            new ErrorMessage("Could not save this item.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage();
+        } finally {
+            if (!closeAfterSave) {
+                this.isSaving = false;
+                this.setSaveInProgress(false);
+            }
+        }
+    }
+    private setSaveInProgress(isSaving: boolean): void {
+        const button = getElement<HTMLButtonElement>('#save');
+        const label = getElement<HTMLSpanElement>('#save-label');
+        if (!button || !label) return;
+
+        button.disabled = isSaving;
+        button.setAttribute('aria-busy', String(isSaving));
+        button.dataset.saving = String(isSaving);
+        label.textContent = isSaving ? 'Saving...' : 'Save';
     }
     /** merge novel type if changed */
     private async updateNovelType(): Promise<boolean> {

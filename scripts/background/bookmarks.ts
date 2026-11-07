@@ -19,10 +19,10 @@ export async function writeToBookmarks(hermidata: HermidataModel) {
 
     const decision = shouldReplaceOrBlock(hermidata.toInputArraySheetRow(), rows, false);
     if (decision.action === "append") {
-        addBookmark(hermidata);
+        await addBookmark(hermidata);
         console.log("Added bookmark entry.");
     } else if (decision.action === "replace") {
-        replaceBookmark(hermidata, decision);
+        await replaceBookmark(hermidata, decision);
         console.log("Replaced bookmark entry.");
     } else {
         console.log("Skipping bookmark entry.");
@@ -84,7 +84,7 @@ async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplac
         console.log("Updated bookmark", updated);
     } else {
         console.warn("Old bookmark not found, adding new one.");
-        addBookmark(hermidata);
+        await addBookmark(hermidata);
     }
     updateCurrentBookmarkAndIcon(hermidata.getBookmark().color);
     console.log('Change Icon');
