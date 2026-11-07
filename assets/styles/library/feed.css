@@ -8,6 +8,11 @@
     justify-content: center;
     grid-gap: 20px;
 }
+
+#filter-container[hidden] {
+    display: none;
+}
+
 .filter-row-1 {
     display: flex;
     gap: 25px;
@@ -136,6 +141,12 @@
     border: none;
 }
 /* --- Feed --- */
+
+.empty-list-message {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 1rem;
+}
 
 body[data-list-mode="true"]
 #library-entries-container {
@@ -535,4 +546,3 @@ body[data-list-mode="false"]
 .filtered {
 	display: none;
 }
-

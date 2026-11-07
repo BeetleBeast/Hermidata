@@ -33,6 +33,7 @@ export class FilterLogic extends Sort {
 
 
     private readonly libraryEntriesContainer = document.querySelector<HTMLDivElement>('#filter-container');
+    private readonly filterToggle = document.querySelector<HTMLButtonElement>('#toggle-filters');
 
     private readonly searchInput = document.querySelector<HTMLInputElement>('#search'); // Hermidata search bar
     private readonly autocompleteContainer = document.querySelector<HTMLDivElement>('#search-suggestions'); // Hermidata search-suggestions
@@ -81,6 +82,8 @@ export class FilterLogic extends Sort {
         // text query inputs
         this.addTextQueryInputs(this.searchInput, this.autocompleteContainer);
 
+        this.filterToggle?.addEventListener('click', () => this.toggleFilters());
+
         // update highlighted suggestion on hover
         this.updateSuggestions();
 
@@ -88,6 +91,14 @@ export class FilterLogic extends Sort {
         this.filterReset?.addEventListener('click', async () => await this.resetFilters());
 
         this.countVisibleEntries();
+    }
+    private toggleFilters() {
+        if (!this.filterToggle || !this.libraryEntriesContainer) return;
+
+        const showFilters = this.filterToggle.getAttribute('aria-expanded') !== 'true';
+        this.filterToggle.setAttribute('aria-expanded', String(showFilters));
+        this.filterToggle.textContent = showFilters ? 'Hide filters' : 'Show filters';
+        this.libraryEntriesContainer.hidden = !showFilters;
     }
     private tagSearchToggle() {
         this.tagSearchMode.forEach(mode => mode?.addEventListener('click', async () => {
@@ -148,6 +159,7 @@ export class FilterLogic extends Sort {
 
         // write to counter
         setElement<HTMLSpanElement>('#library-entries-info-amount', el => el.textContent = count.toString());
+        setElement<HTMLParagraphElement>('#library-empty-message', el => el.hidden = count > 0);
 
         // return
         return count;

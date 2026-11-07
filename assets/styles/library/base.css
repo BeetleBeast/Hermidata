@@ -380,6 +380,18 @@ html::-webkit-scrollbar-thumb {
     gap: 5px;
 }
 
+#search-controls-container {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+#toggle-filters {
+    white-space: nowrap;
+}
+
 #search-suggestions {
 	position: absolute;
 	top: calc(100%);
@@ -468,4 +480,3 @@ html::-webkit-scrollbar-thumb {
 #search:focus-within {
     outline: none;
 }
-

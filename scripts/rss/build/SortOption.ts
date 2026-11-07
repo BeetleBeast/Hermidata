@@ -49,7 +49,32 @@ export class SortOption extends Sort {
             this.updateHighlightedSuggestion(array, this.selectedIndex);
         });
 
-        searchContainer.append(searchInput, autocompleteContainer);
+        const filterToggle = document.createElement('button');
+        filterToggle.type = 'button';
+        filterToggle.className = 'filterSectionTitle Btn';
+        filterToggle.textContent = 'filter';
+        filterToggle.dataset.filterDisplay = 'none';
+        filterToggle.setAttribute('aria-controls', 'rss-filter-section');
+        filterToggle.setAttribute('aria-expanded', 'false');
+        filterToggle.setAttribute('aria-label', 'Show RSS filters');
+
+        filterToggle.addEventListener('click', () => {
+            const showFilters = filterToggle.dataset.filterDisplay !== 'flex';
+            const filterSection = searchContainerWrapper.parentElement?.querySelector<HTMLElement>('.filter-section-container');
+            if (!filterSection) throw new Error('RSS filter section not found');
+
+            const filterHeight = showFilters
+                ? filterSection.scrollHeight
+                : filterSection.getBoundingClientRect().height;
+            filterSection.style.setProperty('--rss-filter-height', `${filterHeight}px`);
+            filterToggle.dataset.filterDisplay = showFilters ? 'flex' : 'none';
+            filterToggle.setAttribute('aria-expanded', String(showFilters));
+            filterToggle.setAttribute('aria-label', `${showFilters ? 'Hide' : 'Show'} RSS filters`);
+            filterSection.inert = !showFilters;
+            filterSection.setAttribute('aria-hidden', String(!showFilters));
+        });
+
+        searchContainer.append(searchInput, autocompleteContainer, filterToggle);
 
         searchContainerWrapper.append(searchContainer);
         return searchContainerWrapper;
@@ -57,6 +82,9 @@ export class SortOption extends Sort {
     private CreateFilter(settings: Settings): HTMLDivElement {
         const filterSection = document.createElement('div');
         filterSection.className = 'filter-section-container';
+        filterSection.id = 'rss-filter-section';
+        filterSection.inert = true;
+        filterSection.setAttribute('aria-hidden', 'true');
 
         // 1. sort
         const SortSection = this.createFilterSection(filterName.Sort, AllSorts, filterClassName.Sort);
