@@ -72,7 +72,10 @@ export class SortLogic extends Sort {
         const hasFilters = Object.values(filters.include || {}).some(values => values.length > 0)
             || Object.values(filters.exclude || {}).some(values => values.length > 0)
             || Boolean(filters.sort);
-        if (!hasFilters) return;
+        if (!hasFilters) {
+            this.updateEmptyState();
+            return;
+        }
 
         this.applyFilterToEntries(filters);
         if (!filters.sort) return;
@@ -240,6 +243,28 @@ export class SortLogic extends Sort {
             entry.style.display = visible ? "" : "none";
             entry.dataset.searchable = visible ? "true" : "false";
         }
+
+        this.updateEmptyState();
+    }
+
+    private updateEmptyState(): void {
+        const container = document.querySelector<HTMLElement>("#All-RSS-entries");
+        if (!container) return;
+
+        let emptyMessage = container.querySelector<HTMLParagraphElement>(":scope > .empty-list-message");
+        if (!emptyMessage) {
+            emptyMessage = document.createElement("p");
+            emptyMessage.className = "empty-list-message";
+            emptyMessage.textContent = "No items";
+            emptyMessage.setAttribute("role", "status");
+            emptyMessage.setAttribute("aria-live", "polite");
+            container.appendChild(emptyMessage);
+        }
+
+        const hasVisibleEntries = Array.from(
+            container.querySelectorAll<HTMLDivElement>('.hermidata-item[data-is-notification-item="false"]')
+        ).some(entry => entry.style.display !== "none");
+        emptyMessage.hidden = hasVisibleEntries;
     }
 
     private getEntryFilterValues(entry: HTMLDivElement): Record<string, string[]> {

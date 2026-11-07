@@ -24,6 +24,12 @@
     --line-v1-x: 0px;
 }
 
+.empty-list-message {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 1rem;
+}
+
 .hermidata-item:hover{
     background-color: var(--accent-hover-dark);
     cursor: pointer;
@@ -363,7 +369,18 @@
     flex-direction: row;
     height: 32px;
 }
+.filterSectionTitle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: none;
+    margin: 0;
+    -webkit-user-select: none;
+    user-select: none;
+}
 .search-input {
+    flex: 1;
+    min-width: 0;
     width: 100%;
     background-color: var(--surface-raised);
     color: var(--text);
@@ -400,6 +417,18 @@
     border-radius: 6px;
     box-shadow: 0 1px 2px var(--shadow-soft);
     padding: 0.5rem;
+    box-sizing: border-box;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: max-height 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+}
+
+.search-container-wrapper:has(.filterSectionTitle[data-filter-display="flex"]) ~ .filter-section-container {
+    max-height: var(--rss-filter-height, 0px);
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .filter-row-1,
