@@ -1,5 +1,5 @@
 import { type Hermidata, type Settings } from "../../shared/types/index";
-import { getLastSortOption, getSettings } from "../../shared/db/Storage";
+import { getSettings } from "../../shared/db/Storage";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { Sort } from "./Sort";
 import { AllSorts, filterClassName, filterName } from "../../shared/constants";
@@ -14,22 +14,10 @@ export class SortOption extends Sort {
 
         const settings = await getSettings();
         
-        // --- 1. Search bar & filter ---
-        const [mainContainer, lastSort] = await Promise.all([
-            Promise.resolve(this.CreateMainContainer(settings)),
-            getLastSortOption()
-        ]);
-
+        const mainContainer = this.CreateMainContainer(settings);
         parent_section.appendChild(mainContainer);
 
-        this.setMinimumWidthOfFilter(mainContainer);
-
-        
-        // --- 2. apply sort last, after DOM is stable ---
-        if (lastSort) { 
-            this.applySortToEntries(lastSort);
-            this.applySortToNotification();
-        }
+        this.setAutocompleteWidth();
     }
     private CreateSearchBar(): HTMLDivElement {
         const searchContainerWrapper = document.createElement('div');
@@ -48,6 +36,12 @@ export class SortOption extends Sort {
 
         searchInput.addEventListener('input', (e) => this.handleSearchInput(e, autocompleteContainer));
         searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer));
+        document.addEventListener('click', e => {
+            const target = e.target;
+            if (target !== searchInput && !(target instanceof Node && autocompleteContainer.contains(target))) {
+                autocompleteContainer.innerHTML = '';
+            }
+        });
         // update highlighted suggestion on hover
         autocompleteContainer.addEventListener('mouseover', (e) => {
             this.selectedIndex = Array.from(autocompleteContainer.children).indexOf(e.target as HTMLDivElement);
@@ -55,9 +49,7 @@ export class SortOption extends Sort {
             this.updateHighlightedSuggestion(array, this.selectedIndex);
         });
 
-        const filterSectionTitle = this.CreateFilterButtonTitle();
-
-        searchContainer.append(searchInput, autocompleteContainer, filterSectionTitle);
+        searchContainer.append(searchInput, autocompleteContainer);
 
         searchContainerWrapper.append(searchContainer);
         return searchContainerWrapper;
@@ -79,83 +71,65 @@ export class SortOption extends Sort {
         const novelStatusSection = this.createFilterSection(filterName.NovelStatus, settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS, filterClassName.NovelStatus);
     
         // 4. Source
-        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta.altSources).filter(Boolean)));
+        const allSources = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta.altSources).filter(Boolean)))
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         const sourceSection = this.createFilterSection(filterName.Source, allSources, filterClassName.Source);
 
         // 5. Tags
-        const allTags = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta?.tags || [])));
+        const allTags = Array.from(new Set(Object.values(this.AllHermidata || {}).flatMap(item => item.meta?.tags || [])))
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         const tagSection = this.createFilterSection(filterName.Tag, allTags, filterClassName.Tag);
 
         // 6. Dates
         const allDates = this.generateDateFilterSection()
         const dateSection = this.createFilterSection(filterName.Date, allDates, filterClassName.Date);
         
-        filterSection.append(SortSection, typeSection, statusSection, novelStatusSection, sourceSection, tagSection, dateSection);
+        const firstRow = document.createElement('div');
+        firstRow.className = 'filter-row-1';
+        firstRow.append(SortSection, typeSection, statusSection, novelStatusSection);
+
+        const secondRow = document.createElement('div');
+        secondRow.className = 'filter-row-2';
+        secondRow.append(sourceSection, tagSection, dateSection);
+
+        filterSection.append(firstRow, secondRow);
 
         return filterSection
-    }
-    private CreateFilterButtonTitle(): HTMLDivElement {
-        const filterSectionTitle = document.createElement('h4');
-        filterSectionTitle.className = 'filterSectionTitle';
-        filterSectionTitle.classList.add('Btn');
-        filterSectionTitle.textContent = "filter";
-        filterSectionTitle.dataset.filterDisplay = 'none';
-        filterSectionTitle.addEventListener('click', () => {
-            filterSectionTitle.dataset.filterDisplay = filterSectionTitle.dataset.filterDisplay === 'none' ? 'flex' : 'none';
-        });
-        return filterSectionTitle
     }
     private createFilterSection(title: string, items: string[], className: string): HTMLDivElement {
         const section = document.createElement('div');
         section.className = `filter-section ${className}`;
-        section.style.width = 'fit-content';
-        const headerContainer = document.createElement('div');
-        headerContainer.className = 'filter-header-container';
-        headerContainer.style.cursor = 'pointer';
-
-        const headerSymbol = document.createElement('div');
-        headerSymbol.className = 'filter-header-symbol';
-        headerSymbol.dataset.filterState = 'down';
 
         const header = document.createElement('h4');
         header.textContent = title;
-        header.className = 'filter-header-text'
-        
-        
-        const list = document.createElement('div');
-        list.className = 'filter-list';
+        header.className = 'filter-header-text';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'filter-button Btn';
+        button.textContent = title === filterName.Sort ? 'Alphabet' : 'Any';
+        button.setAttribute('aria-label', `Filter by ${title}`);
+
+        const popover = document.createElement('div');
+        popover.id = `rss-${className}-dialog`;
+        popover.className = 'filter-dialog rss-filter-dialog';
+        const filterItems = items.filter(item => item !== '');
+        button.dataset.optionCount = String(filterItems.length);
+        if (title !== filterName.Sort) button.textContent = `Any · ${filterItems.length}`;
+        const useLargePopover = filterItems.length > 8;
+        if (className === filterClassName.Tag && useLargePopover) popover.classList.add('rss-filter-dialog-tags');
+        if (useLargePopover) popover.classList.add('rss-filter-dialog-large');
+        popover.setAttribute('popover', 'auto');
+        button.setAttribute('popovertarget', popover.id);
+        button.setAttribute('popovertargetaction', 'toggle');
+        const longestItem = Math.max(title.length, ...filterItems.map(item => item.length));
+        button.style.setProperty('--rss-filter-content-width', `${longestItem + 3}ch`);
 
         const innerList = document.createElement('div');
-        innerList.className = 'filter-list-inner';
-        
-        headerContainer.addEventListener('click', () => {
-            headerSymbol.dataset.filterState = headerSymbol.dataset.filterState === 'down' ? 'up' : 'down';
-        });
-        headerContainer.append(header, headerSymbol);
-        section.appendChild(headerContainer)
-
-        for (const item of items) {
-            if (item === '') continue;
-            const itemContainer = document.createElement('div');
-            itemContainer.className = 'filter-item-container';
-
-            // Custom checkbox div
-            const checkbox = document.createElement('div');
-            checkbox.className = 'custom-checkbox';
-            checkbox.dataset.state = '0'; // 0=neutral, 1=include, 2=exclude
-
-            // Label
-            const label = document.createElement('label');
-            label.className = 'filter-item-label';
-            label.textContent = item;
-
-            itemContainer.appendChild(checkbox);
-            itemContainer.appendChild(label);
-            innerList.appendChild(itemContainer);
-        }
-
-        list.appendChild(innerList);
-        section.appendChild(list);
+        innerList.className = 'rss-filter-list';
+        innerList.dataset.filterItems = JSON.stringify(filterItems);
+        popover.appendChild(innerList);
+        section.append(header, button, popover);
         return section;
     };
     private CreateMainContainer(settings: Settings): HTMLDivElement {
@@ -173,16 +147,7 @@ export class SortOption extends Sort {
 
         return mainContainer
     }
-    private setMinimumWidthOfFilter(mainContainer: HTMLDivElement): void {
-        // First pass — read all widths (browser calculates layout once)
-        const measurements = Object.keys(filterName).map(index => {
-            const elFilter = mainContainer.querySelector<HTMLDivElement>(`.${filterClassName[index]}`)
-            return { elFilter, width: elFilter?.scrollWidth || 0 }
-        })
-        // Second pass — write all widths (browser paints once)
-        measurements.forEach(({ elFilter, width }) => {
-            if (elFilter && width) elFilter.style.minWidth = `${width}px`;
-        })
+    private setAutocompleteWidth(): void {
         const searchInput = getElement<HTMLInputElement>('.search-input');
         const boundingBox = searchInput?.getBoundingClientRect();
         if (!boundingBox) return
@@ -310,13 +275,6 @@ export class SortOption extends Sort {
             }
         }
 
-        // Hide autocomplete when clicking elsewhere
-        document.addEventListener('click', (e) => {
-            const target = e.target as HTMLInputElement;
-            if (target !== searchInput && !suggestionBox.contains(target)) {
-                suggestionBox.innerHTML = '';
-            }
-        });
     }
     private updateHighlightedSuggestion(items: NodeListOf<HTMLDivElement>, selectedIndex: number) {
         items.forEach((el, i) => {
