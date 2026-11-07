@@ -421,14 +421,22 @@ input[type=number]::-webkit-inner-spin-button {
 
 #save {
     margin-top: 10px;
+    position: relative;
 }
 
 #save[data-saving="true"] {
     cursor: wait;
 }
 
+#save[data-saving="true"] #save-label {
+    visibility: hidden;
+}
+
 #save .save-spinner {
     display: none;
+    position: absolute;
+    inset: 0;
+    margin: auto;
     width: 14px;
     height: 14px;
     border: 2px solid currentColor;
@@ -438,7 +446,7 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 #save[data-saving="true"] .save-spinner {
-    display: inline-block;
+    display: block;
 }
 
 @keyframes save-spinner-rotation {
@@ -524,5 +532,3 @@ input[type=number]::-webkit-inner-spin-button {
 	font-family: inherit;
 	line-height: inherit;
 }
-
-

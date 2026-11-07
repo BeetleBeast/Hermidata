@@ -300,13 +300,11 @@ class HermidataController {
     }
     private setSaveInProgress(isSaving: boolean): void {
         const button = getElement<HTMLButtonElement>('#save');
-        const label = getElement<HTMLSpanElement>('#save-label');
-        if (!button || !label) return;
+        if (!button) return;
 
         button.disabled = isSaving;
         button.setAttribute('aria-busy', String(isSaving));
         button.dataset.saving = String(isSaving);
-        label.textContent = isSaving ? 'Saving...' : 'Save';
     }
     /** merge novel type if changed */
     private async updateNovelType(): Promise<boolean> {
