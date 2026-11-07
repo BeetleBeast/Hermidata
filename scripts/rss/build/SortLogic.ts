@@ -2,6 +2,8 @@ import type { Filters, NormalSortsType } from "../../shared/types/index";
 import { getLastFilter, setLastFilter } from "../../shared/db/Storage";
 import { Sort } from "./Sort";
 
+type RSSFilterOptionList = HTMLDivElement & { filterItems?: string[] };
+
 export class SortLogic extends Sort {
     private readonly entryFilterValues = new WeakMap<HTMLDivElement, Record<string, string[]>>();
 
@@ -14,50 +16,69 @@ export class SortLogic extends Sort {
             sort: ''
         };
     
-        for (const popover of parent_section.querySelectorAll<HTMLElement>(".rss-filter-dialog")) {
-            popover.addEventListener("toggle", event => {
-                if ((event as ToggleEvent).newState !== "open" || popover.dataset.populated) return;
-                window.setTimeout(() => {
-                    if (popover.matches(":popover-open") && !popover.dataset.populated) {
-                        this.populateFilterPopover(popover, filters);
-                    }
-                }, 0);
-            });
+        // Keep setup steps separate: large menus render after opening; small menus are ready immediately.
+        this.attachPopoverListeners(parent_section, filters);
+        this.populateSmallFilterPopovers(parent_section, filters);
+        this.attachFilterOptionListener(parent_section, filters);
 
-            const optionCount = (popover.querySelector<HTMLDivElement>(".rss-filter-list") as (HTMLDivElement & { filterItems?: string[] }) | null)?.filterItems?.length;
-            if (optionCount !== undefined && optionCount <= 36) {
+        // Restore the compact button labels independently of when each menu's options are rendered.
+        for (const section of parent_section.querySelectorAll<HTMLElement>(".filter-section")) {
+            this.updateFilterButton(section, filters);
+        }
+
+        this.applySavedFilters(filters);
+    }
+
+    private attachPopoverListeners(parentSection: HTMLElement, filters: Filters): void {
+        const popovers = parentSection.querySelectorAll<HTMLElement>(".rss-filter-dialog");
+        for (const popover of popovers) {
+            popover.addEventListener("toggle", event => this.handlePopoverToggle(popover, event, filters));
+        }
+    }
+
+    private populateSmallFilterPopovers(parentSection: HTMLElement, filters: Filters): void {
+        const popovers = parentSection.querySelectorAll<HTMLElement>(".rss-filter-dialog");
+        for (const popover of popovers) {
+            const list = popover.querySelector<RSSFilterOptionList>(".rss-filter-list");
+            if (list?.filterItems && list.filterItems.length <= 36) {
                 this.populateFilterPopover(popover, filters);
             }
         }
+    }
 
-        parent_section.addEventListener("click", event => {
+    private attachFilterOptionListener(parentSection: HTMLElement, filters: Filters): void {
+        // A single delegated listener also handles options appended later while scrolling.
+        parentSection.addEventListener("click", event => {
             const target = event.target;
             if (!(target instanceof Element)) return;
             const item = target.closest<HTMLElement>(".filter-item-list");
             const checkbox = item?.querySelector<HTMLDivElement>(".custom-checkbox");
             if (checkbox) this.eventOnClick(checkbox, filters);
         });
+    }
 
-        for (const section of parent_section.querySelectorAll<HTMLElement>(".filter-section")) {
-            this.updateFilterButton(section, filters);
-        }
-        const hasAnyFilters = (filters: Filters) => {
-            return (
-                Object.values(filters.include || {}).some(v => v.length > 0) ||
-                Object.values(filters.exclude || {}).some(v => v.length > 0) ||
-                !!filters.sort
-            );
-        }
-    
-        // Apply saved filters after the RSS entries and filter controls are in the DOM.
-        if (hasAnyFilters(filters)) {
-            this.applyFilterToEntries(filters);
-            if (filters.sort) {
-                this.applySortToEntries(filters.sort);
-                this.applySortToNotification()
+    private handlePopoverToggle(popover: HTMLElement, event: Event, filters: Filters): void {
+        if ((event as ToggleEvent).newState !== "open" || popover.dataset.populated) return;
+
+        // Yield one task so Chrome can paint the native popover before a large menu is built.
+        window.setTimeout(() => {
+            if (popover.matches(":popover-open") && !popover.dataset.populated) {
+                this.populateFilterPopover(popover, filters);
             }
-        }
-    
+        }, 0);
+    }
+
+    private applySavedFilters(filters: Filters): void {
+        const hasFilters = Object.values(filters.include || {}).some(values => values.length > 0)
+            || Object.values(filters.exclude || {}).some(values => values.length > 0)
+            || Boolean(filters.sort);
+        if (!hasFilters) return;
+
+        this.applyFilterToEntries(filters);
+        if (!filters.sort) return;
+
+        this.applySortToEntries(filters.sort);
+        this.applySortToNotification();
     }
 
     private populateFilterPopover(popover: HTMLElement, filters: Filters): void {
@@ -66,40 +87,51 @@ export class SortLogic extends Sort {
         const title = section?.querySelector(".filter-header-text")?.textContent?.trim();
         if (!list || !title) return;
 
-        const items = (list as HTMLDivElement & { filterItems?: string[] }).filterItems;
+        const items = (list as RSSFilterOptionList).filterItems;
         if (!items) throw new Error("RSS filter options were not attached to the list");
-        const appendItems = () => {
-            const start = Number(list.dataset.nextItemIndex || "0");
-            const end = Math.min(start + 36, items.length);
-            const fragment = document.createDocumentFragment();
-            for (let index = start; index < end; index++) {
-                const value = items[index];
-                const item = document.createElement("div");
-                item.className = "filter-item-list";
-
-                const checkbox = document.createElement("div");
-                checkbox.className = "filter-item-checkbox custom-checkbox";
-                checkbox.dataset.state = this.getFilterState(title, value, filters);
-
-                const label = document.createElement("span");
-                label.className = "filter-item-label";
-                label.textContent = value;
-
-                item.append(checkbox, label);
-                fragment.appendChild(item);
-            }
-            list.appendChild(fragment);
-            list.dataset.nextItemIndex = String(end);
-        };
-
-        appendItems();
-        list.addEventListener("scroll", () => {
-            const nextIndex = Number(list.dataset.nextItemIndex || "0");
-            if (nextIndex < items.length && list.scrollTop + list.clientHeight >= list.scrollHeight - 120) {
-                appendItems();
-            }
-        });
+        this.appendFilterOptions(list, items, title, filters);
+        list.addEventListener("scroll", () => this.handleFilterListScroll(list, items, title, filters));
         popover.dataset.populated = "true";
+    }
+
+    private appendFilterOptions(list: HTMLDivElement, items: string[], title: string, filters: Filters): void {
+        const start = Number(list.dataset.nextItemIndex || "0");
+        const end = Math.min(start + 36, items.length);
+        const fragment = document.createDocumentFragment();
+        const checkboxes: HTMLDivElement[] = [];
+
+        for (let index = start; index < end; index++) {
+            const item = document.createElement("div");
+            item.className = "filter-item-list";
+
+            const checkbox = document.createElement("div");
+            checkbox.className = "filter-item-checkbox custom-checkbox";
+            checkbox.dataset.state = "0";
+            checkboxes.push(checkbox);
+
+            const label = document.createElement("span");
+            label.className = "filter-item-label";
+            label.textContent = items[index];
+
+            item.append(checkbox, label);
+            fragment.appendChild(item);
+        }
+
+        // Append the batch in one DOM write, then restore saved include/exclude states.
+        list.appendChild(fragment);
+        for (let index = 0; index < checkboxes.length; index++) {
+            checkboxes[index].dataset.state = this.getFilterState(title, items[start + index], filters);
+        }
+        list.dataset.nextItemIndex = String(end);
+    }
+
+    private handleFilterListScroll(list: HTMLDivElement, items: string[], title: string, filters: Filters): void {
+        const nextIndex = Number(list.dataset.nextItemIndex || "0");
+        const nearBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 120;
+        // Add another small batch only when the user approaches the end of the current list.
+        if (nextIndex < items.length && nearBottom) {
+            this.appendFilterOptions(list, items, title, filters);
+        }
     }
 
     private getFilterState(section: string, label: string, filters: Filters): string {
@@ -214,6 +246,7 @@ export class SortLogic extends Sort {
         const cached = this.entryFilterValues.get(entry);
         if (cached) return cached;
 
+        // Entry metadata is stable for the lifetime of these RSS card nodes.
         const hashItem = this.GetHashItem(entry);
         const entryData = this.AllHermidata[hashItem];
         const values: Record<string, string[]> = {
