@@ -86,7 +86,10 @@
     </section>
     <section class="footer">
         <div id="Btn-Parent">
-            <button type="button" class="Btn" id="save">Save</button>
+            <button type="button" class="Btn" id="save" aria-busy="false">
+                <span id="save-label">Save</span>
+                <span class="save-spinner" aria-hidden="true"></span>
+            </button>
             <div class="RSSLinkState-container">
                 <svg class="RSSLinkState-svg">
                     <g class="RSSLinkState-g">
