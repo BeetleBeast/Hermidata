@@ -146,7 +146,7 @@ export class Subscribe extends RssBuild {
             const confirmationMsg = `
                 <p>Subscribe to "${Hermidata.title}"?</p>
                 <br>
-                ${RawFeed.image ? `<img src="${RawFeed.image}" alt="${RawFeed.latestItem.title}" style="width: 45px; height: auto;">` : ''}\n
+                ${RawFeed.image ? `<img class="rss-subscribe-confirmation-image" src="${RawFeed.image}" alt="${RawFeed.latestItem.title}">` : ''}\n
                 <br>
                 <p>title: ${RawFeed.latestItem.title}</p>\n
                 <br>

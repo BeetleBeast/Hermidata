@@ -365,6 +365,9 @@ export class BookmarkController {
         const relativeTimeValue = this.getTimeInWords(value.createdAt, value.updatedAt);
         bookmarkLastUpdated.textContent = 'chapter ' + value.current + ' - ' + relativeTimeValue;
 
+        const svgContainer = document.createElement('div');
+        svgContainer.className = 'bookmarkMenuManager-item-icon-container';
+
         const bookmarkSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         bookmarkSVG.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
         bookmarkSVG.setAttribute('height', '24px');
@@ -387,8 +390,8 @@ export class BookmarkController {
             bookmarkContainer.append(bookmarkDelete);
         }
 
-
-        bookmarkContainer.append(bookmarkSVG, bookmarkLabel, bookmarkLastUpdated);
+        svgContainer.appendChild(bookmarkSVG);
+        bookmarkContainer.append(svgContainer, bookmarkLabel, bookmarkLastUpdated);
         this.bookmarkMenuManager?.appendChild(bookmarkContainer);
 
     }

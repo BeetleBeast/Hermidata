@@ -1,0 +1,62 @@
+/* generic prompt or confirm */
+
+.promptSection {
+    display: none;
+    flex-direction: column;
+    background-color: var(--shadow);
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    gap: 30px;
+}
+
+.genericInput {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 80%;
+    background-color: var(--surface-raised);
+    color: var(--text);
+    outline-color: var(--surface-input);
+    text-emphasis-color: var(--surface-input);
+    text-align: left;
+    accent-color: var(--text);
+    border: 1px solid var(--surface-input);
+    border-radius: 3px;
+}
+.genericInput:focus {
+    outline: 1px invert var(--surface-input);
+}
+.genericLabel {
+    display: none;
+    align-items: center;
+    justify-content: center;
+	width: 80%;
+    color: var(--text);
+    text-align: center;
+	word-wrap: unset;
+    gap: 10px;
+}
+.genericPromptBtns {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-evenly;
+	width: 100%;
+}
+.genericButton1 {
+    display: none;
+    background-color: var(--bg);
+    color: var(--text);
+}
+.genericButton2 {
+    display: none;
+    background-color: var(--bg);
+    color: var(--text);
+}
+
