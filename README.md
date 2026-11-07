@@ -225,6 +225,7 @@ dist/        Generated build output (created by `npm run build`)
 | `bookmarks` | Create and manage browser bookmarks |
 | `tabs` | Read current tab URL and title |
 | `activeTab` | Access the active tab on click |
+| `cookies` | Read Firefox's cookie-store ID to open links in the same container in a new tab |
 | `storage` | Persist settings and cache |
 | `identity` | Google OAuth authentication (Sheets sync only) |
 | `contextMenus` | Right-click save option |

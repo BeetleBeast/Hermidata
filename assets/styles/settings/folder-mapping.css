@@ -1,0 +1,297 @@
+/* folder mapping */
+
+.FolderMapping[data-active="true"] {
+    display: flex;
+}
+
+.FolderMapping {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 920px;
+    color: var(--text);
+}
+
+/* ---------- Cards ---------- */
+.FolderMapping .card {
+    background: color-mix(in srgb, var(--surface-raised) 94%, var(--accent-dark));
+    border: 1px solid color-mix(in srgb, var(--border) 78%, var(--accent-dark));
+    border-radius: 14px;
+    padding: 18px 20px;
+}
+.FolderMapping .card > h3 {
+    margin: 0 0 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.FolderMapping .card-desc,
+.FolderMapping .hint {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.FolderMapping code {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--surface-input);
+    font-size: 0.85em;
+}
+
+/* ---------- Inputs & buttons ---------- */
+.FolderMapping input[type="text"],
+.FolderMapping select {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--surface-input);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    transition: border-color 150ms;
+    margin: 0;
+}
+.FolderMapping input[type="text"]:focus-visible,
+.FolderMapping select:focus-visible {
+    outline: none;
+    border-color: var(--accent-dark);
+}
+.FolderMapping button {
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background-color 150ms, filter 150ms, transform 100ms;
+}
+.FolderMapping button:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.FolderMapping button:active { transform: scale(0.97); }
+.FolderMapping button:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+.FolderMapping .btn.primary {
+    color: #fff;
+    background: var(--accent-dark);
+    border-color: transparent;
+}
+.FolderMapping .btn.primary:hover { background: var(--accent-dark); filter: brightness(1.1); }
+
+.FolderMapping .status {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: var(--accent-dark);
+}
+.FolderMapping .status:empty { display: none; }
+
+.FolderMapping .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* ---------- Explanation ---------- */
+.explain summary {
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.explain summary::-webkit-details-marker { display: none; }
+.explain summary::after {
+    content: "";
+    width: 7px; height: 7px;
+    border-right: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
+    transform: rotate(45deg);
+    transition: transform 180ms;
+}
+.explain[open] summary::after { transform: rotate(-135deg); }
+.explain #folderMappingExplanationContainer p { margin: 10px 0 14px; color: var(--text-muted); font-size: 0.9rem; }
+.explain .hint { margin: 0 0 6px; }
+.formula {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    background: var(--surface-disabled-soft);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+}
+.formula:last-child { margin-bottom: 0; }
+
+/* ---------- Base folder fields ---------- */
+.field + .field {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+.field > label { font-weight: 500; }
+.field .hint { margin: 2px 0 8px; }
+.field-row { display: flex; gap: 8px; }
+.field-row input { flex: 1; }
+
+/* ---------- Add alias / subfolder rows ---------- */
+.add-row,
+.subfolder-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.add-row + .add-row,
+.subfolder-row + .subfolder-row {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.add-tag {
+    flex: 1 0 100%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.add-row select { flex: 0 1 170px; }
+.add-row input[type="text"] { flex: 1 1 160px; }
+.add-row .arrow { color: var(--text-muted); }
+
+.path-builder {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 280px;
+    min-width: 0;
+}
+.path-builder input { flex: 1 1 90px; }
+.path-word {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* ---------- Active aliases & rules (rows are built in TS) ---------- */
+#activeAliasesContainer .group-title {
+    margin: 16px 0 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+#activeAliasesContainer .alias-group:first-child .group-title { margin-top: 12px; }
+
+#activeTypeAliases,
+#activeReadStatuses,
+#activeCustomRules {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.folder-mapping-row {
+    display: grid;
+    grid-template-columns: minmax(90px, max-content) minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+.folder-mapping-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+.folder-mapping-edit-alias,
+.folder-mapping-edit-override { width: 100%; }
+
+/* Last button in a row is "Remove" */
+.folder-mapping-row button:last-child {
+    color: var(--danger);
+    border-color: transparent;
+}
+.folder-mapping-row button:last-child:hover {
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+}
+
+/* Hide the whole rules card when the TS hides its container (no rules) */
+.FolderMapping_ActiveCustomRules:has(#activeCustomRulesContainer[style*="display: none"]) {
+    display: none;
+}
+
+/* ---------- Advanced ---------- */
+#advancedOptionsBtn {
+    align-self: flex-end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    color: var(--accent-soft);
+    background: none;
+    border: none;
+}
+#advancedOptionsBtn:hover { background: none; text-decoration: underline; }
+#advancedOptionsBtn::after {
+    content: "";
+    width: 7px; height: 7px;
+    margin-top: -3px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 180ms;
+}
+.FolderMapping:has(.FolderMapping_advancedOptions[style*="flex"]) #advancedOptionsBtn::after {
+    margin-top: 3px;
+    transform: rotate(-135deg);
+}
+/* your TS toggles style.display between 'flex' and 'none' */
+.FolderMapping_advancedOptions {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Custom rule sentence */
+.rule-builder {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.rule-builder .CustomRules { color: var(--text-muted); font-size: 0.9rem; }
+.ghost-wrap {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 180px;
+    background: var(--surface-input);
+    border-radius: 9px;
+}
+.ghost-wrap input {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    background: transparent !important;
+}
+#customRuleGhostText {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 11px;
+    overflow: hidden;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    color: var(--text-muted);
+    opacity: 0.7;
+    pointer-events: none;
+}
+

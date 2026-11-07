@@ -57,12 +57,6 @@ export class BuildRSSController {
         // set tag ellipsis
         this.trimTagOverflowBatch(allElements);
 
-        // set title header if no saved items
-        if (allElements.length === 0) {
-            const Header = document.querySelector('#All-RSS-entries')?.querySelector('.titleHeader');
-            if (Header) Header.textContent = 'No saved items';
-        }
-
         await this.sortLogic.sortOptionLogic(sortSection);
     }
 

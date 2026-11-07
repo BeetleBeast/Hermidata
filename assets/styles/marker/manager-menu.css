@@ -1,0 +1,80 @@
+/* manager */
+
+.bookmarkMenuManagerContainer {
+	width: min(480px, calc(100vw - 20px));
+	padding: 12px;
+	box-sizing: border-box;
+}
+.bookmarkMenuManager-header {
+	min-height: 34px;
+}
+#bookmarkManagerPagination {
+	margin-bottom: 8px;
+}
+#bookmarkMenuManager {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: start;
+	gap: 6px;
+	padding: 8px 0;
+}
+
+
+.bookmarkMenuManager-item {
+	display: grid;
+	min-width: 0;
+	width: 100%;
+	box-sizing: border-box;
+	align-items: center;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--surface-raised);
+	padding: 10px 12px;
+	grid-template: 'svg label remove' 'svg footer remove' / 35px minmax(0, 1fr) auto;
+	column-gap: 12px;
+}
+.bookmarkMenuManager-item-icon {
+	grid-area: svg;
+	width: 35px;
+	height: 31px;
+	fill: var(--text);
+}
+.bookmarkDelete {
+	cursor: pointer;
+	grid-area: remove;
+	border: 1px solid;
+	padding: 5px;
+	text-align: center;
+	transition: color 0.15s ease;
+	border-radius: 4px;
+}
+.bookmarkDelete:hover {
+	color: lightcoral;
+}
+.bookmarkLabel {
+	grid-area: label;
+	min-width: 0;
+	width: 100%;
+	box-sizing: border-box;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	background-color: transparent;
+	color: var(--text);
+	border: none;
+	transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.bookmarkLastUpdated {
+	color: var(--text-disabled);
+	grid-area: footer;
+}
+
+#addNewBookmarkBtn-manager {
+	width: 100%;
+}
+
+.bookmarkMenuManager-sub {
+	display: block;
+	margin: 8px 2px 0;
+	color: var(--text-muted);
+	font-size: 11px;
+}

@@ -15,7 +15,9 @@ export type RegexConfig = {
     cleanTitleKeywordEnd: RegExp,
     cleanTitleKeywordStart: RegExp,
     stripReadOnline: RegExp,
-    trailingJunkRegex: RegExp
+    trailingJunkRegex: RegExp,
+    trailingBareKeywordRegex: RegExp,
+    cjkChapterRegex: RegExp
 }
 /**
  * @fileoverview Types

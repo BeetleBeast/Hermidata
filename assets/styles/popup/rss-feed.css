@@ -1,4 +1,9 @@
 
+.rss-subscribe-confirmation-image {
+    width: 45px;
+    height: auto;
+}
+
 .hermidata-item {
     border: 1px solid var(--surface-input);
     background-color: var(--bg);
@@ -17,6 +22,12 @@
     --line-h2-y: 0px;
     --line-h1-y: 0px;
     --line-v1-x: 0px;
+}
+
+.empty-list-message {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 1rem;
 }
 
 .hermidata-item:hover{
@@ -358,7 +369,18 @@
     flex-direction: row;
     height: 32px;
 }
+.filterSectionTitle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: none;
+    margin: 0;
+    -webkit-user-select: none;
+    user-select: none;
+}
 .search-input {
+    flex: 1;
+    min-width: 0;
     width: 100%;
     background-color: var(--surface-raised);
     color: var(--text);
@@ -372,54 +394,13 @@
 .search-input:focus {
     outline: 1px invert var(--surface-input);
 }
-.filter-header-container {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-}
-.filter-header-symbol {
-	position: initial;
-	display: block;
-	height: 0.5rem;
-	width: 0.5rem;
-	transform: translateY(-100%) rotate(45deg);
-	transition-property: all;
-	transition-timing-function: cubic-bezier(0.4,0,0.2,1);
-	transition-duration: 0.2s;
-	content: "";
-	transform-origin: 75% 75%;
-	box-shadow: 2px 2px;
-	pointer-events: none;
-    margin-left: 10px;
-    margin-right: 5px;
-    margin-bottom: 0px;
-    margin-top: 15px;
-}
-.filterSectionTitle {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0;
-    -webkit-user-select: none;
-    user-select: none;
-}
 .filter-header-text {
-    padding-top: 2px;
-    margin-top: 0;
-    -webkit-user-select: none;
-    user-select: none;
-    margin-bottom: 0;
-    font-size: initial;
-}
-.filter-header-symbol[data-filter-state="up"] {
-    transform: translateY(-50%) rotate(225deg);
-    
-}
-.filter-header-container:has(.filter-header-symbol[data-filter-state="up"]) ~ .filter-list {
-    grid-template-rows: 1fr;
-    transform: translateY(0);
-    opacity: 1;
-    width: auto;
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .filter-search input[type="text"]:focus {
@@ -429,48 +410,166 @@
 }
 .filter-section-container {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0.4rem;
+    width: 100%;
     background: var(--bg);
-    border: 10 solid var(--surface-input);
     border-radius: 6px;
     box-shadow: 0 1px 2px var(--shadow-soft);
-    justify-content: center;
-    
+    padding: 0.5rem;
+    box-sizing: border-box;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
     transform: translateY(-10px);
     transition: max-height 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
 }
+
 .search-container-wrapper:has(.filterSectionTitle[data-filter-display="flex"]) ~ .filter-section-container {
-    max-height: 10000px;
-    transform: translateY(0);
+    max-height: var(--rss-filter-height, 0px);
     opacity: 1;
+    transform: translateY(0);
 }
 
-/* Each filter section (Type, Status, etc.) */
+.filter-row-1,
+.filter-row-2 {
+    display: grid;
+    align-items: start;
+    justify-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.filter-row-1 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.filter-row-2 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .filter-section {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    background: var(--bg);
-    padding: 0.8rem;
-    border-radius: 6px;
-    box-shadow: 0 1px 2px var(--shadow-soft);
+    gap: 0.25rem;
+    min-width: 0;
+    width: 100%;
     align-items: center;
-    border: 1px solid var(--surface-input);
-    height: fit-content;
-    padding-bottom: 15px;
+    padding: 0.15rem;
 }
-.filter-header {
-    margin: 0;
-    font-size: 0.9rem;
-    font-weight: 600;
+
+.filter-button {
+    width: min(max(7rem, var(--rss-filter-content-width)), 100%);
+    max-width: 18rem;
+    height: 30px;
+    padding: 0.3rem 0.5rem;
     color: var(--text);
-    border-bottom: 1px solid var(--surface-input);
-    padding-bottom: 0.3rem;
+    background: var(--surface-input);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    justify-content: space-between;
+}
+
+.filter-button:hover {
+    background: var(--accent-hover-dark);
+    border-color: var(--accent-dark);
+}
+
+.filter-section:has(.custom-checkbox[data-state="1"], .custom-checkbox[data-state="2"]) .filter-button {
+    border-color: var(--accent-dark);
+}
+
+.rss-filter-dialog {
+    position: fixed;
+    inset: auto;
+    position-area: bottom;
+    margin: 4px 0 0;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 180px;
+    max-width: min(300px, calc(100vw - 20px));
+    max-height: min(60vh, 360px);
+    overflow: hidden;
+    padding: 10px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: var(--overlay) 0px 18px 40px -12px, var(--shadow) 0px 2px 6px;
+    opacity: 0;
+}
+
+.rss-filter-dialog:popover-open {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 1;
+    transition: opacity 150ms cubic-bezier(0, 0, 0.2, 1), display 150ms allow-discrete;
+}
+
+.rss-filter-dialog-large,
+.rss-filter-dialog-tags {
+    position-area: none;
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    width: min(420px, calc(100vw - 24px));
+    max-width: min(420px, calc(100vw - 24px));
+    max-height: min(70vh, 440px);
+    transform: translate(-50%, -50%);
+}
+
+.rss-filter-dialog-tags {
+    width: min(560px, calc(100vw - 24px));
+    max-width: min(560px, calc(100vw - 24px));
+}
+
+.rss-filter-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 4px;
+    min-width: 0;
+    max-height: min(52vh, 360px);
+    overflow-y: auto;
+    align-content: start;
+}
+
+.filter-item-list {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.filter-item-list:hover {
+    background: var(--accent-hover-dark);
+}
+
+.filter-item-checkbox {
+    flex: 0 0 20px;
+}
+
+.filter-item-label {
+    min-width: 0;
+    font-size: 0.9rem;
+    color: var(--text);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    user-select: none;
+}
+
+@starting-style {
+    .rss-filter-dialog:popover-open {
+        opacity: 0;
+    }
 }
 /* feedState*/
 .feed-header-symbol {
@@ -507,41 +606,6 @@
     transition: height 0.3s ease, padding 0.3s ease, margin 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
     
 }
-/* wrapper for List of checkboxes under each filter */
-.filter-list {
-    display: grid;
-    grid-template-rows: 0fr;
-    flex-wrap: nowrap;
-    margin-top: 0.4rem;
-
-    /*max-height: 0;*/
-    overflow: hidden;
-    /*opacity: 0;*/
-    transform: translateY(-10px);
-    transition: grid-template-rows 0.3s cubic-bezier(0.4,0,0.2,1), transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
-}
-/* list of checkboxes under each filter */
-.filter-list-inner {
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    gap: 0.4rem;
-}
-
-/* Each checkbox + label combo */
-.filter-item-container {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    /*cursor: pointer;*/
-    border-radius: 4px;
-}
-.filter-item-container:has(.custom-checkbox[data-state="2"]) {
-    background-color: var(--bg);
-}
-
 .custom-checkbox[data-state="2"]  ~ .filter-item-label {
     color: var(--text-muted);
 }
@@ -585,18 +649,19 @@
     background: url('data:image/svg+xml;utf8,\<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">\<line x1="2" y1="8" x2="14" y2="8" stroke="%23c85b5b" stroke-width="2"/>\</svg>') center/contain no-repeat;
 }
 
-/* Label */
-.filter-item-container label {
-    -webkit-user-select:none;
-    user-select: none;
-    font-size: 0.9rem;
-    color: var(--text);
-}
-
-/* Responsive: stack filters nicely */
 @media (max-width: 600px) {
-    .filter-list {
-        flex-direction: column;
+    .filter-row-1 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .filter-row-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rss-filter-dialog-large,
+    .rss-filter-dialog-tags {
+        width: min(420px, calc(100vw - 24px));
+        max-width: min(420px, calc(100vw - 24px));
     }
 }
 

@@ -1,0 +1,270 @@
+.marker-menu-trigger {
+	grid-column: 1;
+	justify-self: self-start;
+	display: grid;
+	place-items: center;
+	width: auto;
+	height: 34px;
+	padding: 2px;
+	border: 1px solid transparent;
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--text);
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.marker-menu-trigger:hover {
+	background-color: var(--surface-raised);
+	border-color: var(--border);
+	transform: translateY(-1px);
+}
+.marker-menu-trigger:active {
+	transform: translateY(0);
+}
+.marker-menu-trigger:focus-visible {
+	outline: 2px solid var(--accent-soft);
+	outline-offset: 2px;
+}
+.imgBookmark {
+	fill: lightgrey;
+	width: 26px;
+	height: 26px;
+	grid-column: 1;
+	justify-self: self-start;
+	border: none;
+	background: none;
+	pointer-events: none;
+}
+.marker-menu-trigger:hover .imgBookmark {
+	fill: var(--accent-hover-soft);
+}
+
+.markerPopover[popover] {
+	position: fixed;
+	inset: auto;
+	top: 50px;
+	left: 10px;
+	margin: 0;
+	max-height: none;
+	overflow: visible;
+	box-sizing: border-box;
+	color: var(--text);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 7px;
+	box-shadow: 0 8px 20px var(--shadow-soft);
+	opacity: 0;
+	transform: translateY(-6px) scale(0.99);
+	transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.markerPopover:popover-open {
+	position: fixed;
+	inset: auto;
+	top: 50px;
+	left: 10px;
+	margin: 0;
+	max-height: none;
+	overflow: visible;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 7px;
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+@starting-style {
+	.markerPopover:popover-open {
+		opacity: 0;
+		transform: translateY(-6px) scale(0.99);
+	}
+}
+.bookmarkMenuContainer {
+	width: min(420px, calc(100vw - 20px));
+	padding: 10px;
+	box-sizing: border-box;
+}
+.markerPopover-close {
+	display: grid;
+	place-items: center;
+	flex: 0 0 28px;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 19px;
+	line-height: 1;
+	cursor: pointer;
+	transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.markerPopover-close:hover {
+	color: var(--danger-hover);
+	background: color-mix(in srgb, var(--danger) 12%, transparent);
+	border-color: var(--danger);
+}
+.marker-sort-controls {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+	margin-right: auto;
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	overflow: hidden;
+	background: var(--surface-raised);
+}
+.marker-sort-controls[hidden] {
+	display: none;
+}
+.marker-sort {
+	max-width: 106px;
+	height: 26px;
+	padding: 3px 5px;
+	border: 0;
+	border-radius: 0;
+	background: var(--surface-raised);
+	color: var(--text);
+	color-scheme: dark;
+	font: inherit;
+	font-size: 11px;
+	cursor: pointer;
+}
+.marker-sort option {
+	background: var(--surface-raised);
+	color: var(--text);
+}
+.marker-sort-direction {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	min-width: 26px;
+	padding: 0;
+	border: 0;
+	border-left: 1px solid var(--border);
+	border-radius: 0;
+	background: transparent;
+	color: var(--text);
+	font-size: 15px;
+	line-height: 1;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.marker-sort-direction:hover {
+	background: var(--accent-hover-dark);
+	border-color: var(--accent-soft);
+	color: var(--text-highlight);
+}
+.marker-sort-direction:focus-visible {
+	outline: 2px solid var(--accent-soft);
+	outline-offset: 2px;
+}
+.bookmarkMenu {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: start;
+	gap: 4px;
+	width: 100%;
+	margin: 6px 0;
+}
+.bookmarkMenu-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-height: 36px;
+	min-width: 0;
+	padding: 6px 9px;
+	border-left: 3px solid var(--marker-color, var(--border));
+	border-radius: 4px;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+	cursor: pointer;
+}
+.bookmarkMenu-item .bookmarkLabel {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text);
+}
+.bookmarkChapter {
+	color: var(--text-muted);
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.bookmarkMenu-item[data-active="true"] {
+	background-color: var(--surface-raised);
+	/*border-left-color: var(--accent-soft);*/
+}
+.bookmarkMenu-item[data-active="false"] {
+	background-color: transparent;
+}
+.marker-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 6px 0;
+	padding-top: 8px;
+	border-top: 1px solid var(--border);
+}
+.marker-pagination[hidden] {
+	display: none;
+}
+.marker-pagination button {
+	min-width: 72px;
+	padding: 5px 8px;
+	font-size: 11px;
+}
+.marker-pagination button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+.marker-page-status {
+	color: var(--text-muted);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+}
+
+.markerPopover .addNewBookmarkBtn,
+.markerPopover .bookmarkMenuBtn {
+	width: 100%;
+	min-height: 34px;
+	padding: 7px 10px;
+	background-color: var(--surface-raised);
+	color: var(--text);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	font-size: 13px;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.bookmarkMenuBtn:last-child {
+	margin-top: 6px;
+}
+
+.bookmarkMenu-item:hover {
+	background-color: var(--accent-hover-dark);
+}
+.markerPopover .addNewBookmarkBtn:hover,
+.markerPopover .bookmarkMenuBtn:hover {
+	background-color: var(--accent-hover-dark);
+	border-color: var(--accent-soft);
+	color: var(--text-highlight);
+	cursor: pointer;
+}
+.markerPopover .addNewBookmarkBtn:active,
+.markerPopover .bookmarkMenuBtn:active {
+	background-color: var(--accent-active-dark);
+}
+
+
+hr {
+	margin: 6px 0;
+	border: 0;
+	border-top: 1px solid var(--border);
+}
+
+
+

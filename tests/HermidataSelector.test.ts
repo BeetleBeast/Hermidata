@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { PastHermidata } from '../scripts/popup/core/Past';
+import { returnHashedTitle } from '../scripts/shared/utils/StringOutput';
 
 function createHermidata(chapter: number, history: { chapter: number; at: string }[] = [], withRss = true): HermidataModel {
     const hermidata = HermidataModel.from('Manga', 'Viewing', 'Ongoing');
@@ -158,4 +159,43 @@ describe('HermidataModel.SetPast', () => {
         expect(merged.GetChapter()).toBe(3);
         expect(merged.GetLatestReadChapter()).toBe(75);
     })
+    it('ignores a placeholder chapter 0 history entry and keeps the saved current chapter as last-read (RSS)', async () => {
+        const saved = createHermidata(70, [{ chapter: 0, at: '2026-01-27T17:08:46.848Z' }]);
+        saved.chapter.latest = 78;
+
+        const merged = await mergeSavedHermidata(saved, 78);
+
+        expect(merged.GetChapter()).toBe(78);
+        expect(merged.GetLatestReadChapter()).toBe(70);
+    });
+});
+
+describe('HermidataModel.Update ID', () => {
+    it('updates the entry ID and type together when given the new key', () => {
+        const saved = createHermidata(5);
+        const changed = createHermidata(12);
+        changed.novelType = 'Anime';
+        const newId = returnHashedTitle(saved.title, changed.novelType);
+        saved.Update(newId, changed, 12);
+
+        expect(saved.novelType).toBe('Anime');
+        expect(saved.id).toBe(newId);
+        expect(saved.id).toBe(returnHashedTitle(saved.title, saved.novelType));
+    });
+});
+
+describe('HermidataModel.UpdateBookmark', () => {
+    it('records an ISO timestamp instead of the active marker ID in history', () => {
+        const saved = createHermidata(5);
+        const current = createHermidata(6);
+        const markerId = current.chapter.bookmarkInUse;
+
+        saved.UpdateBookmark(current, 6);
+
+        const history = saved.GetHistory(markerId);
+        expect(history).toHaveLength(1);
+        expect(history[0].chapter).toBe(6);
+        expect(new Date(history[0].at).toISOString()).toBe(history[0].at);
+        expect(history[0].at).not.toBe(markerId);
+    });
 });
