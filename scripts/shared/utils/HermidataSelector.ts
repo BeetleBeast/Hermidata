@@ -329,7 +329,7 @@ export class HermidataModel implements Hermidata {
     UpdateBookmark(hermidata: HermidataModel, newChapterNumber: number): void {
 
         this.SetChapter(newChapterNumber, hermidata.chapter.bookmarkInUse);
-        this.PushUniqueHistory(newChapterNumber, hermidata.chapter.bookmarkInUse);
+        this.PushUniqueHistory(newChapterNumber, new Date().toISOString(), hermidata.chapter.bookmarkInUse);
         this.SetUrl(hermidata.GetUrl(), hermidata.chapter.bookmarkInUse);
         this.SetScrollPosition(hermidata.GetScrollPosition(), hermidata.chapter.bookmarkInUse);
         this.SetReadStatus(hermidata.GetReadStatus(), hermidata.chapter.bookmarkInUse);

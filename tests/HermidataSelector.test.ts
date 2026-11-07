@@ -168,3 +168,19 @@ describe('HermidataModel.SetPast', () => {
         expect(merged.GetLatestReadChapter()).toBe(70);
     });
 });
+
+describe('HermidataModel.UpdateBookmark', () => {
+    it('records an ISO timestamp instead of the active marker ID in history', () => {
+        const saved = createHermidata(5);
+        const current = createHermidata(6);
+        const markerId = current.chapter.bookmarkInUse;
+
+        saved.UpdateBookmark(current, 6);
+
+        const history = saved.GetHistory(markerId);
+        expect(history).toHaveLength(1);
+        expect(history[0].chapter).toBe(6);
+        expect(new Date(history[0].at).toISOString()).toBe(history[0].at);
+        expect(history[0].at).not.toBe(markerId);
+    });
+});
