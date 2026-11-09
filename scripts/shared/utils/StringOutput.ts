@@ -257,7 +257,7 @@ export function generateHermidataHash(title: string, type: AnyNovelType, url: st
 export function generateBookmarkId(bookmarkLabel: string) {
     return simpleHash(bookmarkLabel);
 }
-export function returnRawFeedHash(title: string, url: string) {
+export function generateRawFeedId(title: string, url: string) {
     return simpleHash(title + url);
 }
 

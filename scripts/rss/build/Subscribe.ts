@@ -1,6 +1,6 @@
 import { PastHermidata } from "../../popup/core/Past";
 import { getAllRawFeeds, getSettings, removeRawFeedByUrl, setSettings } from "../../shared/db/Storage";
-import { findByTitleOrAlt, returnRawFeedHash, TrimTitle } from "../../shared/utils/StringOutput";
+import { findByTitleOrAlt, generateRawFeedId, TrimTitle } from "../../shared/utils/StringOutput";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -157,7 +157,7 @@ export class Subscribe extends RssBuild {
                 `;
             const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel', contentDirection: "vertical" });
             if (!shouldSubscribe) {
-                const RawFeedID = returnRawFeedHash(RawFeed.latestItem.title, RawFeed.url);
+                const RawFeedID = generateRawFeedId(RawFeed.latestItem.title, RawFeed.url);
                 const newRecord: Record<string, string> = { [Hermidata.id]: RawFeedID };
                 const HermidataNotLinkedToRSS = settings.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
                 settings.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS = HermidataNotLinkedToRSS ? { ...HermidataNotLinkedToRSS, ...newRecord } : newRecord;

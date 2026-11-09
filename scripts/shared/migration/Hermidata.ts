@@ -4,7 +4,7 @@ import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
 import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
-import { getChapterFromTitle, normalizeDateToIso, generateBookmarkId, generateHermidataHash, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
+import { getChapterFromTitle, normalizeDateToIso, generateBookmarkId, generateHermidataHash, generateRawFeedId, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV10, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
 import type { BookmarkV4 } from "../types/oldVersions";
@@ -826,7 +826,7 @@ export class HermidataMigration {
             chapter: getChapterFromTitle(feed.latestItem.title, feed.latestItem.link),
             pubDate: feed.latestItem.pubDate,
             guid: feed.latestItem.guid ?? null,
-            id: returnRawFeedHash(trimmedTitle, feed.latestItem.link)
+            id: generateRawFeedId(trimmedTitle, feed.latestItem.link)
         }
         const migratedFeed: Feed = {
             url: feed.url,
@@ -836,7 +836,7 @@ export class HermidataMigration {
             domain: feed.domain,
             lastFetched: feed.lastFetched,
             lastBuildDate: feed.lastBuildDate ?? null,
-            id: returnRawFeedHash(trimmedTitle , feed.url)
+            id: generateRawFeedId(trimmedTitle , feed.url)
         }
         return migratedFeed;
     }
@@ -849,7 +849,7 @@ export class HermidataMigration {
             chapter: getChapterFromTitle(feed.items[0].title, feed.items[0].link),
             pubDate: feed.items[0].pubDate,
             guid: feed.items[0].guid ?? null,
-            id: returnRawFeedHash(trimmedTitle, feed.items[0].link),
+            id: generateRawFeedId(trimmedTitle, feed.items[0].link),
             rawTitle: feed.items[0].title,
         }
         const migratedFeed: RawFeed = {
@@ -861,7 +861,7 @@ export class HermidataMigration {
             lastFetched: feed.lastFetched,
             lastBuildDate: feed.lastBuildDate ?? null,
             lastToken: feed.lastToken ?? null,
-            id: returnRawFeedHash(trimmedTitle , feed.url)
+            id: generateRawFeedId(trimmedTitle , feed.url)
         }
         return migratedFeed;
     }
