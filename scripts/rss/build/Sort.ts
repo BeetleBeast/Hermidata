@@ -109,16 +109,18 @@ export abstract class Sort extends RssBuild {
     }
 
     protected getYearNumber(dateInput: string): string {
-        const isISOString = !!new Date(dateInput)?.getHours();
-        const splitDatum = dateInput.split('/')[2]
-        return isISOString ? dateInput.split('-')[0] : splitDatum || new Date()?.toISOString().split('-')[0];
+        const date = new Date(dateInput);
+        if (!Number.isNaN(date.getTime())) return String(date.getFullYear());
+
+        const splitDatum = dateInput.split('/')[2];
+        return splitDatum || String(new Date().getFullYear());
     }
     /**
      * Converts a date (string, Date, or number) into a decade label bucket.
      * @param {string|Date|number} dateInput
      * @returns {string} decadeLabel
     */
-    protected getYearBucket(dateInput: string): string {
+    public getYearBucket(dateInput: string): string {
         if (!dateInput) return "Unknown";
         const year = this.getYearNumber(dateInput)
         if (Number.isNaN(year)) return "Unknown";
