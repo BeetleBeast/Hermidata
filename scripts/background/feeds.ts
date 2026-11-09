@@ -82,7 +82,7 @@ async function webSearch() {
     // get the links to check
     const savedFeeds = await getAllRawFeeds();
     const allHermidata = await getAllHermidata();
-    const allNovelRSS = Object.values(allHermidata).map(novel => novel?.rss).filter(Boolean);
+    const allNovelRSS = Object.values(allHermidata).flatMap(novel => novel?.rss ?? []);
 
     const allNewItemsKey: string[] = [];
 
@@ -175,11 +175,12 @@ async function webSearch() {
 
     const HermidataToUpdate: Hermidata[] = [];
     for (const feed of combined) {
-        const related = Object.values(allHermidata).find(h => h.rss?.url === feed.url);
-        if (related?.rss) {
-            related.rss.lastFetched = feed.lastFetched;
-            related.rss.latestItem = feed.latestItem;
-            if (allNewItemsKey.includes(related.id)) related.rss.Notified = true;
+        const related = Object.values(allHermidata).find(h => h.rss.some(rss => rss.url === feed.url));
+        const relatedFeed = related?.rss.find(rss => rss.url === feed.url);
+        if (related && relatedFeed) {
+            relatedFeed.lastFetched = feed.lastFetched;
+            relatedFeed.latestItem = feed.latestItem;
+            if (allNewItemsKey.includes(related.id)) relatedFeed.Notified = true;
 
             HermidataToUpdate.push(related);
         }
@@ -189,7 +190,7 @@ async function webSearch() {
     console.groupEnd();
 }
 function shouldSkipFeed(feed: RawFeed, allHermidata: Record<string, Hermidata>) {
-    const novel = Object.values(allHermidata).find(novel => novel?.rss?.url === feed.url);
+    const novel = Object.values(allHermidata).find(novel => novel?.rss.some(rss => rss.url === feed.url));
     return novel === undefined;
 }
 
@@ -347,4 +348,3 @@ function createMessageFullNotification(rawFeed: RawFeed, feed: FeedItem) {
         message
     });
 }
-

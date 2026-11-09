@@ -51,7 +51,6 @@ export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Pr
 function updateImageReference(entry: OnlyPlainHermidata, oldId: string, newId: string): HermidataImageSource {
     const image = entry.meta.image;
     if (image.kind === 'stored' && image.id === oldId) return { kind: "stored", id: newId };
-    if (image.kind === 'url' && image.cacheId === oldId) return { ...image, cacheId: newId };
     return image;
 }
 

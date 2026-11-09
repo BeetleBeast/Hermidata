@@ -50,7 +50,7 @@ export class BookmarkController {
     private readonly markersPerPage = 6;
     private bookmarkMenuPage = 0;
     private bookmarkManagerPage = 0;
-    private markerSort: 'updatedAt' | 'createdAt' = 'updatedAt';
+    private markerSort: 'updatedAt' | 'createdAt' | 'lastUsedAt' = 'updatedAt';
     private markerSortDirection: 'asc' | 'desc' = 'desc';
 
     constructor(hermidata: HermidataModel, isNew: boolean = false) {
@@ -81,7 +81,13 @@ export class BookmarkController {
         document.addEventListener('click', this.handleOutsideMarkerClick);
         document.addEventListener('keydown', this.handleMarkerEscape);
         // save new bookmark
-        this.saveBookmarkBtn?.addEventListener('click', () => this.saveNewBookmark() );
+        this.saveBookmarkBtn?.addEventListener('click', async () => {
+            try {
+                await this.saveNewBookmark();
+            } catch (error) {
+                new ErrorMessage('Failed to save bookmark', undefined, { details: [error] }).sendMessage();
+            }
+        });
     }
     private openBookmarkMenuEvent(): void {
         this.bookmarkMenuTrigger?.addEventListener('click', () => {
@@ -164,7 +170,17 @@ export class BookmarkController {
 
         for (const select of [this.bookmarkMenuSort, this.bookmarkManagerSort]) {
             select?.addEventListener('change', () => {
-                this.markerSort = select.value === 'createdAt' ? 'createdAt' : 'updatedAt';
+                switch (select.value) {
+                    case 'createdAt':
+                        this.markerSort = 'createdAt';
+                        break;
+                    case 'updatedAt':
+                        this.markerSort = 'updatedAt';
+                        break;
+                    case 'lastUsedAt':
+                        this.markerSort = 'lastUsedAt';
+                        break;
+                }
                 this.refreshSortedMarkerPanels();
             });
         }
@@ -322,9 +338,13 @@ export class BookmarkController {
 
         bookmarkChapter.textContent = 'Ch. ' + String(lastChapter);
 
-        bookmarkContainer.addEventListener('click', () => {
+        bookmarkContainer.addEventListener('click', async () => {
             this.closeBookmarkMenu();
-            this.switchBookmarkMenu(key);
+            try {
+                await this.switchBookmarkMenu(key);
+            } catch (error) {
+                new ErrorMessage('Failed to select bookmark', undefined, { details: [error] }).sendMessage();
+            }
         });
 
         bookmarkContainer.append(bookmarkLabel, bookmarkChapter);
@@ -386,7 +406,13 @@ export class BookmarkController {
             const bookmarkDelete = document.createElement('div');
             bookmarkDelete.className = 'bookmarkDelete';
             bookmarkDelete.textContent = 'Remove';
-            bookmarkDelete.addEventListener('click', () => this.removeBookmark(key));
+            bookmarkDelete.addEventListener('click', async () => {
+                try {
+                    await this.removeBookmark(key);
+                } catch (error) {
+                    new ErrorMessage('Failed to remove bookmark', undefined, { details: [error] }).sendMessage();
+                }
+            });
             bookmarkContainer.append(bookmarkDelete);
         }
 
@@ -464,7 +490,7 @@ export class BookmarkController {
             // get primary bookmark
             const primaryBookmarkKey = Object.keys(this.hermidata.chapter.bookmarks).find(b => this.hermidata.chapter.bookmarks[b].isPrimary);
             if (!primaryBookmarkKey) return false;
-            this.switchBookmarkMenu(primaryBookmarkKey);
+            await this.switchBookmarkMenu(primaryBookmarkKey);
         } 
         // remove bookmark
         delete this.hermidata.chapter.bookmarks[key];
@@ -504,6 +530,7 @@ export class BookmarkController {
             color: colorValue,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            lastUsedAt: new Date().toISOString(),
             history: [{
                 chapter: Number(chapterValue),
                 at: new Date().toISOString()
@@ -517,8 +544,7 @@ export class BookmarkController {
         // if re-reading, update revisiting count
         if (this.hermidata.chapter.latest === this.hermidata.chapter.bookmarks[hash].current) this.hermidata.chapter.revisitingCount++;
 
-        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
-        this.switchBookmarkMenu(hash);
+        await this.switchBookmarkMenu(hash);
         this.closeAddBookmark();
     }
     private async saveBookmarkLabel(key: string, label: string): Promise<void> {
@@ -540,6 +566,7 @@ export class BookmarkController {
         if (this.hermidata.chapter.bookmarkInUse == key) return;
         // update current bookmark in use
         this.hermidata.chapter.bookmarkInUse = key;
+        this.hermidata.chapter.bookmarks[key].lastUsedAt = new Date().toISOString();
         this.bookmarkInUseID = key;
         // update popup UI
         setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].history.at(-1) || 0));

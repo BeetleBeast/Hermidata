@@ -1,5 +1,6 @@
 import type { AllSortsType, HermidataDateType, HermidataSortType } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { RssBuild } from "../build";
 
 export abstract class Sort extends RssBuild {
@@ -85,8 +86,14 @@ export abstract class Sort extends RssBuild {
         };
 
         const compareDate = (a: HTMLDivElement, b: HTMLDivElement, key: HermidataSortType, reverse = false) => {
-            const dateA = new Date(getData(a).rss?.latestItem[key] || 0).getTime();
-            const dateB = new Date(getData(b).rss?.latestItem[key] || 0).getTime();
+            const latestFeedDate = (entry: HTMLDivElement) => {
+                const hash = this.GetHashItem(entry);
+                const feeds = this.AllHermidata[hash]?.rss ?? [];
+                const latestFeed = HermidataModel.GetLatestRssFeed(feeds);
+                return latestFeed ? new Date(latestFeed.latestItem[key]).getTime() || 0 : 0;
+            };
+            const dateA = latestFeedDate(a);
+            const dateB = latestFeedDate(b);
             return reverse ? dateA - dateB : dateB - dateA;
         };
 

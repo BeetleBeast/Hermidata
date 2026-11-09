@@ -33,20 +33,10 @@ export class Subscribe extends RssBuild {
 
         // set default state
         subscribeBtn.className = "Btn";
-        subscribeBtn.textContent = "Subscribe to RSS Feed";
+        subscribeBtn.textContent = this.hermidata.rss.length ? "Add another RSS Feed" : "Subscribe to RSS Feed";
         subscribeBtn.disabled = true;
         subscribeBtn.title = "this site doesn't have a RSS link";
         subscribeBtn.ariaLabel = "this site doesn't have a RSS link";
-
-        // if already subscribed, disable button and return
-        if (this.hermidata.rss?.latestItem) {
-            subscribeBtn.className = "Btn";
-            subscribeBtn.textContent = "Already Subscribed to RSS Feed";
-            subscribeBtn.disabled = true;
-            subscribeBtn.title = "Already subscribed to RSS feed";
-            subscribeBtn.ariaLabel = "Already subscribed to RSS feed";
-            return;
-        }
 
         // if auto subscriber has found a feed, disable button and return
         if (this.autoSubscriberHasFoundFeed) {
@@ -60,13 +50,14 @@ export class Subscribe extends RssBuild {
 
         const currentTitle = getElement<HTMLInputElement>("#title_HDRss")?.value || this.hermidata.title;
 
-        this.matchedFeed = await this.findMatchingFeed( feedListGlobal,  allHermidata,  currentTitle );
+        this.matchedFeed = await this.findMatchingFeed( feedListGlobal, allHermidata, currentTitle );
 
         if (this.autoSubscriberHasFoundFeed) return; // re-check after every async call
 
         if (this.matchedFeed) {
             console.log('found matching feed:', this.matchedFeed);
             subscribeBtn.disabled = false
+            subscribeBtn.textContent = this.hermidata.rss.length ? "Add another RSS Feed" : "Subscribe to RSS Feed";
             subscribeBtn.title = "subscribe to receive notifications"
             subscribeBtn.ariaLabel = "subscribe to receive notifications"
         }
@@ -76,8 +67,8 @@ export class Subscribe extends RssBuild {
     private async findMatchingFeed( feedList: Record<string, RawFeed>, allHermidata: Record<string, Hermidata>, currentTitle: string ): Promise<RawFeed | null> {
         for (const feed of Object.values(feedList)) {
             const feedTitle = TrimTitle.trimTitle( feed?.latestItem?.title || feed.title, feed.url ).title;
-            const matchedTitle = findByTitleOrAlt(feedTitle, allHermidata)?.title;
-            if (matchedTitle === currentTitle) return feed;
+            const matchedEntry = findByTitleOrAlt(feedTitle, allHermidata);
+            if (matchedEntry?.title === currentTitle && !this.hermidata.rss.some(linkedFeed => linkedFeed.url === feed.url)) return feed;
         }
         return null;
     }
@@ -125,16 +116,15 @@ export class Subscribe extends RssBuild {
         // 2. take all hermidata
         const allHermidata = await PastHermidata.getAllHermidata();
         const RSSIdsNotAllowed = settings?.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
-        const allHermidataWithNoRSS = Object.entries(allHermidata).filter(list => {
+        const eligibleHermidata = Object.entries(allHermidata).filter(list => {
             const Hermidata = list[1];
-            const hasRSS = Hermidata.rss === null;
             const isNotAllowed = typeof RSSIdsNotAllowed[Hermidata.id] === 'string';
-            return hasRSS && !isNotAllowed;
+            return !isNotAllowed;
         });
-        const allHermidataWithNoRSSRecord: Record<string, Hermidata> = Object.fromEntries(allHermidataWithNoRSS);
+        const eligibleHermidataRecord: Record<string, Hermidata> = Object.fromEntries(eligibleHermidata);
 
         // 3. find matching feed
-        const matchingFeeds = await this.findMatchingFeeds(allRawFeeds, allHermidataWithNoRSSRecord, allowSimilarityScanning, autoSubscribeThreshold);
+        const matchingFeeds = await this.findMatchingFeeds(allRawFeeds, eligibleHermidataRecord, allowSimilarityScanning, autoSubscribeThreshold);
         if (!matchingFeeds || matchingFeeds.length === 0) return false;
 
 
@@ -193,6 +183,7 @@ export class Subscribe extends RssBuild {
             const rawFeedTitle = RawFeed.latestItem.title ?? RawFeed.title; // use latest item title if available otherwise use raw feed title ( some feeds have no items )
             const rawFeedTitleTrimmed = TrimTitle.trimTitle(rawFeedTitle, RawFeed.url).title;
             const matchedEntry = findByTitleOrAlt(rawFeedTitleTrimmed, allHermidata); // 100% match only
+            if (matchedEntry?.rss.some(feed => feed.url === RawFeed.url)) continue;
 
             // check if this check is a not excluded
             const settings = await getSettings();

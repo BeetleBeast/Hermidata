@@ -42,7 +42,7 @@ export class EventListener extends RssBuild {
 
         const hermidata = new HermidataModel(value);
 
-        await openLink(value?.rss?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
+        await openLink(hermidata.GetLatestRssFeed()?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
     }
     private async rightMouseClickOnItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
@@ -384,7 +384,7 @@ export class EventListener extends RssBuild {
         item.remove()
         const hashItem = this.GetHashItem(item);
 
-        if (this.AllHermidata[hashItem].rss?.Notified) this.AllHermidata[hashItem].rss.Notified = undefined;
+        for (const feed of this.AllHermidata[hashItem].rss) feed.Notified = undefined;
         saveHermidata(hashItem, this.AllHermidata[hashItem]);
     }
     private async pickElement(target: HTMLDivElement | null) {
@@ -531,7 +531,7 @@ export class EventListener extends RssBuild {
     private async unLinkRSSFeed(entry: HermidataModel) {
         if (!entry) return;
 
-        entry.rss = null;
+        entry.rss = [];
 
         await saveHermidata(entry.id, entry.toJSON());
     }

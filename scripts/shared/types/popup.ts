@@ -33,7 +33,7 @@ export type NovelType =  'Manga' | 'Manhwa' | 'Manhua' | 'Novel' | 'Webnovel' | 
 export type NovelStatus = 'Ongoing' | 'Completed' | 'Hiatus' | 'Canceled';
 export type ReadStatus = 'Viewing' | 'Finished' | 'On-hold' | 'Dropped' | 'Planned';
 export type HermidataImageSource =
-    | { kind: 'url'; url: string; cacheId?: string }
+    | { kind: 'url'; url: string }
     | { kind: 'stored'; id: string };
 
 // Extended versions — what you actually use at runtime
@@ -76,6 +76,7 @@ export interface Bookmark { // new
 	color: string; // hex rgb for visual distinction
 	createdAt: string;
 	updatedAt: string;
+    lastUsedAt: string;
 	isPrimary: boolean; // only one can be primary
     scrollPosition: number;
     url: string;
@@ -96,8 +97,9 @@ export interface Hermidata {
         bookmarkInUse: string;
         releaseSchedule: ReleaseSchedule; // calculated from chapter history
     };
-    rss: Feed | null;
+    rss: Feed[];
     import: string | null;
+    titleTrimming: { type: 'default' } | { type: 'custom'; rule: string };
     meta: {
         tags: string[];
 

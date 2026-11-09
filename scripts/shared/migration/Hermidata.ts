@@ -2,13 +2,13 @@ import { logConsoleError } from "../utils/ErrorMessage";
 import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
-import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
+import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
 import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
 import { getChapterFromTitle, normalizeDateToIso, returnBookmarkHash, returnHashedTitle, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV10, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
+import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, BookmarkV4, BookmarkV5, Feed, FeedItem, FeedV1, Hermidata, HermidataImageSource, HermidataV1, HermidataV10, HermidataV11, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
-import type { BookmarkV4 } from "../types/oldVersions";
 import { AutoSetAllHermidata } from "../utils/AutoSetAllHermidata";
+import { HERMIDATA_VERSION } from "../constants";
 
 
 interface DuplicationResult {
@@ -461,7 +461,7 @@ export class HermidataMigration {
                 releaseSchedule: newer.chapter?.releaseSchedule || older.chapter?.releaseSchedule
 
             },
-            rss: newer.rss || older.rss || null,
+            rss: this.mergeRssFeeds(newer.rss, older.rss),
             import: newer.import || older.import || null,
             meta: {
                 tags: Array.from(
@@ -507,6 +507,13 @@ export class HermidataMigration {
     }
     private static unionDedupe(a: string[], b: string[]): string[] {
         return Array.from(new Set([...a, ...b]));
+    }
+    private static mergeRssFeeds(...feedLists: Feed[][]): Feed[] {
+        const merged = new Map<string, Feed>();
+        for (const feed of feedLists.flat()) {
+            if (!merged.has(feed.url)) merged.set(feed.url, feed);
+        }
+        return Array.from(merged.values());
     }
     private static reconcileBookmarkKeys(bookmarks: Record<string, Bookmark>): Record<string, Bookmark> {
         const reconciled: Record<string, Bookmark> = {};
@@ -567,8 +574,9 @@ export class HermidataMigration {
                 bookmarkInUse: this.resolveBookmarkInUse(keep, discard, bookmarks),
                 releaseSchedule: keep.chapter.releaseSchedule ?? discard.chapter.releaseSchedule
             },
-            rss: keep.rss ?? discard.rss,
+            rss: this.mergeRssFeeds(keep.rss, discard.rss),
             import: keep.import ?? discard.import,
+            titleTrimming: keep.titleTrimming ?? discard.titleTrimming,
             meta: {
                 tags: this.unionDedupe(keep.meta.tags, discard.meta.tags),
                 notes: flagOrSkip("meta.notes", keep.meta.notes, discard.meta.notes) as string,
@@ -795,16 +803,16 @@ export class HermidataMigration {
 
     private static migrateFeeds(hermidatas: Record<string, Hermidata>): void {
         const allHermidata: Hermidata[] = [];
-        for (const [key, hermidata] of Object.entries(hermidatas)) {
-            if (!hermidata.rss) continue; // no rss feed to migrate
+        for (const hermidata of Object.values(hermidatas)) {
+            if (!hermidata.rss.length) continue; // no rss feed to migrate
 
-            if (this.isFeedV2(hermidata.rss)) continue; // already latest
-            if (this.isFeedV1(hermidata.rss)) {
-                const migratedFeed = this.migrateFeedV1ToV2(hermidata.rss);
-                hermidata.rss = migratedFeed;
-                allHermidata.push(hermidata);
-                continue;
-            }
+            let changed = false;
+            hermidata.rss = hermidata.rss.map(feed => {
+                if (this.isFeedV2(feed)) return feed;
+                changed = true;
+                return this.migrateFeedV1ToV2(feed);
+            });
+            if (changed) allHermidata.push(hermidata);
         }
 
         setAllHermidata(allHermidata);
@@ -909,6 +917,7 @@ export class HermidataMigration {
         8: (data) => this.migrateHermidataV8ToV9(data),
         9: (data) => this.migrateHermidataV9ToV10(data),
         10: (data) => this.migrateHermidataV10ToV11(data),
+        11: (data) => this.migrateHermidataV11ToV12(data),
     };
     public static migrateAllHermidataToLatest(older: AnyHermidataVersion): migrationReturn {
         
@@ -920,12 +929,12 @@ export class HermidataMigration {
             version = current.version ?? version + 1;
         }
 
-        if (!isHermidataV11(current)) { // <-- bump this check to whatever "latest" is
-        console.warn('[Migration] Failed to reach latest version:', current);
-        return { result: current, isMigratedSuccessfully: false };
-    }
+        if (current.version !== HERMIDATA_VERSION) {
+            console.warn('[Migration] Failed to reach latest version:', current);
+            return { result: current, isMigratedSuccessfully: false };
+        }
 
-    return { result: current, isMigratedSuccessfully: true };
+        return { result: current, isMigratedSuccessfully: true };
     }
     private static isHermidataV11OrMore(older: AnyHermidataVersion): older is Hermidata {
         const hasVersion = "version" in older;
@@ -1224,12 +1233,12 @@ export class HermidataMigration {
         }
         return newHistory
     }
-    private static setNewBookmarkV4ToV5(bookmarks: Record<string, BookmarkV4>): Record<string, Bookmark> {
-        const newBookmarks: Bookmark[] = [];
+    private static setNewBookmarkV4ToV5(bookmarks: Record<string, BookmarkV4>): Record<string, BookmarkV5> {
+        const newBookmarks: BookmarkV5[] = [];
 
         for (const [id, bookmark] of Object.entries(bookmarks)) {
 
-            const newBookmark: Bookmark = {
+            const newBookmark: BookmarkV5 = {
                 version: 5,
                 id: bookmark.id,
                 current: Number(bookmark.current),
@@ -1247,12 +1256,12 @@ export class HermidataMigration {
             
             newBookmarks.push(newBookmark);
         }
-        const record: Record<string, Bookmark> = Object.fromEntries(newBookmarks.map(bookmark => [bookmark.id, bookmark]));
+        const record: Record<string, BookmarkV5> = Object.fromEntries(newBookmarks.map(bookmark => [bookmark.id, bookmark]));
         return record
     }
-    private static migrateHermidataV10ToV11(data: HermidataV10): Hermidata {
+    private static migrateHermidataV10ToV11(data: HermidataV10): HermidataV11 {
         
-        const hermidata: Hermidata = {
+        const hermidata: HermidataV11 = {
             ...data,
             version: 11,
             id: data.id,
@@ -1292,5 +1301,36 @@ export class HermidataMigration {
         }
 
         return hermidata
+    }
+    private static migrateHermidataV11ToV12(data: HermidataV11): Hermidata {
+        const bookmarks = Object.fromEntries(
+            Object.entries(data.chapter.bookmarks).map(([id, bookmark]) => [id, {
+                ...bookmark,
+                version: 6,
+                lastUsedAt: bookmark.updatedAt,
+            }])
+        );
+        const image: HermidataImageSource = typeof data.meta.image === 'string'
+            ? data.meta.image === 'inside-indexedDB'
+                ? { kind: 'stored', id: data.id }
+                : { kind: 'url', url: data.meta.image }
+            : data.meta.image.kind === 'stored'
+                ? data.meta.image
+                : { kind: 'url', url: data.meta.image.url };
+
+        return {
+            ...data,
+            version: 12,
+            titleTrimming: { type: 'default' },
+            rss: data.rss ? [data.rss] : [],
+            chapter: {
+                ...data.chapter,
+                bookmarks,
+            },
+            meta: {
+                ...data.meta,
+                image,
+            },
+        };
     }
 }

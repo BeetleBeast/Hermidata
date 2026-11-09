@@ -25,8 +25,12 @@ export class FeedItem {
         this.AllHermidata = AllHermidata;
     }
     private sortByLastUpdated(a: Hermidata, b: Hermidata) {
-        const dateA = new Date(a.rss?.lastFetched ?? a.meta.updated).getTime();
-        const dateB = new Date(b.rss?.lastFetched ?? b.meta.updated).getTime();
+        const getLatestFetched = (hermidata: Hermidata): number => {
+            const latestFetched = HermidataModel.GetLatestRssFeed(hermidata.rss, "lastFetched")?.lastFetched;
+            return (latestFetched ? new Date(latestFetched).getTime() : 0) || new Date(hermidata.meta.updated).getTime();
+        };
+        const dateA = getLatestFetched(a);
+        const dateB = getLatestFetched(b);
         return dateB - dateA;
     }
 
@@ -150,7 +154,7 @@ export class FeedItem {
 
         return { groupLeft: diamondGroupLeft, groupRight: diamondGroupRight }
     }
-    private createItemLines(item: Hermidata, isFirstItemOfList: boolean = false): SVGElement {
+    private createItemLines(item: HermidataModel, isFirstItemOfList: boolean = false): SVGElement {
         const svgNS = "http://www.w3.org/2000/svg";
         
         const svg = document.createElementNS(svgNS, 'svg');
@@ -181,14 +185,15 @@ export class FeedItem {
         
         diamond.setAttribute('points',`${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`);
         diamond.setAttribute("class", "line-diamond hermidata-item-lines");
-        item.rss?.latestItem ? diamond.style.fill = "rgba(1, 175, 118, 0.87)" : diamond.style.fill = "#3c5ca6";
+        const latestRss = item.GetLatestRssFeed();
+        latestRss?.latestItem ? diamond.style.fill = "rgba(1, 175, 118, 0.87)" : diamond.style.fill = "#3c5ca6";
 
-        const titleOfDiamond = this.createSVGItemTitle(item.rss?.latestItem ? "This Item is linked" : "this Item is not linked to a RSS feed")
+        const titleOfDiamond = this.createSVGItemTitle(item.rss.length ? "This Item is linked" : "this Item is not linked to a RSS feed")
         diamond.appendChild(titleOfDiamond);
         diamondGroup.appendChild(diamond);
         
         // RSS link missing Icon ( only for non RSS items)
-        if (!item.rss?.latestItem) {
+        if (!item.rss.length) {
             const notifyRSSLinkIcon = this.CreateNotifyRSSLinkIcon();
 
             const titleOfExclamation = this.createSVGItemTitle("This Item can not be updated via RSS feed because no RSS feed is linked to it.")
@@ -214,7 +219,7 @@ export class FeedItem {
     }
     private async getItemInfo(key: string, item: HermidataModel, isRSSItem: boolean = false): Promise<ItemInfo> {
         const title = findByTitleOrAlt(item.title, this.AllHermidata)?.title || item.title;
-        const url = item.rss?.latestItem.link || item.GetUrl();
+        const url = item.GetLatestRssFeed()?.latestItem.link || item.GetUrl();
         
         const useAutoDetectedChapter = getChapterFromTitleReturn(title, item?.title, undefined, url);
         const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.GetChapter();
@@ -226,7 +231,7 @@ export class FeedItem {
         
         return { title, url, chapter, isRead, clearedNotification, currentChapter, currentHermidata };
     }
-    private createItemPubDate(item: Hermidata): HTMLElement {
+    private createItemPubDate(item: HermidataModel): HTMLElement {
         const pubDate = document.createElement("p");
         pubDate.className = "hermidata-item-pubDate";
         const latestDate = this.showLatestDate(item);
@@ -355,12 +360,13 @@ export class FeedItem {
         return li
     }
 
-    private showLatestDate(item: Hermidata): { date: Date, originalDateVariable: string} {
+    private showLatestDate(item: HermidataModel): { date: Date, originalDateVariable: string} {
 
-        const allDatesExceptBookmarks = item.rss ? {
+        const latestRssFeed = item.GetLatestRssFeed();
+        const allDatesExceptBookmarks = latestRssFeed ? {
             added: new Date(item.meta.added),
             updated: new Date(item.meta.updated),
-            latestRss: new Date(item.rss.latestItem.pubDate)
+            latestRss: new Date(latestRssFeed.latestItem.pubDate)
         } : {
             added: new Date(item.meta.added),
             updated: new Date(item.meta.updated)
@@ -384,4 +390,3 @@ export class FeedItem {
         return {date, originalDateVariable};
     }
 }
-

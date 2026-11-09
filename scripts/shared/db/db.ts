@@ -1,10 +1,10 @@
 import { logConsoleError } from "../utils/ErrorMessage";
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { type Hermidata, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
+import { type Hermidata, type HermidataV11, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
 import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from './sync';
 import { HermidataMigration } from '../migration/Hermidata';
-import { defaultSettings } from '../constants';
+import { defaultSettings, HERMIDATA_VERSION } from '../constants';
 import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/oldVersions';
 import type { OnlyPlainHermidata } from '../types/popup';
 
@@ -283,7 +283,7 @@ export async function getAllHermidataWithRss(preAll: Record<string, OnlyPlainHer
     try {
         const all = preAll ?? await getAllHermidata();
         return Object.fromEntries(
-            Object.entries(all).filter(([_, h]) => h.rss !== null)
+            Object.entries(all).filter(([_, h]) => h.rss.length > 0)
         )
     } catch (err) {
         logConsoleError('[DB] getAllHermidataWithRss:', err);
@@ -526,10 +526,11 @@ export async function migrateFromChromeStorage(): Promise<void> {
  */
 export async function migrateHermidataToLatest(_allHermidata?: Record<string, Hermidata>): Promise<void> {
     const db = await getDb();
-    const alreadyMigrated = await db.get('settings', 'migrated_Hermidata_v11');
+    const migrationFlag = `migrated_Hermidata_v${HERMIDATA_VERSION}`;
+    const alreadyMigrated = await db.get('settings', migrationFlag);
     if (alreadyMigrated) return;
 
-    console.log('[DB] Starting migration of Hermidata to latest (V11)...');
+    console.log(`[DB] Starting migration of Hermidata to latest (V${HERMIDATA_VERSION})...`);
 
     
     const allHermidata = _allHermidata ?? await getAllHermidata();
@@ -538,7 +539,7 @@ export async function migrateHermidataToLatest(_allHermidata?: Record<string, He
 
     for (const value of Object.values(allHermidata)) {
         
-        if (isHermidataV11(value)) continue;
+        if (isHermidataLatestVersion(value)) continue;
         
         const { result: hermidata, isMigratedSuccessfully} = HermidataMigration.migrateAllHermidataToLatest(value);
         if (isMigratedSuccessfully) entries.push(hermidata);
@@ -548,8 +549,8 @@ export async function migrateHermidataToLatest(_allHermidata?: Record<string, He
     if (entries.length) await putAllHermidata(entries);
 
     // Mark as done
-    await db.put('settings', true as unknown as Settings, 'migrated_Hermidata_v11');
-    console.log(`[DB] Migrated ${entries.length} Hermidata entries to V11`);
+    await db.put('settings', true as unknown as Settings, migrationFlag);
+    console.log(`[DB] Migrated ${entries.length} Hermidata entries to V${HERMIDATA_VERSION}`);
     console.log(`[DB] ${failCount} Hermidata entries could not be migrated`);
     
     console.log('[DB] Migration complete');
@@ -704,13 +705,19 @@ export function isHermidataV10( data: AnyHermidataVersion ): data is Hermidata {
         hasNotContentRating
     )
 }
-export function isHermidataV11( data: AnyHermidataVersion ): data is Hermidata {
+export function isHermidataV11( data: AnyHermidataVersion ): data is HermidataV11 {
     const hasCorrectVersion = (data as Hermidata)?.version === 11;
     
     return (
         hasCorrectVersion
     )
 
+}
+export function isHermidataV12( data: AnyHermidataVersion ): data is Hermidata {
+    return (data as Hermidata)?.version === 12;
+}
+export function isHermidataLatestVersion(data: AnyHermidataVersion): data is Hermidata {
+    return 'version' in data && data.version === HERMIDATA_VERSION;
 }
 
 

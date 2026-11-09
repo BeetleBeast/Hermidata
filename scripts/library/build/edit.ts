@@ -492,12 +492,7 @@ export class EditDetail extends LibraryBuilder {
         const oldKey = this.hermidata.id;
         if (newKey === oldKey) return;
         const imageSource = this.hermidata.meta.image;
-        if (imageSource.kind === 'stored' && imageSource.id === oldKey) {
-            this.hermidata.meta.image = { ...imageSource, id: newKey };
-        }
-        else if (imageSource.kind === 'url' && imageSource.cacheId === oldKey) {
-            this.hermidata.meta.image = { ...imageSource, cacheId: newKey };
-        }
+        if (imageSource.kind === 'stored' && imageSource.id === oldKey) this.hermidata.meta.image = { ...imageSource, id: newKey };
         this.hermidata.id = newKey;
 
         await this.changeHermidata(oldKey, newKey, this.hermidata.toJSON());
