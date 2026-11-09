@@ -1,4 +1,4 @@
-import { findByTitleOrAlt, getChapterFromTitleReturn } from "../../shared/utils/StringOutput";
+import { findByTitleOrAlt, extractChapterFromFeedItemTitle } from "../../shared/utils/StringOutput";
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
 import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
@@ -216,7 +216,7 @@ export class FeedItem {
         const title = findByTitleOrAlt(item.title, this.AllHermidata)?.title || item.title;
         const url = item.rss?.latestItem.link || item.GetUrl();
         
-        const useAutoDetectedChapter = getChapterFromTitleReturn(title, item?.title, undefined, url);
+        const useAutoDetectedChapter = extractChapterFromFeedItemTitle(title, item?.title, undefined, url);
         const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.GetChapter();
         
         const currentHermidata = new HermidataModel(this.AllHermidata?.[key]);
@@ -384,4 +384,3 @@ export class FeedItem {
         return {date, originalDateVariable};
     }
 }
-

@@ -2,7 +2,7 @@ import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
 import { appendAltTitle, makeHermidata } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
-import { findByTitleOrAlt, getChapterFromTitle, getChapterFromTitleReturn, returnHashedFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, returnHashedFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidata } from "../shared/db/Storage";
 import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";

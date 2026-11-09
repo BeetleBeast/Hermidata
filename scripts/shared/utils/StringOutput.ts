@@ -121,10 +121,15 @@ export function getChapterFromTitle(title: string | undefined, url: string): num
     return detectChapter(title, url).chapter;
 }
 
-export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number | undefined, url: string): number {
-    const isNotPartOfTitle = title?.replace(correctTitle, '');
-    const finalChapter = url ? getChapterFromTitle(isNotPartOfTitle, url) : chapter;
-    return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
+/**
+ * Extracts a chapter from a feed item title after removing the known series title.
+ * Uses the URL for chapter detection when available, otherwise the fallback chapter.
+ * Returns NaN when removing the series title leaves no title content to inspect.
+ */
+export function extractChapterFromFeedItemTitle(seriesTitle: string, feedItemTitle: string, fallbackChapter: number | undefined, url: string): number {
+    const titleWithoutSeries = feedItemTitle?.replace(seriesTitle, '');
+    const finalChapter = url ? getChapterFromTitle(titleWithoutSeries, url) : fallbackChapter;
+    return titleWithoutSeries ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
 export function normalizeDateToIso(rawDate: string): string {
