@@ -188,7 +188,7 @@ export class AutoSetAllHermidata {
                 contentRating: "Safe",
                 contentWarnings: [],
                 starRating: 5.0,
-                image: '../../../assets/icon/icon48.png',
+                image: { kind: 'url', url: '../../../assets/icon/icon48.png' },
 
                 readingQueue: false,
                 relations: "None"

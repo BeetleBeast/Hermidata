@@ -2,10 +2,25 @@ import { logConsoleError } from "./ErrorMessage";
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata } from "../constants";
 import { isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import { getImage, saveImage, getSettings } from "../db/Storage";
-import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
+import { getImage, removeImage, saveImage, getSettings } from "../db/Storage";
+import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, HermidataImageSource, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { openLink, returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
+
+type HermidataModelInput = Omit<Hermidata, "meta"> & {
+    meta: Omit<Hermidata["meta"], "image"> & { image: HermidataImageSource | string | null };
+};
+
+function normalizeImageSource(image: HermidataImageSource | string | null | undefined, id: string): HermidataImageSource {
+    if (typeof image === "string") {
+        return image === "inside-indexedDB"
+            ? { kind: "stored", id }
+            : { kind: "url", url: image, cacheId: id };
+    }
+    if (image?.kind === "url" && typeof image.url === "string") return image;
+    if (image?.kind === "stored" && typeof image.id === "string") return image;
+    return { kind: "url", url: '../../../assets/icon/icon48.png' };
+}
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -22,7 +37,7 @@ export class HermidataModel implements Hermidata {
     private latestVersion = 11;
     private readonly locale: string = navigator.language; // e.g. "fr-FR", "en-US", "ja-JP"
 
-    constructor(data: Hermidata) {
+    constructor(data: HermidataModelInput) {
         this.id = data.id;
         this.title = data.title;
         this.novelType = data.novelType;
@@ -30,7 +45,10 @@ export class HermidataModel implements Hermidata {
         this.rss = data.rss;
         this.import = data.import;
         this.chapter = data.chapter;
-        this.meta = data.meta;
+        this.meta = {
+            ...data.meta,
+            image: normalizeImageSource(data.meta.image ?? data.rss?.image, data.id),
+        };
 
         this.version = data.version ?? this.CalculateHermidataVersion();
         // if (this.version !== this.latestVersion) console.count("HermidataModel version check");
@@ -93,23 +111,22 @@ export class HermidataModel implements Hermidata {
         return this.getBookmark(bookmarkInUseId)?.history;
     }
     async getDisplayImageUrl(): Promise<string> {
-        // prefer a stored blob if one exists (covers the upload case)
-        const blob = await getImage(this.id);
-        if (blob) return URL.createObjectURL(blob);
+        if (this.meta.image.kind === "stored") {
+            const blob = await getImage(this.meta.image.id);
+            if (blob) return URL.createObjectURL(blob);
+        }
+        else if (this.meta.image.cacheId) {
+            const blob = await getImage(this.meta.image.cacheId);
+            if (blob) return URL.createObjectURL(blob);
+        }
 
-        // fall back to a direct URL
         const imagePath = this.GetImagePath();
         if (imagePath) return imagePath;
         else return this.GetImageDefaultPath();
     }
     GetImagePath(): string | null {
-        const imageAttributeLocation = this.meta.image;
-        const rssFeedImage = this.rss?.image;
-
-        // if image is stored in indexedDB, 
-        if (imageAttributeLocation === 'inside-indexedDB') return null;
-
-        return imageAttributeLocation ?? rssFeedImage ?? this.GetImageDefaultPath();
+        if (this.meta.image.kind === "stored") return null;
+        return this.meta.image.url ?? this.rss?.image ?? this.GetImageDefaultPath();
     }
     GetImageDefaultPath(): string {
         return '../../../assets/icon/icon48.png';
@@ -166,35 +183,49 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history = history;
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
     }
-    /** set image blob inside separate indexedDB and update meta source */
+    /** Store an uploaded image in IndexedDB and reference it by ID. */
     async SetImage(imageFile: Blob | File): Promise<void>;
-    /** set image source directly and then call update image */
-    async SetImage(imageUrl: string): Promise<void>;
-    async SetImage(image: string | Blob | File): Promise<void> {
+    /** Fetch and cache a URL image, optionally using the already-fetched image data. */
+    async SetImage(imageUrl: string, cachedImage?: Blob): Promise<void>;
+    async SetImage(image: string | Blob | File, cachedImage?: Blob): Promise<void> {
+        let imageBlob: Blob;
+
+        // If the image is a URL, fetch it and store it in IndexedDB.
         if (typeof image === 'string') {
-            const imageUrl = image;
-            // 1. set image path
 
-            this.meta.image = imageUrl;
+            this.meta.image = { kind: "url", url: image, cacheId: this.id };
 
-            // 2. set blob from image path
-            const response = await fetch(imageUrl);
-            const blob = await response.blob();
-            await saveImage(this.id, blob);
+            if (cachedImage) imageBlob = cachedImage;
+            else {
+                const response = await fetch(image);
+                if (!response.ok) throw new Error(`Could not fetch image (${response.status} ${response.statusText})`);
+
+                imageBlob = await response.blob();
+            }
         }
+        // If the image is a Blob or File, store it in IndexedDB.
         else {
-            const imageBlob = image;
-            // 1. set image path
-            this.meta.image = "inside-indexedDB";
+            imageBlob = image;
+            this.meta.image =  { kind: "stored", id: this.id };
+        }
 
-            // 2. set blob from image file
-            await saveImage(this.id, imageBlob);
+        // Save the image to IndexedDB and remove the previous image if it exists.
+        await saveImage(this.id, imageBlob).catch((() => new Error(`Could not save image ${this.id}`)));
+
+        const previousImageId =  this.meta.image.kind === "stored"
+            ?  this.meta.image.id
+            :  this.meta.image.cacheId;
+
+        if (previousImageId && previousImageId !== this.id) {
+            const imageRemoved = await removeImage(previousImageId);
+            
+            if (!imageRemoved) throw new Error(`Could not remove stored image ${previousImageId}`);
         }
     }
     /** update image with rss feed or given image source */
-    UpdateImage(image?: string): void {
-        const newImage = image ?? this.rss?.image;
-        this.meta.image = newImage ?? this.meta.image;
+    UpdateImage(imageURL?: string): void {
+        const newImage = imageURL ?? this.rss?.image;
+        if (newImage) this.meta.image = { kind: "url", url: newImage };
     }
     SetAltTitle(title: string): void {
         // remove duplicates
@@ -436,7 +467,7 @@ export class HermidataModel implements Hermidata {
             contentRating: brokenHermidata?.meta?.contentRating ?? this.meta.tags.includes('Hentai') ? 'Pornographic' : 'Safe',
             contentWarnings: brokenHermidata?.meta?.contentWarnings ?? [],
             starRating: brokenHermidata?.meta?.starRating ?? 5.0,
-            image: brokenHermidata?.meta?.image ?? brokenHermidata?.rss?.image ?? '../../../assets/icon/icon48.png',
+            image: normalizeImageSource(brokenHermidata?.meta?.image ?? brokenHermidata?.rss?.image, this.id),
 
             readingQueue: brokenHermidata?.meta?.readingQueue ?? false,
             relations: brokenHermidata?.meta?.relations ?? "None",

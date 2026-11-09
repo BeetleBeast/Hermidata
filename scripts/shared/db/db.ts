@@ -382,6 +382,7 @@ export async function dbSaveImage(id: string, blob: Blob): Promise<void> {
         await db.put('images', blob, id);
     } catch (err) {
         logConsoleError('[DB] saveImage:', err);
+        throw err;
     }
 }
 /** save multiple images in a single transaction */
@@ -454,6 +455,7 @@ export async function dbDeleteImage(id: string): Promise<void> {
         await db.delete('images', id);
     } catch (err) {
         logConsoleError('[DB] deleteImage:', err);
+        throw err;
     }
 }
 

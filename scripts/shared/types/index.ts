@@ -5,6 +5,7 @@ export type {
     NovelType,
     NovelStatus,
     ReadStatus,
+    HermidataImageSource,
 
     ContentRating,
     ContentWarning,

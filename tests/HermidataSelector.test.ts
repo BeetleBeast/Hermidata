@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { PastHermidata } from '../scripts/popup/core/Past';
 import { returnHashedTitle } from '../scripts/shared/utils/StringOutput';
+import * as Storage from '../scripts/shared/db/Storage';
+
+afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+});
 
 function createHermidata(chapter: number, history: { chapter: number; at: string }[] = [], withRss = true): HermidataModel {
     const hermidata = HermidataModel.from('Manga', 'Viewing', 'Ongoing');
@@ -197,5 +203,50 @@ describe('HermidataModel.UpdateBookmark', () => {
         expect(history[0].chapter).toBe(6);
         expect(new Date(history[0].at).toISOString()).toBe(history[0].at);
         expect(history[0].at).not.toBe(markerId);
+    });
+});
+
+describe('HermidataModel image source', () => {
+    it('migrates the legacy IndexedDB marker to a stored image reference', () => {
+        const saved = createHermidata(5).toJSON();
+        const legacy = {
+            ...saved,
+            meta: { ...saved.meta, image: 'inside-indexedDB' },
+        };
+
+        const model = new HermidataModel(legacy);
+
+        expect(model.meta.image).toEqual({ kind: 'stored', id: saved.id });
+    });
+
+    it('fetches URL images for their resolved image data and keeps the URL source', async () => {
+        const model = createHermidata(5);
+        const imageBlob = new Blob(['resolved cover'], { type: 'image/jpeg' });
+        const fetchImage = vi.fn().mockResolvedValue(new Response(imageBlob));
+        vi.stubGlobal('fetch', fetchImage);
+        const saveImage = vi.spyOn(Storage, 'saveImage').mockResolvedValue(true);
+        const removeImage = vi.spyOn(Storage, 'removeImage').mockResolvedValue(true);
+        model.meta.image = { kind: 'url', url: 'https://example.com/old-cover.jpg', cacheId: 'old-image-id' };
+
+        await model.SetImage('https://example.com/cover.jpg');
+
+        expect(fetchImage).toHaveBeenCalledWith('https://example.com/cover.jpg');
+        expect(saveImage).toHaveBeenCalledWith(model.id, imageBlob);
+        expect(removeImage).toHaveBeenCalledWith('old-image-id');
+        expect(model.meta.image).toEqual({ kind: 'url', url: 'https://example.com/cover.jpg', cacheId: model.id });
+    });
+
+    it('stores uploaded image blobs and references them by ID', async () => {
+        const model = createHermidata(5);
+        const file = new Blob(['cover'], { type: 'image/jpeg' });
+        const saveImage = vi.spyOn(Storage, 'saveImage').mockResolvedValue(true);
+        const removeImage = vi.spyOn(Storage, 'removeImage').mockResolvedValue(true);
+        model.meta.image = { kind: 'stored', id: 'previous-image-id' };
+
+        await model.SetImage(file);
+
+        expect(saveImage).toHaveBeenCalledWith(model.id, file);
+        expect(removeImage).toHaveBeenCalledWith('previous-image-id');
+        expect(model.meta.image).toEqual({ kind: 'stored', id: model.id });
     });
 });

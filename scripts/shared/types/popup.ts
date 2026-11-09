@@ -32,6 +32,9 @@ export type TrimmedTitle = {
 export type NovelType =  'Manga' | 'Manhwa' | 'Manhua' | 'Novel' | 'Webnovel' | 'Anime' | "TV-Series";
 export type NovelStatus = 'Ongoing' | 'Completed' | 'Hiatus' | 'Canceled';
 export type ReadStatus = 'Viewing' | 'Finished' | 'On-hold' | 'Dropped' | 'Planned';
+export type HermidataImageSource =
+    | { kind: 'url'; url: string; cacheId?: string }
+    | { kind: 'stored'; id: string };
 
 // Extended versions — what you actually use at runtime
 // Allows user-defined values while keeping autocomplete on the defaults
@@ -101,7 +104,7 @@ export interface Hermidata {
         contentRating: ContentRating;
         contentWarnings: ContentWarning[];
         starRating: number;
-        image: (string & {}) | 'inside-indexedDB'; // image url? or file path? ( unsure )
+        image: HermidataImageSource;
         author?: string; // optional
         language?: string; // optional
         translator?: string; // optional

@@ -1284,7 +1284,7 @@ export class HermidataMigration {
                 contentRating: data.meta.tags.includes('Hentai') ? 'Pornographic' : 'Safe',
                 contentWarnings: [],
                 starRating: 5.0,
-                image: data?.rss?.image ?? '../../../assets/icon/icon48.png',
+                image: { kind: 'url', url: data?.rss?.image ?? '../../../assets/icon/icon48.png' },
 
                 readingQueue: false,
                 relations: 'None',
