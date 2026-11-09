@@ -4,7 +4,7 @@ import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
 import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
-import { getChapterFromTitle, normalizeDateToIso, returnBookmarkHash, generateHermidataHash, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
+import { getChapterFromTitle, normalizeDateToIso, generateBookmarkId, generateHermidataHash, returnRawFeedHash, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, Feed, FeedItem, FeedV1, Hermidata, HermidataV1, HermidataV10, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
 import type { BookmarkV4 } from "../types/oldVersions";
@@ -512,7 +512,7 @@ export class HermidataMigration {
         const reconciled: Record<string, Bookmark> = {};
 
         for (const bookmark of Object.values(bookmarks)) {
-            reconciled[returnBookmarkHash(bookmark.label)] = bookmark;
+            reconciled[generateBookmarkId(bookmark.label)] = bookmark;
         }
         return reconciled;
     }
@@ -524,14 +524,14 @@ export class HermidataMigration {
         const keepInUse = keep.chapter.bookmarks[keep.chapter.bookmarkInUse];
 
         if (keepInUse) {
-            const key = returnBookmarkHash(keepInUse.label);
+            const key = generateBookmarkId(keepInUse.label);
             if (mergedBookmarks[key]) return key;
         }
 
         const discardInUse = discard.chapter.bookmarks[discard.chapter.bookmarkInUse];
         
         if (discardInUse) {
-            const key = returnBookmarkHash(discardInUse.label);
+            const key = generateBookmarkId(discardInUse.label);
             if (mergedBookmarks[key]) return key;
         }
 
@@ -1024,7 +1024,7 @@ export class HermidataMigration {
     private static migrateHermidataV5ToV6(data: HermidataV5): HermidataV6 {
         const defaultBookmarkLabel = 'Primary';
         const bookmark: BookmarkV1 = {
-            id: returnBookmarkHash(defaultBookmarkLabel),
+            id: generateBookmarkId(defaultBookmarkLabel),
             current: Number(data?.chapter?.current) ?? 0,
             history: this.setNumbersFromStringToList(data.chapter.history) ?? [],
             label: defaultBookmarkLabel,

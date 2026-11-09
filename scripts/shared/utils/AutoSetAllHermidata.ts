@@ -1,6 +1,6 @@
 import { findNestedFolder, getBookmarkChildren } from "../../background/bookmarks";
 import type { AnyNovelType, Bookmark, Hermidata, ReleaseSchedule } from "../types";
-import { findByTitleOrAlt, getChapterFromTitle, returnBookmarkHash, generateHermidataHash, TrimTitle } from "./StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, generateBookmarkId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 
 export class AutoSetAllHermidata {
@@ -134,7 +134,7 @@ export class AutoSetAllHermidata {
         const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
         const chapter = getChapterFromTitle(rawTitle, rawUrl);
         const HermidataID = generateHermidataHash(rawTitle, novelType, rawUrl);
-        const BookmarkID = returnBookmarkHash(label);
+        const BookmarkID = generateBookmarkId(label);
 
         const bookmarkGuess: Bookmark = {
             version: 4,

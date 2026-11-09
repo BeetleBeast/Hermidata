@@ -254,7 +254,7 @@ export function generateHermidataHash(title: string, type: AnyNovelType, url: st
     const finalTitle = trimTitle ? TrimTitle.trimTitle(title, url).title : title;
     return simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
 }
-export function returnBookmarkHash(bookmarkLabel: string) {
+export function generateBookmarkId(bookmarkLabel: string) {
     return simpleHash(bookmarkLabel);
 }
 export function returnRawFeedHash(title: string, url: string) {

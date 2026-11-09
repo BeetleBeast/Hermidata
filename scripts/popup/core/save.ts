@@ -1,6 +1,6 @@
 import { ErrorMessage, logConsoleError } from "../../shared/utils/ErrorMessage";
 
-import { TrimTitle, returnBookmarkHash, generateHermidataHash } from "../../shared/utils/StringOutput";
+import { TrimTitle, generateBookmarkId, generateHermidataHash } from "../../shared/utils/StringOutput";
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
@@ -94,7 +94,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
     const label = 'Primary';
     const newBookmark: Bookmark = {
         version: 4,
-        id: returnBookmarkHash(label),
+        id: generateBookmarkId(label),
         current: 0,
         history: [],
         label: label,
@@ -121,7 +121,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
             },
             revisitingCount: 0,
             lastChecked: new Date().toISOString(),
-            bookmarkInUse: returnBookmarkHash(label),
+            bookmarkInUse: generateBookmarkId(label),
             releaseSchedule: "Unknown"
         },
         rss: null,

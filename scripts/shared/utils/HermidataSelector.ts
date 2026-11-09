@@ -5,7 +5,7 @@ import { isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidat
 import { getImage, saveImage, getSettings } from "../db/Storage";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
-import { openLink, returnBookmarkHash, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
+import { openLink, generateBookmarkId, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -378,7 +378,7 @@ export class HermidataModel implements Hermidata {
 
         if (!brokenHermidata?.chapter?.bookmarks) {
             const newBookmark: Bookmark = {
-                id: returnBookmarkHash('Primary'),
+                id: generateBookmarkId('Primary'),
                 current: 0,
                 history: [],
                 label: 'Primary',
@@ -393,7 +393,7 @@ export class HermidataModel implements Hermidata {
                 version: 5
             }
             this.chapter.bookmarks = {
-                [returnBookmarkHash('Primary')]: newBookmark
+                [generateBookmarkId('Primary')]: newBookmark
             }
         }else {
             this.chapter = {
@@ -412,7 +412,7 @@ export class HermidataModel implements Hermidata {
                 if (hasPrimary && marker.label == undefined) continue;
                 const newBookmark: Bookmark = {
                     version: 5,
-                    id: returnBookmarkHash(marker?.label ?? 'Primary'),
+                    id: generateBookmarkId(marker?.label ?? 'Primary'),
                     current: marker.current ?? 0,
                     history: marker.history ?? [],
                     label: marker.label ?? 'Primary',
