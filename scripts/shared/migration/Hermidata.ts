@@ -1293,7 +1293,7 @@ export class HermidataMigration {
                 contentRating: data.meta.tags.includes('Hentai') ? 'Pornographic' : 'Safe',
                 contentWarnings: [],
                 starRating: 5.0,
-                image: { kind: 'url', url: data?.rss?.image ?? '../../../assets/icon/icon48.png' },
+                image: data?.rss?.image ?? '../../../assets/icon/icon48.png',
 
                 readingQueue: false,
                 relations: 'None',
@@ -1310,13 +1310,9 @@ export class HermidataMigration {
                 lastUsedAt: bookmark.updatedAt,
             }])
         );
-        const image: HermidataImageSource = typeof data.meta.image === 'string'
-            ? data.meta.image === 'inside-indexedDB'
-                ? { kind: 'stored', id: data.id }
-                : { kind: 'url', url: data.meta.image }
-            : data.meta.image.kind === 'stored'
-                ? data.meta.image
-                : { kind: 'url', url: data.meta.image.url };
+        const image: HermidataImageSource = data.meta.image === 'inside-indexedDB'
+            ? { kind: 'stored', id: data.id }
+            : { kind: 'url', url: data.meta.image };
 
         return {
             ...data,

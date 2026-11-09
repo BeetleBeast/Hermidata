@@ -1,4 +1,4 @@
-import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Feed, Hermidata, HermidataImageSource, NovelType, ReadStatus } from "./popup";
+import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Feed, Hermidata, NovelType, ReadStatus } from "./popup";
 
 
 
@@ -175,6 +175,6 @@ export interface HermidataV11 extends Omit<Hermidata, "version" | "rss" | "chapt
         bookmarks: Record<string, BookmarkV5>;
     };
     meta: Omit<Hermidata["meta"], "image"> & {
-        image: HermidataImageSource | string;
+        image: string;
     };
 }
