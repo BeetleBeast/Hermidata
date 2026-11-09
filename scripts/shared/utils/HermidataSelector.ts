@@ -5,7 +5,7 @@ import { isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidat
 import { getImage, saveImage, getSettings } from "../db/Storage";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
-import { openLink, returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { openLink, returnBookmarkHash, returnHashedFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -368,7 +368,7 @@ export class HermidataModel implements Hermidata {
             return;
         }
         const trimmedTitle = TrimTitle.trimTitle(alternativeRequired.title, alternativeRequired.url);
-        const newId = returnHashedTitle(trimmedTitle.title, alternativeRequired.novelType, alternativeRequired.url);
+        const newId = generateHermidataHash(trimmedTitle.title, alternativeRequired.novelType, alternativeRequired.url);
         this.id = newId;
         this.novelType = alternativeRequired.novelType;
         this.title = trimmedTitle.title;

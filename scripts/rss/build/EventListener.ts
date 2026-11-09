@@ -1,6 +1,6 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
-import { getMultipleTitles, openLink, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
+import { getMultipleTitles, openLink, generateHermidataHash, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
@@ -462,7 +462,7 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.GetUrl(), false);
+        const newKey = generateHermidataHash(newTitle, oldData.novelType, oldData.GetUrl(), false);
         const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title;
 
         const newData: HermidataModel = oldData.Copy();

@@ -1,5 +1,5 @@
 import type { PickedElementData } from '../types/rss';
-import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
+import type { AnyNovelType, Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
 import { ext } from './BrowserCompat';
 
@@ -237,11 +237,17 @@ export function returnHashedFeedId(title: string, url: string): string {
     return simpleHash(`${domain}:${title.toLowerCase()}`);
 }
 
-export function returnHashedTitle(title: string, type: string, url: string = '', trimTitle: boolean = true) {
+/**
+ * Generates a hash for the given title, type, and URL
+ * @param title - The title of the novel
+ * @param type - The type of the novel (e.g., Manga, Novel)
+ * @param url - The URL of the novel (optional)
+ * @param trimTitle - Whether to trim the title before hashing (default: true)
+ * @returns - A unique hash string based on the title, type, and URL
+ */
+export function generateHermidataHash(title: string, type: AnyNovelType, url: string = '', trimTitle: boolean = true) {
     const finalTitle = trimTitle ? TrimTitle.trimTitle(title, url).title : title;
-    return type 
-    ? simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
-    : simpleHash(finalTitle.toLowerCase()) // V1
+    return simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
 }
 export function returnBookmarkHash(bookmarkLabel: string) {
     return simpleHash(bookmarkLabel);

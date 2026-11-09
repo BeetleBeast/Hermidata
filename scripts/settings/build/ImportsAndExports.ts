@@ -6,7 +6,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 import { AutoSetAllHermidata } from "../../shared/utils/AutoSetAllHermidata";
 import { levenshteinDistance } from "../../popup/core/Past";
-import { returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
+import { generateHermidataHash, TrimTitle } from "../../shared/utils/StringOutput";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 
@@ -664,6 +664,7 @@ export class ImportsAndExports extends Build {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, "text/xml");
         const entries = [...doc.querySelectorAll("manga")];
+        // TODO: fill in missing data
 
         const hermidatas = entries.map(entry => {
             const title = entry.querySelector("manga_title")?.textContent?.trim() ?? "";
@@ -674,7 +675,7 @@ export class ImportsAndExports extends Build {
             const trimmedTitle = TrimTitle.trimTitle(title, "").title;
             const hermidata = new HermidataModel(HermidataModel.from("Manga", readStatus, "Ongoing"));
             hermidata.SetFromTab({ pageTitle: title, url: "", currentChapter: chapter });
-            hermidata.id = returnHashedTitle(trimmedTitle, "Manga", "");
+            hermidata.id = generateHermidataHash(trimmedTitle, "Manga", "");
             hermidata.source = "MyAnimeList";
             hermidata.import = "MAL";
 

@@ -1,7 +1,7 @@
 import { ErrorMessage, logConsoleError, WarningMessage } from "../../shared/utils/ErrorMessage";
 
 import { ext } from '../../shared/utils/BrowserCompat';
-import { getChapterFromTitle, returnHashedTitle } from '../../shared/utils/StringOutput';
+import { getChapterFromTitle, generateHermidataHash } from '../../shared/utils/StringOutput';
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
@@ -315,7 +315,7 @@ class HermidataController {
         if (!novelTypeChanged || !this.past.pastHermidata) return true;
         
         // 3. If the novel type has changed, generate a new id
-        const newId = returnHashedTitle(this.hermidata.title, this.hermidata.novelType);
+        const newId = generateHermidataHash(this.hermidata.title, this.hermidata.novelType);
         this.hermidata.id = newId;
         
         // 4. If the user confirms the merge, merge the two hermidatas and return the new hermidata, else return false

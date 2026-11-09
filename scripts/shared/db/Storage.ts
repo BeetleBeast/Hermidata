@@ -16,7 +16,7 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     dbUpdateImageKey} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
-import { returnHashedTitle } from '../utils/StringOutput';
+import { generateHermidataHash } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
 import { type RawFeed, type Settings, type AllSortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
 import { SettingsMigration } from '../migration/Settings';
@@ -33,7 +33,7 @@ export function getHermidataViaKey(key: string): Promise<OnlyPlainHermidata | nu
 
 export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Promise<void> {
     try {
-        const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
+        const Key = key || entry.id || generateHermidataHash(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
         entry.id = Key;
         entry.meta.updated = new Date().toISOString();
 

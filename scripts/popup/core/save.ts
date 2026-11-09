@@ -1,6 +1,6 @@
 import { ErrorMessage, logConsoleError } from "../../shared/utils/ErrorMessage";
 
-import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/utils/StringOutput";
+import { TrimTitle, returnBookmarkHash, generateHermidataHash } from "../../shared/utils/StringOutput";
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
@@ -15,7 +15,7 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
     
         const newChapterNumber = hermidata.GetChapter();
         
-        const key = returnHashedTitle(hermidata.title, hermidata.novelType, hermidata.GetUrl(), false);
+        const key = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl(), false);
         const data = await getHermidataViaKey(key);
     
         
@@ -84,7 +84,7 @@ export async function getPagePosition(): Promise<chrome.scripting.InjectionResul
 
 export async function makeHermidata(title: string, url: string, novelType: AnyNovelType = "Manga", isPrimary: boolean = true): Promise<Hermidata> {
     const Title = TrimTitle.trimTitle(title, url);
-    const hash = returnHashedTitle(title, novelType, url);
+    const hash = generateHermidataHash(title, novelType, url);
     const source = new URL(url).hostname.replace(/^www\./, "");
 
     const pagePositionObject = await getPagePosition();
@@ -155,7 +155,7 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
         new Set([...(hermidata.meta.altTitles || []), trimmed])
     );
 
-    const entryKey = hermidata.id || returnHashedTitle(hermidata.title, hermidata.novelType);
+    const entryKey = hermidata.id || generateHermidataHash(hermidata.title, hermidata.novelType);
 
     await saveHermidata(entryKey, hermidata.toJSON());
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${hermidata.title}`);

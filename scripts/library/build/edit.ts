@@ -3,7 +3,7 @@ import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { openLink, returnHashedTitle } from "../../shared/utils/StringOutput";
+import { openLink, generateHermidataHash } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, LibraryBuilder } from "../build";
 import { Tags } from "./tags";
 
@@ -484,7 +484,7 @@ export class EditDetail extends LibraryBuilder {
     }
     /** update key if changes have been made */
     private async forceKeyUpdate() {
-        const newKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
+        const newKey = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
         const oldKey = this.hermidata.id;
         if (newKey === oldKey) return;
         

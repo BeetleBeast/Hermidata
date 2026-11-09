@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HermidataMigration } from '../scripts/shared/migration/Hermidata';
 import { removeHermidata, updateHermidata } from '../scripts/shared/db/Storage';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
-import { returnHashedTitle } from '../scripts/shared/utils/StringOutput';
+import { generateHermidataHash } from '../scripts/shared/utils/StringOutput';
 
 vi.mock('../scripts/shared/db/Storage', () => ({
     getAllRawFeeds: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('../scripts/shared/db/Storage', () => ({
 function createHermidata(novelType: string, title = 'Series'): HermidataModel {
     const hermidata = HermidataModel.from(novelType, 'Viewing', 'Ongoing');
     hermidata.title = title;
-    hermidata.id = returnHashedTitle(hermidata.title, novelType);
+    hermidata.id = generateHermidataHash(hermidata.title, novelType);
     hermidata.SetUrl('https://example.com/series/chapter-12');
     return hermidata;
 }
@@ -31,8 +31,8 @@ describe('HermidataMigration.mergeHermidata', () => {
         expect(conflicts.map(conflict => conflict.path)).toContain('novelType');
         expect(merged.id).toBe(keep.id);
         expect(merged.id).not.toBe(discard.id);
-        expect(keep.id).toBe(returnHashedTitle(keep.title, keep.novelType));
-        expect(discard.id).toBe(returnHashedTitle(discard.title, discard.novelType));
+        expect(keep.id).toBe(generateHermidataHash(keep.title, keep.novelType));
+        expect(discard.id).toBe(generateHermidataHash(discard.title, discard.novelType));
     });
 });
 
@@ -57,7 +57,7 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
         expect(animeResult).not.toBeInstanceOf(Error);
         if (animeResult instanceof Error) throw animeResult;
 
-        const animeId = returnHashedTitle(animeResult.title, animeResult.novelType);
+        const animeId = generateHermidataHash(animeResult.title, animeResult.novelType);
         expect(animeResult.novelType).toBe('Anime');
         expect(animeResult.id).toBe(animeId);
         expect(updateHermidata).toHaveBeenCalledWith(original.id, animeId, animeResult);
@@ -71,7 +71,7 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
         expect(mangaResult).not.toBeInstanceOf(Error);
         if (mangaResult instanceof Error) throw mangaResult;
 
-        const mangaId = returnHashedTitle(mangaResult.title, mangaResult.novelType);
+        const mangaId = generateHermidataHash(mangaResult.title, mangaResult.novelType);
         expect(mangaResult.novelType).toBe('Manga');
         expect(mangaResult.id).toBe(mangaId);
         expect(updateHermidata).toHaveBeenNthCalledWith(2, animeId, mangaId, mangaResult);
@@ -94,7 +94,7 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
             },
         );
 
-        const expectedId = returnHashedTitle(keep.title, 'Anime', keep.GetUrl());
+        const expectedId = generateHermidataHash(keep.title, 'Anime', keep.GetUrl());
         expect(result).toEqual({
             merged: true,
             removedIds: [keep.id, discard.id],
@@ -111,7 +111,7 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
     it('keeps the existing ID and removes only the discarded key when identity is unchanged', async () => {
         const keep = createHermidata('Manga');
         const discard = keep.Copy();
-        discard.id = returnHashedTitle('Series Alt', discard.novelType);
+        discard.id = generateHermidataHash('Series Alt', discard.novelType);
         discard.title = 'Series Alt';
 
         const result = await HermidataMigration.mergeTwoHermidataWithConfiguration(

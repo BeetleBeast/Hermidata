@@ -1,6 +1,6 @@
 import { findNestedFolder, getBookmarkChildren } from "../../background/bookmarks";
 import type { AnyNovelType, Bookmark, Hermidata, ReleaseSchedule } from "../types";
-import { findByTitleOrAlt, getChapterFromTitle, returnBookmarkHash, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, returnBookmarkHash, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 
 export class AutoSetAllHermidata {
@@ -65,7 +65,7 @@ export class AutoSetAllHermidata {
             const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
             
             // create all possible id with all possible types
-            const allPossibleIDs = this.allNovelTypes.map(type => returnHashedTitle(rawTitle, type, rawUrl));
+            const allPossibleIDs = this.allNovelTypes.map(type => generateHermidataHash(rawTitle, type, rawUrl));
             const allPossibleIDsIncludes = Object.keys(this.allHermidata).find(novelId => allPossibleIDs.includes(novelId));
             if (allPossibleIDsIncludes) continue;
             // also check if there is a novel with the same title.
@@ -133,7 +133,7 @@ export class AutoSetAllHermidata {
         // trim version
         const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
         const chapter = getChapterFromTitle(rawTitle, rawUrl);
-        const HermidataID = returnHashedTitle(rawTitle, novelType, rawUrl);
+        const HermidataID = generateHermidataHash(rawTitle, novelType, rawUrl);
         const BookmarkID = returnBookmarkHash(label);
 
         const bookmarkGuess: Bookmark = {
