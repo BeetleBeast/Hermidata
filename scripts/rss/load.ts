@@ -2,7 +2,7 @@ import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
 import { appendAltTitle, makeHermidata } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
-import { findByTitleOrAlt, getChapterFromTitle, returnHashedFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, generateRssFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidata } from "../shared/db/Storage";
 import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";
@@ -215,7 +215,7 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     const entry: Hermidata = await getEntry(title, stored, altCheck, resolvedType, url, key);
 
     entry.rss = {
-        id: returnHashedFeedId(rssData.latestItem.title, rssData.url),
+        id: generateRssFeedId(rssData.latestItem.title, rssData.url),
         title: rssData.title,
         url: rssData.url,
         image: rssData.image,

@@ -5,7 +5,7 @@ import { isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidat
 import { getImage, saveImage, getSettings } from "../db/Storage";
 import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
-import { openLink, returnBookmarkHash, returnHashedFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
+import { openLink, returnBookmarkHash, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -580,7 +580,7 @@ export class HermidataModel implements Hermidata {
         
         // only update feed if we have a newer chapter, otherwise we might overwrite with stale data
         this.rss = {
-            id: returnHashedFeedId(this.title, this.rss.url),
+            id: generateRssFeedId(this.title, this.rss.url),
             title: latestFetchedIsNewer ? rawFeed.latestItem.title : this.rss.title,
             url: latestFetchedIsNewer ? rawFeed.url : this.rss.url, // rss url
             image: latestFetchedIsNewer ? rawFeed.image : this.rss.image,

@@ -9,7 +9,7 @@ import { checkFeedsForUpdates } from "./feeds"
 import { writeToSheet } from "./sheets"
 import { lastAutoFeedCheck, lastFeedCheck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
-import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput"
+import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput"
 import { pushToSync, removeFromSync } from "../shared/db/sync"
 
 let rssCache: Record<string, Hermidata> | null = null
@@ -216,12 +216,12 @@ function buildFeedItem(raw: RawScrappedFeed): RawFeed {
     const rawTitle = raw.latestItem.title;
     const trimmedTitle = TrimTitle.trimTitle(rawTitle, url).title;
     return {
-        id: returnHashedFeedId(trimmedTitle, raw.url),
+        id: generateRssFeedId(trimmedTitle, raw.url),
         title: trimmedTitle,
         url,
         domain: raw.domain ?? new URL(url).hostname.replace(/^www\./, ''),
         latestItem: {
-            id: returnHashedFeedId(trimmedTitle, url),
+            id: generateRssFeedId(trimmedTitle, url),
             title: trimmedTitle,
             rawTitle: rawTitle,
             link: raw.latestItem.link,

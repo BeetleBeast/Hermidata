@@ -235,9 +235,9 @@ export function findByTitleOrAlt(title: string, allData: Record<string, Hermidat
 /** 
  * takes title and *domain* as input
  * - url is only used to get the domain
- * @return returns a hashed string that is unique to the title and domain
+ * @returns A hashed string that is unique to the title and domain
  * */
-export function returnHashedFeedId(title: string, url: string): string {
+export function generateRssFeedId(title: string, url: string): string {
     const domain = new URL(url).hostname.replace(/^www\./, "");
     return simpleHash(`${domain}:${title.toLowerCase()}`);
 }
