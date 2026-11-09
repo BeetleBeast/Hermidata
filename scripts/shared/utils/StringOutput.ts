@@ -1,5 +1,5 @@
 import type { PickedElementData } from '../types/rss';
-import type { Hermidata, RegexConfig, TrimmedTitle } from '../types';
+import type { AnyNovelType, Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
 import { ext } from './BrowserCompat';
 
@@ -121,10 +121,15 @@ export function getChapterFromTitle(title: string | undefined, url: string): num
     return detectChapter(title, url).chapter;
 }
 
-export function getChapterFromTitleReturn(correctTitle: string, title: string, chapter: number | undefined, url: string): number {
-    const isNotPartOfTitle = title?.replace(correctTitle, '');
-    const finalChapter = url ? getChapterFromTitle(isNotPartOfTitle, url) : chapter;
-    return isNotPartOfTitle ? finalChapter ?? Number.NaN : Number.NaN;
+/**
+ * Extracts a chapter from a feed item title after removing the known series title.
+ * Uses the URL for chapter detection when available, otherwise the fallback chapter.
+ * Returns NaN when removing the series title leaves no title content to inspect.
+ */
+export function extractChapterFromFeedItemTitle(seriesTitle: string, feedItemTitle: string, fallbackChapter: number | undefined, url: string): number {
+    const titleWithoutSeries = feedItemTitle?.replace(seriesTitle, '');
+    const finalChapter = url ? getChapterFromTitle(titleWithoutSeries, url) : fallbackChapter;
+    return titleWithoutSeries ? finalChapter ?? Number.NaN : Number.NaN;
 }
 
 export function normalizeDateToIso(rawDate: string): string {
@@ -230,23 +235,29 @@ export function findByTitleOrAlt(title: string, allData: Record<string, Hermidat
 /** 
  * takes title and *domain* as input
  * - url is only used to get the domain
- * @return returns a hashed string that is unique to the title and domain
+ * @returns A hashed string that is unique to the title and domain
  * */
-export function returnHashedFeedId(title: string, url: string): string {
+export function generateRssFeedId(title: string, url: string): string {
     const domain = new URL(url).hostname.replace(/^www\./, "");
     return simpleHash(`${domain}:${title.toLowerCase()}`);
 }
 
-export function returnHashedTitle(title: string, type: string, url: string = '', trimTitle: boolean = true) {
+/**
+ * Generates a hash for the given title, type, and URL
+ * @param title - The title of the novel
+ * @param type - The type of the novel (e.g., Manga, Novel)
+ * @param url - The URL of the novel (optional)
+ * @param trimTitle - Whether to trim the title before hashing (default: true)
+ * @returns - A unique hash string based on the title, type, and URL
+ */
+export function generateHermidataHash(title: string, type: AnyNovelType, url: string = '', trimTitle: boolean = true) {
     const finalTitle = trimTitle ? TrimTitle.trimTitle(title, url).title : title;
-    return type 
-    ? simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
-    : simpleHash(finalTitle.toLowerCase()) // V1
+    return simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
 }
-export function returnBookmarkHash(bookmarkLabel: string) {
+export function generateBookmarkId(bookmarkLabel: string) {
     return simpleHash(bookmarkLabel);
 }
-export function returnRawFeedHash(title: string, url: string) {
+export function generateRawFeedId(title: string, url: string) {
     return simpleHash(title + url);
 }
 

@@ -5,7 +5,7 @@ import { isHermidataV1, isHermidataV10, isHermidataV12, isHermidataV2, isHermida
 import { getImage, removeImage, saveImage, getSettings } from "../db/Storage";
 import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
-import { openLink, returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { openLink, generateBookmarkId, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -395,7 +395,7 @@ export class HermidataModel implements Hermidata {
             return;
         }
         const trimmedTitle = TrimTitle.trimTitle(alternativeRequired.title, alternativeRequired.url);
-        const newId = returnHashedTitle(trimmedTitle.title, alternativeRequired.novelType, alternativeRequired.url);
+        const newId = generateHermidataHash(trimmedTitle.title, alternativeRequired.novelType, alternativeRequired.url);
         this.id = newId;
         this.novelType = alternativeRequired.novelType;
         this.title = trimmedTitle.title;
@@ -405,7 +405,7 @@ export class HermidataModel implements Hermidata {
 
         if (!brokenHermidata?.chapter?.bookmarks) {
             const newBookmark: Bookmark = {
-                id: returnBookmarkHash('Primary'),
+                id: generateBookmarkId('Primary'),
                 version: 6,
                 current: 0,
                 history: [],
@@ -421,7 +421,7 @@ export class HermidataModel implements Hermidata {
                 note: '',
             }
             this.chapter.bookmarks = {
-                [returnBookmarkHash('Primary')]: newBookmark
+                [generateBookmarkId('Primary')]: newBookmark
             }
         }else {
             this.chapter = {
@@ -440,7 +440,7 @@ export class HermidataModel implements Hermidata {
                 if (hasPrimary && marker.label == undefined) continue;
                 const newBookmark: Bookmark = {
                     version: 6,
-                    id: returnBookmarkHash(marker?.label ?? 'Primary'),
+                    id: generateBookmarkId(marker?.label ?? 'Primary'),
                     current: marker.current ?? 0,
                     history: marker.history ?? [],
                     label: marker.label ?? 'Primary',
@@ -611,7 +611,7 @@ export class HermidataModel implements Hermidata {
         
         // only update feed if we have a newer chapter, otherwise we might overwrite with stale data
         this.rss[feedIndex] = {
-            id: returnHashedFeedId(this.title, currentFeed.url),
+            id: generateRssFeedId(this.title, currentFeed.url),
             title: latestFetchedIsNewer ? rawFeed.latestItem.title : currentFeed.title,
             url: currentFeed.url,
             image: latestFetchedIsNewer ? rawFeed.image : currentFeed.image,

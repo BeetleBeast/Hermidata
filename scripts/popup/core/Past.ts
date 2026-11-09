@@ -1,6 +1,6 @@
 import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { getAllHermidata, getHermidataViaKey, getSettings } from "../../shared/db/Storage";
-import { TrimTitle, findByTitleOrAlt, returnHashedTitle } from "../../shared/utils/StringOutput";
+import { TrimTitle, findByTitleOrAlt, generateHermidataHash } from "../../shared/utils/StringOutput";
 import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
@@ -115,7 +115,7 @@ export class PastHermidata {
             else return null
         }
 
-        const key: string = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
+        const key: string = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
 
         return getHermidataViaKey(key).catch(error => {
             logConsoleError('Extension error: Failed Premise getHermidata: ',error);
@@ -137,7 +137,7 @@ export class PastHermidata {
         
         const fuzzyKey = AltKeyNeeded?.relatedKey;
         // Generate all possible keys
-        const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => returnHashedTitle(trueTitle, type, this.hermidata.GetUrl(), false));
+        const possibleKeys = settings.ContentTypesAndStatuses.TYPE_OPTIONS.map(type => generateHermidataHash(trueTitle, type, this.hermidata.GetUrl(), false));
         // add fuzzy key if not inside possible keys
         if (fuzzyKey && !possibleKeys.includes(fuzzyKey)) possibleKeys.push(fuzzyKey);
         // get all possible hermidata Obj
@@ -175,11 +175,11 @@ export class PastHermidata {
             return sameTitleMatches[0];
         }
          // Prefer the same type if exists
-        const typeKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType);
+        const typeKey = generateHermidataHash(this.hermidata.title, this.hermidata.novelType);
         if (possibleObj[typeKey]) return possibleObj[typeKey];
     
         // Fallback: old V1 hash (title only)
-        const fallbackKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
+        const fallbackKey = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
         const fallbackObj = await getHermidataViaKey(fallbackKey);
         if (fallbackObj) return fallbackObj;
     
@@ -200,7 +200,7 @@ export async function detectAltTitleNeeded(title: string, type: AnyNovelType, so
         return { 
             needAltTitle: false,
             reason: "Title or alt title already exists",
-            existingKey: returnHashedTitle(titleOrAltMatch.title, type)
+            existingKey: generateHermidataHash(titleOrAltMatch.title, type)
         };
     }
 

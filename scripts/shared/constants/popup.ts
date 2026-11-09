@@ -1,4 +1,4 @@
-import { returnBookmarkHash } from "../utils/StringOutput";
+import { generateBookmarkId } from "../utils/StringOutput";
 import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
 
 export const HERMIDATA_VERSION = 12;
@@ -104,12 +104,12 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
     source: '',
     chapter: {
         bookmarks: {
-            [returnBookmarkHash('Primary')]: makeDefaultBookmark(status)
+            [generateBookmarkId('Primary')]: makeDefaultBookmark(status)
         },
         latest: 0,
         lastChecked: new Date().toISOString(),
         revisitingCount: 0,
-        bookmarkInUse: returnBookmarkHash('Primary'),
+        bookmarkInUse: generateBookmarkId('Primary'),
         releaseSchedule: "Unknown",
     },
     rss: [],
@@ -134,7 +134,7 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
 });
 export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', currentChapter: number = 0, history: { chapter: number, at: string }[] = [], notes: string = ''): Bookmark => ({
     version: 6,
-    id: returnBookmarkHash('Primary'),
+    id: generateBookmarkId('Primary'),
     current: currentChapter,
     history: history,
     label: 'Primary',

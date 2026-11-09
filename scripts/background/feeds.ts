@@ -3,7 +3,7 @@ import { ext } from "../shared/utils/BrowserCompat";
 import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
 import { getAllHermidata, getAllRawFeeds, getSettings, setAllHermidata, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
-import { returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput";
+import { generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput";
 import { XMLParser } from 'fast-xml-parser';
 import { getLatestToken, parseItems } from "./parseXML";
 
@@ -134,7 +134,7 @@ async function webSearch() {
         }
 
         const newFeed: RawFeed = {
-            id: returnHashedFeedId(novel.latestItem?.title, novel.url),
+            id: generateRssFeedId(novel.latestItem?.title, novel.url),
             title: TrimTitle.trimTitle(novel.latestItem?.title, novel.url).title,
             url: novel.url,
             domain: novel.domain,

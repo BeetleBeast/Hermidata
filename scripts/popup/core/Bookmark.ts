@@ -1,5 +1,5 @@
 import { saveHermidata } from "../../shared/db/Storage";
-import { returnBookmarkHash } from "../../shared/utils/StringOutput";
+import { generateBookmarkId } from "../../shared/utils/StringOutput";
 import type { Bookmark } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
@@ -519,7 +519,7 @@ export class BookmarkController {
         // if a label has already the same name, give warning message
         if (Object.values(this.hermidata.chapter.bookmarks).some(b => b.label === labelValue)) return new WarningMessage('Bookmark with same name already exists').sendMessage();
 
-        const hash = returnBookmarkHash(labelValue);
+        const hash = generateBookmarkId(labelValue);
 
         this.hermidata.chapter.bookmarks[hash] = {
             version: this.hermidata.version,

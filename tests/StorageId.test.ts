@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { dbAccess, saveHermidata, updateHermidata } from '../scripts/shared/db/Storage';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
-import { returnHashedTitle } from '../scripts/shared/utils/StringOutput';
+import { generateHermidataHash } from '../scripts/shared/utils/StringOutput';
 import { dbUpdateImageKey, deleteHermidata, putHermidata } from '../scripts/shared/db/db';
 import { pushToSync, removeFromSync } from '../scripts/shared/db/sync';
 
@@ -55,7 +55,7 @@ describe('Hermidata storage ID changes', () => {
     it('generates the ID from the entry title and type when no key or ID is supplied', async () => {
         const entry = createHermidata();
         entry.id = '';
-        const expectedId = returnHashedTitle(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
+        const expectedId = generateHermidataHash(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
 
         await saveHermidata('', entry);
 

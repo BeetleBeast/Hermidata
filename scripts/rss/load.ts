@@ -2,7 +2,7 @@ import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
 import { appendAltTitle, makeHermidata } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
-import { findByTitleOrAlt, getChapterFromTitle, getChapterFromTitleReturn, returnHashedFeedId, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, generateRssFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidata } from "../shared/db/Storage";
 import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";
@@ -121,7 +121,7 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
         }
         
         const type = matched?.novelType ?? TYPE_OPTIONS[0];
-        const id = returnHashedTitle(feedTitle, type, feed.url);
+        const id = generateHermidataHash(feedTitle, type, feed.url);
 
         filteredRawFeeds[id] = Object.freeze({ ...feed, items: feed.latestItem });
         // filteredRawFeeds[id] = feed;
@@ -202,7 +202,7 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     const existingEntry = findByTitleOrAlt(title, AllHermidata)
     const resolvedTitle = existingEntry ? existingEntry.title : title;
     const resolvedType = existingEntry ? existingEntry.novelType : type;
-    const key = returnHashedTitle( resolvedTitle, resolvedType);
+    const key = generateHermidataHash( resolvedTitle, resolvedType);
 
     const KeysToFetch = [key];
     if (altCheck.relatedKey && altCheck.relatedKey !== key) KeysToFetch.push(altCheck.relatedKey)
@@ -217,7 +217,7 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     const entry: Hermidata = await getEntry(title, stored, altCheck, resolvedType, url, key);
 
     const newFeed: Feed = {
-        id: returnHashedFeedId(rssData.latestItem.title, rssData.url),
+        id: generateRssFeedId(rssData.latestItem.title, rssData.url),
         title: rssData.title,
         url: rssData.url,
         image: rssData.image,
