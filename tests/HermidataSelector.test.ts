@@ -164,7 +164,7 @@ describe('HermidataModel image source', () => {
     it('migrates the legacy IndexedDB marker to a stored image reference', () => {
         const saved = createHermidata(5).toJSON();
         const { titleTrimming: _titleTrimming, ...v11Saved } = saved;
-        const legacy = {
+        const legacy: HermidataV11 = {
             ...v11Saved,
             version: 11,
             rss: null,
@@ -175,8 +175,8 @@ describe('HermidataModel image source', () => {
                     return [id, { ...legacyBookmark, version: 5 }];
                 })),
             },
-            meta: { ...saved.meta, image: 'inside-indexedDB' } as unknown as HermidataV11['meta'],
-        } as HermidataV11;
+            meta: { ...saved.meta, image: 'inside-indexedDB' }
+        };
 
         const result = HermidataMigration.migrateAllHermidataToLatest(legacy);
         expect(result.isMigratedSuccessfully).toBe(true);
@@ -192,8 +192,9 @@ describe('HermidataModel image source', () => {
 
     it('migrates a legacy RSS feed into a one-item list', () => {
         const saved = createHermidata(5).toJSON();
-        const { titleTrimming: _titleTrimming, ...v11Saved } = saved;
-        const legacy = {
+        const { titleTrimming: _titleTrimming, meta: _meta, ...v11Saved } = saved;
+        
+        const legacy: HermidataV11 = {
             ...v11Saved,
             version: 11,
             rss: saved.rss[0],
@@ -204,7 +205,8 @@ describe('HermidataModel image source', () => {
                     return [id, { ...legacyBookmark, version: 5 }];
                 })),
             },
-        } as unknown as HermidataV11;
+            meta: { ...saved.meta, image: 'inside-indexedDB' },
+        };
 
         const result = HermidataMigration.migrateAllHermidataToLatest(legacy);
         expect(result.isMigratedSuccessfully).toBe(true);

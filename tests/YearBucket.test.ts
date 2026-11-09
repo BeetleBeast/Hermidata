@@ -17,8 +17,8 @@ describe('getYearBucket', () => {
         ['2019-01-01', '2010s'],
     ])('getYearBucket(%s) → %s', (input, expected) => {
         const bucketState = { amountOfYearBuckets: 15, maxYearBuckets: 15 };
-        const rssSort = Object.assign(Object.create(SortLogic.prototype), bucketState) as SortLogic;
-        const libraryFilter = Object.assign(Object.create(FilterLogic.prototype), bucketState) as FilterLogic;
+        const rssSort: SortLogic = Object.assign(Object.create(SortLogic.prototype), bucketState);
+        const libraryFilter: FilterLogic = Object.assign(Object.create(FilterLogic.prototype), bucketState);
 
         expect(rssSort.getYearBucket(input)).toBe(expected);
         expect(libraryFilter.getYearBucket(input)).toBe(expected);

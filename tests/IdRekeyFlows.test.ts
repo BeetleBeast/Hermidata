@@ -71,7 +71,7 @@ describe('ID rekey flows outside the database layer', () => {
     it('rekeys a library entry when its title changes', async () => {
         const hermidata = createHermidata();
         const oldId = hermidata.id;
-        const editDetail = Object.create(EditDetail.prototype) as EditDetail;
+        const editDetail: EditDetail = Object.create(EditDetail.prototype);
         const changeHermidata = vi.fn().mockResolvedValue(undefined);
         setPrivate(editDetail, 'hermidata', hermidata);
         setPrivate(editDetail, 'changeHermidata', changeHermidata);
@@ -93,7 +93,7 @@ describe('ID rekey flows outside the database layer', () => {
             querySelector: vi.fn().mockReturnValue(null),
         };
         const target = {} as HTMLDivElement;
-        const listener = Object.create(EventListener.prototype) as EventListener;
+        const listener: EventListener = Object.create(EventListener.prototype);
         const allHermidata: Record<string, Hermidata> = { [oldId]: original.toJSON() };
         setPrivate(listener, 'AllHermidata', allHermidata);
         setPrivate(listener, 'getEntriesItem', vi.fn().mockReturnValue(entryItem));
