@@ -1,5 +1,6 @@
 import type { AllSortsType, HermidataDateType, HermidataSortType } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { RssBuild } from "../build";
 
 export abstract class Sort extends RssBuild {
@@ -85,8 +86,14 @@ export abstract class Sort extends RssBuild {
         };
 
         const compareDate = (a: HTMLDivElement, b: HTMLDivElement, key: HermidataSortType, reverse = false) => {
-            const dateA = new Date(getData(a).rss?.latestItem[key] || 0).getTime();
-            const dateB = new Date(getData(b).rss?.latestItem[key] || 0).getTime();
+            const latestFeedDate = (entry: HTMLDivElement) => {
+                const hash = this.GetHashItem(entry);
+                const feeds = this.AllHermidata[hash]?.rss ?? [];
+                const latestFeed = HermidataModel.GetLatestRssFeed(feeds);
+                return latestFeed ? new Date(latestFeed.latestItem[key]).getTime() || 0 : 0;
+            };
+            const dateA = latestFeedDate(a);
+            const dateB = latestFeedDate(b);
             return reverse ? dateA - dateB : dateB - dateA;
         };
 
@@ -102,16 +109,18 @@ export abstract class Sort extends RssBuild {
     }
 
     protected getYearNumber(dateInput: string): string {
-        const isISOString = !!new Date(dateInput)?.getHours();
-        const splitDatum = dateInput.split('/')[2]
-        return isISOString ? dateInput.split('-')[0] : splitDatum || new Date()?.toISOString().split('-')[0];
+        const date = new Date(dateInput);
+        if (!Number.isNaN(date.getTime())) return String(date.getFullYear());
+
+        const splitDatum = dateInput.split('/')[2];
+        return splitDatum || String(new Date().getFullYear());
     }
     /**
      * Converts a date (string, Date, or number) into a decade label bucket.
      * @param {string|Date|number} dateInput
      * @returns {string} decadeLabel
     */
-    protected getYearBucket(dateInput: string): string {
+    public getYearBucket(dateInput: string): string {
         if (!dateInput) return "Unknown";
         const year = this.getYearNumber(dateInput)
         if (Number.isNaN(year)) return "Unknown";

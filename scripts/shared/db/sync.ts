@@ -1,7 +1,7 @@
 import { logConsoleError } from "../utils/ErrorMessage";
 // shared/sync.ts
 import { ext } from '../utils/BrowserCompat'
-import { putHermidata, isHermidataV10 } from './db'
+import { isHermidataLatestVersion, putHermidata } from './db'
 import type { Hermidata, migrationReturn } from '../types'
 import { HermidataMigration } from '../migration/Hermidata';
 import { getHermidataViaKey } from './Storage';
@@ -113,11 +113,16 @@ export function initSync(): void {
                 let { _syncedBy, ...entry } = newValue
 
                 // make sure to have the hermidata in the latest format before putting it in the db
-                const returnObj: migrationReturn = isHermidataV10(entry) ? { result: entry, isMigratedSuccessfully: true }: HermidataMigration.migrateAllHermidataToLatest(entry);
+                const returnObj: migrationReturn = isHermidataLatestVersion(entry)
+                    ? { result: entry, isMigratedSuccessfully: true }
+                    : HermidataMigration.migrateAllHermidataToLatest(entry);
 
-                console.assert(isHermidataV10(returnObj.result), '[Sync] Failed to migrate entry');
+                if (!returnObj.isMigratedSuccessfully || !isHermidataLatestVersion(returnObj.result)) {
+                    console.assert(false, '[Sync] Failed to migrate entry');
+                    continue;
+                }
 
-                if (returnObj?.isMigratedSuccessfully) {
+                if (returnObj.isMigratedSuccessfully) {
                     // check if the entry in the database and the one in sync is out of date
                     const existingEntry = await getHermidataViaKey(entry.id);
 

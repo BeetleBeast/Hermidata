@@ -157,7 +157,7 @@ class HermidataController {
     }
     private getState(): keyof typeof stateConfig {
         if (!this.pastHermidata?.title) return 'new';
-        if (this.pastHermidata.rss?.latestItem.title) return 'linked';
+        if (this.pastHermidata.rss.some(feed => feed.latestItem?.title)) return 'linked';
         return 'unlinked';
     };
     private setChapterPastNumber(hasPast: Hermidata | null = null): void {
@@ -421,7 +421,7 @@ class HermidataController {
         if (!url) return
         const currentUrlSource = new URL(url).hostname.replace(/^www\./, "");
         const savedUrlSource = new URL(this.hermidata.GetUrl()).hostname.replace(/^www\./, "");
-        const possibleRSSSource = this.hermidata.rss?.domain;
+        const possibleRSSSource = this.hermidata.GetLatestRssFeed()?.domain;
         const altSources = this.hermidata.meta.altSources;
 
         // check if url is already in sources

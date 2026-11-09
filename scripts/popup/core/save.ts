@@ -93,7 +93,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
 
     const label = 'Primary';
     const newBookmark: Bookmark = {
-        version: 4,
+        version: 6,        
         id: generateBookmarkId(label),
         current: 0,
         history: [],
@@ -101,6 +101,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
         color: '#5979d6',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        lastUsedAt: new Date().toISOString(),
         note: '',
         isPrimary,
         readStatus: 'Viewing',
@@ -109,7 +110,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
     }
 
     return {
-        version: 11,
+        version: 12,
         id: hash,
         title: Title.title,
         novelType,
@@ -124,8 +125,9 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
             bookmarkInUse: generateBookmarkId(label),
             releaseSchedule: "Unknown"
         },
-        rss: null,
+        rss: [],
         import: null,
+        titleTrimming: { type: 'default' },
         meta: {
             tags: [],
             notes: Title.note ?? '',
@@ -138,7 +140,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
             contentRating: "Safe",
             contentWarnings: [],
             starRating: 5.0,
-            image: '../../../assets/icon/icon48.png',
+            image: { kind: 'url', url: '../../../assets/icon/icon48.png' },
             readingQueue: false,
             relations: "None",
             

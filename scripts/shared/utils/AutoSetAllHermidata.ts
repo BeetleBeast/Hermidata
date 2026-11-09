@@ -137,7 +137,7 @@ export class AutoSetAllHermidata {
         const BookmarkID = generateBookmarkId(label);
 
         const bookmarkGuess: Bookmark = {
-            version: 4,
+            version: 6,
             id: BookmarkID,
             current: chapter,
             history: [
@@ -150,6 +150,7 @@ export class AutoSetAllHermidata {
             color: 'blue',
             createdAt: date.toISOString(),
             updatedAt: date.toISOString(),
+            lastUsedAt: date.toISOString(),
             note: '',
             isPrimary: true,
             readStatus: 'Viewing',
@@ -158,7 +159,7 @@ export class AutoSetAllHermidata {
         }
 
         const hermidataGuess: Hermidata = {
-            version: 11,
+            version: 12,
             id: HermidataID,
             title: trimmedTitle,
             novelType: novelType,
@@ -173,8 +174,9 @@ export class AutoSetAllHermidata {
                 bookmarkInUse: BookmarkID,
                 releaseSchedule: this.releaseSchedule(bookmarkGuess.history)
             },
-            rss: null,
+            rss: [],
             import: null,
+            titleTrimming: { type: 'default' },
             meta: {
                 tags: [],
                 notes: '',
@@ -188,7 +190,7 @@ export class AutoSetAllHermidata {
                 contentRating: "Safe",
                 contentWarnings: [],
                 starRating: 5.0,
-                image: '../../../assets/icon/icon48.png',
+                image: { kind: 'url', url: '../../../assets/icon/icon48.png' },
 
                 readingQueue: false,
                 relations: "None"

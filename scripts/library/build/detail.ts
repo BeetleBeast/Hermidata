@@ -249,7 +249,7 @@ export class Detail extends LibraryBuilder {
         if (!button) throw new Error("Read latest chapter button does not exist");
 
         button.addEventListener('click', () => {
-            openLink(this.hermidata.rss?.latestItem.link ?? this.hermidata.GetUrl(), 'newTab');
+            openLink(this.hermidata.GetLatestRssFeed()?.latestItem.link ?? this.hermidata.GetUrl(), 'newTab');
         });
     }
     private populateTitle() {

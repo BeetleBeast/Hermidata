@@ -23,7 +23,7 @@ import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
 import type { AllSortsType as LibraryAllSortsType } from '../../library/build/filter';
 import type { Filters as LibraryFilters } from '../../library/build/filterLogic';
-import type { OnlyPlainHermidata } from '../types/popup';
+import type { HermidataImageSource, OnlyPlainHermidata } from '../types/popup';
 
 
 // ============================================================
@@ -48,10 +48,17 @@ export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Pr
     }
 }
 
+function updateImageReference(entry: OnlyPlainHermidata, oldId: string, newId: string): HermidataImageSource {
+    const image = entry.meta.image;
+    if (image.kind === 'stored' && image.id === oldId) return { kind: "stored", id: newId };
+    return image;
+}
+
 export async function updateHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
     try {
         entry.id = newKey;
         entry.meta.updated = new Date().toISOString();
+        entry.meta.image = updateImageReference(entry, oldKey, newKey); // update image key
 
         await putHermidata(entry, false)    // write new key to IndexedDB
         await deleteHermidata(oldKey, false) // remove old key from IndexedDB
@@ -576,6 +583,7 @@ export class dbAccess {
         try {
             entry.id = newKey;
             entry.meta.updated = new Date().toISOString();
+            entry.meta.image = updateImageReference(entry, oldKey, newKey);
     
             await this.setHermidata(entry.id, entry)    // write new key to IndexedDB
             await this.deleteHermidata(oldKey) // remove old key from IndexedDB

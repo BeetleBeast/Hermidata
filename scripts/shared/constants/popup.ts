@@ -1,6 +1,9 @@
 import { generateBookmarkId } from "../utils/StringOutput";
 import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
 
+export const HERMIDATA_VERSION = 12;
+
+
 // Default arrays — used to seed settings on first install
 export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
 export const DEFAULT_NOVEL_STATUSES: NovelStatus[] = ['Ongoing', 'Completed', 'Hiatus', 'Canceled'];
@@ -94,7 +97,7 @@ export const filterName: FilterName = {
 
 
 export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
-    version: 11,
+    version: 12,
     id: '',
     title: '',
     novelType: type,
@@ -109,8 +112,9 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         bookmarkInUse: generateBookmarkId('Primary'),
         releaseSchedule: "Unknown",
     },
-    rss: null,
+    rss: [],
     import: null,
+    titleTrimming: { type: 'default' },
     meta: {
         tags: [],
         notes: '',
@@ -123,13 +127,13 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         contentRating: "Safe",
         contentWarnings: [],
         starRating: 5.0,
-        image: '../../../assets/icon/icon48.png',
+        image: { kind: 'url', url: '../../../assets/icon/icon48.png' },
         readingQueue: false,
         relations: "None",
     }
 });
 export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', currentChapter: number = 0, history: { chapter: number, at: string }[] = [], notes: string = ''): Bookmark => ({
-    version: 4,
+    version: 6,
     id: generateBookmarkId('Primary'),
     current: currentChapter,
     history: history,
@@ -137,6 +141,7 @@ export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', cu
     color: '#5979d6',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    lastUsedAt: new Date().toISOString(),
     note: notes,
     isPrimary: true,
     readStatus: AnyReadStatus,

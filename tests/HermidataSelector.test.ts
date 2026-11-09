@@ -1,7 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { PastHermidata } from '../scripts/popup/core/Past';
 import { generateHermidataHash } from '../scripts/shared/utils/StringOutput';
+import * as Storage from '../scripts/shared/db/Storage';
+import { HermidataMigration } from '../scripts/shared/migration/Hermidata';
+import type { HermidataV11 } from '../scripts/shared/types';
+
+afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+});
 
 function createHermidata(chapter: number, history: { chapter: number; at: string }[] = [], withRss = true): HermidataModel {
     const hermidata = HermidataModel.from('Manga', 'Viewing', 'Ongoing');
@@ -10,23 +18,25 @@ function createHermidata(chapter: number, history: { chapter: number; at: string
     hermidata.SetChapter(chapter);
     hermidata.SetHistory(history);
     if (withRss) {
-        hermidata.rss = {
-            id: 'feed',
-            title: 'Series',
-            url: 'https://example.com/feed',
-            image: null,
-            domain: 'example.com',
-            lastFetched: null,
-            latestItem: {
-                id: 'latest-item',
-                rawTitle: 'Series Chapter 20',
-                title: 'Series Chapter 20',
-                link: 'https://example.com/series/chapter-20',
-                chapter: 20,
-                pubDate: new Date('2025-01-01T00:00:00Z'),
-                guid: 'latest-item',
-            },
-        };
+        hermidata.rss = [{
+                id: 'feed',
+                title: 'Series',
+                url: 'https://example.com/feed',
+                image: null,
+                domain: 'example.com',
+                lastFetched: null,
+                latestItem: {
+                    id: 'latest-item',
+                    rawTitle: 'Series Chapter 20',
+                    title: 'Series Chapter 20',
+                    link: 'https://example.com/series/chapter-20',
+                    chapter: 20,
+                    pubDate: new Date('2025-01-01T00:00:00Z'),
+                    guid: 'latest-item',
+                },
+            }];
+    } else {
+        hermidata.rss = [];
     }
     return hermidata;
 }
@@ -80,65 +90,15 @@ describe('HermidataModel.SetPast', () => {
         expect(merged.GetHistory()).toEqual([]);
     });
     it('seeds read history from the saved chapter for an old non-RSS record with no history and latest = 0', async () => {
-        const saved = new HermidataModel({ // set true data that has the bug
-            "id": "5722706019",
-            "title": "Salvos (A Monster Evolution LitRPG)",
-            "novelType": "Manga",
-            "source": "mangafire.to",
-            "rss": null,
-            "import": null,
-            "chapter": {
-                "bookmarks": {
-                "1349887458": {
-                    "version": 5,
-                    "id": "1349887458",
-                    "current": 75,
-                    "history": [],
-                    "label": "Primary",
-                    "color": "blue",
-                    "createdAt": "2025-09-14T22:00:00.000Z",
-                    "updatedAt": "2026-05-11T15:30:39.540Z",
-                    "note": "",
-                    "isPrimary": true,
-                    "readStatus": "viewing",
-                    "scrollPosition": 0,
-                    "url": "https://mangafire.to/read/salvos-a-monster-evolution-litrpgg.mvjvv/en/chapter-75"
-                }
-                },
-                "revisitingCount": 0,
-                "latest": 0,
-                "lastChecked": "2025-09-14T22:00:00.000Z",
-                "bookmarkInUse": "1349887458",
-                "releaseSchedule": "Unknown"
-            },
-            "meta": {
-                "tags": [],
-                "notes": "",
-                "altTitles": [
-                "Salvos (A Monster Evolution LitRPG)"
-                ],
-                "altSources": [
-                "mangafire.to"
-                ],
-                "added": "2025-09-14T22:00:00.000Z",
-                "updated": "2025-10-22T16:33:40.348Z",
-                "originalRelease": null,
-                "novelStatus": "Ongoing",
-                "contentRating": "Safe",
-                "contentWarnings": [],
-                "starRating": 5,
-                "image": "../../../assets/icon/icon48.png",
-                "readingQueue": false,
-                "relations": "None"
-            },
-            "version": 11
-            })
+        const saved = createHermidata(75, [], false);
+        saved.chapter.latest = 0;
+        saved.getBookmark().updatedAt = '2026-05-11T15:30:39.540Z';
         const merged = await mergeSavedHermidata(saved, 78);
 
         expect(merged.GetChapter()).toBe(78)
         expect(merged.GetLatestReadChapter()).toBe(75);
         expect(merged.GetHistory()).toEqual([
-            { chapter: 75, at: '2026-05-11T15:30:39.540Z' },
+            { chapter: 75, at: saved.getBookmark().updatedAt },
         ]);
     })
     it('keeps the saved latest chapter as last-read when the open tab is behind it (non-RSS, no history)', async () => {
@@ -197,5 +157,107 @@ describe('HermidataModel.UpdateBookmark', () => {
         expect(history[0].chapter).toBe(6);
         expect(new Date(history[0].at).toISOString()).toBe(history[0].at);
         expect(history[0].at).not.toBe(markerId);
+    });
+});
+
+describe('HermidataModel image source', () => {
+    it('migrates the legacy IndexedDB marker to a stored image reference', () => {
+        const saved = createHermidata(5).toJSON();
+        const { titleTrimming: _titleTrimming, ...v11Saved } = saved;
+        const legacy: HermidataV11 = {
+            ...v11Saved,
+            version: 11,
+            rss: null,
+            chapter: {
+                ...saved.chapter,
+                bookmarks: Object.fromEntries(Object.entries(saved.chapter.bookmarks).map(([id, bookmark]) => {
+                    const { lastUsedAt: _lastUsedAt, ...legacyBookmark } = bookmark;
+                    return [id, { ...legacyBookmark, version: 5 }];
+                })),
+            },
+            meta: { ...saved.meta, image: 'inside-indexedDB' }
+        };
+
+        const result = HermidataMigration.migrateAllHermidataToLatest(legacy);
+        expect(result.isMigratedSuccessfully).toBe(true);
+        if (!result.isMigratedSuccessfully) throw result.result;
+        const model = new HermidataModel(result.result);
+
+        expect(model.meta.image).toEqual({ kind: 'stored', id: saved.id });
+        expect(model.rss).toEqual([]);
+        expect(model.titleTrimming).toEqual({ type: 'default' });
+        expect(model.version).toBe(12);
+        expect(Object.values(model.chapter.bookmarks)[0].lastUsedAt).toBe(Object.values(saved.chapter.bookmarks)[0].updatedAt);
+    });
+
+    it('migrates a legacy RSS feed into a one-item list', () => {
+        const saved = createHermidata(5).toJSON();
+        const { titleTrimming: _titleTrimming, meta: _meta, ...v11Saved } = saved;
+        
+        const legacy: HermidataV11 = {
+            ...v11Saved,
+            version: 11,
+            rss: saved.rss[0],
+            chapter: {
+                ...saved.chapter,
+                bookmarks: Object.fromEntries(Object.entries(saved.chapter.bookmarks).map(([id, bookmark]) => {
+                    const { lastUsedAt: _lastUsedAt, ...legacyBookmark } = bookmark;
+                    return [id, { ...legacyBookmark, version: 5 }];
+                })),
+            },
+            meta: { ...saved.meta, image: 'inside-indexedDB' },
+        };
+
+        const result = HermidataMigration.migrateAllHermidataToLatest(legacy);
+        expect(result.isMigratedSuccessfully).toBe(true);
+        if (!result.isMigratedSuccessfully) throw result.result;
+        expect(result.result.rss).toEqual([saved.rss[0]]);
+    });
+
+    it('selects the most recently published feed from the RSS list', () => {
+        const model = createHermidata(5);
+        const olderFeed = model.rss[0];
+        model.rss.push({
+            ...olderFeed,
+            id: 'newer-feed',
+            url: 'https://example.com/newer-feed',
+            latestItem: {
+                ...olderFeed.latestItem,
+                pubDate: new Date('2025-02-01T00:00:00Z'),
+            },
+        });
+
+        expect(model.GetLatestRssFeed()?.id).toBe('newer-feed');
+    });
+
+    it('fetches URL images for their resolved image data and keeps the URL source', async () => {
+        const model = createHermidata(5);
+        const imageBlob = new Blob(['resolved cover'], { type: 'image/jpeg' });
+        const fetchImage = vi.fn().mockResolvedValue(new Response(imageBlob));
+        vi.stubGlobal('fetch', fetchImage);
+        const saveImage = vi.spyOn(Storage, 'saveImage').mockResolvedValue(true);
+        const removeImage = vi.spyOn(Storage, 'removeImage').mockResolvedValue(true);
+        model.meta.image = { kind: 'stored', id: 'old-image-id' };
+
+        await model.SetImage('https://example.com/cover.jpg');
+
+        expect(fetchImage).toHaveBeenCalledWith('https://example.com/cover.jpg');
+        expect(saveImage).toHaveBeenCalledWith(model.id, imageBlob);
+        expect(removeImage).toHaveBeenCalledWith('old-image-id');
+        expect(model.meta.image).toEqual({ kind: 'url', url: 'https://example.com/cover.jpg' });
+    });
+
+    it('stores uploaded image blobs and references them by ID', async () => {
+        const model = createHermidata(5);
+        const file = new Blob(['cover'], { type: 'image/jpeg' });
+        const saveImage = vi.spyOn(Storage, 'saveImage').mockResolvedValue(true);
+        const removeImage = vi.spyOn(Storage, 'removeImage').mockResolvedValue(true);
+        model.meta.image = { kind: 'stored', id: 'previous-image-id' };
+
+        await model.SetImage(file);
+
+        expect(saveImage).toHaveBeenCalledWith(model.id, file);
+        expect(removeImage).toHaveBeenCalledWith('previous-image-id');
+        expect(model.meta.image).toEqual({ kind: 'stored', id: model.id });
     });
 });

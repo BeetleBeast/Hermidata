@@ -5,6 +5,7 @@ export type {
     NovelType,
     NovelStatus,
     ReadStatus,
+    HermidataImageSource,
 
     ContentRating,
     ContentWarning,
@@ -63,6 +64,8 @@ export type {
     BookmarkV1,
     BookmarkV2,
     BookmarkV3,
+    BookmarkV4,
+    BookmarkV5,
 
     HermidataV1,
     HermidataV2,
@@ -74,6 +77,7 @@ export type {
     HermidataV8,
     HermidataV9,
     HermidataV10,
+    HermidataV11,
 
     AnyHermidataVersion,
     allOlderHermidata,
