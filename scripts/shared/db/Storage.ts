@@ -16,14 +16,14 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     dbUpdateImageKey} from './db';
 import { pushToSync, removeFromSync } from './sync';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
-import { returnHashedTitle } from '../utils/StringOutput';
+import { generateHermidataHash } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
 import { type RawFeed, type Settings, type AllSortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
 import type { AllSortsType as LibraryAllSortsType } from '../../library/build/filter';
 import type { Filters as LibraryFilters } from '../../library/build/filterLogic';
-import type { OnlyPlainHermidata } from '../types/popup';
+import type { HermidataImageSource, OnlyPlainHermidata } from '../types/popup';
 
 
 // ============================================================
@@ -33,7 +33,7 @@ export function getHermidataViaKey(key: string): Promise<OnlyPlainHermidata | nu
 
 export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Promise<void> {
     try {
-        const Key = key || entry.id || returnHashedTitle(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
+        const Key = key || entry.id || generateHermidataHash(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
         entry.id = Key;
         entry.meta.updated = new Date().toISOString();
 
@@ -48,10 +48,17 @@ export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Pr
     }
 }
 
+function updateImageReference(entry: OnlyPlainHermidata, oldId: string, newId: string): HermidataImageSource {
+    const image = entry.meta.image;
+    if (image.kind === 'stored' && image.id === oldId) return { kind: "stored", id: newId };
+    return image;
+}
+
 export async function updateHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
     try {
         entry.id = newKey;
         entry.meta.updated = new Date().toISOString();
+        entry.meta.image = updateImageReference(entry, oldKey, newKey); // update image key
 
         await putHermidata(entry, false)    // write new key to IndexedDB
         await deleteHermidata(oldKey, false) // remove old key from IndexedDB
@@ -576,6 +583,7 @@ export class dbAccess {
         try {
             entry.id = newKey;
             entry.meta.updated = new Date().toISOString();
+            entry.meta.image = updateImageReference(entry, oldKey, newKey);
     
             await this.setHermidata(entry.id, entry)    // write new key to IndexedDB
             await this.deleteHermidata(oldKey) // remove old key from IndexedDB

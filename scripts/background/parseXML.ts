@@ -1,5 +1,5 @@
 import type { FeedItem } from "../shared/types";
-import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput";
+import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput";
 
 // A value that might come as a bare string, or as an object with #text (when it has attributes)
 type TextOrObj = string | { "#text"?: string; };
@@ -86,7 +86,7 @@ export function parseItems(doc: ParsedFeedDoc, title: string): FeedItem | null {
     const guid = textOf(first.guid) || first.id || linkUrl || "";
 
     return {
-        id: returnHashedFeedId(trimmedTitle, linkUrl),
+        id: generateRssFeedId(trimmedTitle, linkUrl),
         rawTitle,
         chapter: getChapterFromTitle(rawTitle, linkUrl),
         title: trimmedTitle,

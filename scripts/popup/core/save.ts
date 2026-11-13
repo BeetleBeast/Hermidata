@@ -1,21 +1,24 @@
 import { ErrorMessage, logConsoleError } from "../../shared/utils/ErrorMessage";
 
-import { TrimTitle, returnBookmarkHash, returnHashedTitle } from "../../shared/utils/StringOutput";
+import { TrimTitle, generateBookmarkId, generateHermidataHash } from "../../shared/utils/StringOutput";
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
 import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import type { PastHermidataPromptOptions } from "./Past";
+
+const notificationTarget = typeof document === "undefined" ? "browser" : "in-page";
+const notifyUser = typeof document !== "undefined";
 
 
 
-
-export async function updateChapterProgress(hermidata: HermidataModel): Promise<boolean> {
+export async function updateChapterProgress( hermidata: HermidataModel, pastPrompts?: PastHermidataPromptOptions ): Promise<boolean> {
     try {
         let needsToMigrate = false
     
         const newChapterNumber = hermidata.GetChapter();
         
-        const key = returnHashedTitle(hermidata.title, hermidata.novelType, hermidata.GetUrl(), false);
+        const key = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl(), false);
         const data = await getHermidataViaKey(key);
     
         
@@ -24,7 +27,7 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         if (data) entry = new HermidataModel(data);
         else {
             // id entry is new/can't be found in storage
-            const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
+            const Hermidata: Hermidata | null = new PastHermidata(hermidata, pastPrompts).pastHermidata;
             if (Hermidata) entry = new HermidataModel(Hermidata);
             else entry = new HermidataModel(await makeHermidata(hermidata.title, hermidata.GetUrl(), hermidata.novelType));
         }
@@ -32,6 +35,8 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         if (!entry) {
             new ErrorMessage("Could not find the saved item to update its chapter progress.", undefined, {
                 consoleLevel: 'error',
+                notifyUser,
+                notificationTarget,
                 details: [hermidata.title]
             }).sendMessage();
             return false;
@@ -47,9 +52,11 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
             console.log(`[HermidataV3] Updated ${hermidata.title} to chapter ${newChapterNumber}`);
         }
         if (needsToMigrate) {
-            const past = new PastHermidata(hermidata);
+            const past = new PastHermidata(hermidata, pastPrompts);
             await past.init().catch(error => new ErrorMessage("Could not migrate the saved item before updating its progress.", undefined, {
                 consoleLevel: 'error',
+                notifyUser,
+                notificationTarget,
                 details: [error]
             }).sendMessage());
             return false
@@ -58,6 +65,8 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
     } catch (error) {
         new ErrorMessage("Could not save the chapter progress.", undefined, {
             consoleLevel: 'error',
+            notifyUser,
+            notificationTarget,
             details: [error]
         }).sendMessage();
         return false;
@@ -84,7 +93,7 @@ export async function getPagePosition(): Promise<chrome.scripting.InjectionResul
 
 export async function makeHermidata(title: string, url: string, novelType: AnyNovelType = "Manga", isPrimary: boolean = true): Promise<Hermidata> {
     const Title = TrimTitle.trimTitle(title, url);
-    const hash = returnHashedTitle(title, novelType, url);
+    const hash = generateHermidataHash(title, novelType, url);
     const source = new URL(url).hostname.replace(/^www\./, "");
 
     const pagePositionObject = await getPagePosition();
@@ -93,14 +102,15 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
 
     const label = 'Primary';
     const newBookmark: Bookmark = {
-        version: 4,
-        id: returnBookmarkHash(label),
+        version: 6,        
+        id: generateBookmarkId(label),
         current: 0,
         history: [],
         label: label,
         color: '#5979d6',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        lastUsedAt: new Date().toISOString(),
         note: '',
         isPrimary,
         readStatus: 'Viewing',
@@ -109,7 +119,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
     }
 
     return {
-        version: 11,
+        version: 12,
         id: hash,
         title: Title.title,
         novelType,
@@ -121,11 +131,12 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
             },
             revisitingCount: 0,
             lastChecked: new Date().toISOString(),
-            bookmarkInUse: returnBookmarkHash(label),
+            bookmarkInUse: generateBookmarkId(label),
             releaseSchedule: "Unknown"
         },
-        rss: null,
+        rss: [],
         import: null,
+        titleTrimming: { type: 'default' },
         meta: {
             tags: [],
             notes: Title.note ?? '',
@@ -138,7 +149,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
             contentRating: "Safe",
             contentWarnings: [],
             starRating: 5.0,
-            image: '../../../assets/icon/icon48.png',
+            image: { kind: 'url', url: '../../../assets/icon/icon48.png' },
             readingQueue: false,
             relations: "None",
             
@@ -155,7 +166,7 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
         new Set([...(hermidata.meta.altTitles || []), trimmed])
     );
 
-    const entryKey = hermidata.id || returnHashedTitle(hermidata.title, hermidata.novelType);
+    const entryKey = hermidata.id || generateHermidataHash(hermidata.title, hermidata.novelType);
 
     await saveHermidata(entryKey, hermidata.toJSON());
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${hermidata.title}`);

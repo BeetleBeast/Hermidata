@@ -4,7 +4,7 @@ import { EventListener } from '../scripts/rss/build/EventListener';
 import { HermidataMigration } from '../scripts/shared/migration/Hermidata';
 import { updateHermidata } from '../scripts/shared/db/Storage';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
-import { returnHashedTitle, TrimTitle } from '../scripts/shared/utils/StringOutput';
+import { generateHermidataHash, TrimTitle } from '../scripts/shared/utils/StringOutput';
 import type { Hermidata } from '../scripts/shared/types';
 
 vi.mock('../scripts/shared/db/Storage', () => ({
@@ -35,7 +35,7 @@ vi.mock('../scripts/rss/controller', () => ({
 function createHermidata(title = 'Series'): HermidataModel {
     const hermidata = HermidataModel.from('Manga', 'Viewing', 'Ongoing');
     hermidata.title = title;
-    hermidata.id = returnHashedTitle(title, hermidata.novelType);
+    hermidata.id = generateHermidataHash(title, hermidata.novelType);
     hermidata.SetUrl('https://example.com/series/chapter-12');
     return hermidata;
 }
@@ -71,7 +71,7 @@ describe('ID rekey flows outside the database layer', () => {
     it('rekeys a library entry when its title changes', async () => {
         const hermidata = createHermidata();
         const oldId = hermidata.id;
-        const editDetail = Object.create(EditDetail.prototype) as EditDetail;
+        const editDetail: EditDetail = Object.create(EditDetail.prototype);
         const changeHermidata = vi.fn().mockResolvedValue(undefined);
         setPrivate(editDetail, 'hermidata', hermidata);
         setPrivate(editDetail, 'changeHermidata', changeHermidata);
@@ -79,7 +79,7 @@ describe('ID rekey flows outside the database layer', () => {
         hermidata.title = 'Renamed Series';
         await callPrivate<Promise<void>>(editDetail, 'forceKeyUpdate');
 
-        const expectedId = returnHashedTitle(hermidata.title, hermidata.novelType, hermidata.GetUrl());
+        const expectedId = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl());
         expect(hermidata.id).toBe(expectedId);
         expect(changeHermidata).toHaveBeenCalledWith(oldId, expectedId, hermidata.toJSON());
     });
@@ -93,7 +93,7 @@ describe('ID rekey flows outside the database layer', () => {
             querySelector: vi.fn().mockReturnValue(null),
         };
         const target = {} as HTMLDivElement;
-        const listener = Object.create(EventListener.prototype) as EventListener;
+        const listener: EventListener = Object.create(EventListener.prototype);
         const allHermidata: Record<string, Hermidata> = { [oldId]: original.toJSON() };
         setPrivate(listener, 'AllHermidata', allHermidata);
         setPrivate(listener, 'getEntriesItem', vi.fn().mockReturnValue(entryItem));
@@ -101,7 +101,7 @@ describe('ID rekey flows outside the database layer', () => {
 
         await callPrivate<Promise<void>>(listener, 'RenameItem', target);
 
-        const expectedId = returnHashedTitle('Renamed Series', original.novelType, original.GetUrl(), false);
+        const expectedId = generateHermidataHash('Renamed Series', original.novelType, original.GetUrl(), false);
         expect(updateHermidata).toHaveBeenCalledWith(oldId, expectedId, expect.objectContaining({
             id: expectedId,
             title: 'Renamed Series',
@@ -115,7 +115,7 @@ describe('ID rekey flows outside the database layer', () => {
         const entry = createHermidata('Series 🚀');
         const normalizedTitle = TrimTitle.trimTitle(entry.title, entry.GetUrl()).title.toLowerCase();
         const oldId = legacyHash(`${entry.novelType}:${normalizedTitle}`);
-        const newId = returnHashedTitle(entry.title, entry.novelType);
+        const newId = generateHermidataHash(entry.title, entry.novelType);
         expect(oldId).not.toBe(newId);
         entry.id = oldId;
         const migration = new HermidataMigration();
@@ -138,6 +138,6 @@ describe('ID rekey flows outside the database layer', () => {
 
         const expectedTitle = TrimTitle.trimTitle('Series Chapter 12', hermidata.GetUrl()).title;
         expect(hermidata.title).toBe(expectedTitle);
-        expect(hermidata.id).toBe(returnHashedTitle(expectedTitle, hermidata.novelType, hermidata.GetUrl()));
+        expect(hermidata.id).toBe(generateHermidataHash(expectedTitle, hermidata.novelType, hermidata.GetUrl()));
     });
 });

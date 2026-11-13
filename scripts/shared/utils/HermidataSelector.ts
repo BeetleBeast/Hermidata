@@ -1,11 +1,11 @@
 import { logConsoleError } from "./ErrorMessage";
 import type { PastHermidata } from "../../popup/core/Past";
-import { makeDefaultHermidata } from "../constants";
-import { isHermidataV1, isHermidataV10, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
-import { getImage, saveImage, getSettings } from "../db/Storage";
-import type { AnyNovelType, Bookmark, CurrentTab, Feed, Hermidata, InputArraySheetType, InputArrayType, RawFeed, StringListFieldPath, ValueAtPath, ReleaseSchedule } from "../types";
+import { makeDefaultHermidata, HERMIDATA_VERSION } from "../constants";
+import { isHermidataV1, isHermidataV10, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
+import { getImage, removeImage, saveImage, getSettings } from "../db/Storage";
+import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
-import { openLink, returnBookmarkHash, returnHashedFeedId, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { openLink, generateBookmarkId, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -13,13 +13,14 @@ export class HermidataModel implements Hermidata {
     title: string;
     novelType: AnyNovelType;
     source: string;
-    rss: Feed | null;
+    rss: Feed[];
     import: string | null;
+    titleTrimming: Hermidata["titleTrimming"];
     chapter: Hermidata["chapter"];
     meta: Hermidata["meta"];
     version: number;
 
-    private latestVersion = 11;
+    private latestVersion = HERMIDATA_VERSION;
     private readonly locale: string = navigator.language; // e.g. "fr-FR", "en-US", "ja-JP"
 
     constructor(data: Hermidata) {
@@ -31,6 +32,7 @@ export class HermidataModel implements Hermidata {
         this.import = data.import;
         this.chapter = data.chapter;
         this.meta = data.meta;
+        this.titleTrimming = data.titleTrimming;
 
         this.version = data.version ?? this.CalculateHermidataVersion();
         // if (this.version !== this.latestVersion) console.count("HermidataModel version check");
@@ -51,6 +53,14 @@ export class HermidataModel implements Hermidata {
 
         return new HermidataModel(makeDefaultHermidata(novelType ?? defaultNovelType[0], readStatus ?? defaultReadStatus[0], novelStatus ?? defaultNovelStatus[0]));
     }
+    public static GetLatestRssFeed(feeds: Feed[], dateField: "pubDate" | "lastFetched" = "pubDate"): Feed | undefined {
+        return feeds.reduce<Feed | undefined>((latest, feed) => {
+            if (!latest) return feed;
+            const feedDate = Date.parse(dateField === "pubDate" ? String(feed.latestItem.pubDate) : feed.lastFetched ?? "") || 0;
+            const latestDate = Date.parse(dateField === "pubDate" ? String(latest.latestItem.pubDate) : latest.lastFetched ?? "") || 0;
+            return feedDate > latestDate ? feed : latest;
+        }, undefined);
+    }
     // -- private methods --
     private Replace(hermidata: Hermidata) {
         Object.assign(this, new HermidataModel(hermidata));
@@ -58,6 +68,7 @@ export class HermidataModel implements Hermidata {
     private CalculateHermidataVersion(): number {
         const Hermidata = this.toJSON();
 
+        if (isHermidataV12(Hermidata)) return 12;
         if (isHermidataV10(Hermidata)) return 10;
         if (isHermidataV9(Hermidata)) return 9;
         if (isHermidataV8(Hermidata)) return 8;
@@ -93,23 +104,21 @@ export class HermidataModel implements Hermidata {
         return this.getBookmark(bookmarkInUseId)?.history;
     }
     async getDisplayImageUrl(): Promise<string> {
-        // prefer a stored blob if one exists (covers the upload case)
-        const blob = await getImage(this.id);
+        // Retrieve the image from the indexedDB or from a URL and create an object URL
+        const blobId = this.meta.image.kind === "stored" ? this.meta.image.id : this.id;
+        const blob = await getImage(blobId);
         if (blob) return URL.createObjectURL(blob);
 
-        // fall back to a direct URL
+        // If the image is not stored, return the URL directly
         const imagePath = this.GetImagePath();
         if (imagePath) return imagePath;
+
+        // If there is no image, return the default image
         else return this.GetImageDefaultPath();
     }
     GetImagePath(): string | null {
-        const imageAttributeLocation = this.meta.image;
-        const rssFeedImage = this.rss?.image;
-
-        // if image is stored in indexedDB, 
-        if (imageAttributeLocation === 'inside-indexedDB') return null;
-
-        return imageAttributeLocation ?? rssFeedImage ?? this.GetImageDefaultPath();
+        if (this.meta.image.kind === "stored") return null;
+        return this.meta.image.url ?? this.GetLatestRssFeed()?.image ?? this.GetImageDefaultPath();
     }
     GetImageDefaultPath(): string {
         return '../../../assets/icon/icon48.png';
@@ -119,12 +128,15 @@ export class HermidataModel implements Hermidata {
         const latestHistory = this.GetHistory(bookmarkInUseId).filter(history => history.chapter > 0)?.at(-1);
 
         const latestChapter = this.chapter.latest;
-        const allowedTakeLatestChapter = this.rss == null;
+        const allowedTakeLatestChapter = this.rss.length === 0;
         const currentChapter = this.GetChapter(bookmarkInUseId);
         
         const latestChapterCatch = allowedTakeLatestChapter ? latestChapter : currentChapter;
 
         return latestHistory?.chapter ?? latestChapterCatch;
+    }
+    GetLatestRssFeed(): Feed | undefined {
+        return HermidataModel.GetLatestRssFeed(this.rss);
     }
     GetLatestChapter(): number { return this.chapter.latest; }
     GetAltSources(): string[] {
@@ -136,7 +148,9 @@ export class HermidataModel implements Hermidata {
         // transform list of strings into list of sources ( only the site name )
         const sourceList = list.map(url => new URL(url).hostname.replace(/^www\./, ""));
 
-        if ((this.rss?.latestItem.chapter === this.chapter.latest ) || (this.rss && this.rss.latestItem.chapter >= this.chapter.latest)) return this.rss.domain;
+
+        const latestRss = HermidataModel.GetLatestRssFeed(this.rss.filter(feed => feed.latestItem.chapter >= this.chapter.latest));
+        if ((latestRss?.latestItem.chapter === this.chapter.latest ) || (latestRss && latestRss.latestItem.chapter >= this.chapter.latest)) return latestRss.domain;
 
         return sourceList[0];
     }
@@ -166,35 +180,48 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].history = history;
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].history = history;
     }
-    /** set image blob inside separate indexedDB and update meta source */
+    /** Store an uploaded image in IndexedDB and reference it by ID. */
     async SetImage(imageFile: Blob | File): Promise<void>;
-    /** set image source directly and then call update image */
-    async SetImage(imageUrl: string): Promise<void>;
-    async SetImage(image: string | Blob | File): Promise<void> {
+    /** Fetch and cache a URL image, optionally using the already-fetched image data. */
+    async SetImage(imageUrl: string, cachedImage?: Blob): Promise<void>;
+    async SetImage(image: string | Blob | File, cachedImage?: Blob): Promise<void> {
+        let imageBlob: Blob;
+        let imageSource: HermidataImageSource;
+        const previousImage = this.meta.image;
+        const previousImageId = previousImage.kind === "stored" ? previousImage.id : undefined;
+
+        // If the image is a URL, fetch it and store it in IndexedDB.
         if (typeof image === 'string') {
-            const imageUrl = image;
-            // 1. set image path
 
-            this.meta.image = imageUrl;
+            imageSource = { kind: "url", url: image };
+            if (cachedImage) imageBlob = cachedImage;
+            else {
+                const response = await fetch(image);
+                if (!response.ok) throw new Error(`Could not fetch image (${response.status} ${response.statusText})`);
 
-            // 2. set blob from image path
-            const response = await fetch(imageUrl);
-            const blob = await response.blob();
-            await saveImage(this.id, blob);
+                imageBlob = await response.blob();
+            }
         }
+        // If the image is a Blob or File, store it in IndexedDB.
         else {
-            const imageBlob = image;
-            // 1. set image path
-            this.meta.image = "inside-indexedDB";
-
-            // 2. set blob from image file
-            await saveImage(this.id, imageBlob);
+            imageBlob = image;
+            imageSource = { kind: "stored", id: this.id };
         }
+
+        const imageSaved = await saveImage(this.id, imageBlob);
+        if (!imageSaved) throw new Error(`Could not save image ${this.id}`);
+
+        // If there was a previous image, remove it from IndexedDB.
+        if (previousImageId && previousImageId !== this.id) {
+            const imageRemoved = await removeImage(previousImageId);
+            if (!imageRemoved) throw new Error(`Could not remove stored image ${previousImageId}`);
+        }
+        this.meta.image = imageSource;
     }
     /** update image with rss feed or given image source */
-    UpdateImage(image?: string): void {
-        const newImage = image ?? this.rss?.image;
-        this.meta.image = newImage ?? this.meta.image;
+    UpdateImage(imageURL?: string): void {
+        const newImage = imageURL ?? this.GetLatestRssFeed()?.image ?? undefined;
+        if (newImage) this.meta.image = { kind: "url", url: newImage };
     }
     SetAltTitle(title: string): void {
         // remove duplicates
@@ -359,16 +386,16 @@ export class HermidataModel implements Hermidata {
         // title, novelType, url
         // if missing
         const alternativeRequired = {
-            title: brokenHermidata.title ?? brokenHermidata.rss?.latestItem.title ?? brokenHermidata.rss?.latestItem.rawTitle ?? brokenHermidata.rss?.title ?? null,
+            title: brokenHermidata.title ?? brokenHermidata.rss?.[0]?.latestItem.title ?? brokenHermidata.rss?.[0]?.latestItem.rawTitle ?? brokenHermidata.rss?.[0]?.title ?? null,
             novelType: brokenHermidata.novelType ?? null,
-            url: brokenHermidata.chapter?.bookmarks?.[brokenHermidata.chapter.bookmarkInUse]?.url ?? brokenHermidata.rss?.latestItem.link ?? null,
+            url: brokenHermidata.chapter?.bookmarks?.[brokenHermidata.chapter.bookmarkInUse]?.url ?? brokenHermidata.rss?.[0]?.latestItem.link ?? null,
         }
         if (!alternativeRequired.title || !alternativeRequired.novelType || !alternativeRequired.url) {
             logConsoleError(`[Hermidata Selector] Missing required data.`, alternativeRequired, brokenHermidata);
             return;
         }
         const trimmedTitle = TrimTitle.trimTitle(alternativeRequired.title, alternativeRequired.url);
-        const newId = returnHashedTitle(trimmedTitle.title, alternativeRequired.novelType, alternativeRequired.url);
+        const newId = generateHermidataHash(trimmedTitle.title, alternativeRequired.novelType, alternativeRequired.url);
         this.id = newId;
         this.novelType = alternativeRequired.novelType;
         this.title = trimmedTitle.title;
@@ -378,7 +405,8 @@ export class HermidataModel implements Hermidata {
 
         if (!brokenHermidata?.chapter?.bookmarks) {
             const newBookmark: Bookmark = {
-                id: returnBookmarkHash('Primary'),
+                id: generateBookmarkId('Primary'),
+                version: 6,
                 current: 0,
                 history: [],
                 label: 'Primary',
@@ -386,14 +414,14 @@ export class HermidataModel implements Hermidata {
                 readStatus: 'Viewing',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
+                lastUsedAt: new Date().toISOString(),
                 isPrimary: true,
                 url: alternativeRequired.url,
                 scrollPosition: 0,
                 note: '',
-                version: 5
             }
             this.chapter.bookmarks = {
-                [returnBookmarkHash('Primary')]: newBookmark
+                [generateBookmarkId('Primary')]: newBookmark
             }
         }else {
             this.chapter = {
@@ -411,14 +439,15 @@ export class HermidataModel implements Hermidata {
                 const marker: Partial<Bookmark> = markerBookmark;
                 if (hasPrimary && marker.label == undefined) continue;
                 const newBookmark: Bookmark = {
-                    version: 5,
-                    id: returnBookmarkHash(marker?.label ?? 'Primary'),
+                    version: 6,
+                    id: generateBookmarkId(marker?.label ?? 'Primary'),
                     current: marker.current ?? 0,
                     history: marker.history ?? [],
                     label: marker.label ?? 'Primary',
                     color: marker.color ?? '#5979d6',
                     createdAt: marker.createdAt ?? new Date().toISOString(),
                     updatedAt: marker.updatedAt ?? new Date().toISOString(),
+                    lastUsedAt: marker.lastUsedAt ?? marker.updatedAt ?? new Date().toISOString(),
                     note: marker.note ?? '',
                     isPrimary: marker.isPrimary ?? true,
                     readStatus: marker.readStatus ?? 'Viewing',
@@ -431,12 +460,12 @@ export class HermidataModel implements Hermidata {
         }
 
 
-        this.rss = brokenHermidata?.rss ?? null;
+        this.rss = brokenHermidata?.rss ?? [];
         this.meta = {
             contentRating: brokenHermidata?.meta?.contentRating ?? this.meta.tags.includes('Hentai') ? 'Pornographic' : 'Safe',
             contentWarnings: brokenHermidata?.meta?.contentWarnings ?? [],
             starRating: brokenHermidata?.meta?.starRating ?? 5.0,
-            image: brokenHermidata?.meta?.image ?? brokenHermidata?.rss?.image ?? '../../../assets/icon/icon48.png',
+            image: brokenHermidata?.meta?.image ?? { kind: 'url', url: brokenHermidata?.rss?.[0]?.image ?? '../../../assets/icon/icon48.png' },
 
             readingQueue: brokenHermidata?.meta?.readingQueue ?? false,
             relations: brokenHermidata?.meta?.relations ?? "None",
@@ -450,6 +479,7 @@ export class HermidataModel implements Hermidata {
             originalRelease: brokenHermidata?.meta?.originalRelease ?? null,
             novelStatus: brokenHermidata?.meta?.novelStatus ?? 'Ongoing',
         };
+        this.titleTrimming = brokenHermidata?.titleTrimming ?? { type: 'default' };
 
         this.version = this.CalculateHermidataVersion();
     }
@@ -491,7 +521,7 @@ export class HermidataModel implements Hermidata {
 
         const savedLastRead = this.GetLatestReadChapter(activeBookmarkId) || savedBookmark.current;
         const tabChapter = hermidataCopy.GetChapter(activeBookmarkId);
-        const wouldBeClobbered = this.rss != null || tabChapter > this.chapter.latest || this.chapter.latest < savedBookmark.current;
+        const wouldBeClobbered = this.rss.length > 0 || tabChapter > this.chapter.latest || this.chapter.latest < savedBookmark.current;
 
         const hasNoReadHistory = !savedHistory.some(entry => Number.isFinite(entry.chapter) && entry.chapter > 0);
 
@@ -560,34 +590,35 @@ export class HermidataModel implements Hermidata {
     }
     UpdateFeed(rawFeed: RawFeed): void {
         // always update it with latest info NOT latest fetched item
-        if (!this.rss) return;
-
-        const latestFetchedIsNewer = new Date(rawFeed.latestItem.pubDate).getTime() > new Date(this.rss.latestItem.pubDate).getTime();
+        const feedIndex = this.rss.findIndex(feed => feed.url === rawFeed.url);
+        if (feedIndex === -1) return;
+        const currentFeed = this.rss[feedIndex];
+        const latestFetchedIsNewer = new Date(rawFeed.latestItem.pubDate).getTime() > new Date(currentFeed.latestItem.pubDate).getTime();
     
-        const isNew = (rawFeed.latestItem?.link !== this.rss.latestItem?.link) && latestFetchedIsNewer;
+        const isNew = (rawFeed.latestItem?.link !== currentFeed.latestItem?.link) && latestFetchedIsNewer;
     
-        const latestChapter = latestFetchedIsNewer ? rawFeed.latestItem.chapter : this.rss.latestItem.chapter;
+        const latestChapter = latestFetchedIsNewer ? rawFeed.latestItem.chapter : currentFeed.latestItem.chapter;
     
         if (isNew) console.log(`
             New Release\n
             title: ${rawFeed.latestItem.title}\n
             New Chapter: ${rawFeed.latestItem.chapter}\n
-            Old Chapter: ${this.rss.latestItem.chapter}\n
+            Old Chapter: ${currentFeed.latestItem.chapter}\n
             new Date: ${new Date(rawFeed.latestItem.pubDate)}\n
-            old Date: ${new Date(this.rss.latestItem.pubDate)}\n
+            old Date: ${new Date(currentFeed.latestItem.pubDate)}\n
         `);
         
         
         // only update feed if we have a newer chapter, otherwise we might overwrite with stale data
-        this.rss = {
-            id: returnHashedFeedId(this.title, this.rss.url),
-            title: latestFetchedIsNewer ? rawFeed.latestItem.title : this.rss.title,
-            url: latestFetchedIsNewer ? rawFeed.url : this.rss.url, // rss url
-            image: latestFetchedIsNewer ? rawFeed.image : this.rss.image,
-            domain: latestFetchedIsNewer ? rawFeed.domain : this.rss.domain,
+        this.rss[feedIndex] = {
+            id: generateRssFeedId(this.title, currentFeed.url),
+            title: latestFetchedIsNewer ? rawFeed.latestItem.title : currentFeed.title,
+            url: currentFeed.url,
+            image: latestFetchedIsNewer ? rawFeed.image : currentFeed.image,
+            domain: latestFetchedIsNewer ? rawFeed.domain : currentFeed.domain,
             lastFetched: new Date().toISOString(),
-            latestItem: latestFetchedIsNewer ? rawFeed.latestItem : this.rss.latestItem,
-            lastBuildDate: this.rss?.lastBuildDate,
+            latestItem: latestFetchedIsNewer ? rawFeed.latestItem : currentFeed.latestItem,
+            lastBuildDate: currentFeed.lastBuildDate,
             Notified: true
         };
         this.chapter.latest = latestChapter;
@@ -597,8 +628,8 @@ export class HermidataModel implements Hermidata {
     }
     // -- serialization --
     toJSON(): Hermidata {
-        const { id, title, novelType, source, chapter, rss, import: imp, meta, version } = this;
-        return { id, title, novelType, source, chapter, rss, import: imp, meta, version };
+        const { id, title, novelType, source, chapter, rss, import: imp, titleTrimming, meta, version } = this;
+        return { id, title, novelType, source, chapter, rss, import: imp, titleTrimming, meta, version };
     }
 
     private isoToLocal(rawDate: string, locale?: string): string {
@@ -667,7 +698,7 @@ export class HermidataModel implements Hermidata {
     }
     // -- boolean helpers --
     public hasRSS(): boolean {
-        return this.rss !== null;
+        return this.rss.length > 0;
     }
     public IsLatestVersion(): boolean {
         return this.GetVersion() === this.latestVersion;

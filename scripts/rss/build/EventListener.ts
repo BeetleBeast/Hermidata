@@ -1,6 +1,6 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
-import { getMultipleTitles, openLink, returnHashedTitle, TrimTitle } from "../../shared/utils/StringOutput";
+import { getMultipleTitles, openLink, generateHermidataHash, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
@@ -42,7 +42,7 @@ export class EventListener extends RssBuild {
 
         const hermidata = new HermidataModel(value);
 
-        await openLink(value?.rss?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
+        await openLink(hermidata.GetLatestRssFeed()?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
     }
     private async rightMouseClickOnItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
@@ -384,7 +384,7 @@ export class EventListener extends RssBuild {
         item.remove()
         const hashItem = this.GetHashItem(item);
 
-        if (this.AllHermidata[hashItem].rss?.Notified) this.AllHermidata[hashItem].rss.Notified = undefined;
+        for (const feed of this.AllHermidata[hashItem].rss) feed.Notified = undefined;
         saveHermidata(hashItem, this.AllHermidata[hashItem]);
     }
     private async pickElement(target: HTMLDivElement | null) {
@@ -462,7 +462,7 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = returnHashedTitle(newTitle, oldData.novelType, oldData.GetUrl(), false);
+        const newKey = generateHermidataHash(newTitle, oldData.novelType, oldData.GetUrl(), false);
         const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title;
 
         const newData: HermidataModel = oldData.Copy();
@@ -531,7 +531,7 @@ export class EventListener extends RssBuild {
     private async unLinkRSSFeed(entry: HermidataModel) {
         if (!entry) return;
 
-        entry.rss = null;
+        entry.rss = [];
 
         await saveHermidata(entry.id, entry.toJSON());
     }

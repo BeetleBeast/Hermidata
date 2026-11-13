@@ -10,6 +10,8 @@ export {
 
     CONTENT_RATING_MAP,
     DEMOGRAPHIC_TAGS,
+    
+    HERMIDATA_VERSION,
 
     makeDefaultHermidata,
     makeDefaultBookmark

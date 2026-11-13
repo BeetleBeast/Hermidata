@@ -9,7 +9,7 @@ import { checkFeedsForUpdates } from "./feeds"
 import { writeToSheet } from "./sheets"
 import { lastAutoFeedCheck, lastFeedCheck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
-import { getChapterFromTitle, returnHashedFeedId, TrimTitle } from "../shared/utils/StringOutput"
+import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput"
 import { pushToSync, removeFromSync } from "../shared/db/sync"
 
 let rssCache: Record<string, Hermidata> | null = null
@@ -41,29 +41,24 @@ export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
 }
 
 export function handleSaveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }, sendResponse: (r: unknown) => void): true {
+    void saveNovelDirect(data, args).then(sendResponse);
+    return true;
+}
+
+export async function saveNovelDirect(data: Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }): Promise<SaveNovelResponse> {
     const pendingSave = pendingNovelSaves.get(data.id);
-    if (pendingSave) {
-        pendingSave.then(sendResponse, error => {
-            logConsoleError('[Background] Save failed:', error);
-            sendResponse({ success: false, errors: [error instanceof Error ? error.message : String(error)] });
-        });
-        return true;
-    }
+    if (pendingSave) return pendingSave;
 
     const savePromise = saveNovel(data, args);
     pendingNovelSaves.set(data.id, savePromise);
-    savePromise.then(
-        result => {
-            if (pendingNovelSaves.get(data.id) === savePromise) pendingNovelSaves.delete(data.id);
-            sendResponse(result);
-        },
-        error => {
-            if (pendingNovelSaves.get(data.id) === savePromise) pendingNovelSaves.delete(data.id);
-            logConsoleError('[Background] Save failed:', error);
-            sendResponse({ success: false, errors: [error instanceof Error ? error.message : String(error)] });
-        }
-    );
-    return true;
+    try {
+        return await savePromise;
+    } catch (error) {
+        logConsoleError('[Background] Save failed:', error);
+        return { success: false, errors: [error instanceof Error ? error.message : String(error)] };
+    } finally {
+        if (pendingNovelSaves.get(data.id) === savePromise) pendingNovelSaves.delete(data.id);
+    }
 }
 
 async function saveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }): Promise<SaveNovelResponse> {
@@ -216,12 +211,12 @@ function buildFeedItem(raw: RawScrappedFeed): RawFeed {
     const rawTitle = raw.latestItem.title;
     const trimmedTitle = TrimTitle.trimTitle(rawTitle, url).title;
     return {
-        id: returnHashedFeedId(trimmedTitle, raw.url),
+        id: generateRssFeedId(trimmedTitle, raw.url),
         title: trimmedTitle,
         url,
         domain: raw.domain ?? new URL(url).hostname.replace(/^www\./, ''),
         latestItem: {
-            id: returnHashedFeedId(trimmedTitle, url),
+            id: generateRssFeedId(trimmedTitle, url),
             title: trimmedTitle,
             rawTitle: rawTitle,
             link: raw.latestItem.link,

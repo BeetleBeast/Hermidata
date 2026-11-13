@@ -1,5 +1,6 @@
 import type { FolderMapping, Settings } from "../types";
 import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, DEFAULT_TAG_COLOURS } from "./popup";
+import { DEFAULT_KEYBOARD_SHORTCUTS } from "../utils/KeyboardShortcuts";
 
 export const DEFAULT_FOLDER_MAPPING: FolderMapping = {
     root: 'Hermidata',
@@ -16,7 +17,7 @@ export const DEFAULT_FOLDER_MAPPING: FolderMapping = {
 
 
 export const defaultSettings: Settings = {
-    version: 7,
+    version: 8,
     AccountAndConnections: {
         spreadsheetUrl: '',
     },
@@ -28,7 +29,8 @@ export const defaultSettings: Settings = {
             BrowserBookmark: true,
             GoogleSpreadsheet: false,
         },
-        EnableKeyboardShortcuts: false,
+        EnableKeyboardShortcuts: true,
+        KeyboardShortcuts: { ...DEFAULT_KEYBOARD_SHORTCUTS },
         AutoSubscribe: {
             EnableAutoSubscribe: false,
             AllowSimilarityScanning: false,

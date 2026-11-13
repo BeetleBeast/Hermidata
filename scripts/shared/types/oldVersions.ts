@@ -2,9 +2,9 @@ import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Feed, Hermidata, Nove
 
 
 
-export type allOlderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10;
+export type allOlderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10 | HermidataV11;
 
-export type AnyHermidataVersion = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10 | Hermidata;
+export type AnyHermidataVersion = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10 | HermidataV11 | Hermidata;
 
 /* old Feed & RawFeed */
 
@@ -60,6 +60,7 @@ export interface BookmarkV3 extends BookmarkV2 {
 export interface BookmarkV4 extends BookmarkV3 {
     url: string;
 }
+export type BookmarkV5 = Omit<Hermidata["chapter"]["bookmarks"][string], "lastUsedAt">;
 /* Old Hermidata
     V1/V2 are the original flat (capitalized-key) shape.
     From V3 onward the shape is lowercase-key/nested, and stabilizes over time:
@@ -166,4 +167,14 @@ export interface HermidataV9 extends Omit<HermidataV8, "chapter"> {
 }
 export interface HermidataV10 extends Omit<HermidataV9, "url" | "chapter"> {
     chapter: ChapterV7Plus<BookmarkV4>; // top-level `url` removed
+}
+export interface HermidataV11 extends Omit<Hermidata, "version" | "rss" | "chapter" | "titleTrimming" | "meta"> {
+    version: 11;
+    rss: Feed | null;
+    chapter: Omit<Hermidata["chapter"], "bookmarks"> & {
+        bookmarks: Record<string, BookmarkV5>;
+    };
+    meta: Omit<Hermidata["meta"], "image"> & {
+        image: string;
+    };
 }

@@ -1,11 +1,15 @@
 import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
-import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, Settings, SwitchConfig, TagMap } from "../../shared/types";
+import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, HermidataImageSource, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { openLink, returnHashedTitle } from "../../shared/utils/StringOutput";
+import { openLink, generateHermidataHash } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, LibraryBuilder } from "../build";
 import { Tags } from "./tags";
+
+type ImageUrlImport = { kind: 'url'; url: string; blob: Blob };
+type ImageFileImport = { kind: 'file'; file: Blob | File };
+type ImageImport = ImageUrlImport | ImageFileImport;
 
 export class EditDetail extends LibraryBuilder {
 
@@ -29,7 +33,7 @@ export class EditDetail extends LibraryBuilder {
 
     private currentImageUrl: string | null = null;
 
-    private temporaryBlob: Blob | File | null = null;
+    private pendingImage: ImageImport | null = null;
 
     private newAltTitles: string[] | null = null;
 
@@ -236,9 +240,6 @@ export class EditDetail extends LibraryBuilder {
             
         }
 
-        // set image back
-        // document.querySelector<HTMLImageElement>('#hermidata-img')?.setAttribute('src', this.hermidata.meta.image);
-
         // set author text
         const author = document.querySelector<HTMLDivElement>('#hermidata-author');
         this.setEmptyText(author);
@@ -362,20 +363,23 @@ export class EditDetail extends LibraryBuilder {
     private async updateImage(mode: 'cancel' | 'save'): Promise<void> {
         if (!this.imgElement) return;
 
-        const image = await this.hermidata.getDisplayImageUrl();
-        if (mode == "save" && this.temporaryBlob) {
-            // update back-end
-            await this.hermidata.SetImage(this.temporaryBlob);
+        if (mode === "save" && this.pendingImage) {
+            // set new Image to db
+            if (this.pendingImage.kind === 'url') await this.hermidata.SetImage(this.pendingImage.url, this.pendingImage.blob);
+            else await this.hermidata.SetImage(this.pendingImage.file);
 
-            // update front-end
-            // get new image
             const newImage = await this.hermidata.getDisplayImageUrl();
-            // set new image value
             this.setImageValue(this.imgElement, newImage);
-            // update image ratio
             if (this.imgElement instanceof HTMLImageElement) this.calculateImageRatio(this.imgElement);
+            this.clearTemporaryImageUrl();
+            this.pendingImage = null;
         }
-        else if (mode == "cancel") this.setImageValue(this.imgElement, image);
+        else if (mode === "cancel") {
+            const image = await this.hermidata.getDisplayImageUrl();
+            this.setImageValue(this.imgElement, image);
+            this.clearTemporaryImageUrl();
+            this.pendingImage = null;
+        }
     }
     private updateTitle(mode: 'cancel' | 'save', title: HTMLElement | null | undefined): void {
         if (!title) return;
@@ -484,10 +488,11 @@ export class EditDetail extends LibraryBuilder {
     }
     /** update key if changes have been made */
     private async forceKeyUpdate() {
-        const newKey = returnHashedTitle(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
+        const newKey = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
         const oldKey = this.hermidata.id;
         if (newKey === oldKey) return;
-        
+        const imageSource = this.hermidata.meta.image;
+        if (imageSource.kind === 'stored' && imageSource.id === oldKey) this.hermidata.meta.image = { ...imageSource, id: newKey };
         this.hermidata.id = newKey;
 
         await this.changeHermidata(oldKey, newKey, this.hermidata.toJSON());
@@ -1091,9 +1096,9 @@ export class EditDetail extends LibraryBuilder {
         // prefill URL with current image src, if one exists
         this.popover.addEventListener('toggle', (e: Event) => {
             const toggleEvent = e as ToggleEvent; // 'toggle' event on popovers is a ToggleEvent
-            const image: string | null = this.imgElement instanceof HTMLImageElement ? this.imgElement.src : this.imgElement!.value;
-            if (toggleEvent.newState === 'open' && this.urlInput && image) {
-                this.urlInput.value = image;
+            const imageSource: HermidataImageSource = this.hermidata.meta.image;
+            if (toggleEvent.newState === 'open' && this.urlInput) {
+                this.urlInput.value = imageSource.kind === 'url' ? imageSource.url : '';
             }
         });
 
@@ -1114,13 +1119,17 @@ export class EditDetail extends LibraryBuilder {
         // URL confirm
         this.urlConfirmBtn?.addEventListener('click', async () => {
             if (this.urlInput?.value && this.imgElement) {
-                
-                const response = await fetch(this.urlInput.value);
-                const blob = await response.blob();
+                const url = this.urlInput.value.trim();
+                if (!url) return;
 
-                this.temporaryBlob = blob;
+                // Fetch follows redirects and gives us the actual image bytes; don't replace this
+                // with setting the input URL directly, since it may not be the final image URL.
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Could not fetch image (${response.status} ${response.statusText})`);
 
-                this.setImage(blob);
+                const imageBlob = await response.blob();
+                this.pendingImage = { kind: 'url', url, blob: imageBlob };
+                this.setImage(imageBlob);
                 this.popover?.hidePopover();
             }
         });
@@ -1130,22 +1139,27 @@ export class EditDetail extends LibraryBuilder {
             const file = this.fileInput?.files?.[0];
             if (!file || !this.imgElement) return;
             
-            this.temporaryBlob = file;
-
+            this.pendingImage = { kind: 'file', file };
             this.setImage(file);
             this.popover?.hidePopover();
             
         });
     }
-    private setImage(blob: Blob) {
+    private setImage(image: string | Blob) {
         if (this.currentImageUrl) URL.revokeObjectURL(this.currentImageUrl);
-        this.currentImageUrl = URL.createObjectURL(blob);
+        this.currentImageUrl = typeof image === 'string' ? null : URL.createObjectURL(image);
+        const imageUrl = typeof image === 'string' ? image : this.currentImageUrl;
+        if (!imageUrl) return;
 
-        this.imgElement instanceof HTMLImageElement ? this.imgElement.src = this.currentImageUrl : this.imgElement!.value = this.currentImageUrl;
+        this.imgElement instanceof HTMLImageElement ? this.imgElement.src = imageUrl : this.imgElement!.value = imageUrl;
 
         // set as background image
-        this.imgElement!.style.backgroundImage = `url(${this.currentImageUrl})`;
+        this.imgElement!.style.backgroundImage = `url(${imageUrl})`;
         
+    }
+    private clearTemporaryImageUrl(): void {
+        if (this.currentImageUrl) URL.revokeObjectURL(this.currentImageUrl);
+        this.currentImageUrl = null;
     }
 
 }

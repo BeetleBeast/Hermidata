@@ -47,8 +47,8 @@ export class Footer extends RssBuild {
         const newHermidataWithNoNotification = [];
 
         for (const notification of Object.values(allNotificationList)) {
-            if (!notification.rss) continue;
-            notification.rss.Notified = undefined;
+            if (!notification.rss.length) continue;
+            for (const feed of notification.rss) feed.Notified = undefined;
             newHermidataWithNoNotification.push(notification);
         }
         await setAllHermidata(newHermidataWithNoNotification);

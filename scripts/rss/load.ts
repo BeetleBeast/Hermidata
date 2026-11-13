@@ -2,7 +2,7 @@ import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
 import { appendAltTitle, makeHermidata } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
-import { findByTitleOrAlt, getChapterFromTitle, getChapterFromTitleReturn, returnHashedFeedId, returnHashedTitle, TrimTitle } from "../shared/utils/StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, generateRssFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
 import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidata } from "../shared/db/Storage";
 import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";
@@ -87,6 +87,9 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
     const filteredRawFeeds: Record<string, RawFeed> = {};
     
     const allNonMatches: RawFeed[] = [];
+    const linkedFeeds = new Map(hermidataValues.flatMap(novel =>
+        novel.rss.map(feed => [feed.url, novel] as const)
+    ));
     
     const domainToHermidata = getAllDomainFromHermidata(hermidataValues);
 
@@ -101,23 +104,24 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
     for (const feed of rawFeeds) {
         if (!feed.title || !feed.url ||!feed) continue;
 
+        const linkedHermidata = linkedFeeds.get(feed.url);
         // Get all Hermidata entries for this feed's domain
         const domainCandidates = domainToHermidata.get(feed.domain);
-        if (!domainCandidates?.length) continue;
+        if (!domainCandidates?.length && !linkedHermidata) continue;
 
         // Trim the feed title the same way as the titleMap keys
         const rawFeedTitle = feed?.latestItem?.title || feed.title;
         const feedTitle = TrimTitle.trimTitle(rawFeedTitle, feed.url).title;
 
         // Find the matching Hermidata entry by trimmed title among domain candidates only
-        const matched = domainCandidates.find( n => TrimTitle.trimTitle(n.title, n.chapter.bookmarks[n.chapter.bookmarkInUse].url).title === feedTitle );
+        const matched = domainCandidates?.find( n => TrimTitle.trimTitle(n.title, n.chapter.bookmarks[n.chapter.bookmarkInUse].url).title === feedTitle ) ?? linkedHermidata;
         if (!matched) {
             allNonMatches.push(feed);
             continue;
         }
         
         const type = matched?.novelType ?? TYPE_OPTIONS[0];
-        const id = returnHashedTitle(feedTitle, type, feed.url);
+        const id = generateHermidataHash(feedTitle, type, feed.url);
 
         filteredRawFeeds[id] = Object.freeze({ ...feed, items: feed.latestItem });
         // filteredRawFeeds[id] = feed;
@@ -163,7 +167,7 @@ export async function getHermidataWithRssFromBackground(): Promise<Record<string
 /** get hermidata with RSS that have the notification set to true */
 export async function getHermidataNotification(): Promise<Record<string, Hermidata>> {
     const hermidata = await getHermidataWithRssFromBackground();
-    const newNotification = Object.values(hermidata).filter(h => h.rss?.Notified)
+    const newNotification = Object.values(hermidata).filter(h => h.rss.some(feed => feed.Notified))
 
     return Object.fromEntries(newNotification.map(h => [h.id, h]));
 }
@@ -171,16 +175,14 @@ export async function getHermidataNotification(): Promise<Record<string, Hermida
 
 /** Refreshes RSS info by comparing to rawFeeds and hermidata */
 export function updateFeed(hermidata: Hermidata, allFeeds: Record<string, RawFeed>): Hermidata {
-    if (!hermidata.rss?.url) return hermidata;
-
-    const matchFeedKey = Object.keys(allFeeds).find(key => key === hermidata.id);
-    if (!matchFeedKey) return hermidata; // no match
-
-    const matchFeed = allFeeds[matchFeedKey];
+    if (hermidata.rss.length === 0) return hermidata;
 
     const hermidataModel = new HermidataModel(hermidata);
 
-    hermidataModel.UpdateFeed(matchFeed);
+    for (const feed of hermidata.rss) {
+        const latestRawFeed = Object.values(allFeeds).find(rawFeed => rawFeed.url === feed.url);
+        if (latestRawFeed) hermidataModel.UpdateFeed(latestRawFeed);
+    }
 
     return hermidataModel.toJSON();
 }
@@ -200,7 +202,7 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     const existingEntry = findByTitleOrAlt(title, AllHermidata)
     const resolvedTitle = existingEntry ? existingEntry.title : title;
     const resolvedType = existingEntry ? existingEntry.novelType : type;
-    const key = returnHashedTitle( resolvedTitle, resolvedType);
+    const key = generateHermidataHash( resolvedTitle, resolvedType);
 
     const KeysToFetch = [key];
     if (altCheck.relatedKey && altCheck.relatedKey !== key) KeysToFetch.push(altCheck.relatedKey)
@@ -214,8 +216,8 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
 
     const entry: Hermidata = await getEntry(title, stored, altCheck, resolvedType, url, key);
 
-    entry.rss = {
-        id: returnHashedFeedId(rssData.latestItem.title, rssData.url),
+    const newFeed: Feed = {
+        id: generateRssFeedId(rssData.latestItem.title, rssData.url),
         title: rssData.title,
         url: rssData.url,
         image: rssData.image,
@@ -223,6 +225,9 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
         lastFetched: new Date().toISOString(),
         latestItem: rssData.latestItem ?? null
     };
+    const existingFeedIndex = entry.rss.findIndex(feed => feed.url === newFeed.url);
+    if (existingFeedIndex === -1) entry.rss.push(newFeed);
+    else entry.rss[existingFeedIndex] = newFeed;
 
     // Optionally update chapter.latest from feed title
     const latestChapter = rssData.latestItem.chapter;

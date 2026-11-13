@@ -607,7 +607,7 @@ export class FilterLogic extends Sort {
     private getQueryItem(item: HermidataModel, query: string, queryType: 'title' | 'chapter' | 'author' = 'title'): boolean {
         if (queryType === 'title') return [item.title, ...(item.meta?.altTitles || [])].some(t => t.toLowerCase().includes(query));
         if (queryType === 'chapter') {
-            const percentageCompleted = item.rss?.latestItem.chapter ?? item.chapter.latest / item.GetChapter();
+            const percentageCompleted = item.GetLatestRssFeed()?.latestItem.chapter ?? item.chapter.latest / item.GetChapter();
             
             return percentageCompleted >= Number(query);
         }

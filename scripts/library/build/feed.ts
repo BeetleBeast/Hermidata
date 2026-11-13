@@ -235,8 +235,8 @@ export class feed extends LibraryBuilder {
     private buildDate(entry: HermidataModel): HTMLDivElement {
         const date = document.createElement('div');
         date.className = "hermidata-item-date";
-
-        const timeUsing = entry.rss?.lastFetched ? new Date(entry.rss?.lastFetched).toISOString() : new Date(entry.meta.updated).toISOString();
+        const latestFeed = HermidataModel.GetLatestRssFeed(entry.rss, "lastFetched");
+        const timeUsing = latestFeed?.lastFetched ? new Date(latestFeed.lastFetched).toISOString() : new Date(entry.meta.updated).toISOString();
         const dateText = this.getTimeAgo(timeUsing);
         date.textContent = dateText;
 
@@ -343,6 +343,3 @@ export class feed extends LibraryBuilder {
         return checkboxContainer;
     }
 }
-
-
-

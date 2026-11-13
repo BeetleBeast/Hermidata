@@ -1,5 +1,8 @@
-import { returnBookmarkHash } from "../utils/StringOutput";
+import { generateBookmarkId } from "../utils/StringOutput";
 import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
+
+export const HERMIDATA_VERSION = 12;
+
 
 // Default arrays — used to seed settings on first install
 export const DEFAULT_NOVEL_TYPES: NovelType[] = ['Manga', 'Manhwa', 'Manhua', 'Novel', 'Webnovel', 'Anime', "TV-Series"];
@@ -94,23 +97,24 @@ export const filterName: FilterName = {
 
 
 export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
-    version: 11,
+    version: 12,
     id: '',
     title: '',
     novelType: type,
     source: '',
     chapter: {
         bookmarks: {
-            [returnBookmarkHash('Primary')]: makeDefaultBookmark(status)
+            [generateBookmarkId('Primary')]: makeDefaultBookmark(status)
         },
         latest: 0,
         lastChecked: new Date().toISOString(),
         revisitingCount: 0,
-        bookmarkInUse: returnBookmarkHash('Primary'),
+        bookmarkInUse: generateBookmarkId('Primary'),
         releaseSchedule: "Unknown",
     },
-    rss: null,
+    rss: [],
     import: null,
+    titleTrimming: { type: 'default' },
     meta: {
         tags: [],
         notes: '',
@@ -123,20 +127,21 @@ export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, 
         contentRating: "Safe",
         contentWarnings: [],
         starRating: 5.0,
-        image: '../../../assets/icon/icon48.png',
+        image: { kind: 'url', url: '../../../assets/icon/icon48.png' },
         readingQueue: false,
         relations: "None",
     }
 });
 export const makeDefaultBookmark = (AnyReadStatus: AnyReadStatus = 'Viewing', currentChapter: number = 0, history: { chapter: number, at: string }[] = [], notes: string = ''): Bookmark => ({
-    version: 4,
-    id: returnBookmarkHash('Primary'),
+    version: 6,
+    id: generateBookmarkId('Primary'),
     current: currentChapter,
     history: history,
     label: 'Primary',
     color: '#5979d6',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    lastUsedAt: new Date().toISOString(),
     note: notes,
     isPrimary: true,
     readStatus: AnyReadStatus,

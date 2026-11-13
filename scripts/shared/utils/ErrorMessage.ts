@@ -1,9 +1,14 @@
+import { ext } from "./BrowserCompat";
+
 export type ConsoleLevel = 'log' | 'warn' | 'error' | 'none';
 export type MessageSeverity = 'info' | 'warning' | 'error';
+export type NotificationTarget = 'in-page' | 'browser';
 
 /** Controls whether a message is shown to the user and/or written to the console. */
 export interface MessageOptions {
     notifyUser: boolean;
+    /** Defaults to an in-page dialog; use "browser" for extension notifications. */
+    notificationTarget?: NotificationTarget;
     consoleLevel: ConsoleLevel;
     severity: MessageSeverity;
     color: string;
@@ -52,6 +57,18 @@ abstract class Messaging {
 
         this.sendToConsole();
         if (this.options.notifyUser) {
+            if (this.options.notificationTarget === 'browser') {
+                void ext.notifications.create({
+                    type: 'basic',
+                    iconUrl: ext.runtime.getURL('assets/icon/icon48.png'),
+                    title: 'Hermidata',
+                    message: this.message
+                }).catch(error => {
+                    console.error('[Hermidata] Could not show browser notification.', error);
+                });
+                return;
+            }
+
             if (typeof document === 'undefined' || !document.body) throw new Error('Cannot show a user message before the document body is available.');
 
             this.messageBuilder ??= this.elements ? new BuildElement(this.elements) : (defaultMessageBuilder ??= new BuildElement());

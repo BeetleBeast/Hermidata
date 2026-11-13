@@ -2,7 +2,7 @@
     "name": "Hermidata",
     "author": "BeetleB",
     "description": "Track your reading and watching progress across novels, manga, and anime. Save entries with one click, manage multiple read-thoughts per title with independent bookmarks, get notified of new chapters via RSS, and optionally sync to Google Sheets.",
-    "version": "0.25.6",
+    "version": "0.26.0",
     "manifest_version": 3,
     "permissions": [
         "contextMenus",
@@ -58,5 +58,26 @@
     "options_ui": {
         "page": "dist/pages/settings.html",
         "open_in_tab": true
+    },
+    "commands": {
+        "_execute_action": {
+            "suggested_key": {
+                "default": "Alt+Shift+H",
+                "mac": "Alt+Shift+H"
+            },
+            "description": "Open Hermidata (Classic)"
+        },
+        "open-rss": {
+            "suggested_key": { "default": "Alt+Shift+F" },
+            "description": "Open Hermidata (RSS)"
+        },
+        "save-hermidata": {
+            "suggested_key": { "default": "Alt+Shift+S" },
+            "description": "Save Hermidata"
+        },
+        "open-library": {
+            "suggested_key": { "default": "Alt+Shift+L" },
+            "description": "Open Library"
+        }
     }
 }

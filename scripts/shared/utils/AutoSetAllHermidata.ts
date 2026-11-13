@@ -1,6 +1,6 @@
 import { findNestedFolder, getBookmarkChildren } from "../../background/bookmarks";
 import type { AnyNovelType, Bookmark, Hermidata, ReleaseSchedule } from "../types";
-import { findByTitleOrAlt, getChapterFromTitle, returnBookmarkHash, returnHashedTitle, TrimTitle } from "./StringOutput";
+import { findByTitleOrAlt, getChapterFromTitle, generateBookmarkId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 
 export class AutoSetAllHermidata {
@@ -65,7 +65,7 @@ export class AutoSetAllHermidata {
             const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
             
             // create all possible id with all possible types
-            const allPossibleIDs = this.allNovelTypes.map(type => returnHashedTitle(rawTitle, type, rawUrl));
+            const allPossibleIDs = this.allNovelTypes.map(type => generateHermidataHash(rawTitle, type, rawUrl));
             const allPossibleIDsIncludes = Object.keys(this.allHermidata).find(novelId => allPossibleIDs.includes(novelId));
             if (allPossibleIDsIncludes) continue;
             // also check if there is a novel with the same title.
@@ -133,11 +133,11 @@ export class AutoSetAllHermidata {
         // trim version
         const trimmedTitle = TrimTitle.trimTitle(rawTitle, rawUrl).title;
         const chapter = getChapterFromTitle(rawTitle, rawUrl);
-        const HermidataID = returnHashedTitle(rawTitle, novelType, rawUrl);
-        const BookmarkID = returnBookmarkHash(label);
+        const HermidataID = generateHermidataHash(rawTitle, novelType, rawUrl);
+        const BookmarkID = generateBookmarkId(label);
 
         const bookmarkGuess: Bookmark = {
-            version: 4,
+            version: 6,
             id: BookmarkID,
             current: chapter,
             history: [
@@ -150,6 +150,7 @@ export class AutoSetAllHermidata {
             color: 'blue',
             createdAt: date.toISOString(),
             updatedAt: date.toISOString(),
+            lastUsedAt: date.toISOString(),
             note: '',
             isPrimary: true,
             readStatus: 'Viewing',
@@ -158,7 +159,7 @@ export class AutoSetAllHermidata {
         }
 
         const hermidataGuess: Hermidata = {
-            version: 11,
+            version: 12,
             id: HermidataID,
             title: trimmedTitle,
             novelType: novelType,
@@ -173,8 +174,9 @@ export class AutoSetAllHermidata {
                 bookmarkInUse: BookmarkID,
                 releaseSchedule: this.releaseSchedule(bookmarkGuess.history)
             },
-            rss: null,
+            rss: [],
             import: null,
+            titleTrimming: { type: 'default' },
             meta: {
                 tags: [],
                 notes: '',
@@ -188,7 +190,7 @@ export class AutoSetAllHermidata {
                 contentRating: "Safe",
                 contentWarnings: [],
                 starRating: 5.0,
-                image: '../../../assets/icon/icon48.png',
+                image: { kind: 'url', url: '../../../assets/icon/icon48.png' },
 
                 readingQueue: false,
                 relations: "None"
