@@ -261,10 +261,7 @@ export class ExtensionBehavior extends Build {
             await openBrowserShortcutSettings();
             this.setShortcutStatus("Opened browser shortcut settings.");
         } catch (error) {
-            const url = /Edg\//.test(navigator.userAgent)
-                ? "edge://extensions/shortcuts"
-                : "chrome://extensions/shortcuts";
-            this.setShortcutStatus(`Could not open browser shortcut settings. Open ${url} manually.`, true);
+            this.setShortcutStatus(`“Could not open it automatically. Open your browser's extensions page and look for Keyboard shortcuts.”`, true);
         }
     }
     private StartShortcutCapture(button: HTMLButtonElement) {

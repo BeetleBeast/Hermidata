@@ -59,7 +59,7 @@ export function matchesKeyboardShortcut(event: KeyboardEvent, shortcut: string):
 
     const key = parts.at(-1)!;
     const expected = new Set(parts.slice(0, -1).map(part => part.toLowerCase()));
-    
+
     return normalizeKey(event.key) === normalizeKey(key)
         && event.ctrlKey === expected.has("ctrl")
         && event.altKey === expected.has("alt")
@@ -98,8 +98,6 @@ export async function openBrowserShortcutSettings(): Promise<void> {
         return;
     }
 
-    const url = /Edg\//.test(navigator.userAgent)
-        ? "edge://extensions/shortcuts"
-        : "chrome://extensions/shortcuts";
-    await ext.tabs.create({ url });
+    // chromium browser rewrite chrome:// to their own scheme automatically
+    await ext.tabs.create({ url: "chrome://extensions/shortcuts" });
 }
