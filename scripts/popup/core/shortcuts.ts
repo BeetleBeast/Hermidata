@@ -38,6 +38,7 @@ export async function shortcutEventListener(e: KeyboardEvent) {
     // if saving
     if (e.ctrlKey && e.key === "Enter") return saveProgress(e);
 
+    if (e.ctrlKey && e.key === "k") return focusOnSearchBar(e);
 
     if (typing || e.ctrlKey || e.altKey || e.metaKey) return;
 
@@ -86,6 +87,15 @@ async function saveProgress(e: KeyboardEvent) {
     } finally {
         setSaveInProgress(false);
     }
+}
+async function focusOnSearchBar(e: KeyboardEvent) {
+    e.preventDefault();
+    const searchInRSSMode = document.querySelector<HTMLInputElement>(".search-input");
+
+    const search = searchInRSSMode;
+    if (!search) return;
+
+    search.focus();
 }
 
 
