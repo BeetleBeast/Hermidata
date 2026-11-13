@@ -14,7 +14,7 @@ import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
 import { HermidataService } from "./service";
-import "../core/shortcuts";
+import { shortcutEventListener } from "../core/shortcuts";
 
 
 const stateConfig = {
@@ -52,6 +52,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setTimeout( async () => checkSyncQuota(), 500);
 });
+
+document.addEventListener('keydown', async (e) => shortcutEventListener(e));
 
 class HermidataController {
     private hermidata: HermidataModel;
@@ -95,17 +97,26 @@ class HermidataController {
         this.populateUI(settings);
         
         this.bindEvents();
-        // initialize tags system
-        await this.tagsSystem.init(settings);
 
         // initialize RSS mode
         this.RSS = new RSS(this.hermidata, await getAllHermidata());
+        // open RSS mode if shortcut was used
+        await this.openRSSIfSetInsideSession();
+
+        // initialize tags system
+        await this.tagsSystem.init(settings);
 
         this.service = new HermidataService(settings);
 
         // log a table of all potential duplicates
         // set it up in the background
         setTimeout(() => this.checkForDuplicates(), 0);
+    }
+    private async openRSSIfSetInsideSession(): Promise<void> {
+        const { popupMode } = await ext.storage.session.get<{ popupMode: 'rss' | 'classic' }>('popupMode');
+        await ext.storage.session.remove("popupMode");
+        
+        if (popupMode === 'rss') this.RSS?.openRSS(new PointerEvent('click'));
     }
     private async checkForDuplicates(): Promise<void> {
         await this.duplicate.init();

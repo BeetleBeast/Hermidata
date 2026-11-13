@@ -10,8 +10,6 @@ import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 import { HermidataService } from "../in/service";
 import { PastHermidata } from "./Past";
 
-type PopupMode = "classic" | "rss";
-
 let modeSwitcher: ModeSwitcher | undefined;
 let modeSwitcherPromise: Promise<ModeSwitcher> | undefined;
 
@@ -27,58 +25,28 @@ async function getModeSwitcher(): Promise<ModeSwitcher> {
 }
 
 
-async function init() {
-
-    const { popupMode } = await ext.storage.session.get<{ popupMode: PopupMode }>("popupMode");
-    
-    await ext.storage.session.remove("popupMode");
-    // open in RSS mode if set to "rss", otherwise do nothing (default is classic mode).
-    if (popupMode === "rss") {
-        await (await getModeSwitcher()).setMode("rss");
-    }
-}
-
-await init();
-
-
 let pendingG = false;
 let gTimer: ReturnType<typeof setTimeout> | undefined;
 
-document.addEventListener("keydown", async (e) => {
+export async function shortcutEventListener(e: KeyboardEvent) {
     const target = e.target as HTMLElement;
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable;
 
     // Works even while typing
-    if (e.key === "Escape") {
-        const search = document.querySelector<HTMLInputElement>("#search");
+    // if closing window
+    if (e.key === "Escape") return closeWindow(typing);
+    // if saving
+    if (e.ctrlKey && e.key === "Enter") return saveProgress(e);
 
-        if (!search) return;
 
-        if (typing && search.value) {
-            search.value = "";
-            search.dispatchEvent(new Event("input"));
-        } else window.close();
-
-        return;
-    }
-    if (e.ctrlKey && e.key === "Enter") {
-        e.preventDefault();
-        try {
-            await (await getModeSwitcher()).saveCurrentHermidata();
-        } catch (error) {
-            new ErrorMessage("Could not save this item.", undefined, { details: [error] }).sendMessage();
-        }
-        return;
-    }
     if (typing || e.ctrlKey || e.altKey || e.metaKey) return;
 
     // "g" then a letter
     if (pendingG) {
         clearTimeout(gTimer);
         pendingG = false;
-        const k = e.key.toLowerCase();
-        if (k === "l") ext.tabs.create({ url: ext.runtime.getURL("dist/pages/Library.html") });
-        if (k === "s") ext.tabs.create({ url: ext.runtime.getURL("dist/pages/settings.html") });
+        if (e.key.toLowerCase() === "l") ext.tabs.create({ url: ext.runtime.getURL("dist/pages/Library.html") });
+        if (e.key.toLowerCase() === "s") ext.tabs.create({ url: ext.runtime.getURL("dist/pages/settings.html") });
 
         // Not implemented yet, but could be added in the future
         // if (k === "n") ext.tabs.create({ url: ext.runtime.getURL("dist/pages/Notification.html") });
@@ -93,7 +61,42 @@ document.addEventListener("keydown", async (e) => {
 
     if (e.key === "1") await (await getModeSwitcher()).setMode("classic");
     if (e.key === "2") await (await getModeSwitcher()).setMode("rss");
-});
+}
+
+function closeWindow(typing: boolean) {
+    const search = document.querySelector<HTMLInputElement>("#search");
+
+    if (!search) return;
+
+    if (typing && search.value) {
+        search.value = "";
+        search.dispatchEvent(new Event("input"));
+    }
+    else window.close();
+}
+async function saveProgress(e: KeyboardEvent) {
+    e.preventDefault();
+    setSaveInProgress(true);
+    try {
+        await (await getModeSwitcher()).saveCurrentHermidata();
+        setTimeout(() => window.close(), 400);
+        
+    } catch (error) {
+        new ErrorMessage("Could not save this item.", undefined, { details: [error] }).sendMessage();
+    } finally {
+        setSaveInProgress(false);
+    }
+}
+
+
+function setSaveInProgress(isSaving: boolean): void {
+    const button = document.querySelector<HTMLButtonElement>('#save');
+    if (!button) return;
+
+    button.disabled = isSaving;
+    button.setAttribute('aria-busy', String(isSaving));
+    button.dataset.saving = String(isSaving);
+}
 
 export class ModeSwitcher {
 
