@@ -29,7 +29,7 @@ export const defaultSettings: Settings = {
             BrowserBookmark: true,
             GoogleSpreadsheet: false,
         },
-        EnableKeyboardShortcuts: false,
+        EnableKeyboardShortcuts: true,
         KeyboardShortcuts: { ...DEFAULT_KEYBOARD_SHORTCUTS },
         AutoSubscribe: {
             EnableAutoSubscribe: false,
