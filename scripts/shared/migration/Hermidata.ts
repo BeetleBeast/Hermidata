@@ -340,22 +340,32 @@ export class HermidataMigration {
      * Entry point to migrate duplicates by user selection
      * Migrates a list of Hermidata objects by finding and merging duplicates
      * @param objs - list of Hermidata objects that are potential duplicates of the same series
+     * @param confirmMigration - function to confirm migration
      * @returns - merged Hermidata object or Error if migration was cancelled or failed
      */
-    public static async migrateCopy(objs: Hermidata[]): Promise<Hermidata | Error> {
+    public static async migrateCopy(
+        objs: Hermidata[],
+        confirmMigration: (newer: HermidataModel, older: HermidataModel) => Promise<boolean> = confirmMigrationPrompt
+    ): Promise<Hermidata | Error> {
         // Compare pairs and pick which one is newer vs older
         for (let i = 0; i < objs.length; i++) {
             for (let j = i + 1; j < objs.length; j++) {
                 const obj1 = objs[i];
                 const obj2 = objs[j];
-                if (this.isSameSeries(obj1, obj2) && obj1.novelType !== obj2.novelType) return await this.migrationSteps(obj1, obj2);
+                if (this.isSameSeries(obj1, obj2) && obj1.novelType !== obj2.novelType) {
+                    return await this.migrationSteps(obj1, obj2, confirmMigration);
+                }
             }
         }
         console.warn("No migratable pair found, returning most recent");
         objs.sort((a, b) => new Date(b.meta.updated || 0).getTime() - new Date(a.meta.updated || 0).getTime());
         return objs[0] || {};
     }
-    private static async migrationSteps(obj1: Hermidata, obj2: Hermidata, options = {}) {
+    private static async migrationSteps(
+        obj1: Hermidata,
+        obj2: Hermidata,
+        confirmMigration: (newer: HermidataModel, older: HermidataModel) => Promise<boolean> = confirmMigrationPrompt
+    ) {
         // Pick by date or lastUpdated
         const date1 = new Date(obj1.meta.updated || 0);
         const date2 = new Date(obj2.meta.updated || 0);
@@ -369,7 +379,7 @@ export class HermidataMigration {
         }
 
         // Confirm with clear indication which is which
-        const confirmMerge = await confirmMigrationPrompt(newer, older, options );
+        const confirmMerge = await confirmMigration(newer, older);
 
         if (confirmMerge) {
             const migrated = await this.mergeTwoHermidata(newer, older);
@@ -379,7 +389,7 @@ export class HermidataMigration {
             // Confirm with clear indication which is which
             let New_older = newer;
             let New_newer = older
-            const confirm_NewMerge = await confirmMigrationPrompt(New_newer, New_older, options );
+            const confirm_NewMerge = await confirmMigration(New_newer, New_older);
 
             if (confirm_NewMerge) {
                 const migrated = await this.mergeTwoHermidata(New_newer, New_older);

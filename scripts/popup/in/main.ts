@@ -5,7 +5,6 @@ import { getChapterFromTitle, generateHermidataHash } from '../../shared/utils/S
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type CurrentTab, type Hermidata, type Settings } from '../../shared/types/index';
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
-import { getPagePosition, updateChapterProgress } from '../core/save';
 import { RSS } from '../../rss/main';
 import { getAllHermidata, getSettings } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/db/sync';
@@ -14,7 +13,8 @@ import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
-import type { OnlyPlainHermidata } from '../../shared/types/popup';
+import { HermidataService } from "./service";
+import "../core/shortcuts";
 
 
 const stateConfig = {
@@ -70,6 +70,8 @@ class HermidataController {
 
     get pastHermidata(): Hermidata | null { return this.past?.pastHermidata ?? null; }
 
+    private service: HermidataService | null = null;
+
     public pageTitle: string | undefined;
 
     private readonly Testing = false;
@@ -98,6 +100,8 @@ class HermidataController {
 
         // initialize RSS mode
         this.RSS = new RSS(this.hermidata, await getAllHermidata());
+
+        this.service = new HermidataService(settings);
 
         // log a table of all potential duplicates
         // set it up in the background
@@ -272,17 +276,13 @@ class HermidataController {
             if (hasMigrated) console.info('migration plan activated');
 
             const settings = await getSettings();
-            const allowedSendSHeet = settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet;
-            const allowedSendBookmark = settings.ExtensionBehaviour.SaveTarget.BrowserBookmark;
             
             // update settings ( add new tags if new added in UI )
             await this.updateSettings(settings);
-            await this.setScrollPosition();
 
-            const savedInStorage = await updateChapterProgress(this.hermidata);
-            const saved = await this.saveBookmarkOrAndSheet({allowedSendBookmark, allowedSendSHeet});
+            const saved = await this.service?.saveHermidata(this.hermidata);
 
-            if (!this.Testing && savedInStorage && saved) {
+            if (!this.Testing && saved) {
                 closeAfterSave = true;
                 setTimeout(() => window.close(), 400);
             }
@@ -354,29 +354,6 @@ class HermidataController {
         console.log(`Merged "${older.title}" with "${newer.title}"`);
         return merged;
     }
-    private async saveBookmarkOrAndSheet(allowed: {allowedSendBookmark: boolean, allowedSendSHeet: boolean }): Promise<boolean> {
-        // save to google sheet & bookmark/replace bookmark
-        if (allowed.allowedSendBookmark || allowed.allowedSendSHeet || (allowed.allowedSendBookmark && allowed.allowedSendSHeet)) {
-            const saved = await ext.runtime.sendMessage<{type: "SAVE_NOVEL", data: OnlyPlainHermidata, args: { allowedSendSHeet: boolean, allowedSendBookmark: boolean }}>({
-                type: "SAVE_NOVEL",
-                data: this.hermidata.toJSON(),
-                args: { 
-                    allowedSendSHeet: allowed.allowedSendSHeet, 
-                    allowedSendBookmark: allowed.allowedSendBookmark
-                },
-            }) as boolean | { success: false; errors: string[] };
-            if (saved === true) return true;
-
-            const errors = typeof saved === 'object' && saved !== null ? saved.errors : [];
-            new ErrorMessage(
-                errors.length ? `Some save targets failed:\n${errors.join('\n')}` : "Could not save to the selected targets.",
-                undefined,
-                { consoleLevel: 'error', details: errors }
-            ).sendMessage();
-            return false;
-        }
-        return true
-    }
     private async updateSettings(settings: Settings): Promise<void> {
         // update tags in settings if new tags are added
         await this.tagsSystem.saveTags(settings);
@@ -409,46 +386,10 @@ class HermidataController {
         this.hermidata.title = title;
         this.hermidata.novelType = Type;
         this.hermidata.SetChapter(Chapter);
-        this.updateHermidataChapterHistory();
         this.hermidata.SetReadStatus(status);
         this.hermidata.meta.novelStatus = novelStatuses;
         this.hermidata.meta.tags = this.tagsSystem.tags;
         this.hermidata.meta.notes = notes;
-        this.updateHermidataSources();
-    }
-    private updateHermidataSources() {
-        const url = this.hermidata.GetUrl();
-        if (!url) return
-        const currentUrlSource = new URL(url).hostname.replace(/^www\./, "");
-        const savedUrlSource = new URL(this.hermidata.GetUrl()).hostname.replace(/^www\./, "");
-        const possibleRSSSource = this.hermidata.GetLatestRssFeed()?.domain;
-        const altSources = this.hermidata.meta.altSources;
-
-        // check if url is already in sources
-        if (!altSources.includes(currentUrlSource)) this.hermidata.meta.altSources.push(currentUrlSource);
-        // check if RSS source is different / isn't saved in alt sources
-        if (possibleRSSSource && !altSources.includes(possibleRSSSource)) this.hermidata.meta.altSources.push(possibleRSSSource);
-        // check if current url source is different from saved url source
-        // NOTE: hermidata.source is the latest source used NOT the first used
-        // NOTE: first used is the first item in altSources
-        if (currentUrlSource !== savedUrlSource) this.hermidata.source = currentUrlSource;
-
-        if (this.hermidata.source.trim() === undefined || this.hermidata.source === '') this.hermidata.source = currentUrlSource;
-
-        // remove duplicates & empty entries
-        this.hermidata.meta.altSources = Array.from( new Set(this.hermidata.meta.altSources) ).filter(Boolean);
-    }
-    private updateHermidataChapterHistory() {
-        // if history is undefined
-        if (this.hermidata.GetHistory() === undefined) this.hermidata.SetHistory([]);
-        // max 20 entries in history
-        if (this.hermidata.GetHistory()?.length >= 20) this.hermidata.ShiftHistory();
-
-        this.hermidata.PushHistory(this.hermidata.GetChapter(), new Date().toISOString());
-        // only unique entries in history
-        this.hermidata.SetHistory(Array.from( new Set(this.hermidata.GetHistory())));
-        
-        
     }
     private getLatestValueFromUI() {
         const title = getElement<HTMLInputElement>("#title")?.value;
@@ -465,11 +406,6 @@ class HermidataController {
             novelStatuses,
             notes
         }
-    }
-    private async setScrollPosition() {
-        const scrollPositionObject = await getPagePosition();
-        const scrollPosition = scrollPositionObject?.[0]?.result;
-        this.hermidata.SetScrollPosition(scrollPosition ?? 0);
     }
 }
 

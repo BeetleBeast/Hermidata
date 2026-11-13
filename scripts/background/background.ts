@@ -7,6 +7,7 @@ import { initSync } from '../shared/db/sync'
 import { migrationSteps } from '../shared/migration'
 import { getAllHermidata } from '../shared/db/Storage'
 import { scheduleCull } from './culling'
+import { initShortcuts } from './shortcuts'
 
 /*
 ./background/
@@ -20,6 +21,8 @@ import { scheduleCull } from './culling'
     rssCache.ts            ← RSS cache + GET_RSS handler
     fuzzy.ts               ← fuzzy bookmark/hermidata matching
     contextMenus.ts        ← context menu setup + handler
+    shortcuts.ts           ← keyboard shortcuts
+    culling.ts             ← culling logic for bookmarks/hermidata
 ../shared/...
     initSync.ts            ← sync logic + onChanged listener for syncing across devices
     migrateFromChromeStorage() ← migrate from chrome.storage to IndexedDB
@@ -33,6 +36,7 @@ let syncInProgress: boolean = false;
 (async () => {
     await migrationSteps();
     
+    initShortcuts();
     initRssCache();
     initTabs();
     initMessaging();

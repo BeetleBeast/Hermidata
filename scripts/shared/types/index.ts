@@ -15,6 +15,8 @@ export type {
     Hermidata,
     Bookmark,
 
+    OnlyPlainHermidata,
+
     HermidataDateType,
     HermidataSortType,
     AllHermidata,
