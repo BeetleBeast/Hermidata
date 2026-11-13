@@ -344,7 +344,111 @@ nav {
 .content {
     flex: 1;
     padding: 30px;
-    overflow-y: auto;
+    /*overflow-y: auto;*/
 }
 
+.shortcut-scope {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+}
 
+.shortcut-scope-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.shortcut-scope-heading h3 {
+    margin: 0;
+}
+
+.shortcut-scope-heading p {
+    margin: 5px 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.shortcut-scope-heading > button {
+    flex: 0 0 auto;
+}
+
+.shortcut-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, 12rem) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.shortcut-row + .shortcut-row {
+    border-top: 1px solid var(--border);
+}
+
+.shortcut-row > span {
+    min-width: 0;
+    font-weight: 500;
+}
+
+.shortcut-row kbd,
+.shortcut-recorder {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-input);
+    color: var(--text);
+    font: inherit;
+    text-align: center;
+}
+
+.shortcut-row kbd {
+    display: block;
+}
+
+.shortcut-recorder {
+    width: 100%;
+    cursor: pointer;
+}
+
+.shortcut-recorder:hover,
+.shortcut-recorder.is-recording {
+    border-color: var(--accent);
+    background: var(--accent-active-dark);
+}
+
+.shortcut-recorder.is-recording {
+    outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.shortcut-row > button:not(.shortcut-recorder) {
+    padding: 8px 12px;
+}
+
+#keyboardShortcutStatus:empty {
+    display: none;
+}
+
+@media (max-width: 650px) {
+    .shortcut-scope {
+        padding: 12px;
+    }
+
+    .shortcut-scope-heading {
+        flex-direction: column;
+    }
+
+    .shortcut-row {
+        grid-template-columns: minmax(0, 1fr) minmax(7rem, 10rem) auto;
+        gap: 6px;
+    }
+
+    .shortcut-row > button:not(.shortcut-recorder) {
+        padding: 8px;
+    }
+}

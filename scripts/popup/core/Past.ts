@@ -2,11 +2,15 @@ import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { getAllHermidata, getHermidataViaKey, getSettings } from "../../shared/db/Storage";
 import { TrimTitle, findByTitleOrAlt, generateHermidataHash } from "../../shared/utils/StringOutput";
 import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
-import { customConfirm } from "../frontend/confirm";
+import { confirmMigrationPrompt, customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
+export type PastHermidataPromptOptions = {
+    confirm?: (message: string) => Promise<boolean>;
+    confirmMigration?: (newer: HermidataModel, older: HermidataModel) => Promise<boolean>;
+}
 
 // --- cache ---
 const CalcDiffCache = new Map();
@@ -31,9 +35,13 @@ export class PastHermidata {
     public pastHermidata: Hermidata | null = null;
 
     private readonly hermidata: HermidataModel;
+    private readonly confirmPrompt: (message: string) => Promise<boolean>;
+    private readonly confirmMigration: (newer: HermidataModel, older: HermidataModel) => Promise<boolean>;
 
-    constructor(hermidata: HermidataModel) {
+    constructor(hermidata: HermidataModel, prompts: PastHermidataPromptOptions = {}) {
         this.hermidata = hermidata;
+        this.confirmPrompt = prompts.confirm ?? customConfirm;
+        this.confirmMigration = prompts.confirmMigration ?? confirmMigrationPrompt;
     }
 
     public async init(): Promise<Hermidata | null> {
@@ -56,7 +64,7 @@ export class PastHermidata {
 
         // add alt title to Object
         if (AltKeyNeeded?.needAltTitle && fuzzyKey && possibleObj[fuzzyKey]) {
-            const confirmation = await customConfirm(`${AltKeyNeeded.reason}\nAdd "${this.hermidata.title}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
+            const confirmation = await this.confirmPrompt(`${AltKeyNeeded.reason}\nAdd "${this.hermidata.title}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
             if (confirmation) await appendAltTitle(this.hermidata.title, possibleObj[fuzzyKey]);
         }
 
@@ -69,7 +77,7 @@ export class PastHermidata {
             if (byOtherMeans ) return byOtherMeans;
             const objs = Object.values(possibleObj);
             // Check for possible same-series different-type pairs
-            const result = await HermidataMigration.migrateCopy(objs);
+            const result = await HermidataMigration.migrateCopy(objs, this.confirmMigration);
             if (!(result instanceof Error) ) return result
         }
         // if less than 1 ( no results )
@@ -97,7 +105,7 @@ export class PastHermidata {
 
         // add alt title to Object
         if (AltKeyNeeded?.needAltTitle && fuzzyKey && possibleObj[fuzzyKey]) {
-            const confirmation = await customConfirm(`${AltKeyNeeded.reason}\nAdd "${this.hermidata.title}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
+            const confirmation = await this.confirmPrompt(`${AltKeyNeeded.reason}\nAdd "${this.hermidata.title}" as an alt title for "${possibleObj[fuzzyKey].title}"?`);
             if (confirmation) await appendAltTitle(this.hermidata.title, possibleObj[fuzzyKey]);
         }
 
@@ -110,7 +118,7 @@ export class PastHermidata {
             if (byOtherMeans ) return byOtherMeans;
             const objs = Object.values(possibleObj);
             // Check for possible same-series different-type pairs
-            const result = await HermidataMigration.migrateCopy(objs);
+            const result = await HermidataMigration.migrateCopy(objs, this.confirmMigration);
             if (!(result instanceof Error) ) return result
             else return null
         }

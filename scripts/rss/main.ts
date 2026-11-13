@@ -32,16 +32,15 @@ export class RSS {
         this.BuildRSS = new BuildRSSController(hermidata, allHermidata);
     }
 
-    public openClassic(e: PointerEvent) {
+    public openClassic(e?: PointerEvent) {
         this.changePageToClassic();
-        this.changClassListOfClassic(e);
-    }
-    private changClassListOfClassic(e: PointerEvent): void {
-        const target = e.target as HTMLButtonElement;
-        target.classList = "active Btn";
+        const target = e?.currentTarget instanceof HTMLButtonElement
+            ? e.currentTarget
+            : getElement<HTMLButtonElement>("#HDClassicBtn");
+        if (target) target.classList = "active Btn";
     }
 
-    public async openRSS(e: PointerEvent) {
+    public async openRSS(e?: PointerEvent) {
         try {
 
             const reportBackgroundError = (error: unknown) => {
@@ -182,9 +181,11 @@ export class RSS {
         }
     }
 
-    private changePageToRSS(e: PointerEvent) {
-        const target = e.target as HTMLButtonElement;
-        target.classList = "active Btn";
+    private changePageToRSS(e?: PointerEvent) {
+        const target = e?.currentTarget instanceof HTMLButtonElement
+            ? e.currentTarget
+            : getElement<HTMLButtonElement>("#HDRssBtn");
+        if (target) target.classList = "active Btn";
         setElement("#HDClassicBtn", el => el.classList = "Btn");
         setElement(".HDClassic", el => el.style.opacity = '0');
         setElement(".HDRss", el => el.style.display = 'block');

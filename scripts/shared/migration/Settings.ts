@@ -1,6 +1,7 @@
 import { defaultSettings } from "../constants";
 import { setSettings } from "../db/Storage";
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping, type FolderRule, type NotificationTypes, type SaveTargets, type DefaultChoice } from "../types";
+import { DEFAULT_KEYBOARD_SHORTCUTS } from "../utils/KeyboardShortcuts";
 
 type FolderEntry = { path: string }
 
@@ -82,6 +83,13 @@ interface oldSettingsV6 {
     FolderMapping: FolderMapping,
 }
 
+type oldSettingsV7 = Omit<Settings, "version" | "ExtensionBehaviour"> & {
+    version: 7;
+    ExtensionBehaviour: Omit<Settings["ExtensionBehaviour"], "KeyboardShortcuts"> & {
+        KeyboardShortcuts?: Settings["ExtensionBehaviour"]["KeyboardShortcuts"];
+    };
+};
+
 type oldFolderMapping = Record<string, Record<string, FolderEntry>>;
 
 export class SettingsMigration {
@@ -103,6 +111,7 @@ export class SettingsMigration {
         if (version <= 4) current = this.migrateV4toV5(current as oldSettingsV4);
         if (version <= 5) current = this.migrateV5toV6(current as oldSettingsV5);
         if (version <= 6) current = this.migrateV6toV7(current as oldSettingsV6);
+        if (version <= 7) current = this.migrateV7toV8(current as oldSettingsV7);
 
         await setSettings(current as Settings);
     }
@@ -161,7 +170,7 @@ export class SettingsMigration {
         };
     }
 
-    private static migrateV6toV7(data: oldSettingsV6): Settings {
+    private static migrateV6toV7(data: oldSettingsV6): oldSettingsV7 {
         return {
             version: 7,
             ExtensionBehaviour: {
@@ -182,6 +191,19 @@ export class SettingsMigration {
             ContentTypesAndStatuses: data.ContentTypesAndStatuses,
             TagManagement: data.TagManagement,
             FolderMapping: data.FolderMapping,
+        };
+    }
+    private static migrateV7toV8(data: oldSettingsV7): Settings {
+        return {
+            ...data,
+            version: 8,
+            ExtensionBehaviour: {
+                ...data.ExtensionBehaviour,
+                KeyboardShortcuts: {
+                    ...DEFAULT_KEYBOARD_SHORTCUTS,
+                    ...(data.ExtensionBehaviour.KeyboardShortcuts ?? {}),
+                },
+            },
         };
     }
     public static migrateFolderMapping( old: oldFolderMapping, root: string ): FolderMapping {

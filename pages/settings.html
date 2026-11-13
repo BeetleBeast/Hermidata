@@ -72,13 +72,88 @@
                     </div>
                     <input id="AllowContextMenu" class="switch" type="checkbox" title="Allow context menu" checked>
                 </div>
+            </div>
+
+            <!-- Keyboard shortcuts -->
+            <div class="card">
 
                 <div class="setting">
                     <div class="setting-text">
                         <label for="enableKeyboardShortcuts">Keyboard shortcuts <span class="badge">Beta</span></label>
-                        <p>Trigger common actions with hotkeys.</p>
+                        <p>Trigger popup actions with hotkeys. Browser-wide shortcuts are managed separately in your browser.</p>
                     </div>
-                    <input id="enableKeyboardShortcuts" class="switch" type="checkbox" title="Enable Keyboard Shortcuts" disabled>
+                    <input id="enableKeyboardShortcuts" class="switch" type="checkbox" title="Enable Keyboard Shortcuts" checked>
+                </div>
+                <div class="sub" id="keyboardShortcuts">
+                    <section class="shortcut-scope" aria-labelledby="browserShortcutHeading">
+                        <div class="shortcut-scope-heading">
+                            <div>
+                                <h3 id="browserShortcutHeading">Browser-wide shortcuts</h3>
+                                <p>Work from any tab. Change these in your browser’s extension shortcut settings.</p>
+                            </div>
+                            <button id="openBrowserShortcutSettings" type="button">Open browser shortcut settings</button>
+                        </div>
+                        <div class="shortcut-browser-list">
+                            <div class="shortcut-row">
+                                <span>Save Hermidata</span>
+                                <kbd data-browser-command="saveHermidata">Alt+Shift+S</kbd>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Open Hermidata</span>
+                                <kbd data-browser-command="openHermidata">Alt+Shift+H</kbd>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Open Hermidata in RSS mode</span>
+                                <kbd data-browser-command="openRSSMode">Alt+Shift+F</kbd>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Open library</span>
+                                <kbd data-browser-command="openLibrary">Alt+Shift+L</kbd>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="shortcut-scope" aria-labelledby="popupShortcutHeading">
+                        <div class="shortcut-scope-heading">
+                            <div>
+                                <h3 id="popupShortcutHeading">Popup shortcuts</h3>
+                                <p>Only work while the popup is open. Click a shortcut, press the keys, and it saves automatically. Press Esc to cancel; two-key sequences are supported.</p>
+                            </div>
+                        </div>
+                        <div class="shortcut-local-list">
+                            <div class="shortcut-row">
+                                <span>Open settings</span>
+                                <button class="shortcut-recorder" type="button" data-shortcut="openSettings" aria-label="Record shortcut for Open settings">G+S</button>
+                                <button class="shortcut-reset-btn" type="button" data-shortcut-reset="openSettings">Reset</button>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Open library</span>
+                                <button class="shortcut-recorder" type="button" data-shortcut="openLibraryPopup" aria-label="Record shortcut for Open library">G+L</button>
+                                <button class="shortcut-reset-btn" type="button" data-shortcut-reset="openLibraryPopup">Reset</button>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Focus search bar</span>
+                                <button class="shortcut-recorder" type="button" data-shortcut="focusSearch" aria-label="Record shortcut for Focus search bar">Ctrl+K</button>
+                                <button class="shortcut-reset-btn" type="button" data-shortcut-reset="focusSearch">Reset</button>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Save current item</span>
+                                <button class="shortcut-recorder" type="button" data-shortcut="saveCurrentPage" aria-label="Record shortcut for Save current item">Ctrl+Enter</button>
+                                <button class="shortcut-reset-btn" type="button" data-shortcut-reset="saveCurrentPage">Reset</button>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Switch to classic mode</span>
+                                <button class="shortcut-recorder" type="button" data-shortcut="switchToClassic" aria-label="Record shortcut for Switch to classic mode">1</button>
+                                <button class="shortcut-reset-btn" type="button" data-shortcut-reset="switchToClassic">Reset</button>
+                            </div>
+                            <div class="shortcut-row">
+                                <span>Switch to RSS mode</span>
+                                <button class="shortcut-recorder" type="button" data-shortcut="switchToRSS" aria-label="Record shortcut for Switch to RSS mode">2</button>
+                                <button class="shortcut-reset-btn" type="button" data-shortcut-reset="switchToRSS">Reset</button>
+                            </div>
+                        </div>
+                    </section>
+                    <p id="keyboardShortcutStatus" role="status" aria-live="polite"></p>
                 </div>
             </div>
 

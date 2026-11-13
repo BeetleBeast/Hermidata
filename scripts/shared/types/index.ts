@@ -15,6 +15,8 @@ export type {
     Hermidata,
     Bookmark,
 
+    OnlyPlainHermidata,
+
     HermidataDateType,
     HermidataSortType,
     AllHermidata,
@@ -140,6 +142,7 @@ export type {
     FolderRule,
 
     NotificationTypes,
-    SaveTargets
+    SaveTargets,
+    KeyboardShortcutSettings
 
 } from "./settings";

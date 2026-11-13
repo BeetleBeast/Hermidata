@@ -58,5 +58,26 @@
     "options_ui": {
         "page": "dist/pages/settings.html",
         "open_in_tab": true
+    },
+    "commands": {
+        "_execute_action": {
+            "suggested_key": {
+                "default": "Alt+Shift+H",
+                "mac": "Alt+Shift+H"
+            },
+            "description": "Open Hermidata (Classic)"
+        },
+        "open-rss": {
+            "suggested_key": { "default": "Alt+Shift+F" },
+            "description": "Open Hermidata (RSS)"
+        },
+        "save-hermidata": {
+            "suggested_key": { "default": "Alt+Shift+S" },
+            "description": "Save Hermidata"
+        },
+        "open-library": {
+            "suggested_key": { "default": "Alt+Shift+L" },
+            "description": "Open Library"
+        }
     }
 }

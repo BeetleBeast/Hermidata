@@ -5,11 +5,14 @@ import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/inde
 import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
 import { PastHermidata } from "./Past";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import type { PastHermidataPromptOptions } from "./Past";
+
+const notificationTarget = typeof document === "undefined" ? "browser" : "in-page";
+const notifyUser = typeof document !== "undefined";
 
 
 
-
-export async function updateChapterProgress(hermidata: HermidataModel): Promise<boolean> {
+export async function updateChapterProgress( hermidata: HermidataModel, pastPrompts?: PastHermidataPromptOptions ): Promise<boolean> {
     try {
         let needsToMigrate = false
     
@@ -24,7 +27,7 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         if (data) entry = new HermidataModel(data);
         else {
             // id entry is new/can't be found in storage
-            const Hermidata: Hermidata | null = new PastHermidata(hermidata).pastHermidata;
+            const Hermidata: Hermidata | null = new PastHermidata(hermidata, pastPrompts).pastHermidata;
             if (Hermidata) entry = new HermidataModel(Hermidata);
             else entry = new HermidataModel(await makeHermidata(hermidata.title, hermidata.GetUrl(), hermidata.novelType));
         }
@@ -32,6 +35,8 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
         if (!entry) {
             new ErrorMessage("Could not find the saved item to update its chapter progress.", undefined, {
                 consoleLevel: 'error',
+                notifyUser,
+                notificationTarget,
                 details: [hermidata.title]
             }).sendMessage();
             return false;
@@ -47,9 +52,11 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
             console.log(`[HermidataV3] Updated ${hermidata.title} to chapter ${newChapterNumber}`);
         }
         if (needsToMigrate) {
-            const past = new PastHermidata(hermidata);
+            const past = new PastHermidata(hermidata, pastPrompts);
             await past.init().catch(error => new ErrorMessage("Could not migrate the saved item before updating its progress.", undefined, {
                 consoleLevel: 'error',
+                notifyUser,
+                notificationTarget,
                 details: [error]
             }).sendMessage());
             return false
@@ -58,6 +65,8 @@ export async function updateChapterProgress(hermidata: HermidataModel): Promise<
     } catch (error) {
         new ErrorMessage("Could not save the chapter progress.", undefined, {
             consoleLevel: 'error',
+            notifyUser,
+            notificationTarget,
             details: [error]
         }).sendMessage();
         return false;
