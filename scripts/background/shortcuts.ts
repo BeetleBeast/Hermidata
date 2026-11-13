@@ -12,25 +12,31 @@ type ActiveWebTab = chrome.tabs.Tab & { id: number; title: string; url: string }
 
 export function initShortcuts() {
     ext.commands.onCommand.addListener(async (command) => {
-        await shortcut(command as Command);
+        if (!isCommand(command)) return;
+        try {
+            await shortcut(command);
+        } catch (error) {
+            new ErrorMessage("Could not run this keyboard shortcut.", undefined, {
+                notificationTarget: "browser",
+                details: [error],
+            }).sendMessage();
+        }
     });
 }
 
+function isCommand(command: string): command is Command {
+    return command === "open-rss"
+        || command === "open-library"
+        || command === "save-hermidata";
+}
+
 async function shortcut(command: Command) {
+    const settings = await getSettings();
+    if (!settings.ExtensionBehaviour.EnableKeyboardShortcuts) return;
+
     switch (command) {
         case "open-rss":
-            // Tell the popup which mode to start in, then open it
-            await ext.storage.session.set({ popupMode: "rss" });
-            try {
-                await ext.action.openPopup();
-            } catch (e) {
-                try {
-                    await ext.storage.session.remove("popupMode");
-                } catch (cleanupError) {
-                    console.warn("Could not clear the pending popup mode:", cleanupError);
-                }
-                console.warn("openPopup failed:", e);
-            }
+            await openPopupInMode();
             break;
 
         case "open-library":
@@ -40,6 +46,20 @@ async function shortcut(command: Command) {
         case "save-hermidata":
             await saveActiveTab();
             break;
+    }
+}
+
+async function openPopupInMode(): Promise<void> {
+    await ext.storage.session.set({ popupMode: "rss" });
+    try {
+        await ext.action.openPopup();
+    } catch (error) {
+        try {
+            await ext.storage.session.remove("popupMode");
+        } catch (cleanupError) {
+            console.warn("Could not clear the pending popup mode:", cleanupError);
+        }
+        console.warn("openPopup failed:", error);
     }
 }
 

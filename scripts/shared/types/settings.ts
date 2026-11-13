@@ -38,6 +38,15 @@ export type StatusScores = {
     allowAllDateFields: boolean
 }
 
+export interface KeyboardShortcutSettings {
+    openSettings: string;
+    openLibraryPopup: string;
+    focusSearch: string;
+    saveCurrentPage: string;
+    switchToClassic: string;
+    switchToRSS: string;
+}
+
 export interface Settings {
     version: number;
 
@@ -49,6 +58,7 @@ export interface Settings {
         AllowContextMenu: boolean
         EnableNotification: NotificationTypes;
         EnableKeyboardShortcuts: boolean;
+        KeyboardShortcuts: KeyboardShortcutSettings;
         AutoSubscribe: AutoSubscribe;
         SaveTarget: SaveTargets;
         AutoSetStatusScore: StatusScores;

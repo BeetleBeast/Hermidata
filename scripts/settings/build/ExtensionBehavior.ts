@@ -1,6 +1,15 @@
 import { defaultSettings } from "../../shared/constants";
-import { type NotificationTypes, type Settings } from "../../shared/types";
+import { type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
+import {
+    BROWSER_COMMAND_SHORTCUTS,
+    DEFAULT_KEYBOARD_SHORTCUTS,
+    formatKeyboardEventShortcut,
+    getBrowserCommandShortcuts,
+    isModifierKey,
+    openBrowserShortcutSettings,
+    shortcutsConflict,
+} from "../../shared/utils/KeyboardShortcuts";
 import { Build } from "../build";
 
 export class ExtensionBehavior extends Build {
@@ -14,6 +23,18 @@ export class ExtensionBehavior extends Build {
     private readonly notificationMessageFull = getElement<HTMLInputElement>("#notificationMessageFull");
 
     private readonly enableKeyboardShortcuts = getElement<HTMLInputElement>("#enableKeyboardShortcuts");
+    private readonly keyboardShortcutsList = getElement<HTMLDivElement>("#keyboardShortcuts");
+    private readonly keyboardShortcutStatus = getElement<HTMLParagraphElement>("#keyboardShortcutStatus");
+    private readonly openBrowserShortcutSettingsButton = getElement<HTMLButtonElement>("#openBrowserShortcutSettings");
+    private activeShortcutCapture: {
+        button: HTMLButtonElement;
+        action: keyof KeyboardShortcutSettings;
+        pendingKey?: string;
+        timer?: ReturnType<typeof setTimeout>;
+    } | undefined;
+    private readonly shortcutCaptureListener = (event: KeyboardEvent) => {
+        void this.CaptureKeyboardShortcut(event);
+    };
 
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
     private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
@@ -36,7 +57,7 @@ export class ExtensionBehavior extends Build {
     private spreadsheetUrl: string = "";
 
     public async init() {
-        const settings = await this.getSettings();
+        const settings = await this.ensureSettingsUpToDate();
 
         // populate values from settings
 
@@ -48,6 +69,8 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionNotification(settings);
         // Keyboard Shortcuts
         this.setValueOptionKeyboardShortcuts(settings);
+        this.setValueKeyboardShortcuts(settings.ExtensionBehaviour.KeyboardShortcuts);
+        await this.setBrowserShortcutLabels();
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
         // Auto Subscribe - Threshold
@@ -75,6 +98,14 @@ export class ExtensionBehavior extends Build {
         this.notificationMessageFull?.addEventListener("change", (e) => this.NotificationType(e));
 
         this.enableKeyboardShortcuts?.addEventListener("change", (e) => this.EnableKeyboardShortcuts(e));
+        this.openBrowserShortcutSettingsButton?.addEventListener("click", () => this.OpenBrowserShortcutSettings());
+        window.addEventListener("focus", () => void this.setBrowserShortcutLabels());
+        this.keyboardShortcutsList?.querySelectorAll<HTMLButtonElement>(".shortcut-recorder[data-shortcut]").forEach(button => {
+            button.addEventListener("click", () => this.StartShortcutCapture(button));
+        });
+        this.keyboardShortcutsList?.querySelectorAll<HTMLButtonElement>("[data-shortcut-reset]").forEach(button => {
+            button.addEventListener("click", () => this.ResetKeyboardShortcut(button));
+        });
         
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
@@ -94,18 +125,15 @@ export class ExtensionBehavior extends Build {
 
     }
     public async resetValues() {
+        this.CancelShortcutCapture();
         // reset all values from inputs to default
         const settings = await this.getSettings();
         const updatedSettings: Settings = { ...settings, ExtensionBehaviour: { ...defaultSettings.ExtensionBehaviour } };
         // reset settings in IndexedDB
         await this.setSettings(updatedSettings);
 
-        this.cancelValues();
-    }
-
-    private async cancelValues() {
-        if (this.spreadsheetInput) this.spreadsheetInput.value = "";
-        if (this.status) this.status.textContent = "";
+        this.setValueOptionKeyboardShortcuts(updatedSettings);
+        this.setValueKeyboardShortcuts(updatedSettings.ExtensionBehaviour.KeyboardShortcuts);
     }
 
     private async SetSpreadsheetUrl() {
@@ -208,6 +236,146 @@ export class ExtensionBehavior extends Build {
     private setValueOptionKeyboardShortcuts(settings: Settings) {
         const keyboardShortcuts = settings.ExtensionBehaviour.EnableKeyboardShortcuts;
         setElement<HTMLInputElement>("#enableKeyboardShortcuts", el => el.checked = keyboardShortcuts);
+        if (this.keyboardShortcutsList) this.keyboardShortcutsList.hidden = !keyboardShortcuts;
+    }
+    private setValueKeyboardShortcuts(shortcuts: KeyboardShortcutSettings) {
+        this.keyboardShortcutsList?.querySelectorAll<HTMLButtonElement>(".shortcut-recorder[data-shortcut]").forEach(button => {
+            const action = button.dataset.shortcut as keyof KeyboardShortcutSettings | undefined;
+            if (action && action in shortcuts) this.setShortcutButtonValue(button, shortcuts[action]);
+        });
+    }
+    private async setBrowserShortcutLabels() {
+        try {
+            const shortcuts = await getBrowserCommandShortcuts();
+            this.keyboardShortcutsList?.querySelectorAll<HTMLElement>("[data-browser-command]").forEach(label => {
+                const action = label.dataset.browserCommand as keyof typeof BROWSER_COMMAND_SHORTCUTS | undefined;
+                if (action && action in shortcuts) label.textContent = shortcuts[action];
+            });
+        } catch (error) {
+            this.setShortcutStatus(error instanceof Error ? error.message : String(error), true);
+        }
+    }
+    private async OpenBrowserShortcutSettings() {
+        this.CancelShortcutCapture();
+        try {
+            await openBrowserShortcutSettings();
+            this.setShortcutStatus("Opened browser shortcut settings.");
+        } catch (error) {
+            const url = /Edg\//.test(navigator.userAgent)
+                ? "edge://extensions/shortcuts"
+                : "chrome://extensions/shortcuts";
+            this.setShortcutStatus(`Could not open browser shortcut settings. Open ${url} manually.`, true);
+        }
+    }
+    private StartShortcutCapture(button: HTMLButtonElement) {
+        const action = button.dataset.shortcut as keyof KeyboardShortcutSettings | undefined;
+        if (!action || !(action in DEFAULT_KEYBOARD_SHORTCUTS)) return;
+        this.CancelShortcutCapture();
+        this.activeShortcutCapture = { button, action };
+        button.classList.add("is-recording");
+        button.setAttribute("aria-pressed", "true");
+        button.textContent = "Press keys…";
+        this.setShortcutStatus("Press a key combination, or type a two-key sequence. Press Esc to cancel.");
+        document.addEventListener("keydown", this.shortcutCaptureListener, true);
+    }
+    private async CaptureKeyboardShortcut(event: KeyboardEvent) {
+        const capture = this.activeShortcutCapture;
+        if (!capture) return;
+        if (event.key === "Tab") {
+            this.CancelShortcutCapture();
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.repeat) return;
+
+        if (event.key === "Escape") {
+            this.CancelShortcutCapture();
+            this.setShortcutStatus("Shortcut recording cancelled.");
+            return;
+        }
+        if (isModifierKey(event.key)) {
+            this.setShortcutStatus("Now press a non-modifier key.");
+            return;
+        }
+        const hasModifier = event.ctrlKey || event.altKey || event.metaKey || event.shiftKey;
+        if (hasModifier) {
+            if (capture.timer) clearTimeout(capture.timer);
+            this.CancelShortcutCapture();
+            const shortcut = formatKeyboardEventShortcut(event);
+            if (shortcut) await this.SaveKeyboardShortcut(capture.button, capture.action, shortcut);
+            return;
+        }
+
+        if (capture.pendingKey) {
+            clearTimeout(capture.timer);
+            const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+            const shortcut = `${capture.pendingKey}+${key}`;
+            this.CancelShortcutCapture();
+            await this.SaveKeyboardShortcut(capture.button, capture.action, shortcut);
+            return;
+        }
+
+        const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+        capture.pendingKey = key;
+        capture.button.textContent = `${key} …`;
+        this.setShortcutStatus(`Press another key for a sequence, or wait to save ${key}.`);
+        capture.timer = setTimeout(() => {
+            if (this.activeShortcutCapture !== capture) return;
+            this.CancelShortcutCapture();
+            void this.SaveKeyboardShortcut(capture.button, capture.action, key);
+        }, 800);
+    }
+    private CancelShortcutCapture() {
+        const capture = this.activeShortcutCapture;
+        if (!capture) return;
+        if (capture.timer) clearTimeout(capture.timer);
+        document.removeEventListener("keydown", this.shortcutCaptureListener, true);
+        capture.button.classList.remove("is-recording");
+        capture.button.setAttribute("aria-pressed", "false");
+        capture.button.textContent = capture.button.dataset.shortcutValue ?? "";
+        this.activeShortcutCapture = undefined;
+    }
+    private setShortcutButtonValue(button: HTMLButtonElement, shortcut: string) {
+        button.dataset.shortcutValue = shortcut;
+        button.textContent = shortcut;
+        button.setAttribute("aria-pressed", "false");
+    }
+    private async SaveKeyboardShortcut(button: HTMLButtonElement, action: keyof KeyboardShortcutSettings, shortcut: string) {
+        const previousValue = button.dataset.shortcutValue ?? "";
+        try {
+            const settings = await this.ensureSettingsUpToDate();
+            const shortcuts = settings.ExtensionBehaviour.KeyboardShortcuts;
+            const duplicate = Object.entries(shortcuts).some(([otherAction, value]) =>
+                otherAction !== action && shortcutsConflict(value, shortcut)
+            );
+            if (duplicate) {
+                this.setShortcutButtonValue(button, shortcuts[action]);
+                this.setShortcutStatus("That shortcut is already assigned.", true);
+                return;
+            }
+
+            const updatedShortcuts = { ...shortcuts, [action]: shortcut };
+            settings.ExtensionBehaviour.KeyboardShortcuts = updatedShortcuts;
+            await this.setSettings(settings);
+            this.setShortcutButtonValue(button, shortcut);
+            this.setShortcutStatus("Shortcut saved.");
+        } catch (error) {
+            this.setShortcutButtonValue(button, previousValue);
+            this.setShortcutStatus(error instanceof Error ? error.message : String(error), true);
+        }
+    }
+    private async ResetKeyboardShortcut(button: HTMLButtonElement) {
+        const action = button.dataset.shortcutReset as keyof KeyboardShortcutSettings | undefined;
+        if (!action || !(action in DEFAULT_KEYBOARD_SHORTCUTS)) return;
+        this.CancelShortcutCapture();
+        const recorder = this.keyboardShortcutsList?.querySelector<HTMLButtonElement>(`[data-shortcut="${action}"]`);
+        if (recorder) await this.SaveKeyboardShortcut(recorder, action, DEFAULT_KEYBOARD_SHORTCUTS[action]);
+    }
+    private setShortcutStatus(message: string, isError = false) {
+        if (!this.keyboardShortcutStatus) return;
+        this.keyboardShortcutStatus.textContent = message;
+        this.keyboardShortcutStatus.style.color = isError ? "var(--danger)" : "var(--success)";
     }
     private setValueOptionAutoSubscribe(settings: Settings) {
         const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
@@ -285,10 +453,12 @@ export class ExtensionBehavior extends Build {
     private async EnableKeyboardShortcuts(e: Event) {
         const event = e.target as HTMLInputElement;
         const isChecked = event.checked;
+        if (!isChecked) this.CancelShortcutCapture();
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.EnableKeyboardShortcuts = isChecked;
-
-        this.setSettings(updatedSettings);
+        await this.setSettings(updatedSettings);
+        if (this.keyboardShortcutsList) this.keyboardShortcutsList.hidden = !isChecked;
+        this.setShortcutStatus(isChecked ? "Keyboard shortcuts enabled." : "Keyboard shortcuts disabled.");
     }
     // Auto Subscribe
     private async EnableAutoSubscribe(e: Event) {

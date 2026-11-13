@@ -142,6 +142,7 @@ export type {
     FolderRule,
 
     NotificationTypes,
-    SaveTargets
+    SaveTargets,
+    KeyboardShortcutSettings
 
 } from "./settings";
