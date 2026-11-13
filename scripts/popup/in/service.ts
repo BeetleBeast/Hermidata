@@ -58,7 +58,10 @@ export class HermidataService {
         });
 
         const past = new PastHermidata(candidate, this.pastPrompts);
-        await candidate.SetPast(past);
+        const hasPastAndSaved = await candidate.SetPast(past);
+
+        // if no past was found, return
+        if (!hasPastAndSaved) throw new Error("No past could be found, exiting for better user experience.");
 
         const saved = await this.saveHermidata(candidate);
         if (!saved) throw new Error("Could not save chapter progress.");

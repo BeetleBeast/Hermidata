@@ -105,12 +105,9 @@ export class ModeSwitcher {
 
     public async init() {
 
-        const { hermidata } = await this.createHermidataFromDOM();
+        this.Hermidata = await this.createHermidataFromDOM();
 
-
-        this.Hermidata = hermidata;
-
-        this.RSS = new RSS(this.Hermidata, await getAllHermidata());
+        this.RSS = new RSS(this.Hermidata!, await getAllHermidata());
     }
 
     public async setMode(mode: "classic" | "rss"): Promise<void> {
@@ -149,7 +146,7 @@ export class ModeSwitcher {
         });
     }
 
-    private async createHermidataFromDOM(): Promise<{ hermidata: HermidataModel, pastHermidata: PastHermidata }> {
+    private async createHermidataFromDOM(): Promise<HermidataModel | null> {
         const [ CurrentTabInfo, settings ]: [CurrentTab, Settings] = await Promise.all([
             ModeSwitcher.getCurrentTabInfo(),
             getSettings(),
@@ -166,9 +163,12 @@ export class ModeSwitcher {
         // initialize the  PastHermidata class
         const past = new PastHermidata(Hermidata);
         // create the Hermidata with all values set from a past if it exists
-        await Hermidata.SetPast(past);
+        const hasPastAndSaved = await Hermidata.SetPast(past);
+
+        // if no past was found, return
+        if (!hasPastAndSaved) return null;
         
-        return { hermidata: Hermidata, pastHermidata: past };
+        return Hermidata;
     }
 
 }
