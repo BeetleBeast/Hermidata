@@ -280,7 +280,12 @@ export async function updateCurrentBookmarkAndIcon(colour: string | null = null,
 
     // get hermidata colour
     colour ??= await getHermidataColour(searchUrl);
-    if (!colour) return;
+    if (!colour) {
+        // Not linked to a Hermidata: clear state, then redraw the un-tinted icon
+        setState.currentBookmark(null);
+        if (tab) await updateIcon(null, undefined, tab);
+        return;
+    }
 
     // get valid bookmark
     const validBookmarks = await searchValidBookmarks(searchUrl);

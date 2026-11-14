@@ -8,7 +8,8 @@ import { whenReady } from "./ready";
 export function initTabs() {
     ext.tabs.onActivated.addListener(whenReady(() => updateCurrentBookmarkAndIcon()))
     ext.tabs.onUpdated.addListener(whenReady(async (tabId, changeInfo) => {
-        if (changeInfo.status !== 'complete') return
+        // full page loads AND URL changes (SPA navigation)
+        if (changeInfo.status !== 'complete' && !changeInfo.url) return
         if (allHermidataCashed === null) setState.allHermidataCashed(await getAllHermidata())
         ext.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length && tabs[0].id === tabId) updateCurrentBookmarkAndIcon()
