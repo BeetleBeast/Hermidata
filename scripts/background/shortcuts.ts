@@ -5,13 +5,14 @@ import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { Message, ErrorMessage } from "../shared/utils/ErrorMessage";
 import { saveNovelDirect } from "./rssCache";
 import { ext } from "../shared/utils/BrowserCompat";
+import { whenReady } from "./ready";
 
 type Command = "open-rss" | "open-library" | "save-hermidata";
 type ActiveWebTab = chrome.tabs.Tab & { id: number; title: string; url: string };
 
 
 export function initShortcuts() {
-    ext.commands.onCommand.addListener(async (command) => {
+    ext.commands.onCommand.addListener(whenReady(async (command) => {
         if (!isCommand(command)) return;
         try {
             await shortcut(command);
@@ -21,7 +22,7 @@ export function initShortcuts() {
                 details: [error],
             }).sendMessage();
         }
-    });
+    }));
 }
 
 function isCommand(command: string): command is Command {

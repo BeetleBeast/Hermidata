@@ -6,15 +6,16 @@ import { handleSaveNovel } from "./rssCache";
 import { getTitleAndChapterFromUrl } from "../shared/utils/StringOutput";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getSettings } from "../shared/db/Storage";
+import { whenReady } from "./ready";
 
 export function initContextMenus() {
-    ext.contextMenus.onClicked.addListener((info) => {
+    ext.contextMenus.onClicked.addListener(whenReady((info) => {
         if (info.menuItemId === "Hermidata") {
             getSettings().then(settings => {
                 if (settings.ExtensionBehaviour.AllowContextMenu) createContextMenu(info, settings);
             }).catch(err => logConsoleError('[Background - Context Menu] Failed to load settings:', err));
         }
-    })
+    }));
 }
 
 function createContextMenu(info: chrome.contextMenus.OnClickData, Settings: Settings) {

@@ -4,28 +4,45 @@ import { updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSyncOperation } from "./rssCache"
 import { handleStartPickingFlow } from "./picking"
+import { ready, whenReady } from "./ready"
+
+
+type Respond = (response?: unknown) => void;
+interface Route {
+    run: (msg: any, respond: Respond) => unknown;
+    respondsAsync: boolean; // false = fire and forget
+};
+
+const routes: Record<string, Route> = {
+    SAVE_NOVEL: { run: (m, r) => handleSaveNovel(m.data, m.args, r), respondsAsync: true },
+    RELOAD_RSS_SYNC: { run: () => handleReloadRss(), respondsAsync: false },
+    GET_LAST_SYNC: { run: (_, r) => handleGetLastSync(r), respondsAsync: true },
+    GET_RSS: { run: (_, r) => handleGetRSS(r), respondsAsync: true },
+    INVALIDATE_RSS: { run: (_, r) => handleInvalidateRSS(r), respondsAsync: true },
+    BUILD_AND_SAVE_FEEDS: { run: (m, r) => handleBuildAndSaveRawFeeds(m.data, r), respondsAsync: true },
+    GET_ALL_POSSIBLE_PATHS: { run: (m, r) => handleGetAllPossiblePaths(r, m.data), respondsAsync: true },
+    DB_OPERATION: { run: (m, r) => handleDbOperation(m.store, m.call, r), respondsAsync: true },
+    SYNC_OPERATION: { run: (m, r) => handleSyncOperation(m.call, r), respondsAsync: true },
+    RESET_LOCAL_FILTERS: { run: (_, r) => handleLocalFilterReset(r), respondsAsync: true },
+    START_PICKING_FLOW: { run: (m) => handleStartPickingFlow(m.entry, m.tabID), respondsAsync: false },
+};
 
 export function initMessaging() {
     ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-        switch (msg.type) {
-            case 'SAVE_NOVEL':    return handleSaveNovel(msg.data, msg.args, sendResponse);
-            case 'RELOAD_RSS_SYNC': return handleReloadRss();
-            case 'GET_LAST_SYNC': return handleGetLastSync(sendResponse)
-            case 'GET_RSS':       return handleGetRSS(sendResponse)
-            case 'INVALIDATE_RSS': return handleInvalidateRSS(sendResponse)
-            case 'BUILD_AND_SAVE_FEEDS': return handleBuildAndSaveRawFeeds(msg.data, sendResponse);
-            case 'GET_ALL_POSSIBLE_PATHS': handleGetAllPossiblePaths(sendResponse, msg.data); return true;
-            case 'DB_OPERATION' : handleDbOperation(msg.store, msg.call, sendResponse); return true;
-            case 'SYNC_OPERATION': handleSyncOperation(msg.call, sendResponse); return true;
-            case 'RESET_LOCAL_FILTERS': handleLocalFilterReset(sendResponse); return true;
-            case 'START_PICKING_FLOW': handleStartPickingFlow(msg.entry, msg.tabID); return; // ( fire and forget )
-        }
-        return true
-    })
+        const route = routes[msg?.type];
+        if (!route) return false; // not ours, don't hold the channel open
+
+        ready.then(() => route.run(msg, sendResponse)).catch((error) => {
+            console.error(`[Hermidata] ${msg.type} failed`, error);
+            if (route.respondsAsync) sendResponse({ error: String(error) });
+        });
+
+        return route.respondsAsync; // synchronous, so the channel stays open
+    });
 }
 
 export function initInstalled() {
-    ext.runtime.onInstalled.addListener(async details => {
+    ext.runtime.onInstalled.addListener(whenReady(async details => {
         checkFeedsForUpdates();
 
         const settings = await getSettings();
@@ -47,9 +64,9 @@ export function initInstalled() {
                 contexts: ["link"]
             });
         }
-    });
-    ext.runtime.onStartup.addListener(() => {
+    }));
+    ext.runtime.onStartup.addListener(whenReady(() => {
         updateCurrentBookmarkAndIcon();
         checkFeedsForUpdates();
-    });
+    }));
 }
