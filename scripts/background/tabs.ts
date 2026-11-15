@@ -3,16 +3,18 @@ import { getAllHermidata } from "../shared/db/Storage"
 import { updateCurrentBookmarkAndIcon } from "./bookmarks";
 import { allHermidataCashed, currentBookmark, currentTab, setState } from "./state";
 import { setDynamicIcon } from "../shared/utils/StringOutput";
+import { whenReady } from "./ready";
 
 export function initTabs() {
-    ext.tabs.onActivated.addListener(() => updateCurrentBookmarkAndIcon())
-    ext.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
-        if (changeInfo.status !== 'complete') return
+    ext.tabs.onActivated.addListener(whenReady(() => updateCurrentBookmarkAndIcon()))
+    ext.tabs.onUpdated.addListener(whenReady(async (tabId, changeInfo) => {
+        // full page loads AND URL changes (SPA navigation)
+        if (changeInfo.status !== 'complete' && !changeInfo.url) return
         if (allHermidataCashed === null) setState.allHermidataCashed(await getAllHermidata())
         ext.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length && tabs[0].id === tabId) updateCurrentBookmarkAndIcon()
         })
-    })
+    }))
 }
 
 

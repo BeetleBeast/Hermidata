@@ -8,6 +8,7 @@ import { migrationSteps } from '../shared/migration'
 import { getAllHermidata } from '../shared/db/Storage'
 import { scheduleCull } from './culling'
 import { initShortcuts } from './shortcuts'
+import { markFailed, markReady } from './ready'
 
 /*
 ./background/
@@ -31,19 +32,25 @@ import { initShortcuts } from './shortcuts'
     migrationSettings()    ← migrate from old settings to new version
 */
 
-let syncInProgress: boolean = false;
+// Phase 1: synchronous, first tick. Listeners only, no awaits.
+initShortcuts();
+initTabs();
+initMessaging();
+initContextMenus();
+initInstalled();
 
+// Phase 2: async startup. Things that need migrated data.
 (async () => {
-    await migrationSteps();
-    
-    initShortcuts();
-    initRssCache();
-    initTabs();
-    initMessaging();
-    initContextMenus();
-    initFeeds();
-    const allHermidataCashed = await getAllHermidata();
-    scheduleCull(() => allHermidataCashed, () => syncInProgress);
-    initInstalled();
-    initSync();
+    try {
+        await migrationSteps();
+        initRssCache();
+        initFeeds();
+        initSync();
+        const cached = await getAllHermidata();
+        scheduleCull(() => cached);
+        markReady();
+    } catch (e) {
+        console.error('[Hermidata] startup failed', e);
+        markFailed(e);
+    }
 })();

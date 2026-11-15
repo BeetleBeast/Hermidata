@@ -107,8 +107,8 @@ async function webSearch() {
             continue;
         }
         // if feedText ins't a Feed but a html page, skip
-        if (feedText.includes("<!DOCTYPE html>")) {
-            console.warn("No feed text found:", novel.url);
+        if (looksLikeHtml(feedText)) {
+            console.warn(`[Hermidata] ${novel.url} returned HTML, not a feed. Skipping.`);
             console.dirxml(feedText);
             console.groupEnd();
             continue;
@@ -236,6 +236,10 @@ async function fetchWithRetry(url: string, headers: HeadersInit = {}, retries = 
     return null;
 }
 
+function looksLikeHtml(text: string): boolean {
+    return /^\s*(<!doctype\s+html|<html[\s>])/i.test(text);
+}
+
 async function fetchFeedText(feed: RawFeed | Feed, savedMeta?: Meta): Promise<{ text: string | null; meta: Meta }> {
     const headers: HeadersInit = {};
 
@@ -269,6 +273,7 @@ async function hasFeedChanged(feed: RawFeed, text: string) {
         feedChanged = true;
         feed.lastToken = latestToken;
     } else if (!latestToken) {
+        if (looksLikeHtml(text)) return false;
         // fallback: hash of first 5KB
         const snippet = text.slice(0, 5000);
         const hash = await sha1Hex(snippet);
