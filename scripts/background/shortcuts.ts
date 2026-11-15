@@ -19,7 +19,8 @@ export function initShortcuts() {
             await shortcut(command);
         } catch (error) {
             new ErrorMessage("Could not run this keyboard shortcut.", undefined, {
-                notificationTarget: "browser",
+                notificationTarget: "toast",
+                locationSender: 'background',
                 details: [error],
             }).sendMessage();
         }
@@ -102,7 +103,8 @@ function toCurrentTab(tab: ActiveWebTab): Pick<CurrentTab, "pageTitle" | "url"> 
 
 function notifySaveSuccess(hermidata: HermidataModel): void {
     new Message(`Saved "${hermidata.title}".`, undefined, {
-        notificationTarget: "browser"
+        notificationTarget: 'toast',
+        locationSender: 'background'
     }).sendMessage();
 }
 
