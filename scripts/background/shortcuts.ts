@@ -6,6 +6,7 @@ import { Message, ErrorMessage } from "../shared/utils/ErrorMessage";
 import { saveNovelDirect } from "./rssCache";
 import { ext } from "../shared/utils/BrowserCompat";
 import { whenReady } from "./ready";
+import { NoPastFoundError } from "../shared/utils/dedicatedErrors";
 
 type Command = "open-rss" | "open-library" | "save-hermidata";
 type ActiveWebTab = chrome.tabs.Tab & { id: number; title: string; url: string };
@@ -76,6 +77,10 @@ async function saveActiveTab(): Promise<void> {
 
         notifySaveSuccess(hermidata);
     } catch (error) {
+        if (error instanceof NoPastFoundError) {
+            // expected outcome: log quietly, show a helpful hint, not an error
+            return notifyNoPast();
+        }
         notifySaveFailure(error);
     }
 }
@@ -102,9 +107,16 @@ function notifySaveSuccess(hermidata: HermidataModel): void {
 }
 
 function notifySaveFailure(error: unknown): void {
-    const message = error instanceof Error ? error.message : String(error);
-    new ErrorMessage(`Could not save the active tab: ${message}`, undefined, {
-        notificationTarget: "browser",
-        details: [error]
+    new ErrorMessage('Something went wrong while saving. Please try again.', undefined, {
+        notificationTarget: 'toast',
+        locationSender: 'background',
+        details: [error], // the raw message stays in details/console, not in the toast
+    }).sendMessage();
+}
+
+function notifyNoPast(): void {
+    new ErrorMessage("This novel isn't in your library yet, so there's no progress to update. " + 'Add it first, then save again.', undefined, { 
+        notificationTarget: 'toast',
+        locationSender: 'background'
     }).sendMessage();
 }
