@@ -199,6 +199,7 @@ export class SettingsMigration {
             version: 8,
             ExtensionBehaviour: {
                 ...data.ExtensionBehaviour,
+                EnableKeyboardShortcuts: true, // set default value
                 KeyboardShortcuts: {
                     ...DEFAULT_KEYBOARD_SHORTCUTS,
                     ...(data.ExtensionBehaviour.KeyboardShortcuts ?? {}),
