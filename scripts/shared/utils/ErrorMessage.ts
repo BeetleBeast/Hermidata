@@ -1,14 +1,16 @@
+import { showNotice } from "../../background/notify";
 import { ext } from "./BrowserCompat";
 
 export type ConsoleLevel = 'log' | 'warn' | 'error' | 'none';
 export type MessageSeverity = 'info' | 'warning' | 'error';
-export type NotificationTarget = 'in-page' | 'browser';
+export type NotificationTarget = 'in-page' | 'browser' | 'toast';
 
 /** Controls whether a message is shown to the user and/or written to the console. */
 export interface MessageOptions {
     notifyUser: boolean;
     /** Defaults to an in-page dialog; use "browser" for extension notifications. */
     notificationTarget?: NotificationTarget;
+    locationSender: 'background' | 'default';
     consoleLevel: ConsoleLevel;
     severity: MessageSeverity;
     color: string;
@@ -38,6 +40,7 @@ abstract class Messaging {
         if (!options) options = {};
         if (!defaults) defaults = {
             notifyUser: true,
+            locationSender: 'default',
             consoleLevel: 'none',
             severity: 'info',
             color: DEFAULT_COLOR
@@ -56,24 +59,46 @@ abstract class Messaging {
         if (message !== undefined) this.message = message;
 
         this.sendToConsole();
-        if (this.options.notifyUser) {
-            if (this.options.notificationTarget === 'browser') {
-                void ext.notifications.create({
-                    type: 'basic',
-                    iconUrl: ext.runtime.getURL('assets/icon/icon48.png'),
-                    title: 'Hermidata',
-                    message: this.message
-                }).catch(error => {
-                    console.error('[Hermidata] Could not show browser notification.', error);
-                });
-                return;
-            }
 
-            if (typeof document === 'undefined' || !document.body) throw new Error('Cannot show a user message before the document body is available.');
-
-            this.messageBuilder ??= this.elements ? new BuildElement(this.elements) : (defaultMessageBuilder ??= new BuildElement());
-            this.messageBuilder.show(this.message, this.options.color, this.options.severity);
+        if (this.options.notifyUser) this.notify(this.options.notificationTarget ?? 'in-page');
+    }
+    private notify(location: NotificationTarget) {
+        const handler: Record<NotificationTarget, () => void> = {
+            'browser': () => this.notifyInBrowser(),
+            'toast': () => this.notifyInToast(),
+            'in-page': () => this.notifyInPage()
         }
+        handler[location]();
+    }
+    private notifyInBrowser(): void {
+        if (this.options.locationSender === 'background') {
+            void ext.notifications.create({
+                type: 'basic',
+                iconUrl: ext.runtime.getURL('assets/icon/icon48.png'),
+                title: 'Hermidata',
+                message: this.message
+            }).catch(error => {
+                console.error('[Hermidata] Could not show browser notification.', error);
+            });
+        } else {
+            throw new Error('Unsupported location sender.');
+        }
+        return;
+    }
+    private notifyInPage(): void {
+        if (typeof document === 'undefined' || !document.body) throw new Error('Cannot show a user message before the document body is available.');
+        this.messageBuilder ??= this.elements ? new BuildElement(this.elements) : (defaultMessageBuilder ??= new BuildElement());
+        this.messageBuilder.show(this.message, this.options.color, this.options.severity);
+    }
+    private async notifyInToast(): Promise<void> {
+        if (this.options.locationSender === 'default') {
+            void ext.runtime.sendMessage({
+                type: 'SHOW_NOTICE_TOAST',
+                message: this.message,
+                closeAfterMs: 4_000,
+            });
+        }
+        else showNotice(this.message, 4_000);
     }
 
     private sendToConsole(): void {
@@ -129,6 +154,7 @@ export class WarningMessage extends Messaging {
     constructor(message?: string, elements?: Partial<ErrorElements>, options: Partial<MessageOptions> = {}) {
         super(message, elements, options, {
             notifyUser: true,
+            locationSender: 'default',
             consoleLevel: 'warn',
             severity: 'warning',
             color: 'var(--warning, #caa35a)'
@@ -150,6 +176,7 @@ export class ErrorMessage extends Messaging {
     constructor(message?: string, elements?: Partial<ErrorElements>, options: Partial<MessageOptions> = {}) {
         super(message, elements, options, {
             notifyUser: true,
+            locationSender: 'default',
             consoleLevel: 'error',
             severity: 'error',
             color: 'var(--danger, #c85b5b)'
@@ -170,6 +197,7 @@ export class ConsoleMessage extends Messaging {
     constructor(message?: string, elements?: Partial<ErrorElements>, options: Partial<MessageOptions> = {}) {
         super(message, elements, options, {
             notifyUser: false,
+            locationSender: 'default',
             consoleLevel: 'warn',
             severity: 'warning',
             color: 'var(--warning, #caa35a)'

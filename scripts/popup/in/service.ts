@@ -6,6 +6,7 @@ import { getChapterFromTitle } from "../../shared/utils/StringOutput";
 
 import { getPagePosition, updateChapterProgress } from "../core/save";
 import { PastHermidata, type PastHermidataPromptOptions } from "../core/Past";
+import { NoPastFoundError, SaveFailedError } from "../../shared/utils/dedicatedErrors";
 
 
 type SaveTargetOptions = {
@@ -61,10 +62,10 @@ export class HermidataService {
         const hasPastAndSaved = await candidate.SetPast(past);
 
         // if no past was found, return
-        if (!hasPastAndSaved) throw new Error("No past could be found, exiting for better user experience.");
+        if (!hasPastAndSaved) throw new NoPastFoundError(tab.url);
 
         const saved = await this.saveHermidata(candidate);
-        if (!saved) throw new Error("Could not save chapter progress.");
+        if (!saved) throw new SaveFailedError();
         return candidate;
     }
 

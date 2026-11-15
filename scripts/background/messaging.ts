@@ -5,6 +5,7 @@ import { checkFeedsForUpdates } from "./feeds"
 import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSyncOperation } from "./rssCache"
 import { handleStartPickingFlow } from "./picking"
 import { ready, whenReady } from "./ready"
+import { showNotice } from "./notify"
 
 
 type Respond = (response?: unknown) => void;
@@ -25,6 +26,7 @@ const routes: Record<string, Route> = {
     SYNC_OPERATION: { run: (m, r) => handleSyncOperation(m.call, r), respondsAsync: true },
     RESET_LOCAL_FILTERS: { run: (_, r) => handleLocalFilterReset(r), respondsAsync: true },
     START_PICKING_FLOW: { run: (m) => handleStartPickingFlow(m.entry, m.tabID), respondsAsync: false },
+    SHOW_NOTICE_TOAST: { run: (m) => showNotice(m.message, m.closeAfterMs), respondsAsync: false },
 };
 
 export function initMessaging() {
