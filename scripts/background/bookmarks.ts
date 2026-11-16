@@ -291,10 +291,10 @@ export async function updateCurrentBookmarkAndIcon(colour: string | null = null,
     const validBookmarks = await searchValidBookmarks(searchUrl);
     if (isStale()) return;
 
-    const [bestMatch] = validBookmarks;
+    const bestMatch = validBookmarks.at(0);
 
     setState.currentBookmark(bestMatch ?? null);
-    updateIcon(bestMatch.url ?? null, colour, bestMatch ? undefined : tab);
+    updateIcon(bestMatch?.url ?? null, colour, bestMatch ? undefined : tab);
 
     // update with slower fuzzy promise if best current Bookmark not found
     if ((!currentBookmark && fuzzyPromise)) await updateInvalidBookmark(fuzzyPromise, searchUrl, colour);
@@ -305,7 +305,7 @@ async function updateInvalidBookmark(fuzzyPromise: Promise<FuzzyMatchResult>, se
 
     if (fuzzy.type === 'none' || !fuzzy.sameChapter || !fuzzy.match) return;
     
-    const [validEntryBookmark] = await searchValidBookmarks(fuzzy.match.fuzzySearchUrl);
+    const validEntryBookmark = (await searchValidBookmarks(fuzzy.match.fuzzySearchUrl)).at(0) ?? null;
 
     setState.currentBookmark(validEntryBookmark);
     updateIcon(fuzzy.match.currentUrl ?? searchUrl, colour);
