@@ -1,7 +1,7 @@
 import { HermidataMigration } from "../migration/Hermidata";
 import type { Feed, Hermidata } from "../types";
 import { ext } from "../utils/BrowserCompat";
-import { logConsoleError } from "../utils/ErrorMessage";
+import { logConsoleError, Message, WarningMessage } from "../utils/ErrorMessage";
 
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from './db';
 
@@ -445,11 +445,21 @@ function getMaxWriteOperations(): number {
     return MAX;
 }
 
-function notifySyncTooBig(kb: number): void {
-    console.warn(`[Sync] Too big: ${kb}KB  --=> ${Math.round(kb / getMaxByteCount() * 100)}% of max ${getMaxByteCount()}  `);
+const kbCounter = (kb: number) => `${kb}KB --> ${Math.round(kb / getMaxByteCount() * 100)}% of max ${getMaxByteCount()}`;
+
+function notifySyncTooBig(kbCounter: string): void {
+    const message = `[Sync] Too big: ${kbCounter}`;
+    console.warn(message);
+    void new WarningMessage(message, undefined, {
+        notificationTarget: 'toast',
+    }).sendMessage();
 }
-function notifySyncNearlyFull(kb: number): void {
-    console.warn(`[Sync] Nearly full: ${kb}KB  --=> ${Math.round(kb / getMaxByteCount() * 100)}% of max ${getMaxByteCount()}  `);
+function notifySyncNearlyFull(kbCounter: string): void {
+    const message = `[Sync] Nearly full: ${kbCounter}`;
+    console.warn(message);
+    void new WarningMessage(message, undefined, {
+        notificationTarget: 'toast',
+    }).sendMessage();
 }
 
 
@@ -464,8 +474,8 @@ const sync = new HermidataSync({
         return res.isMigratedSuccessfully && isHermidataLatestVersion(res.result) ? res.result : null;
     },
     getDeviceId,
-    onTooBig: kb => notifySyncTooBig(kb),
-    onNearlyFull: kb => notifySyncNearlyFull(kb),
+    onTooBig: kb => notifySyncTooBig(kbCounter(kb)),
+    onNearlyFull: kb => notifySyncNearlyFull(kbCounter(kb)),
     onError: (msg, err) => logConsoleError(msg, err),
 });
 
