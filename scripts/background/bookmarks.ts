@@ -252,9 +252,9 @@ export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.Bo
     });
 }
 
-async function getCurrentTab(): Promise<chrome.tabs.Tab> {
-    const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
-    return currentTab
+async function getCurrentTab(): Promise<chrome.tabs.Tab | undefined> {
+    const currentTab = await ext.tabs.query({ active: true, currentWindow: true });
+    return currentTab.at(0);
 }
 // Chrome bug workaround: tab.title isn't populated until you re-fetch by id.
 async function getCompleteTab(tab: chrome.tabs.Tab): Promise<chrome.tabs.Tab | null> {
@@ -272,7 +272,7 @@ export async function updateCurrentBookmarkAndIcon(colour: string | null = null,
     if (!tab && !Url) return;
 
     // initialize currentBookmark
-    const searchUrl = Url ?? tab.url;
+    const searchUrl = Url ?? tab?.url;
     // get complete tab
     const completeTab = tab ? await getCompleteTab(tab) : null;
     // get fuzzy promise ( slower than searchValidBookmarks and so is not awaited here)

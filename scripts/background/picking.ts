@@ -68,8 +68,9 @@ class ElementPicker {
 
         console.warn("No current tab ID found.");
 
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab.id) {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tab = tabs.at(0);
+        if (!tab?.id) {
             console.warn("No active tab found.");
             return null;
         }
