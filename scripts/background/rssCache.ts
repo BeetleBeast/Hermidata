@@ -275,10 +275,10 @@ export async function handleSyncOperation(call: SyncCall, sendResponse: (r: unkn
     try {
         switch (call.operation) {
             case 'pushToSync':
-                await pushToSync(call.payload.data);
+                pushToSync(call.payload.data);
                 break;
             case 'removeFromSync':
-                await removeFromSync(call.payload.id);
+                removeFromSync(call.payload.id);
                 break;
         }
         sendResponse({ success: true });

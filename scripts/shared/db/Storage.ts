@@ -38,7 +38,7 @@ export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Pr
         entry.meta.updated = new Date().toISOString();
 
         await putHermidata(entry, false)  // write to IndexedDB
-        await pushToSync(entry)           // push to storage.sync for other devices
+        pushToSync(entry)           // push to storage.sync for other devices
 
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Saved ${entry.title}`);
@@ -65,8 +65,8 @@ export async function updateHermidata(oldKey: string, newKey: string, entry: Onl
 
         await updateImageKey(oldKey, newKey); // move associated images to new key
 
-        await pushToSync(entry)             // push new entry to sync
-        await removeFromSync(oldKey)        // remove old key from sync
+        pushToSync(entry)             // push new entry to sync
+        removeFromSync(oldKey)        // remove old key from sync
 
         PastHermidata.invalidateCache();
         console.log(`Migrated from ${oldKey} → ${newKey}`);
@@ -79,7 +79,7 @@ export async function updateHermidata(oldKey: string, newKey: string, entry: Onl
 export async function removeHermidata(id: string): Promise<void> {
     try {
         await deleteHermidata(id, false)  // remove from IndexedDB
-        await removeFromSync(id)          // remove from sync
+        removeFromSync(id)          // remove from sync
 
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Removed ${id}`);

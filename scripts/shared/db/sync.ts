@@ -1,7 +1,7 @@
 import { HermidataMigration } from "../migration/Hermidata";
 import type { Feed, Hermidata } from "../types";
 import { ext } from "../utils/BrowserCompat";
-import { logConsoleError, Message, WarningMessage } from "../utils/ErrorMessage";
+import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from './db';
 
@@ -89,7 +89,7 @@ const packTs = (v: unknown) => walk(v, (k, x) => {
 const unpackTs = (v: unknown) => walk(v, (k, x) =>
     TS_KEYS.has(k) && typeof x === 'number' ? new Date(x).toISOString() : x);
 
-/** RSS cache (lastFetched / latestItem) is per-device and refetchable: don't sync it. */
+/** RSS cache (lastFetched / latestItem) is per-device and re-fetchable: don't sync it. */
 const stripRss = (h: Hermidata): Hermidata => ({
     ...h,
     rss: h.rss.map(({ lastFetched, latestItem, ...config }: any) => config as Feed),
@@ -222,7 +222,7 @@ export class HermidataSync {
 
     private retryIncomplete(): void {
         if (this.incompleteRetries++ >= MAX_INCOMPLETE_RETRIES) {
-            this.deps.onError('[Sync] remote snapshot stayed incomplete, giving up until nthis.api change', null);
+            this.deps.onError('[Sync] remote snapshot stayed incomplete, giving up until next change', null);
             return;
         }
         setTimeout(() => this.schedulePull(), 5000 * this.incompleteRetries);
@@ -445,7 +445,7 @@ function getMaxWriteOperations(): number {
     return MAX;
 }
 
-const kbCounter = (kb: number) => `${kb}KB --> ${Math.round(kb / getMaxByteCount() * 100)}% of max ${getMaxByteCount()}`;
+const kbCounter = (kb: number) => `${kb}KB --> ${Math.round(kb * 1024 / getMaxByteCount())}% of max ${getMaxByteCount()}`;
 
 function notifySyncTooBig(kbCounter: string): void {
     const message = `[Sync] Too big: ${kbCounter}`;
