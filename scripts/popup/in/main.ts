@@ -420,8 +420,8 @@ class HermidataController {
     }
 }
 
-const startupPromise = (async () => {
-
+const startupPromise = (async () => startup())();
+export async function startup(): Promise<{Hermidata: HermidataModel, past: PastHermidata}> {
     const [ CurrentTabInfo, settings ]: [CurrentTab, Settings] = await Promise.all([
         HermidataController.getCurrentTabInfo(),
         getSettings(),
@@ -441,7 +441,7 @@ const startupPromise = (async () => {
     await Hermidata.SetPast(past);
     
     return { Hermidata, past };
-})();
+}
 
 function capitalizeFirstLetterOfString<T extends AnyNovelType | AnyReadStatus>(str: AnyNovelType | AnyReadStatus ): T {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) as T : str as T;
