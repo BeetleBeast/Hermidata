@@ -21,3 +21,4 @@ Hidden*
 output/*
 # ignore all data test's
 tests/data/*
+tests/test-data/*

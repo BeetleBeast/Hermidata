@@ -252,9 +252,9 @@ export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.Bo
     });
 }
 
-async function getCurrentTab(): Promise<chrome.tabs.Tab> {
-    const [currentTab] = await ext.tabs.query({ active: true, currentWindow: true });
-    return currentTab
+async function getCurrentTab(): Promise<chrome.tabs.Tab | undefined> {
+    const currentTab = await ext.tabs.query({ active: true, currentWindow: true });
+    return currentTab.at(0);
 }
 // Chrome bug workaround: tab.title isn't populated until you re-fetch by id.
 async function getCompleteTab(tab: chrome.tabs.Tab): Promise<chrome.tabs.Tab | null> {
@@ -272,7 +272,7 @@ export async function updateCurrentBookmarkAndIcon(colour: string | null = null,
     if (!tab && !Url) return;
 
     // initialize currentBookmark
-    const searchUrl = Url ?? tab.url;
+    const searchUrl = Url ?? tab?.url;
     // get complete tab
     const completeTab = tab ? await getCompleteTab(tab) : null;
     // get fuzzy promise ( slower than searchValidBookmarks and so is not awaited here)
@@ -291,10 +291,10 @@ export async function updateCurrentBookmarkAndIcon(colour: string | null = null,
     const validBookmarks = await searchValidBookmarks(searchUrl);
     if (isStale()) return;
 
-    const [bestMatch] = validBookmarks;
+    const bestMatch = validBookmarks.at(0);
 
     setState.currentBookmark(bestMatch ?? null);
-    updateIcon(bestMatch.url ?? null, colour, bestMatch ? undefined : tab);
+    updateIcon(bestMatch?.url ?? null, colour, bestMatch ? undefined : tab);
 
     // update with slower fuzzy promise if best current Bookmark not found
     if ((!currentBookmark && fuzzyPromise)) await updateInvalidBookmark(fuzzyPromise, searchUrl, colour);
@@ -305,7 +305,7 @@ async function updateInvalidBookmark(fuzzyPromise: Promise<FuzzyMatchResult>, se
 
     if (fuzzy.type === 'none' || !fuzzy.sameChapter || !fuzzy.match) return;
     
-    const [validEntryBookmark] = await searchValidBookmarks(fuzzy.match.fuzzySearchUrl);
+    const validEntryBookmark = (await searchValidBookmarks(fuzzy.match.fuzzySearchUrl)).at(0) ?? null;
 
     setState.currentBookmark(validEntryBookmark);
     updateIcon(fuzzy.match.currentUrl ?? searchUrl, colour);

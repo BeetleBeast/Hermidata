@@ -19,7 +19,8 @@ export function initShortcuts() {
             await shortcut(command);
         } catch (error) {
             new ErrorMessage("Could not run this keyboard shortcut.", undefined, {
-                notificationTarget: "browser",
+                notificationTarget: "toast",
+                locationSender: 'background',
                 details: [error],
             }).sendMessage();
         }
@@ -86,7 +87,8 @@ async function saveActiveTab(): Promise<void> {
 }
 
 async function getActiveWebTab(): Promise<ActiveWebTab> {
-    const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
+    const tabs = await ext.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs.at(0);
     if (!tab?.id || !tab.title || !tab.url || !/^https?:\/\//i.test(tab.url)) {
         throw new Error("The active tab cannot be saved.");
     }
@@ -102,7 +104,8 @@ function toCurrentTab(tab: ActiveWebTab): Pick<CurrentTab, "pageTitle" | "url"> 
 
 function notifySaveSuccess(hermidata: HermidataModel): void {
     new Message(`Saved "${hermidata.title}".`, undefined, {
-        notificationTarget: "browser"
+        notificationTarget: 'toast',
+        locationSender: 'background'
     }).sendMessage();
 }
 
