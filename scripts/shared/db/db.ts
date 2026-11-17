@@ -210,7 +210,7 @@ export async function putHermidata(entry: Hermidata, sync: boolean = true): Prom
     try {
         const db = await getDb();
         await db.put('hermidata', entry);
-        if (sync) await pushToSync(entry);
+        if (sync) pushToSync(entry);
     } catch (err) {
         logConsoleError('[DB] putHermidata:', err);
     }
@@ -235,7 +235,7 @@ export async function deleteHermidata(key: string, sync: boolean = true): Promis
     try {
         const db = await getDb();
         await db.delete('hermidata', key);
-        if (sync) await removeFromSync(key);
+        if (sync) removeFromSync(key);
     } catch (err) {
         logConsoleError('[DB] deleteHermidata:', err);
     }

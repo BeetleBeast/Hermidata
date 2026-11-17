@@ -87,7 +87,8 @@ async function saveActiveTab(): Promise<void> {
 }
 
 async function getActiveWebTab(): Promise<ActiveWebTab> {
-    const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
+    const tabs = await ext.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs.at(0);
     if (!tab?.id || !tab.title || !tab.url || !/^https?:\/\//i.test(tab.url)) {
         throw new Error("The active tab cannot be saved.");
     }
