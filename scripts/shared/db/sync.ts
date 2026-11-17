@@ -29,6 +29,9 @@ const MAX_INCOMPLETE_RETRIES = 4;
 type SnapshotMeta = { rev: number; n: number; len: number; d: string };
 type Snapshot = { entries: Hermidata[]; tombstones: Record<string, number> };
 type ReadResult = { meta: SnapshotMeta; snapshot: Snapshot } | 'none' | 'incomplete';
+type Tombstones = Record<string, number>;
+type LocalState = { all: Hermidata[]; tombs: Tombstones };
+type PreparedWrite = { items: Record<string, unknown>; rev: number; chunkCount: number };
 
 export interface SyncDeps {
     getAll(): Promise<Hermidata[]>;
@@ -92,7 +95,7 @@ const unpackTs = (v: unknown) => walk(v, (k, x) =>
 /** RSS cache (lastFetched / latestItem) is per-device and re-fetchable: don't sync it. */
 const stripRss = (h: Hermidata): Hermidata => ({
     ...h,
-    rss: h.rss.map(({ lastFetched, latestItem, ...config }: any) => config as Feed),
+    rss: h.rss.map(({ lastFetched, latestItem, ...config }) => config as Feed),
 });
 
 /** When a remote entry wins, keep this device's RSS cache for feeds it already has. */
@@ -108,8 +111,37 @@ function withLocalRssCache(remote: Hermidata, local?: Hermidata): Hermidata {
     };
 }
 
+// --------------------------------------------------------- snapshot codec
+
+/** Library + tombstones -> one gzip+base64 string. */
+async function encodePayload(all: Hermidata[], tombs: Tombstones): Promise<string> {
+    return gzipB64(JSON.stringify({ e: packTs(all.map(stripRss)), t: tombs }));
+}
+
+/** The reverse of encodePayload. Throws if the string is not a valid snapshot. */
+async function decodePayload(packed: string): Promise<Snapshot> {
+    const payload = JSON.parse(await gunzipB64(packed)) as { e: unknown; t?: Tombstones };
+    return { entries: unpackTs(payload.e) as Hermidata[], tombstones: payload.t ?? {} };
+}
+
+function splitChunks(packed: string): string[] {
+    const chunks: string[] = [];
+    for (let i = 0; i < packed.length; i += CHUNK_SIZE) chunks.push(packed.slice(i, i + CHUNK_SIZE));
+    return chunks;
+}
+
+// ------------------------------------------------------------ small helpers
+
 const ts = (h: Hermidata) => Date.parse(h.meta.updated) || 0;
+const toKb = (bytes: number) => Math.round(bytes / 1024);
 const itemBytes = (key: string, value: string) => key.length + value.length + 2; // quota counts JSON-stringified value
+
+/** Quota cost of everything one set() call will write. */
+const bytesNeeded = (items: Record<string, unknown>) =>
+    Object.entries(items).reduce(
+        (n, [key, value]) => n + itemBytes(key, typeof value === 'string' ? value : JSON.stringify(value)),
+        0,
+    );
 
 // -------------------------------------------------------------------- class
 /**
@@ -162,7 +194,7 @@ export class HermidataSync {
         this.enqueue(async () => {
             const tombs = await this.loadTombstones();
             tombs[id] = Date.now();
-            await this.api.storage.local.set({ [TOMBSTONE_KEY]: tombs });
+            await this.saveTombstones(tombs);
         }).then(() => this.schedulePush());
     }
 
@@ -186,12 +218,18 @@ export class HermidataSync {
         this.pullTimer = setTimeout(() => this.enqueue(() => this.pull()), PULL_DEBOUNCE_MS);
     }
 
-    private async loadTombstones(): Promise<Record<string, number>> {
+    // ------------------------------------------------------------ tombstones
+
+    private async loadTombstones(): Promise<Tombstones> {
         const got = await this.api.storage.local.get(TOMBSTONE_KEY);
-        return (got[TOMBSTONE_KEY] as Record<string, number> | undefined) ?? {};
+        return (got[TOMBSTONE_KEY] as Tombstones | undefined) ?? {};
     }
 
-    private pruneTombstones(t: Record<string, number>): Record<string, number> {
+    private async saveTombstones(tombs: Tombstones): Promise<void> {
+        await this.api.storage.local.set({ [TOMBSTONE_KEY]: tombs });
+    }
+
+    private pruneTombstones(t: Tombstones): Tombstones {
         const cutoff = Date.now() - TOMBSTONE_TTL_MS;
         return Object.fromEntries(Object.entries(t).filter(([, at]) => at > cutoff));
     }
@@ -222,7 +260,7 @@ export class HermidataSync {
 
     private retryIncomplete(): void {
         if (this.incompleteRetries++ >= MAX_INCOMPLETE_RETRIES) {
-            this.deps.onError('[Sync] remote snapshot stayed incomplete, giving up until next change', null);
+            this.deps.onError('[Sync] remote snapshot stayed incomplete, giving up until the next change', null);
             return;
         }
         setTimeout(() => this.schedulePull(), 5000 * this.incompleteRetries);
@@ -243,36 +281,66 @@ export class HermidataSync {
         if (!this.ready) this.markReady(false);
     }
 
-    private async readSnapshot(): Promise<ReadResult> {
-        const metaRaw = (await this.api.storage.sync.get(META_KEY))[META_KEY] as SnapshotMeta | undefined;
-        if (!metaRaw) return 'none';
+    // -------------------------------------------------------- reading remote
 
-        const keys = Array.from({ length: metaRaw.n }, (_, i) => `${LIB_PREFIX}${i}`);
+    private async readSnapshot(): Promise<ReadResult> {
+        const meta = await this.readMeta();
+        if (!meta) return 'none';
+
+        const packed = await this.readChunks(meta);
+        if (packed === null) return 'incomplete';
+
+        return this.decodeSnapshot(meta, packed);
+    }
+
+    private async readMeta(): Promise<SnapshotMeta | undefined> {
+        const got = await this.api.storage.sync.get(META_KEY);
+        return got[META_KEY] as SnapshotMeta | undefined;
+    }
+
+    /** All chunks joined, or null if any is missing or the total length is off (never half-apply). */
+    private async readChunks(meta: SnapshotMeta): Promise<string | null> {
+        const keys = Array.from({ length: meta.n }, (_, i) => `${LIB_PREFIX}${i}`);
         const got = await this.api.storage.sync.get(keys);
         const parts = keys.map(k => got[k]);
 
-        // never half-apply: every chunk present and total length matching
-        if (parts.some(p => typeof p !== 'string')) return 'incomplete';
+        if (parts.some(p => typeof p !== 'string')) return null;
         const joined = (parts as string[]).join('');
-        if (joined.length !== metaRaw.len) return 'incomplete';
+        return joined.length === meta.len ? joined : null;
+    }
 
+    private async decodeSnapshot(meta: SnapshotMeta, packed: string): Promise<ReadResult> {
         try {
-            const payload = JSON.parse(await gunzipB64(joined)) as { e: unknown; t: Record<string, number> };
-            const entries = unpackTs(payload.e) as Hermidata[];
-            return { meta: metaRaw, snapshot: { entries, tombstones: payload.t ?? {} } };
+            return { meta, snapshot: await decodePayload(packed) };
         } catch (err) {
             this.deps.onError('[Sync] could not decode remote snapshot', err);
             return 'incomplete';
         }
     }
 
-    private async mergeRemote(remote: Snapshot, rev: number): Promise<void> {
-        const local = new Map((await this.deps.getAll()).map(h => [h.id, h]));
-        const tombs = await this.loadTombstones();
-        let remoteBehind = false;
+    // ----------------------------------------------------------------- merge
 
-        // 1. deletes
-        for (const [id, at] of Object.entries(remote.tombstones)) {
+    private async mergeRemote(remote: Snapshot, rev: number): Promise<void> {
+        const local = await this.loadLocalMap();
+        const tombs = await this.loadTombstones();
+
+        await this.applyRemoteDeletes(remote.tombstones, local, tombs);
+        const behindOnEntries = await this.applyRemoteEntries(remote.entries, local, tombs);
+        const missingLocal = this.remoteLacksLocal(remote.entries, local);
+
+        await this.saveTombstones(this.pruneTombstones(tombs));
+        this.knownRev = Math.max(this.knownRev, rev);
+
+        if (behindOnEntries || missingLocal) this.schedulePush(); // converges: after one push the remote is not behind
+    }
+
+    private async loadLocalMap(): Promise<Map<string, Hermidata>> {
+        return new Map((await this.deps.getAll()).map(h => [h.id, h]));
+    }
+
+    /** Remote tombstones: remove local novels not edited since, and remember the tombstones. */
+    private async applyRemoteDeletes( remoteTombs: Tombstones, local: Map<string, Hermidata>, tombs: Tombstones): Promise<void> {
+        for (const [id, at] of Object.entries(remoteTombs)) {
             const l = local.get(id);
             if (l && ts(l) < at) {
                 await this.deps.remove(id);
@@ -280,32 +348,35 @@ export class HermidataSync {
             }
             tombs[id] = Math.max(tombs[id] ?? 0, at);
         }
+    }
 
-        // 2. additions and updates, newest wins per novel
-        const remoteIds = new Set<string>();
-        for (const r of remote.entries) {
-            remoteIds.add(r.id);
-
-            if ((tombs[r.id] ?? 0) > ts(r)) { remoteBehind = true; continue; } // deleted here after that edit
-
-            const l = local.get(r.id);
-            if (!l || ts(r) > ts(l)) {
-                const ready = this.deps.prepareRemote(r);
-                if (!ready) { this.deps.onError(`[Sync] could not migrate ${r.id}, skipped`, null); continue; }
-                await this.deps.put(withLocalRssCache(ready, l));
-                if ((tombs[r.id] ?? 0) <= ts(r)) delete tombs[r.id]; // re-added after deletion
-            } else if (ts(l) > ts(r)) {
-                remoteBehind = true;
-            }
+    /** Applies every remote entry. True if the remote is behind this device for at least one of them. */
+    private async applyRemoteEntries( entries: Hermidata[], local: Map<string, Hermidata>, tombs: Tombstones): Promise<boolean> {
+        let remoteBehind = false;
+        for (const r of entries) {
+            if (await this.applyRemoteEntry(r, local.get(r.id), tombs)) remoteBehind = true;
         }
+        return remoteBehind;
+    }
 
-        // 3. anything local that the remote lacks
-        for (const l of local.values()) if (!remoteIds.has(l.id)) remoteBehind = true;
+    /** One entry, newest wins. True if the remote is behind this device for it. */
+    private async applyRemoteEntry(r: Hermidata, l: Hermidata | undefined, tombs: Tombstones): Promise<boolean> {
+        if ((tombs[r.id] ?? 0) > ts(r)) return true;                    // deleted here after that edit
+        if (!l || ts(r) > ts(l)) { await this.takeRemoteEntry(r, l, tombs); return false; }
+        return ts(l) > ts(r);                                           // local is newer
+    }
 
-        await this.api.storage.local.set({ [TOMBSTONE_KEY]: this.pruneTombstones(tombs) });
-        this.knownRev = Math.max(this.knownRev, rev);
+    private async takeRemoteEntry(r: Hermidata, l: Hermidata | undefined, tombs: Tombstones): Promise<void> {
+        const ready = this.deps.prepareRemote(r);
+        if (!ready) { this.deps.onError(`[Sync] could not migrate ${r.id}, skipped`, null); return; }
 
-        if (remoteBehind) this.schedulePush(); // converges: after one push the remote is not behind
+        await this.deps.put(withLocalRssCache(ready, l));
+        delete tombs[r.id];                                             // re-added after a deletion
+    }
+
+    private remoteLacksLocal(remoteEntries: Hermidata[], local: Map<string, Hermidata>): boolean {
+        const remoteIds = new Set(remoteEntries.map(r => r.id));
+        return [...local.values()].some(l => !remoteIds.has(l.id));
     }
 
     // ----------------------------------------------------------------- push
@@ -313,26 +384,52 @@ export class HermidataSync {
     private async pushSnapshot(): Promise<void> {
         if (!this.ready) { this.dirty = true; return; }
 
-        const all = await this.deps.getAll();
-        const byId = new Map(all.map(h => [h.id, h]));
+        const state = await this.collectLocalState();
+        if (!state) return; // never publish an empty library
 
-        // drop tombstones that were pruned or superseded by a re-add
+        const packed = await encodePayload(state.all, state.tombs);
+        const existing = await this.api.storage.sync.get(null);
+        if (this.cloudAlreadyHolds(existing, packed)) return; // e.g. an RSS-only refresh
+
+        const write = await this.prepareWrite(existing, packed);
+        if (!(await this.fitsInQuota(write.items))) return; // all or nothing ( remove this to allow partial writes )
+
+        await this.writeSnapshot(existing, write);
+        this.knownRev = write.rev;
+        await this.api.storage.local.set({ [BLOCKED_KEY]: false });
+    }
+
+    /** Local library plus live tombstones, or null when there is nothing worth publishing. */
+    private async collectLocalState(): Promise<LocalState | null> {
+        const all = await this.deps.getAll();
         const tombs = this.pruneTombstones(await this.loadTombstones());
+        this.dropSupersededTombstones(tombs, all);
+
+        const nothingToPublish = all.length === 0 && Object.keys(tombs).length === 0;
+        return nothingToPublish ? null : { all, tombs };
+    }
+
+    /** A tombstone is obsolete once the novel was re-added after the deletion. */
+    private dropSupersededTombstones(tombs: Tombstones, all: Hermidata[]): void {
+        const byId = new Map(all.map(h => [h.id, h]));
         for (const [id, at] of Object.entries(tombs)) {
             const h = byId.get(id);
             if (h && ts(h) > at) delete tombs[id];
         }
+    }
 
-        // never publish an empty library over a real one
-        if (all.length === 0 && Object.keys(tombs).length === 0) return;
+    /** True when the cloud already holds exactly this snapshot, so writing would only waste a revision. */
+    private cloudAlreadyHolds(existing: Record<string, unknown>, packed: string): boolean {
+        const prevMeta = existing[META_KEY] as SnapshotMeta | undefined;
+        if (!prevMeta || prevMeta.len !== packed.length) return false;
 
-        const payload = JSON.stringify({ e: packTs(all.map(stripRss)), t: tombs });
-        const packed = await gzipB64(payload);
+        const prevPacked = Array.from({ length: prevMeta.n }, (_, i) => existing[`${LIB_PREFIX}${i}`]).join('');
+        return prevPacked === packed;
+    }
 
-        const chunks: string[] = [];
-        for (let i = 0; i < packed.length; i += CHUNK_SIZE) chunks.push(packed.slice(i, i + CHUNK_SIZE));
-
-        const existing = await this.api.storage.sync.get(null);
+    /** Builds the one set() payload: the meta key plus every chunk. */
+    private async prepareWrite(existing: Record<string, unknown>, packed: string): Promise<PreparedWrite> {
+        const chunks = splitChunks(packed);
         const prevRev = (existing[META_KEY] as SnapshotMeta | undefined)?.rev ?? 0;
         const rev = Math.max(prevRev, this.knownRev) + 1;
 
@@ -340,40 +437,59 @@ export class HermidataSync {
         const items: Record<string, unknown> = { [META_KEY]: meta };
         chunks.forEach((c, i) => { items[`${LIB_PREFIX}${i}`] = c; });
 
-        // size check: all or nothing
-        const settingsBytes = await this.api.storage.sync.getBytesInUse("Settings");
-        const needed = chunks.reduce((n, c, i) => n + itemBytes(`${LIB_PREFIX}${i}`, c), 0)
-            + itemBytes(META_KEY, JSON.stringify(meta));
-        const usable = QUOTA_BYTES - settingsBytes;
+        return { items, rev, chunkCount: chunks.length };
+    }
+
+    // ----------------------------------------------------------------- quota
+
+    /** False (and writes nothing) when the snapshot would not fit. Warns when it is getting close. */
+    private async fitsInQuota(items: Record<string, unknown>): Promise<boolean> {
+        const needed = bytesNeeded(items);
+        const usable = QUOTA_BYTES - await this.api.storage.sync.getBytesInUse("Settings");
 
         if (needed > usable - SAFETY_MARGIN) {
-            await this.api.storage.local.set({ [BLOCKED_KEY]: true });
-            this.deps.onTooBig(Math.round(needed / 1024));
-            return; // old snapshot stays untouched
+            await this.markBlocked(needed);
+            return false; // old snapshot stays untouched
         }
         if (needed > usable * WARN_RATIO) await this.maybeWarn(needed);
+        return true;
+    }
 
-        // free the old per-novel keys first, otherwise their bytes count against us
-        const legacy = Object.keys(existing).filter(k => k !== "Settings" && !k.startsWith(LIB_PREFIX));
-        if (legacy.length) await this.api.storage.sync.remove(legacy);
-
-        await this.api.storage.sync.set(items); // single call: atomic
-
-        const stale = Object.keys(existing).filter(
-            k => /^lib:\d+$/.test(k) && Number(k.slice(LIB_PREFIX.length)) >= chunks.length,
-        );
-        if (stale.length) await this.api.storage.sync.remove(stale);
-
-        this.knownRev = rev;
-        await this.api.storage.local.set({ [BLOCKED_KEY]: false });
+    private async markBlocked(neededBytes: number): Promise<void> {
+        await this.api.storage.local.set({ [BLOCKED_KEY]: true });
+        this.deps.onTooBig(toKb(neededBytes));
     }
 
     private async maybeWarn(neededBytes: number): Promise<void> {
+        if (await this.warnedRecently()) return;
+        await this.api.storage.local.set({ [WARN_AT_KEY]: Date.now() });
+        this.deps.onNearlyFull(toKb(neededBytes));
+    }
+
+    private async warnedRecently(): Promise<boolean> {
         const got = await this.api.storage.local.get(WARN_AT_KEY);
         const last = (got[WARN_AT_KEY] as number | undefined) ?? 0;
-        if (Date.now() - last < WARN_INTERVAL_MS) return;
-        await this.api.storage.local.set({ [WARN_AT_KEY]: Date.now() });
-        this.deps.onNearlyFull(Math.round(neededBytes / 1024));
+        return Date.now() - last < WARN_INTERVAL_MS;
+    }
+
+    // ----------------------------------------------------------------- write
+
+    private async writeSnapshot(existing: Record<string, unknown>, write: PreparedWrite): Promise<void> {
+        await this.removeLegacyKeys(existing);                          // free their bytes first
+        await this.api.storage.sync.set(write.items);                   // single call: atomic
+        await this.removeStaleChunks(existing, write.chunkCount);
+    }
+
+    /** Old per-novel keys from the previous sync design. Never touches Settings. */
+    private async removeLegacyKeys(existing: Record<string, unknown>): Promise<void> {
+        const legacy = Object.keys(existing).filter(k => k !== "Settings" && !k.startsWith(LIB_PREFIX));
+        if (legacy.length) await this.api.storage.sync.remove(legacy);
+    }
+
+    /** Chunks left over from a previous, longer snapshot. */
+    private async removeStaleChunks(existing: Record<string, unknown>, chunkCount: number): Promise<void> {
+        const stale = Object.keys(existing).filter(k => /^lib:\d+$/.test(k) && Number(k.slice(LIB_PREFIX.length)) >= chunkCount );
+        if (stale.length) await this.api.storage.sync.remove(stale);
     }
 }
 
@@ -404,26 +520,22 @@ export async function checkSyncQuota(): Promise<void> {
     const used_Items = (await ext.storage.sync.getKeys()).length;
     const used_bytes = await ext.storage.sync.getBytesInUse();
     const used_bytes_per_item = 1070 // average
-    const used_write_operations = 0 // TODO
     // 2. get max usage
     const max_items = getMaxItemsCount();
     const max_bytes = getMaxByteCount();
-    const max_bytes_per_item = getMaxByteCountPerItem();
-    const max_write_operations = getMaxWriteOperations();
+    const max_bytes_per_item = getMaxByteCountPerItem();;
     // 3. log current usage
     console.group('[Sync] Current usage');
     
     console.log(`[Sync] Used ${used_Items} of ${max_items} items (${Math.round(used_Items / max_items * 100)}%)`);
     console.log(`[Sync] Used ${used_bytes} of ${max_bytes} bytes (${Math.round( used_bytes / max_bytes * 100)}%)`);
     console.log(`[Sync] Used ${used_bytes_per_item} of ${max_bytes_per_item} bytes per item (${Math.round( used_bytes_per_item / max_bytes_per_item * 100)}%)`);
-    console.log(`[Sync] Used ${used_write_operations} of ${max_write_operations} write operations per hour (${Math.round( used_write_operations / max_write_operations * 100)}%)`);
     // 4. warn if close to limit
 
     if (
         used_Items >( max_items * 0.9) ||
         used_bytes > (max_bytes * 0.9) ||
-        used_bytes_per_item > (max_bytes_per_item * 0.9) ||
-        used_write_operations > (max_write_operations * 0.9)
+        used_bytes_per_item > (max_bytes_per_item * 0.9)
     ) console.warn('[Sync] Approaching sync storage limit')
 
     console.groupEnd();
@@ -438,10 +550,6 @@ function getMaxByteCount(): number {
 }
 function getMaxByteCountPerItem(): number {
     const MAX = ext.storage.sync.QUOTA_BYTES_PER_ITEM ?? 8192;
-    return MAX;
-}
-function getMaxWriteOperations(): number {
-    const MAX = ext.storage.sync.MAX_WRITE_OPERATIONS_PER_HOUR ?? 1800;
     return MAX;
 }
 
