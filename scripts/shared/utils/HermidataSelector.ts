@@ -88,8 +88,15 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) return this.chapter.bookmarks[bookmarkInUseId];
         return this.chapter.bookmarks[this.chapter.bookmarkInUse];
     }
+    getAllBookmarks(): Bookmark[] {
+        return Object.values(this.chapter.bookmarks);
+    }
     GetUrl(bookmarkInUseId?: string): string {
         return this.getBookmark(bookmarkInUseId)?.url;
+    }
+    /** The url of every marker, skipping markers without one */
+    GetMarkerUrls(): string[] {
+        return this.getAllBookmarks().map(bookmark => bookmark.url).filter(Boolean);
     }
     GetChapter(bookmarkInUseId?: string): number {
         return this.getBookmark(bookmarkInUseId)?.current;
@@ -141,6 +148,9 @@ export class HermidataModel implements Hermidata {
     GetLatestChapter(): number { return this.chapter.latest; }
     GetAltSources(): string[] {
         return this.meta.altSources;
+    }
+    GetAltTitles(): string[] {
+        return this.meta.altTitles;
     }
     GetSourceOfLatestChapter(): string { 
         // find the source of the latest chapter

@@ -1,5 +1,6 @@
 import { CalcDiff, levenshteinDistance } from "./Past";
 import { getSeriesUrl, TrimTitle } from "../../shared/utils/StringOutput";
+import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import type { Hermidata, ItemResolution, ItemResolveInput, ScoredCandidate } from "../../shared/types/index";
 
 // Weights sum to 1, so a score is always between 0 and 1
@@ -31,22 +32,20 @@ function seriesUrlSimilarity(a: string, b: string): number {
     return 1 - levenshteinDistance(left, right) / longest;
 }
 
-function getMarkerUrls(item: Hermidata): string[] {
-    return Object.values(item.chapter?.bookmarks ?? {}).map(bookmark => bookmark.url).filter(Boolean);
-}
-
 export function scoreCandidate(input: ItemResolveInput, item: Hermidata): ScoredCandidate {
+    const model = new HermidataModel(item);
+
     const currentSeries = getSeriesUrl(input.url);
-    const markerSeries = getMarkerUrls(item).map(getSeriesUrl);
+    const markerSeries = model.GetMarkerUrls().map(getSeriesUrl);
 
     const urlScore = Math.max(0, ...markerSeries.map(series => seriesUrlSimilarity(currentSeries, series)));
     const exactUrl = currentSeries !== '' && markerSeries.includes(currentSeries);
 
     const title = TrimTitle.trimTitle(input.title, input.url).title;
-    const titleScore = Math.max(0, ...[item.title, ...(item.meta?.altTitles ?? [])].filter(Boolean).map(t => CalcDiff(title, t)));
+    const titleScore = Math.max(0, ...[model.title, ...(model.GetAltTitles() ?? [])].filter(Boolean).map(t => CalcDiff(title, t)));
 
     const host = getHost(input.url);
-    const knownHost = host !== '' && (item.source === host || (item.meta?.altSources ?? []).includes(host));
+    const knownHost = host !== '' && (model.source === host || (model.GetAltSources() ?? []).includes(host));
 
     const score = urlScore * URL_WEIGHT + titleScore * TITLE_WEIGHT + (knownHost ? HOST_WEIGHT : 0);
     return { item, score, exactUrl };

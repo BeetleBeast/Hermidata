@@ -100,6 +100,22 @@ describe('resolveItem', () => {
     });
 });
 
+describe('HermidataModel.GetMarkerUrls', () => {
+    it('returns the url of every marker and skips empty ones', () => {
+        const model = new HermidataModel(createItem('Solo Leveling', 'Novel', 'https://novels.com/solo-leveling/chapter-3'));
+        const [first] = Object.values(model.chapter.bookmarks);
+        model.chapter.bookmarks = {
+            a: first,
+            b: { ...first, id: 'b', url: 'https://other.com/solo-leveling/chapter-9' },
+            c: { ...first, id: 'c', url: '' },
+        };
+        expect(model.GetMarkerUrls()).toEqual([
+            'https://novels.com/solo-leveling/chapter-3',
+            'https://other.com/solo-leveling/chapter-9',
+        ]);
+    });
+});
+
 describe('scoreCandidate', () => {
     it('stays between 0 and 1', () => {
         const item = createItem('Solo Leveling', 'Novel', 'https://novels.com/solo-leveling/chapter-3');
