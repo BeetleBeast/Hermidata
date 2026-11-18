@@ -15,3 +15,11 @@ export class SaveFailedError extends Error {
         this.name = 'SaveFailedError';
     }
 }
+
+/** Thrown by write() when ifMatch no longer matches: re-read, re-merge, write again. */
+export class ConflictError extends Error {
+    constructor(message = 'The remote changed since it was read', options?: ErrorOptions) {
+        super(message, options);
+        this.name = 'ConflictError';
+    }
+}

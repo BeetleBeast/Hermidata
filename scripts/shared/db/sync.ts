@@ -1,5 +1,5 @@
 import { HermidataMigration } from "../migration/Hermidata";
-import type { Feed, Hermidata } from "../types";
+import type { Feed, Hermidata, SyncDeps } from "../types";
 import { ext } from "../utils/BrowserCompat";
 import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 
@@ -32,20 +32,6 @@ type ReadResult = { meta: SnapshotMeta; snapshot: Snapshot } | 'none' | 'incompl
 type Tombstones = Record<string, number>;
 type LocalState = { all: Hermidata[]; tombs: Tombstones };
 type PreparedWrite = { items: Record<string, unknown>; rev: number; chunkCount: number };
-
-export interface SyncDeps {
-    getAll(): Promise<Hermidata[]>;
-    /** Must NOT trigger a re-sync (your putHermidata(h, false)). */
-    put(h: Hermidata): Promise<void>;
-    /** Must NOT trigger a re-sync (your deleteHermidata(id, false)). */
-    remove(id: string): Promise<void>;
-    /** Migrate to the latest version; null if it can't be migrated. */
-    prepareRemote(h: Hermidata): Hermidata | null;
-    getDeviceId(): Promise<string>;
-    onTooBig(neededKb: number): void;
-    onNearlyFull(neededKb: number): void;
-    onError(message: string, err: unknown): void;
-}
 
 // ------------------------------------------------------ compression helpers
 

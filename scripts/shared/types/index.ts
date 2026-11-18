@@ -146,3 +146,10 @@ export type {
     KeyboardShortcutSettings
 
 } from "./settings";
+
+export type {
+
+    SyncBackend,
+    SyncDeps,
+
+} from './sync';
