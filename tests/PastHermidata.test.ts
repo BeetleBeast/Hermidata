@@ -100,6 +100,35 @@ describe('PastHermidata ambiguity', () => {
         expect(unknown.resolution).toBeNull();
     });
 
+    it('is an exact match when the saved item has a marker on this series page', async () => {
+        setStore(novel, manga);
+        const past = new PastHermidata(createCurrent('Solo Leveling', 'https://novels.com/solo-leveling/chapter-4'));
+        await past.init();
+        expect(past.isExactMatch).toBe(true);
+    });
+
+    it('is not an exact match on a site the saved item has no marker on', async () => {
+        setStore(novel);
+        const past = new PastHermidata(createCurrent('Solo Leveling', 'https://elsewhere.com/solo-leveling/chapter-4'));
+        await past.init();
+
+        expect(past.pastHermidata?.id).toBe(novel.id); // still the one-click match
+        expect(past.isExactMatch).toBe(false);
+    });
+
+    it('is not an exact match when ambiguous or when nothing is saved', async () => {
+        setStore(novel, manga);
+        const ambiguous = new PastHermidata(createCurrent('Solo Leveling', 'https://aggregator.com/solo-leveling/chapter-4'));
+        await ambiguous.init();
+        expect(ambiguous.isExactMatch).toBe(false);
+
+        setStore();
+        PastHermidata.invalidateCache();
+        const empty = new PastHermidata(createCurrent('Solo Leveling', 'https://novels.com/solo-leveling/chapter-4'));
+        await empty.init();
+        expect(empty.isExactMatch).toBe(false);
+    });
+
     it('returns the chosen item once the user settled an ambiguous match', async () => {
         setStore(novel, manga);
         const past = new PastHermidata(createCurrent('Solo Leveling', 'https://aggregator.com/solo-leveling/chapter-4'));

@@ -87,14 +87,15 @@
     </section>
     <section class="footer">
         <div id="Btn-Parent">
-            <div class="saveActions">
+            <!-- data-separate: hidden | subtle | visible | primary, set by the popup from how sure the match is -->
+            <div class="saveActions" data-separate="hidden">
                 <button type="button" class="Btn" id="save" aria-busy="false">
                     <span id="save-label">Save</span>
                     <span class="save-spinner" aria-hidden="true"></span>
                 </button>
-                <button type="button" class="saveSeparate" id="saveSeparate" hidden title="Keep the saved item as it is and save this page as its own item">
+                <button type="button" class="saveSeparate" id="saveSeparate" title="Keep the saved item as it is and save this page as its own item">
                     <svg class="saveSeparate-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5" r="2.4"/><circle cx="6" cy="19" r="2.4"/><circle cx="18" cy="9" r="2.4"/><path d="M6 7.5v9M18 11.5c0 3-6 2-12 5"/></svg>
-                    Save as separate item
+                    <span class="saveSeparate-label">Save as separate item</span>
                 </button>
             </div>
             <div class="RSSLinkState-container">
@@ -201,15 +202,12 @@
     <hr>
     <button type="button" class="bookmarkMenuBtn Btn" popovertarget="bookmark-manager" popovertargetaction="show">Marker Manager</button>
 </section>
-<dialog id="itemChooser" class="itemChooser" aria-labelledby="itemChooser-title" aria-describedby="itemChooser-hint">
-    <div class="markerPopover-header">
+<dialog id="itemChooser" class="itemChooser" aria-labelledby="itemChooser-title">
+    <div class="itemChooser-header">
         <h4 id="itemChooser-title">Which item is this?</h4>
+        <button type="button" id="itemChooser-none" class="itemChooser-none" title="Treat this page as a new item">None of these</button>
     </div>
-    <p id="itemChooser-hint" class="itemChooser-hint">More than one saved item has this title. Pick the one you are reading; saving remembers it for this site.</p>
     <ul class="itemChooser-list"> <!-- Dynamic load candidates --> </ul>
-    <div class="itemChooser-footer">
-        <button type="button" id="itemChooser-none" class="Btn">None of these</button>
-    </div>
 </dialog>
 <section class="material-symbols-outlinedContainer">
     <br>

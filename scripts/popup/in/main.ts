@@ -15,6 +15,7 @@ import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
 import { chooseItem } from '../frontend/itemChooser';
 import { linkAsAdaptation } from '../core/save';
+import { getSeparateProminence } from '../core/separateProminence';
 import { HermidataService } from "./service";
 import { shortcutEventListener } from "../core/shortcuts";
 
@@ -223,8 +224,7 @@ class HermidataController {
         
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
-        // a same-titled item exists, so this page could also be a separate work ( hidden for new items )
-        setElement<HTMLButtonElement>('#saveSeparate', el => el.hidden = this.pastHermidata === null && !this.past.isAmbiguous);
+        this.updateSeparateProminence();
 
         const state = stateConfig[this.getState()];
         setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
@@ -240,6 +240,7 @@ class HermidataController {
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
         getElement('#saveSeparate')?.addEventListener('click', () => this.saveAsSeparateItem());
+        getElement('#Type')?.addEventListener('change', () => this.updateSeparateProminence());
 
         getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e as PointerEvent));
         getElement("#HDRssBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e as PointerEvent));
@@ -327,6 +328,18 @@ class HermidataController {
         button.setAttribute('aria-busy', String(isSaving));
         button.dataset.saving = String(isSaving);
     }
+    /** Shows "Save as separate item" as prominently as the match calls for ( styled by .saveActions[data-separate] ) */
+    private updateSeparateProminence(): void {
+        const past = this.pastHermidata;
+        const type = getElement<HTMLSelectElement>('#Type')?.value;
+        const prominence = getSeparateProminence({
+            hasSameTitled: past !== null || this.past.isAmbiguous,
+            declinedAll: past === null && this.past.isAmbiguous,
+            exactMatch: this.past.isExactMatch,
+            typeChanged: past !== null && type !== undefined && type !== past.novelType,
+        });
+        setElement<HTMLDivElement>('.saveActions', el => el.dataset.separate = prominence);
+    }
     /** Saves the page as its own item, leaving the same-titled saved item untouched */
     private async saveAsSeparateItem(): Promise<void> {
         if (this.isSaving || !this.service) return;
@@ -337,6 +350,14 @@ class HermidataController {
         try {
             const page = await this.createSeparatePage();
             const original = this.pastHermidata;
+
+            // same title and type is the risky case ( two items that look identical ): ask first.
+            // a different type was chosen on purpose ( novel <-> manga ) and is asked about linking below
+            const sameTypeAsSaved = original !== null && original.novelType === page.novelType;
+            if (sameTypeAsSaved && !await customConfirm(
+                `Save this page as a new item? "${original.title}" (${original.novelType}) stays as it is.`,
+                { accept: "Save as new", reject: "Cancel" }
+            )) return;
 
             // a different type of the same title is most likely an adaptation ( novel <-> manga )
             const link = original !== null && original.novelType !== page.novelType && await customConfirm(

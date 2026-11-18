@@ -12,16 +12,16 @@ function formatDate(iso: string): string {
     return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** Site · Ch. 12 · Updated 3 Jun 2026 */
+/** novels.com · Ch. 12 · 3 Jun 2026 ( the title is the same for every candidate, so it is not repeated ) */
 function describeCandidate(item: HermidataModel): string {
-    const updated = formatDate(item.meta.updated);
     return [
         getHost(item.GetUrl()) || item.source,
         `Ch. ${item.GetLatestChapter() || item.GetChapter() || '?'}`,
-        updated && `Updated ${updated}`,
+        formatDate(item.meta.updated),
     ].filter(Boolean).join(' · ');
 }
 
+/** One single-line row: type badge, then where and how far it was read */
 function createOption(candidate: ScoredCandidate, onPick: (item: Hermidata) => void): HTMLLIElement {
     const item = new HermidataModel(candidate.item);
     const li = document.createElement('li');
@@ -29,13 +29,6 @@ function createOption(candidate: ScoredCandidate, onPick: (item: Hermidata) => v
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'itemChooser-option';
-
-    const heading = document.createElement('span');
-    heading.className = 'itemChooser-option-heading';
-
-    const title = document.createElement('span');
-    title.className = 'itemChooser-option-title';
-    title.textContent = item.title;
 
     const type = document.createElement('span');
     type.className = 'itemChooser-option-type';
@@ -45,8 +38,7 @@ function createOption(candidate: ScoredCandidate, onPick: (item: Hermidata) => v
     meta.className = 'itemChooser-option-meta';
     meta.textContent = describeCandidate(item);
 
-    heading.append(title, type);
-    button.append(heading, meta);
+    button.append(type, meta);
     button.addEventListener('click', () => onPick(candidate.item));
     li.append(button);
     return li;
@@ -60,7 +52,10 @@ export function chooseItem(candidates: ScoredCandidate[]): Promise<Hermidata | n
     const dialog = getElement<HTMLDialogElement>('#itemChooser');
     const list = getElement<HTMLUListElement>('.itemChooser-list');
     const none = getElement<HTMLButtonElement>('#itemChooser-none');
+    const title = getElement<HTMLElement>('#itemChooser-title');
     if (!dialog || !list || !none || candidates.length === 0) return Promise.resolve(null);
+
+    if (title) title.textContent = `Which “${candidates[0].item.title}”?`;
 
     return new Promise(resolve => {
         const stopShortcuts = (e: KeyboardEvent) => e.stopPropagation(); // the popup's shortcuts ( Escape closes the popup, save ) must not fire behind the dialog

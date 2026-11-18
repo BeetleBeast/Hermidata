@@ -25,6 +25,8 @@ export type {
     ItemResolveInput,
     ScoredCandidate,
     ItemResolution,
+    SeparateProminence,
+    SeparateProminenceState,
 
     InputArrayType,
     InputArraySheetType,

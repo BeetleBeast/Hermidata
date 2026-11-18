@@ -56,6 +56,12 @@ export class PastHermidata {
     public get isAmbiguous(): boolean {
         return this.resolution?.kind === 'ambiguous';
     }
+    /** The matched item has a marker on this very series page: this page is that item, not a separate work */
+    public get isExactMatch(): boolean {
+        if (this.resolution?.kind !== 'match') return false;
+        const matched = this.resolution.item;
+        return this.resolution.candidates.some(candidate => candidate.item.id === matched.id && candidate.exactUrl);
+    }
     public async checkForDuplicates(): Promise<Hermidata | false> {
         // get all Hermidata
         const AllHermidata = await PastHermidata.getAllHermidata();

@@ -194,6 +194,22 @@ export type ItemResolution =
     | { kind: 'match'; item: Hermidata; candidates: ScoredCandidate[] }
     | { kind: 'ambiguous'; candidates: ScoredCandidate[] };
 
+/**
+ * How prominent "Save as separate item" is, from how sure the popup is that this page is the saved item
+ * - hidden: no saved item has this title
+ * - subtle: the page is clearly the saved item, the option stays reachable but nearly out of sight
+ * - visible: matched, but not for certain
+ * - primary: the user said the page is none of the saved items, so a separate item is the likely save
+ */
+export type SeparateProminence = 'hidden' | 'subtle' | 'visible' | 'primary';
+
+export type SeparateProminenceState = {
+    hasSameTitled: boolean; // a saved item matched, or several did
+    declinedAll: boolean; // the user picked "None of these" in the chooser
+    exactMatch: boolean; // the matched item has a marker on this series page
+    typeChanged: boolean; // the Type in the form differs from the matched item's
+};
+
 export type InputArrayType = [string, AnyNovelType, number, string, AnyReadStatus, string, string[], string]
 export type InputArraySheetType = [string, AnyNovelType, number, string, AnyReadStatus, string, string, string]
 
