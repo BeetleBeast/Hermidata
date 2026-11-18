@@ -71,8 +71,7 @@ async function saveActiveTab(): Promise<void> {
         const tab = await getActiveWebTab();
         const settings = await getSettings();
         const service = new HermidataService(settings, saveNovelDirect, {
-            confirm: async () => false,
-            confirmMigration: async () => false
+            confirm: async () => false
         });
         const hermidata = await service.saveCurrentTab(toCurrentTab(tab));
 

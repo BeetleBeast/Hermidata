@@ -1,15 +1,14 @@
 import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { getAllHermidata, getHermidataViaKey, getSettings } from "../../shared/db/Storage";
-import { TrimTitle, findByTitleOrAlt, generateHermidataHash } from "../../shared/utils/StringOutput";
-import type { Hermidata, AllHermidata, AltCheck, AnyNovelType } from "../../shared/types/index";
-import { confirmMigrationPrompt, customConfirm } from "../frontend/confirm";
+import { TrimTitle, findAllByTitleOrAlt, findByTitleOrAlt, generateHermidataHash } from "../../shared/utils/StringOutput";
+import type { Hermidata, AllHermidata, AltCheck, AnyNovelType, ItemResolution } from "../../shared/types/index";
+import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
-import { HermidataMigration } from "../../shared/migration/Hermidata";
-import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { resolveItem } from "./ItemResolver";
+import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 export type PastHermidataPromptOptions = {
     confirm?: (message: string) => Promise<boolean>;
-    confirmMigration?: (newer: HermidataModel, older: HermidataModel) => Promise<boolean>;
 }
 
 // --- cache ---
@@ -36,12 +35,10 @@ export class PastHermidata {
 
     private readonly hermidata: HermidataModel;
     private readonly confirmPrompt: (message: string) => Promise<boolean>;
-    private readonly confirmMigration: (newer: HermidataModel, older: HermidataModel) => Promise<boolean>;
 
     constructor(hermidata: HermidataModel, prompts: PastHermidataPromptOptions = {}) {
         this.hermidata = hermidata;
         this.confirmPrompt = prompts.confirm ?? customConfirm;
-        this.confirmMigration = prompts.confirmMigration ?? confirmMigrationPrompt;
     }
 
     public async init(): Promise<Hermidata | null> {
@@ -68,20 +65,13 @@ export class PastHermidata {
             if (confirmation) await appendAltTitle(this.hermidata.title, possibleObj[fuzzyKey]);
         }
 
-        // only 1 result -> return
-        if ( Object.keys(possibleObj).length == 1 ) return false
+        // 0 or 1 result -> nothing to disambiguate
+        const candidates = this.collectCandidates(possibleObj, AllHermidata, potentialTrueTitle);
+        if (candidates.length <= 1) return false;
 
-        // more then 1 result -> filter it
-        if ( Object.keys(possibleObj).length > 1 ) {
-            const byOtherMeans = await this.tryToFindByOtherMeans(possibleObj);
-            if (byOtherMeans ) return byOtherMeans;
-            const objs = Object.values(possibleObj);
-            // Check for possible same-series different-type pairs
-            const result = await HermidataMigration.migrateCopy(objs, this.confirmMigration);
-            if (!(result instanceof Error) ) return result
-        }
-        // if less than 1 ( no results )
-        return false
+        // more than 1 result -> only a clear winner counts, an ambiguous one is never merged
+        const resolution = this.resolve(candidates);
+        return resolution.kind === 'match' ? resolution.item : false;
     }
 
 
@@ -109,18 +99,11 @@ export class PastHermidata {
             if (confirmation) await appendAltTitle(this.hermidata.title, possibleObj[fuzzyKey]);
         }
 
-        // only 1 result -> return
-        if ( Object.keys(possibleObj).length == 1 ) return Object.values(possibleObj)[0]
-
-        // more then 1 result -> filter it
-        if ( Object.keys(possibleObj).length > 1 ) {
-            const byOtherMeans = await this.tryToFindByOtherMeans(possibleObj);
-            if (byOtherMeans ) return byOtherMeans;
-            const objs = Object.values(possibleObj);
-            // Check for possible same-series different-type pairs
-            const result = await HermidataMigration.migrateCopy(objs, this.confirmMigration);
-            if (!(result instanceof Error) ) return result
-            else return null
+        // 1 or more results -> let the resolver pick; an ambiguous result is left for the user ( null )
+        const candidates = this.collectCandidates(possibleObj, AllHermidata, potentialTrueTitle);
+        if (candidates.length > 0) {
+            const resolution = this.resolve(candidates);
+            return resolution.kind === 'match' ? resolution.item : null;
         }
 
         const key: string = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
@@ -163,36 +146,18 @@ export class PastHermidata {
 
         return returnObj;
     }
-    private async tryToFindByOtherMeans(possibleObj: AllHermidata): Promise<Hermidata | null> {
-        // Try to find by URL domain or substring
-        const urlDomain = this.hermidata.GetUrl() ? new URL(this.hermidata.GetUrl()).hostname.replace(/^www\./, '') : "";
-        const byUrl = Object.values(possibleObj).find(item => {
-            try {
-                const storedDomain = new URL(item.chapter.bookmarks[item.chapter.bookmarkInUse].url || "").hostname.replace(/^www\./, '');
-                return storedDomain === urlDomain;
-            } catch { return false; }
-        });
-        if (byUrl) return byUrl;
-    
-        // Try to find same title + newest date
-        const sameTitleMatches = Object.values(possibleObj).filter(item => {
-            return TrimTitle.trimTitle(item.title, item.chapter.bookmarks[item.chapter.bookmarkInUse].url).title.toLowerCase() === TrimTitle.trimTitle(this.hermidata.title, this.hermidata.GetUrl()).title.toLowerCase();
-        });
-        if (sameTitleMatches.length) {
-            sameTitleMatches.sort((a, b) => new Date(b.meta.updated).getTime() - new Date(a.meta.updated).getTime());
-            return sameTitleMatches[0];
-        }
-         // Prefer the same type if exists
-        const typeKey = generateHermidataHash(this.hermidata.title, this.hermidata.novelType);
-        if (possibleObj[typeKey]) return possibleObj[typeKey];
-    
-        // Fallback: old V1 hash (title only)
-        const fallbackKey = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
-        const fallbackObj = await getHermidataViaKey(fallbackKey);
-        if (fallbackObj) return fallbackObj;
-    
-        // Nothing found
-        return null;
+    /**
+     * Every saved item that could be the current page: the per-type hash hits ( + fuzzy hit )
+     * and every item sharing the title, so items not stored under the hash of their title are found too
+     */
+    private collectCandidates(possibleObj: AllHermidata, allHermidata: AllHermidata, trueTitle: string): Hermidata[] {
+        const byTitle = trueTitle ? findAllByTitleOrAlt(trueTitle, allHermidata) : [];
+        const unique = new Map<string, Hermidata>();
+        for (const item of [...Object.values(possibleObj), ...byTitle]) unique.set(item.id, item);
+        return [...unique.values()];
+    }
+    private resolve(candidates: Hermidata[]): ItemResolution {
+        return resolveItem({ title: this.hermidata.title, url: this.hermidata.GetUrl() }, candidates);
     }
 }
 
