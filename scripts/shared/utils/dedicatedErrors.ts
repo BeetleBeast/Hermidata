@@ -9,6 +9,20 @@ export class NoPastFoundError extends Error {
     }
 }
 
+/** Several saved items match this page and none clearly wins: only the user can decide, so nothing is saved. */
+export class AmbiguousItemError extends Error {
+
+    public readonly url: string
+    public readonly candidateCount: number
+
+    constructor(url: string, candidateCount: number) {
+        super('Several saved items match this page.');
+        this.url = url
+        this.candidateCount = candidateCount
+        this.name = 'AmbiguousItemError';
+    }
+}
+
 export class SaveFailedError extends Error {
     constructor(message = 'Could not save chapter progress.', options?: ErrorOptions) {
         super(message, options);

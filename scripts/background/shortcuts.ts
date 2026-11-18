@@ -2,11 +2,11 @@ import { getSettings } from "../shared/db/Storage";
 import { HermidataService } from "../popup/in/service";
 import type { CurrentTab } from "../shared/types";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
-import { Message, ErrorMessage } from "../shared/utils/ErrorMessage";
+import { Message, ErrorMessage, WarningMessage } from "../shared/utils/ErrorMessage";
 import { saveNovelDirect } from "./rssCache";
 import { ext } from "../shared/utils/BrowserCompat";
 import { whenReady } from "./ready";
-import { NoPastFoundError } from "../shared/utils/dedicatedErrors";
+import { AmbiguousItemError, NoPastFoundError } from "../shared/utils/dedicatedErrors";
 
 type Command = "open-rss" | "open-library" | "save-hermidata";
 type ActiveWebTab = chrome.tabs.Tab & { id: number; title: string; url: string };
@@ -77,10 +77,9 @@ async function saveActiveTab(): Promise<void> {
 
         notifySaveSuccess(hermidata);
     } catch (error) {
-        if (error instanceof NoPastFoundError) {
-            // expected outcome: log quietly, show a helpful hint, not an error
-            return notifyNoPast();
-        }
+        // expected outcome: log quietly, show a helpful hint, not an error
+        if (error instanceof AmbiguousItemError) return notifyAmbiguous(error);
+        if (error instanceof NoPastFoundError) return notifyNoPast();
         notifySaveFailure(error);
     }
 }
@@ -113,6 +112,13 @@ function notifySaveFailure(error: unknown): void {
         notificationTarget: 'toast',
         locationSender: 'background',
         details: [error], // the raw message stays in details/console, not in the toast
+    }).sendMessage();
+}
+
+function notifyAmbiguous(error: AmbiguousItemError): void {
+    new WarningMessage(`${error.candidateCount} saved items match this page, so nothing was saved. ` + 'Open the popup to choose which one to update.', undefined, {
+        notificationTarget: 'toast',
+        locationSender: 'background'
     }).sendMessage();
 }
 

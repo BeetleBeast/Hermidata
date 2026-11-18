@@ -6,7 +6,7 @@ import { getChapterFromTitle } from "../../shared/utils/StringOutput";
 
 import { createSeparateItem, getPagePosition, updateChapterProgress } from "../core/save";
 import { PastHermidata, type PastHermidataPromptOptions } from "../core/Past";
-import { NoPastFoundError, SaveFailedError } from "../../shared/utils/dedicatedErrors";
+import { AmbiguousItemError, NoPastFoundError, SaveFailedError } from "../../shared/utils/dedicatedErrors";
 
 
 type SaveTargetOptions = {
@@ -68,6 +68,8 @@ export class HermidataService {
         const past = new PastHermidata(candidate, this.pastPrompts);
         const hasPastAndSaved = await candidate.SetPast(past);
 
+        // several same-titled items and no clear winner: never guess without a UI to ask in
+        if (past.resolution?.kind === 'ambiguous') throw new AmbiguousItemError(tab.url, past.resolution.candidates.length);
         // if no past was found, return
         if (!hasPastAndSaved) throw new NoPastFoundError(tab.url);
 

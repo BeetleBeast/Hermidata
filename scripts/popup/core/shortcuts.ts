@@ -6,7 +6,8 @@ import type { CurrentTab, KeyboardShortcutSettings, Settings } from "../../share
 import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getChapterFromTitle } from "../../shared/utils/StringOutput";
-import { ErrorMessage } from "../../shared/utils/ErrorMessage";
+import { ErrorMessage, WarningMessage } from "../../shared/utils/ErrorMessage";
+import { AmbiguousItemError } from "../../shared/utils/dedicatedErrors";
 import { HermidataService } from "../in/service";
 import { PastHermidata } from "./Past";
 import { matchesKeyboardShortcut, matchesShortcutKey } from "../../shared/utils/KeyboardShortcuts";
@@ -178,6 +179,10 @@ async function saveProgress(e: KeyboardEvent) {
         setTimeout(() => window.close(), 400);
         
     } catch (error) {
+        if (error instanceof AmbiguousItemError) {
+            new WarningMessage(`${error.candidateCount} saved items match this page, so nothing was saved. ` + 'Use the Save buttons to save to the item you picked.').sendMessage();
+            return;
+        }
         new ErrorMessage("Could not save this item.", undefined, { details: [error] }).sendMessage();
     } finally {
         setSaveInProgress(false);
@@ -209,6 +214,8 @@ export class ModeSwitcher {
 
     private Hermidata: HermidataModel | null = null;
 
+    private past: PastHermidata | null = null;
+
     private RSS: RSS | null = null;
 
     public async init() {
@@ -234,6 +241,8 @@ export class ModeSwitcher {
     }
 
     public async saveCurrentHermidata(): Promise<void> {
+        const resolution = this.past?.resolution;
+        if (resolution?.kind === 'ambiguous') throw new AmbiguousItemError(this.Hermidata?.GetUrl() ?? '', resolution.candidates.length);
         if (!this.Hermidata) throw new Error("Hermidata not initialized.");
         await new HermidataService(await getSettings()).saveHermidata(this.Hermidata);
     }
@@ -269,9 +278,10 @@ export class ModeSwitcher {
         // set the values from the tab
         Hermidata.SetFromTab(CurrentTabInfo);
         // initialize the  PastHermidata class
-        const past = new PastHermidata(Hermidata);
+        this.past = new PastHermidata(Hermidata);
+        
         // create the Hermidata with all values set from a past if it exists
-        const hasPastAndSaved = await Hermidata.SetPast(past);
+        const hasPastAndSaved = await Hermidata.SetPast(this.past);
 
         // if no past was found, return
         if (!hasPastAndSaved) return null;
