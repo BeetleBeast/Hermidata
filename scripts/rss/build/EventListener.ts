@@ -1,6 +1,6 @@
 import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
-import { getMultipleTitles, openLink, generateHermidataHash, TrimTitle } from "../../shared/utils/StringOutput";
+import { getMultipleTitles, openLink, generateHermidataHash, getFreeKey, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
 import { getElement } from "../../shared/utils/Selection";
@@ -462,7 +462,8 @@ export class EventListener extends RssBuild {
             return;
         }
         // Generate new key and object
-        const newKey = generateHermidataHash(newTitle, oldData.novelType, oldData.GetUrl(), false);
+        // never move onto a key another item holds ( a separate same-titled item keeps its own id )
+        const newKey = getFreeKey(oldKey, generateHermidataHash(newTitle, oldData.novelType, oldData.GetUrl(), false), this.AllHermidata);
         const TrimmedTitle = TrimTitle.trimTitle(newTitle, oldData.GetUrl()).title;
 
         const newData: HermidataModel = oldData.Copy();
@@ -473,8 +474,9 @@ export class EventListener extends RssBuild {
         if (TrimmedTitle === newTitle) newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), TrimmedTitle]) );
         else newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), oldData.title, TrimmedTitle]) );
     
-        // Save and clean up
-        await updateHermidata(oldKey, newKey, newData.toJSON());
+        // Save and clean up ( same key: a plain save, since a re-key deletes the old key after writing the new one )
+        if (newKey === oldKey) await saveHermidata(oldKey, newData.toJSON());
+        else await updateHermidata(oldKey, newKey, newData.toJSON());
     
         //  update your in-memory list
         delete this.AllHermidata[oldKey];

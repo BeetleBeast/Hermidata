@@ -412,6 +412,13 @@ class HermidataController {
         
         // 3. If the novel type has changed, generate a new id
         const newId = generateHermidataHash(this.hermidata.title, this.hermidata.novelType);
+
+        // that title and type is already another saved item ( e.g. a separate manga ): merging into it would overwrite it
+        const holder = (await PastHermidata.getAllHermidata())[newId];
+        if (holder && holder.id !== this.past.pastHermidata.id) {
+            new WarningMessage(`"${holder.title}" (${holder.novelType}) is already saved, so the type was not changed and nothing was saved.`).sendMessage();
+            return false;
+        }
         this.hermidata.id = newId;
         
         // 4. If the user confirms the merge, merge the two hermidatas and return the new hermidata, else return false

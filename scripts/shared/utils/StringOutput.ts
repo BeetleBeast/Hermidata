@@ -299,6 +299,13 @@ export function generateHermidataHash(title: string, type: AnyNovelType, url: st
     const finalTitle = trimTitle ? TrimTitle.trimTitle(title, url).title : title;
     return simpleHash(`${type}:${finalTitle.toLowerCase()}`) // V2
 }
+/**
+ * The key an item moves to after its title or type changed: the wanted key, unless another item already holds it.
+ * Then the item keeps its own key, so a re-key never overwrites a different ( e.g. separate same-titled ) item.
+ */
+export function getFreeKey(oldKey: string, wantedKey: string, allData: Record<string, Hermidata>): string {
+    return wantedKey !== oldKey && allData[wantedKey] ? oldKey : wantedKey;
+}
 export function generateBookmarkId(bookmarkLabel: string) {
     return simpleHash(bookmarkLabel);
 }
