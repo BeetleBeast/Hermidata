@@ -10,7 +10,7 @@ import { writeToSheet } from "./sheets"
 import { lastAutoFeedCheck, lastFeedCheck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
 import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput"
-import { pushToSync, removeFromSync } from "../shared/db/sync"
+import { pushToSync, removeFromSync } from "../shared/sync/sync.engine"
 
 let rssCache: Record<string, Hermidata> | null = null
 let rssCachePromise: Promise<Record<string, Hermidata>> | null = null

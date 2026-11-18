@@ -146,3 +146,23 @@ export type {
     KeyboardShortcutSettings
 
 } from "./settings";
+
+export type {
+
+    SyncBackend,
+    SyncDeps,
+    RemoteBlob,
+    WriteResult,
+
+    ConnectionTest,
+    WebDavProblem,
+    WebDavConfig,
+    AlarmsLike,
+    SyncBackendConfig,
+    SyncSwitchMode,
+    EnvelopeHeader,
+    PassphraseSlot,
+    RecoverySlot,
+    KeyStore,
+
+} from './sync';

@@ -7,7 +7,7 @@ import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
 import { RSS } from '../../rss/main';
 import { getAllHermidata, getSettings } from '../../shared/db/Storage';
-import { checkSyncQuota } from '../../shared/db/sync';
+import { checkSyncQuota } from '../../shared/sync/sync.engine';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     setTimeout( async () => checkSyncQuota(), 500);
+    // look for changes from other devices now instead of waiting for the next poll (fire and forget)
+    ext.runtime.sendMessage({ type: 'SYNC_REFRESH' }).catch(() => undefined);
 });
 
 document.addEventListener('keydown', async (e) => shortcutEventListener(e));

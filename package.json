@@ -8,7 +8,8 @@
     "build": "vite build && vite build --config vite.content.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "sync:server": "node -e \"require('fs').mkdirSync('.dav-server',{recursive:true})\" && rclone serve webdav .dav-server --addr 127.0.0.1:8080 --user hermidata --pass hermidata"
   },
   "type": "module",
   "keywords": [],

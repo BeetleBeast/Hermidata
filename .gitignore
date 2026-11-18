@@ -22,3 +22,5 @@ output/*
 # ignore all data test's
 tests/data/*
 tests/test-data/*
+# local WebDAV test server data (npm run sync:server)
+.dav-server/
