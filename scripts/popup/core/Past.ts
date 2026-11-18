@@ -33,8 +33,12 @@ export class PastHermidata {
 
     public pastHermidata: Hermidata | null = null;
 
+    /** How the last lookup matched same-titled items; null when no same-titled item exists */
+    public resolution: ItemResolution | null = null;
+
     private readonly hermidata: HermidataModel;
     private readonly confirmPrompt: (message: string) => Promise<boolean>;
+    private chosen: Hermidata | null = null;
 
     constructor(hermidata: HermidataModel, prompts: PastHermidataPromptOptions = {}) {
         this.hermidata = hermidata;
@@ -42,8 +46,15 @@ export class PastHermidata {
     }
 
     public async init(): Promise<Hermidata | null> {
-        this.pastHermidata = await this.getPastHermidata();
+        this.pastHermidata = this.chosen ?? await this.getPastHermidata();
         return this.pastHermidata;
+    }
+    /** The user settled an ambiguous match; the next init() returns this item */
+    public choose(item: Hermidata): void {
+        this.chosen = item;
+    }
+    public get isAmbiguous(): boolean {
+        return this.resolution?.kind === 'ambiguous';
     }
     public async checkForDuplicates(): Promise<Hermidata | false> {
         // get all Hermidata
@@ -101,10 +112,8 @@ export class PastHermidata {
 
         // 1 or more results -> let the resolver pick; an ambiguous result is left for the user ( null )
         const candidates = this.collectCandidates(possibleObj, AllHermidata, potentialTrueTitle);
-        if (candidates.length > 0) {
-            const resolution = this.resolve(candidates);
-            return resolution.kind === 'match' ? resolution.item : null;
-        }
+        this.resolution = candidates.length > 0 ? this.resolve(candidates) : null;
+        if (this.resolution) return this.resolution.kind === 'match' ? this.resolution.item : null;
 
         const key: string = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
 

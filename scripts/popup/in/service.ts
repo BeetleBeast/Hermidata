@@ -4,7 +4,7 @@ import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getChapterFromTitle } from "../../shared/utils/StringOutput";
 
-import { getPagePosition, updateChapterProgress } from "../core/save";
+import { createSeparateItem, getPagePosition, updateChapterProgress } from "../core/save";
 import { PastHermidata, type PastHermidataPromptOptions } from "../core/Past";
 import { NoPastFoundError, SaveFailedError } from "../../shared/utils/dedicatedErrors";
 
@@ -48,6 +48,13 @@ export class HermidataService {
 
         return savedInStorage && saved;
 
+    }
+
+    /** Saves the page as a new item next to a same-titled one, instead of updating that one */
+    public async saveAsSeparateItem(page: HermidataModel): Promise<boolean> {
+        const item = await createSeparateItem(page.title, page.GetUrl(), page.novelType);
+        page.id = item.id; // the normal save now finds the new item by its id
+        return this.saveHermidata(page);
     }
 
     public async saveCurrentTab(tab: Pick<CurrentTab, "pageTitle" | "url">): Promise<HermidataModel> {

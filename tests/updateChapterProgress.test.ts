@@ -71,6 +71,16 @@ describe('updateChapterProgress', () => {
         expect(savedKeys()).toEqual([pageKey(page)]);
     });
 
+    it('updates an item by its own id when it is not stored under the hash of its title', async () => {
+        const page = createPage('Solo Leveling', 10);
+        page.id = 'separate-id';
+        vi.mocked(getHermidataViaKey).mockImplementation(async (key: string) => key === 'separate-id' ? createSaved('Solo Leveling', 'separate-id') : null);
+
+        expect(await updateChapterProgress(page)).toBe(true);
+        expect(savedKeys()).toEqual(['separate-id']);
+        expect(pastInit).not.toHaveBeenCalled();
+    });
+
     it('reports success when the saved title only differs in case', async () => {
         const page = createPage('Solo Leveling', 10);
         vi.mocked(getHermidataViaKey).mockResolvedValue(createSaved('solo leveling', pageKey(page)));

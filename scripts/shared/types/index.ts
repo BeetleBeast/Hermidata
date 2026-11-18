@@ -57,6 +57,7 @@ export type {
     Migration,
 
     ReleaseSchedule,
+    RelatedWorkType,
 
 } from "./popup";
 

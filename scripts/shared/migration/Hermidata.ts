@@ -466,8 +466,8 @@ export class HermidataMigration {
                 relations: newer.meta.relations ?? older.meta.relations,
             }
         }
-        // step 3. save & remove key
-        updateHermidata(oldKey, newKey, merged);
+        // step 3. save & remove key ( awaited, so a save right after the merge finds the merged item )
+        await updateHermidata(oldKey, newKey, merged);
 
         return merged;
     

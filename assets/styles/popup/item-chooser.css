@@ -1,0 +1,118 @@
+/* --- save actions ( footer ) --- */
+
+.saveActions {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+/* secondary to Save: same shape, quieter so Save stays the obvious one-click action */
+.saveSeparate {
+    margin-top: 10px;
+    color: var(--text-muted);
+    background-color: transparent;
+    border-color: var(--border);
+}
+.saveSeparate:hover {
+    color: var(--text);
+}
+.saveSeparate:disabled {
+    color: var(--text-disabled);
+    cursor: wait;
+}
+.saveSeparate[hidden] {
+    display: none;
+}
+
+/* --- item chooser ( ambiguous same-title match ) --- */
+
+.itemChooser {
+    width: min(420px, calc(100vw - 32px));
+    padding: 14px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    box-shadow: 0 8px 20px var(--shadow-soft);
+}
+.itemChooser::backdrop {
+    background: var(--overlay);
+}
+
+.itemChooser-hint {
+    margin: 10px 2px 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.itemChooser-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 260px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.itemChooser-option {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    padding: 9px 12px;
+    text-align: left;
+    color: var(--text);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--surface-input);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.itemChooser-option:hover {
+    background-color: var(--accent-hover-dark);
+    border-color: var(--accent-soft);
+}
+.itemChooser-option:focus-visible {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: 1px;
+}
+
+.itemChooser-option-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.itemChooser-option-title {
+    overflow: hidden;
+    color: var(--text-highlight);
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.itemChooser-option-type {
+    flex-shrink: 0;
+    padding: 1px 8px;
+    color: var(--accent-hover-soft);
+    font-size: 12px;
+    border: 1px solid var(--accent-dark);
+    border-radius: 999px;
+}
+.itemChooser-option-meta {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.itemChooser-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .itemChooser-option {
+        transition: none;
+    }
+}

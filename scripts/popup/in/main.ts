@@ -13,6 +13,8 @@ import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
+import { chooseItem } from '../frontend/itemChooser';
+import { linkAsAdaptation } from '../core/save';
 import { HermidataService } from "./service";
 import { shortcutEventListener } from "../core/shortcuts";
 
@@ -221,6 +223,9 @@ class HermidataController {
         
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
+        // a same-titled item exists, so this page could also be a separate work ( hidden for new items )
+        setElement<HTMLButtonElement>('#saveSeparate', el => el.hidden = this.pastHermidata === null && !this.past.isAmbiguous);
+
         const state = stateConfig[this.getState()];
         setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
         setElement<HTMLTitleElement>('.RSSLinkState-title', el => el.textContent = state.tooltip);
@@ -234,6 +239,7 @@ class HermidataController {
     }
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
+        getElement('#saveSeparate')?.addEventListener('click', () => this.saveAsSeparateItem());
 
         getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e as PointerEvent));
         getElement("#HDRssBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e as PointerEvent));
@@ -312,12 +318,68 @@ class HermidataController {
         }
     }
     private setSaveInProgress(isSaving: boolean): void {
+        setElement<HTMLButtonElement>('#saveSeparate', el => el.disabled = isSaving);
+
         const button = getElement<HTMLButtonElement>('#save');
         if (!button) return;
 
         button.disabled = isSaving;
         button.setAttribute('aria-busy', String(isSaving));
         button.dataset.saving = String(isSaving);
+    }
+    /** Saves the page as its own item, leaving the same-titled saved item untouched */
+    private async saveAsSeparateItem(): Promise<void> {
+        if (this.isSaving || !this.service) return;
+        this.isSaving = true;
+        this.setSaveInProgress(true);
+        let closeAfterSave = false;
+
+        try {
+            const page = await this.createSeparatePage();
+            const original = this.pastHermidata;
+
+            // a different type of the same title is most likely an adaptation ( novel <-> manga )
+            const link = original !== null && original.novelType !== page.novelType && await customConfirm(
+                `Link "${page.title}" (${page.novelType}) and "${original.title}" (${original.novelType}) as adaptations of each other?`,
+                { accept: "Link", reject: "Don't link" }
+            );
+
+            await this.updateSettings(await getSettings());
+            const saved = await this.service.saveAsSeparateItem(page);
+
+            if (saved && link && original) await linkAsAdaptation(original.id, page.id).catch(error => new ErrorMessage("Saved the new item, but could not link it to the existing one.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage());
+
+            if (!this.Testing && saved) {
+                closeAfterSave = true;
+                setTimeout(() => window.close(), 400);
+            }
+        } catch (error) {
+            new ErrorMessage("Could not save this page as a separate item.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage();
+        } finally {
+            if (!closeAfterSave) {
+                this.isSaving = false;
+                this.setSaveInProgress(false);
+            }
+        }
+    }
+    /** A fresh item from the current tab and the form, without the saved item's markers or history */
+    private async createSeparatePage(): Promise<HermidataModel> {
+        const { title, Type, Chapter, status, novelStatuses, notes } = this.getLatestValueFromUI();
+        if (!title || !Type || !status || !novelStatuses) throw new Error('Missing required fields');
+
+        const page = HermidataModel.from(Type, status, novelStatuses);
+        page.SetFromTab(await HermidataController.getCurrentTabInfo());
+        page.title = title;
+        page.SetChapter(Chapter);
+        page.meta.tags = this.tagsSystem.tags;
+        page.meta.notes = notes;
+        return page;
     }
     /** merge novel type if changed */
     private async updateNovelType(): Promise<boolean> {
@@ -441,7 +503,16 @@ export async function startup(): Promise<{Hermidata: HermidataModel, past: PastH
     const past = new PastHermidata(Hermidata);
     // create the Hermidata with all values set from a past if it exists
     await Hermidata.SetPast(past);
-    
+
+    // several same-titled items and no clear winner: the user decides, nothing is picked for them
+    if (past.resolution?.kind === 'ambiguous') {
+        const chosen = await chooseItem(past.resolution.candidates);
+        if (chosen) {
+            past.choose(chosen);
+            await Hermidata.SetPast(past);
+        }
+    }
+
     return { Hermidata, past };
 }
 

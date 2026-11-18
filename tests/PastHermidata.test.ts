@@ -77,6 +77,39 @@ describe('PastHermidata.init', () => {
     });
 });
 
+describe('PastHermidata ambiguity', () => {
+    it('exposes the candidates of an ambiguous match', async () => {
+        setStore(novel, manga);
+        const past = new PastHermidata(createCurrent('Solo Leveling', 'https://aggregator.com/solo-leveling/chapter-4'));
+        await past.init();
+
+        expect(past.isAmbiguous).toBe(true);
+        if (past.resolution?.kind !== 'ambiguous') throw new Error('expected an ambiguous resolution');
+        expect(past.resolution.candidates.map(candidate => candidate.item.id).sort()).toEqual([novel.id, manga.id].sort());
+    });
+
+    it('is not ambiguous for a clear match or an unknown title', async () => {
+        setStore(novel, manga);
+        const clear = new PastHermidata(createCurrent('Solo Leveling', 'https://novels.com/solo-leveling/chapter-4'));
+        await clear.init();
+        expect(clear.isAmbiguous).toBe(false);
+
+        const unknown = new PastHermidata(createCurrent('Omniscient Reader', 'https://novels.com/orv/chapter-4'));
+        await unknown.init();
+        expect(unknown.isAmbiguous).toBe(false);
+        expect(unknown.resolution).toBeNull();
+    });
+
+    it('returns the chosen item once the user settled an ambiguous match', async () => {
+        setStore(novel, manga);
+        const past = new PastHermidata(createCurrent('Solo Leveling', 'https://aggregator.com/solo-leveling/chapter-4'));
+        await past.init();
+
+        past.choose(manga);
+        expect((await past.init())?.id).toBe(manga.id);
+    });
+});
+
 describe('PastHermidata.checkForDuplicates', () => {
     it('reports no duplicate for a single item', async () => {
         setStore(novel);

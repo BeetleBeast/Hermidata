@@ -51,16 +51,18 @@ export type ContentWarning = 'Nudity' | 'Violence' | 'Sex' | 'Language' | 'Mild 
 
 export type ReleaseSchedule = 'Once' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly' | 'Irregular' | 'Unknown';
 
+export type RelatedWorkType = 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary' | 'adaptation';
+
 export type Relation = {
-    series: {
+    series?: { // optional: an item can be related to others without being part of a series
         seriesId: string;
         position: number;
     },
     relatedWorks: {
-        type: 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary' | 'adaptation';
+        type: RelatedWorkType;
         id: string;
     }[]
-} 
+}
 
 export interface Bookmark { // new
     version: number;

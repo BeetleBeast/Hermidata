@@ -17,14 +17,16 @@ export async function updateChapterProgress( hermidata: HermidataModel, pastProm
         const newChapterNumber = hermidata.GetChapter();
 
         const key = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl(), false);
-        const data = await getHermidataViaKey(key);
+        // an item that already has an id is that item, even when it is not stored under the hash of its title ( separate items )
+        const byId = hermidata.id ? await getHermidataViaKey(hermidata.id) : null;
+        const data = byId ?? await getHermidataViaKey(key);
 
         // not stored under the computed key: look for the saved item ( e.g. found by alt title ), otherwise it is new
         const past = data ? null : await new PastHermidata(hermidata, pastPrompts).init();
         const entry = new HermidataModel(data ?? past ?? await makeHermidata(hermidata.title, hermidata.GetUrl(), hermidata.novelType));
 
         // a found item keeps its own id, so it is updated in place instead of copied under a new key
-        const saveKey = past ? entry.id : key;
+        const saveKey = byId || past ? entry.id : key;
 
         const oldChapterNumber = entry.GetChapter(hermidata.chapter.bookmarkInUse) || entry.GetChapter();
         if (newChapterNumber >= oldChapterNumber) {
@@ -142,4 +144,30 @@ export async function appendAltTitle(newTitle: string, entry: Hermidata): Promis
 
     await saveHermidata(entryKey, hermidata.toJSON());
     console.log(`[Hermidata] Added alt title "${trimmed}" for ${hermidata.title}`);
+}
+
+/**
+ * Stores a new, empty item for a separate work that shares its title with a saved one.
+ * - it gets the hash of its title and type when that is free ( e.g. the manga of a saved novel )
+ * - otherwise a random id, so the item already stored under that hash is never overwritten
+ */
+export async function createSeparateItem(title: string, url: string, novelType: AnyNovelType): Promise<Hermidata> {
+    const item = await makeHermidata(title, url, novelType);
+    if (await getHermidataViaKey(item.id)) item.id = crypto.randomUUID();
+    await saveHermidata(item.id, item);
+    return item;
+}
+
+/** Links two items as adaptations of each other ( e.g. a novel and its manga ) */
+export async function linkAsAdaptation(idA: string, idB: string): Promise<void> {
+    const [a, b] = await Promise.all([getHermidataViaKey(idA), getHermidataViaKey(idB)]);
+    if (!a || !b) throw new Error("Could not find both items to link.");
+
+    const modelA = new HermidataModel(a);
+    const modelB = new HermidataModel(b);
+    modelA.AddRelatedWork('adaptation', idB);
+    modelB.AddRelatedWork('adaptation', idA);
+
+    await saveHermidata(idA, modelA.toJSON());
+    await saveHermidata(idB, modelB.toJSON());
 }
