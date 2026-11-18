@@ -129,6 +129,8 @@ export type {
 
     DefaultChoice,
     Settings,
+    SheetProblem,
+    SheetCheck,
 
     elementInput,
     elementMenu,
