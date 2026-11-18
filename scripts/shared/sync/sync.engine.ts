@@ -1,37 +1,47 @@
 import { HermidataMigration } from "../migration/Hermidata";
-import type { Feed, Hermidata, SyncDeps } from "../types";
+import type { Feed, Hermidata } from "../types";
 import { ext } from "../utils/BrowserCompat";
 import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 
-import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from './db';
+import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from '../db/db';
+import { BrowserSyncBackend } from './BrowserSyncBackend';
+import type { RemoteBlob, SyncBackend, WriteResult } from '../types';
+import { ConflictError } from '../utils/dedicatedErrors';
 
 
 // ---------------------------------------------------------------- constants
 
-const LIB_PREFIX = 'lib:';
-const META_KEY = 'lib:meta';
 const TOMBSTONE_KEY = 'syncTombstones'; // storage.local
 const BLOCKED_KEY = 'syncBlocked'; // storage.local
 const WARN_AT_KEY = 'syncWarnAt'; // storage.local
 
-const CHUNK_SIZE = 7_500; // chars; per-item cap is 8192 incl. key + quotes
-const QUOTA_BYTES = 102_400;
-const SAFETY_MARGIN = 1_024;
-const WARN_RATIO = 0.9;
 const TOMBSTONE_TTL_MS = 30 * 24 * 3_600 * 1_000;
 const PUSH_DEBOUNCE_MS = 3_000;
 const PULL_DEBOUNCE_MS = 1_500;
 const WARN_INTERVAL_MS = 24 * 3_600 * 1_000;
 const MAX_INCOMPLETE_RETRIES = 4;
+const MAX_PUSH_ATTEMPTS = 4;
 
 // -------------------------------------------------------------------- types
 
-type SnapshotMeta = { rev: number; n: number; len: number; d: string };
 type Snapshot = { entries: Hermidata[]; tombstones: Record<string, number> };
-type ReadResult = { meta: SnapshotMeta; snapshot: Snapshot } | 'none' | 'incomplete';
+type ReadResult = { blob: RemoteBlob; snapshot: Snapshot } | 'none' | 'incomplete' | 'unchanged';
 type Tombstones = Record<string, number>;
 type LocalState = { all: Hermidata[]; tombs: Tombstones };
-type PreparedWrite = { items: Record<string, unknown>; rev: number; chunkCount: number };
+
+export interface SyncDeps {
+    getAll(): Promise<Hermidata[]>;
+    /** Must NOT trigger a re-sync (your putHermidata(h, false)). */
+    put(h: Hermidata): Promise<void>;
+    /** Must NOT trigger a re-sync (your deleteHermidata(id, false)). */
+    remove(id: string): Promise<void>;
+    /** Migrate to the latest version; null if it can't be migrated. */
+    prepareRemote(h: Hermidata): Hermidata | null;
+    getDeviceId(): Promise<string>;
+    onTooBig(neededKb: number): void;
+    onNearlyFull(neededKb: number): void;
+    onError(message: string, err: unknown): void;
+}
 
 // ------------------------------------------------------ compression helpers
 
@@ -81,7 +91,7 @@ const unpackTs = (v: unknown) => walk(v, (k, x) =>
 /** RSS cache (lastFetched / latestItem) is per-device and re-fetchable: don't sync it. */
 const stripRss = (h: Hermidata): Hermidata => ({
     ...h,
-    rss: h.rss.map(({ lastFetched, latestItem, ...config }) => config as Feed),
+    rss: h.rss.map(({ lastFetched, latestItem, ...config }: any) => config as Feed),
 });
 
 /** When a remote entry wins, keep this device's RSS cache for feeds it already has. */
@@ -110,30 +120,15 @@ async function decodePayload(packed: string): Promise<Snapshot> {
     return { entries: unpackTs(payload.e) as Hermidata[], tombstones: payload.t ?? {} };
 }
 
-function splitChunks(packed: string): string[] {
-    const chunks: string[] = [];
-    for (let i = 0; i < packed.length; i += CHUNK_SIZE) chunks.push(packed.slice(i, i + CHUNK_SIZE));
-    return chunks;
-}
-
 // ------------------------------------------------------------ small helpers
 
 const ts = (h: Hermidata) => Date.parse(h.meta.updated) || 0;
 const toKb = (bytes: number) => Math.round(bytes / 1024);
-const itemBytes = (key: string, value: string) => key.length + value.length + 2; // quota counts JSON-stringified value
-
-/** Quota cost of everything one set() call will write. */
-const bytesNeeded = (items: Record<string, unknown>) =>
-    Object.entries(items).reduce(
-        (n, [key, value]) => n + itemBytes(key, typeof value === 'string' ? value : JSON.stringify(value)),
-        0,
-    );
 
 // -------------------------------------------------------------------- class
 /**
- * All-or-nothing library sync over storage.sync:
- * - the whole library is one gzip+base64 snapshot, split over a few chunk keys
- * - written with a single set() call, so it either lands completely or not at all
+ * All-or-nothing library sync. The engine decides WHAT to publish; a SyncBackend decides WHERE.
+ * - the whole library is one compressed snapshot, published in a single write
  * - per-novel conflict resolution by newest meta.updated
  * - deletes are tombstones, so merging never resurrects a deleted novel
  * - nothing is ever pushed before the first pull has finished
@@ -144,23 +139,25 @@ export class HermidataSync {
     private queue: Promise<void> = Promise.resolve();   // serializes pull / merge / push
     private ready = false;                              // true once the first pull has finished
     private dirty = false;                              // local changes made before ready
-    private knownRev = 0;                               // newest remote revision we have merged or written
+    private known: RemoteBlob | null = null;            // newest published snapshot we have merged or written
     private incompleteRetries = 0;
 
     private readonly deps: SyncDeps;
-    private readonly api: typeof ext;
+    private readonly api: typeof ext;                   // device-local state: tombstones, flags
+    private readonly backend: SyncBackend;
 
-    constructor(deps: SyncDeps, api: typeof ext = ext) {
+    constructor(deps: SyncDeps, api: typeof ext = ext, backend?: SyncBackend) {
         this.deps = deps;
         this.api = api;
+        this.backend = backend ?? new BrowserSyncBackend(api, () => deps.getDeviceId());
     }
 
     // ------------------------------------------------------------ public API
 
     /** Call synchronously at the top level of the background script (MV3 requirement). */
     start(): void {
-        this.api.storage.onChanged.addListener(this.onChanged);
-        this.enqueue(() => this.initialSync());
+        this.backend.watch?.(() => this.schedulePull());
+        this.enqueue(() => this.pull());
     }
 
     /** Call after every local put. Cheap: debounced into one write per burst. */
@@ -168,6 +165,11 @@ export class HermidataSync {
         if (!this.ready) { this.dirty = true; return; }
         clearTimeout(this.pushTimer);
         this.pushTimer = setTimeout(() => this.enqueue(() => this.pushSnapshot()), PUSH_DEBOUNCE_MS);
+    }
+
+    /** Check the remote for changes now (e.g. when the popup opens). Debounced like a watch event. */
+    refresh(): void {
+        this.schedulePull();
     }
 
     /** Resolves when all currently queued work (pull / merge / push) has finished. Used by tests. */
@@ -193,12 +195,6 @@ export class HermidataSync {
         return this.queue;
     }
 
-    private onChanged = (changes: Record<string, unknown>, area: string): void => {
-        if (area !== 'sync') return;
-        if (!Object.keys(changes).some(k => k.startsWith(LIB_PREFIX))) return;
-        this.schedulePull();
-    };
-
     private schedulePull(): void {
         clearTimeout(this.pullTimer);
         this.pullTimer = setTimeout(() => this.enqueue(() => this.pull()), PULL_DEBOUNCE_MS);
@@ -220,19 +216,22 @@ export class HermidataSync {
         return Object.fromEntries(Object.entries(t).filter(([, at]) => at > cutoff));
     }
 
-    // -------------------------------------------------------------- startup
+    // ----------------------------------------------------------------- pull
 
-    /** Pull first. Only after this finishes is pushing allowed. */
-    private async initialSync(): Promise<void> {
-        const result = await this.readSnapshot();
+    /** The first pull is also the startup sync: only after it finishes is pushing allowed. */
+    private async pull(): Promise<void> {
+        const result = await this.readRemote();
 
-        if (result === 'incomplete') {
-            // Remote exists but isn't fully readable yet: stay not-ready so we never overwrite it.
-            this.retryIncomplete();
-            return;
-        }
-        if (result !== 'none') await this.mergeRemote(result.snapshot, result.meta.rev);
-        this.markReady(result === 'none');
+        // remote exists but isn't fully readable yet: stay not-ready so we never overwrite it
+        if (result === 'incomplete') { this.retryIncomplete(); return; }
+        this.incompleteRetries = 0;
+        if (result === 'none') { if (!this.ready) this.markReady(true); return; }
+
+        // our own write, or a version we already merged
+        if (result === 'unchanged') { if (!this.ready) this.markReady(false); return; }
+
+        await this.mergeRemote(result.snapshot, result.blob);
+        if (!this.ready) this.markReady(false);
     }
 
     private markReady(remoteWasEmpty: boolean): void {
@@ -252,52 +251,21 @@ export class HermidataSync {
         setTimeout(() => this.schedulePull(), 5000 * this.incompleteRetries);
     }
 
-    // ----------------------------------------------------------------- pull
-
-    private async pull(): Promise<void> {
-        const result = await this.readSnapshot();
-
-        if (result === 'incomplete') { this.retryIncomplete(); return; }
-        if (result === 'none') { if (!this.ready) this.markReady(true); return; }
-
-        // our own write, or a revision we already merged
-        if (result.meta.rev <= this.knownRev) { if (!this.ready) this.markReady(false); return; }
-
-        await this.mergeRemote(result.snapshot, result.meta.rev);
-        if (!this.ready) this.markReady(false);
-    }
-
     // -------------------------------------------------------- reading remote
 
-    private async readSnapshot(): Promise<ReadResult> {
-        const meta = await this.readMeta();
-        if (!meta) return 'none';
+    private async readRemote(): Promise<ReadResult> {
+        const blob = await this.backend.read(this.known?.version);
 
-        const packed = await this.readChunks(meta);
-        if (packed === null) return 'incomplete';
+        if (blob === null) return 'none';
+        if (blob === 'incomplete' || blob === 'unchanged') return blob;
+        if (blob.version === this.known?.version) return 'unchanged';  // backend without conditional reads
 
-        return this.decodeSnapshot(meta, packed);
+        return this.decodeSnapshot(blob);
     }
 
-    private async readMeta(): Promise<SnapshotMeta | undefined> {
-        const got = await this.api.storage.sync.get(META_KEY);
-        return got[META_KEY] as SnapshotMeta | undefined;
-    }
-
-    /** All chunks joined, or null if any is missing or the total length is off (never half-apply). */
-    private async readChunks(meta: SnapshotMeta): Promise<string | null> {
-        const keys = Array.from({ length: meta.n }, (_, i) => `${LIB_PREFIX}${i}`);
-        const got = await this.api.storage.sync.get(keys);
-        const parts = keys.map(k => got[k]);
-
-        if (parts.some(p => typeof p !== 'string')) return null;
-        const joined = (parts as string[]).join('');
-        return joined.length === meta.len ? joined : null;
-    }
-
-    private async decodeSnapshot(meta: SnapshotMeta, packed: string): Promise<ReadResult> {
+    private async decodeSnapshot(blob: RemoteBlob): Promise<ReadResult> {
         try {
-            return { meta, snapshot: await decodePayload(packed) };
+            return { blob, snapshot: await decodePayload(blob.data) };
         } catch (err) {
             this.deps.onError('[Sync] could not decode remote snapshot', err);
             return 'incomplete';
@@ -306,7 +274,8 @@ export class HermidataSync {
 
     // ----------------------------------------------------------------- merge
 
-    private async mergeRemote(remote: Snapshot, rev: number): Promise<void> {
+    /** Folds a remote snapshot into the local library. pushIfBehind=false when the caller is about to write anyway. */
+    private async mergeRemote(remote: Snapshot, blob: RemoteBlob, pushIfBehind = true): Promise<void> {
         const local = await this.loadLocalMap();
         const tombs = await this.loadTombstones();
 
@@ -315,9 +284,10 @@ export class HermidataSync {
         const missingLocal = this.remoteLacksLocal(remote.entries, local);
 
         await this.saveTombstones(this.pruneTombstones(tombs));
-        this.knownRev = Math.max(this.knownRev, rev);
+        this.known = blob;
 
-        if (behindOnEntries || missingLocal) this.schedulePush(); // converges: after one push the remote is not behind
+        // converges: after one push the remote is not behind
+        if (pushIfBehind && (behindOnEntries || missingLocal)) this.schedulePush();
     }
 
     private async loadLocalMap(): Promise<Map<string, Hermidata>> {
@@ -325,7 +295,11 @@ export class HermidataSync {
     }
 
     /** Remote tombstones: remove local novels not edited since, and remember the tombstones. */
-    private async applyRemoteDeletes( remoteTombs: Tombstones, local: Map<string, Hermidata>, tombs: Tombstones): Promise<void> {
+    private async applyRemoteDeletes(
+        remoteTombs: Tombstones,
+        local: Map<string, Hermidata>,
+        tombs: Tombstones,
+    ): Promise<void> {
         for (const [id, at] of Object.entries(remoteTombs)) {
             const l = local.get(id);
             if (l && ts(l) < at) {
@@ -337,7 +311,11 @@ export class HermidataSync {
     }
 
     /** Applies every remote entry. True if the remote is behind this device for at least one of them. */
-    private async applyRemoteEntries( entries: Hermidata[], local: Map<string, Hermidata>, tombs: Tombstones): Promise<boolean> {
+    private async applyRemoteEntries(
+        entries: Hermidata[],
+        local: Map<string, Hermidata>,
+        tombs: Tombstones,
+    ): Promise<boolean> {
         let remoteBehind = false;
         for (const r of entries) {
             if (await this.applyRemoteEntry(r, local.get(r.id), tombs)) remoteBehind = true;
@@ -367,22 +345,53 @@ export class HermidataSync {
 
     // ----------------------------------------------------------------- push
 
+    /** Read, merge, write: a push folds in whatever is newer on the remote first, so it never replaces unseen changes. */
     private async pushSnapshot(): Promise<void> {
         if (!this.ready) { this.dirty = true; return; }
 
+        for (let attempt = 0; attempt < MAX_PUSH_ATTEMPTS; attempt++) {
+            if (await this.tryPush() === 'done') return;
+        }
+        this.deps.onError('[Sync] gave up publishing after repeated conflicts', null);
+    }
+
+    /** One read-merge-write round. 'conflict' means someone else wrote in between, so go again. */
+    private async tryPush(): Promise<'done' | 'conflict'> {
+        const base = await this.readBase();
+        if (base === 'unusable') return 'done';                         // never write over what we cannot read
+
         const state = await this.collectLocalState();
-        if (!state) return; // never publish an empty library
+        if (!state) return 'done';                                      // never publish an empty library
 
         const packed = await encodePayload(state.all, state.tombs);
-        const existing = await this.api.storage.sync.get(null);
-        if (this.cloudAlreadyHolds(existing, packed)) return; // e.g. an RSS-only refresh
+        if (base?.data === packed) return 'done';                       // e.g. an RSS-only refresh
 
-        const write = await this.prepareWrite(existing, packed);
-        if (!(await this.fitsInQuota(write.items))) return; // all or nothing ( remove this to allow partial writes )
+        return this.publish(packed, base?.version);
+    }
 
-        await this.writeSnapshot(existing, write);
-        this.knownRev = write.rev;
-        await this.api.storage.local.set({ [BLOCKED_KEY]: false });
+    /** What the write will be based on, after merging it. Null when nothing is published yet. */
+    private async readBase(): Promise<RemoteBlob | null | 'unusable'> {
+        const blob = await this.backend.read(this.known?.version);
+
+        if (blob === null) return null;
+        if (blob === 'unchanged') return this.known;                    // we hold exactly what is published
+        if (blob === 'incomplete') { this.retryIncomplete(); return 'unusable'; }
+        if (blob.version === this.known?.version) return blob;
+
+        const decoded = await this.decodeSnapshot(blob);
+        if (typeof decoded !== 'object') return 'unusable';             // undecodable: leave the remote alone
+        await this.mergeRemote(decoded.snapshot, blob, false);          // fold in what others wrote
+        return blob;
+    }
+
+    private async publish(packed: string, ifMatch: string | undefined): Promise<'done' | 'conflict'> {
+        try {
+            await this.afterWrite(await this.backend.write(packed, ifMatch), packed);
+            return 'done';
+        } catch (err) {
+            if (err instanceof ConflictError) return 'conflict';
+            throw err;
+        }
     }
 
     /** Local library plus live tombstones, or null when there is nothing worth publishing. */
@@ -404,42 +413,15 @@ export class HermidataSync {
         }
     }
 
-    /** True when the cloud already holds exactly this snapshot, so writing would only waste a revision. */
-    private cloudAlreadyHolds(existing: Record<string, unknown>, packed: string): boolean {
-        const prevMeta = existing[META_KEY] as SnapshotMeta | undefined;
-        if (!prevMeta || prevMeta.len !== packed.length) return false;
+    private async afterWrite(result: WriteResult, packed: string): Promise<void> {
+        if (result.status === 'too-big') { await this.markBlocked(result.neededBytes); return; }
 
-        const prevPacked = Array.from({ length: prevMeta.n }, (_, i) => existing[`${LIB_PREFIX}${i}`]).join('');
-        return prevPacked === packed;
-    }
-
-    /** Builds the one set() payload: the meta key plus every chunk. */
-    private async prepareWrite(existing: Record<string, unknown>, packed: string): Promise<PreparedWrite> {
-        const chunks = splitChunks(packed);
-        const prevRev = (existing[META_KEY] as SnapshotMeta | undefined)?.rev ?? 0;
-        const rev = Math.max(prevRev, this.knownRev) + 1;
-
-        const meta: SnapshotMeta = { rev, n: chunks.length, len: packed.length, d: await this.deps.getDeviceId() };
-        const items: Record<string, unknown> = { [META_KEY]: meta };
-        chunks.forEach((c, i) => { items[`${LIB_PREFIX}${i}`] = c; });
-
-        return { items, rev, chunkCount: chunks.length };
+        this.known = { data: packed, version: result.version };
+        await this.api.storage.local.set({ [BLOCKED_KEY]: false });
+        if (result.nearlyFull !== undefined) await this.maybeWarn(result.nearlyFull);
     }
 
     // ----------------------------------------------------------------- quota
-
-    /** False (and writes nothing) when the snapshot would not fit. Warns when it is getting close. */
-    private async fitsInQuota(items: Record<string, unknown>): Promise<boolean> {
-        const needed = bytesNeeded(items);
-        const usable = QUOTA_BYTES - await this.api.storage.sync.getBytesInUse("Settings");
-
-        if (needed > usable - SAFETY_MARGIN) {
-            await this.markBlocked(needed);
-            return false; // old snapshot stays untouched
-        }
-        if (needed > usable * WARN_RATIO) await this.maybeWarn(needed);
-        return true;
-    }
 
     private async markBlocked(neededBytes: number): Promise<void> {
         await this.api.storage.local.set({ [BLOCKED_KEY]: true });
@@ -456,26 +438,6 @@ export class HermidataSync {
         const got = await this.api.storage.local.get(WARN_AT_KEY);
         const last = (got[WARN_AT_KEY] as number | undefined) ?? 0;
         return Date.now() - last < WARN_INTERVAL_MS;
-    }
-
-    // ----------------------------------------------------------------- write
-
-    private async writeSnapshot(existing: Record<string, unknown>, write: PreparedWrite): Promise<void> {
-        await this.removeLegacyKeys(existing);                          // free their bytes first
-        await this.api.storage.sync.set(write.items);                   // single call: atomic
-        await this.removeStaleChunks(existing, write.chunkCount);
-    }
-
-    /** Old per-novel keys from the previous sync design. Never touches Settings. */
-    private async removeLegacyKeys(existing: Record<string, unknown>): Promise<void> {
-        const legacy = Object.keys(existing).filter(k => k !== "Settings" && !k.startsWith(LIB_PREFIX));
-        if (legacy.length) await this.api.storage.sync.remove(legacy);
-    }
-
-    /** Chunks left over from a previous, longer snapshot. */
-    private async removeStaleChunks(existing: Record<string, unknown>, chunkCount: number): Promise<void> {
-        const stale = Object.keys(existing).filter(k => /^lib:\d+$/.test(k) && Number(k.slice(LIB_PREFIX.length)) >= chunkCount );
-        if (stale.length) await this.api.storage.sync.remove(stale);
     }
 }
 
@@ -506,22 +468,26 @@ export async function checkSyncQuota(): Promise<void> {
     const used_Items = (await ext.storage.sync.getKeys()).length;
     const used_bytes = await ext.storage.sync.getBytesInUse();
     const used_bytes_per_item = 1070 // average
+    const used_write_operations = 0 // TODO
     // 2. get max usage
     const max_items = getMaxItemsCount();
     const max_bytes = getMaxByteCount();
-    const max_bytes_per_item = getMaxByteCountPerItem();;
+    const max_bytes_per_item = getMaxByteCountPerItem();
+    const max_write_operations = getMaxWriteOperations();
     // 3. log current usage
     console.group('[Sync] Current usage');
     
     console.log(`[Sync] Used ${used_Items} of ${max_items} items (${Math.round(used_Items / max_items * 100)}%)`);
     console.log(`[Sync] Used ${used_bytes} of ${max_bytes} bytes (${Math.round( used_bytes / max_bytes * 100)}%)`);
     console.log(`[Sync] Used ${used_bytes_per_item} of ${max_bytes_per_item} bytes per item (${Math.round( used_bytes_per_item / max_bytes_per_item * 100)}%)`);
+    console.log(`[Sync] Used ${used_write_operations} of ${max_write_operations} write operations per hour (${Math.round( used_write_operations / max_write_operations * 100)}%)`);
     // 4. warn if close to limit
 
     if (
         used_Items >( max_items * 0.9) ||
         used_bytes > (max_bytes * 0.9) ||
-        used_bytes_per_item > (max_bytes_per_item * 0.9)
+        used_bytes_per_item > (max_bytes_per_item * 0.9) ||
+        used_write_operations > (max_write_operations * 0.9)
     ) console.warn('[Sync] Approaching sync storage limit')
 
     console.groupEnd();
@@ -538,8 +504,12 @@ function getMaxByteCountPerItem(): number {
     const MAX = ext.storage.sync.QUOTA_BYTES_PER_ITEM ?? 8192;
     return MAX;
 }
+function getMaxWriteOperations(): number {
+    const MAX = ext.storage.sync.MAX_WRITE_OPERATIONS_PER_HOUR ?? 1800;
+    return MAX;
+}
 
-const kbCounter = (kb: number) => `${kb}KB --> ${Math.round(kb * 1024 / getMaxByteCount())}% of max ${getMaxByteCount()}`;
+const kbCounter = (kb: number) => `${kb}KB --> ${Math.round(kb / getMaxByteCount() * 100)}% of max ${getMaxByteCount()}`;
 
 function notifySyncTooBig(kbCounter: string): void {
     const message = `[Sync] Too big: ${kbCounter}`;
@@ -579,4 +549,3 @@ export const pushToSync = (_entry?: Hermidata) => sync.schedulePush();
 export const removeFromSync = (id: string) => sync.recordDelete(id);
 /** Register in background.ts — listens for changes from other devices */
 export const initSync = () => sync.start();
-

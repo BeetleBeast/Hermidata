@@ -61,3 +61,34 @@ export interface SyncBackend {
     /** Calls onChange when another device may have written. Returns a function that stops watching. */
     watch?(onChange: () => void): () => void;
 }
+
+
+//---
+
+/** The part of the extension alarms API that polling needs (injectable for tests). */
+export interface AlarmsLike {
+    create(name: string, info: { periodInMinutes: number }): unknown;
+    clear(name: string): unknown;
+    /** Optional: lets watch() keep an existing alarm instead of restarting its period on every worker start. */
+    get?(name: string): Promise<{ periodInMinutes?: number } | undefined> | undefined;
+    onAlarm: {
+        addListener(callback: (alarm: { name: string }) => void): void;
+        removeListener(callback: (alarm: { name: string }) => void): void;
+    };
+}
+
+export type WebDavConfig = {
+    /** Full URL of the snapshot file, e.g. https://cloud.example.com/remote.php/dav/files/me/hermidata.sync */
+    url: string;
+    username?: string;
+    password?: string;
+    pollMinutes?: number;
+    fetch?: typeof fetch;
+    alarms?: AlarmsLike;
+};
+
+export type WebDavProblem = 'auth' | 'forbidden' | 'folder' | 'server' | 'network';
+
+export type ConnectionTest =
+    | { ok: true; conditionalWrite: boolean; note?: string }
+    | { ok: false; problem: WebDavProblem; message: string };

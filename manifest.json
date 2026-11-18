@@ -13,9 +13,11 @@
         "tabs",
         "scripting",
         "notifications",
-        "cookies"
+        "cookies",
+        "alarms"
     ],
     "host_permissions": [ "https://*.googleapis.com/*", "*://*/*" ],
+    "optional_host_permissions": [ "*://*/*" ],
     "browser_specific_settings": {
         "gecko": {
             "id": "{8cc11236-9806-4fa0-a3fa-8bf55309a1d0}",

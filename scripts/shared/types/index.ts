@@ -151,5 +151,13 @@ export type {
 
     SyncBackend,
     SyncDeps,
+    RemoteBlob,
+    WriteResult,
+
+    ConnectionTest,
+    WebDavProblem,
+    WebDavConfig,
+    AlarmsLike,
+    
 
 } from './sync';

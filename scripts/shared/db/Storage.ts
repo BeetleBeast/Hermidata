@@ -14,7 +14,7 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     dbGetImage,
     dbSaveAllImages,
     dbUpdateImageKey} from './db';
-import { pushToSync, removeFromSync } from './sync';
+import { pushToSync, removeFromSync } from '../sync/sync.engine';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { generateHermidataHash } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';

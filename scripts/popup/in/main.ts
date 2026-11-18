@@ -7,7 +7,7 @@ import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
 import { RSS } from '../../rss/main';
 import { getAllHermidata, getSettings } from '../../shared/db/Storage';
-import { checkSyncQuota } from '../../shared/db/sync';
+import { checkSyncQuota } from '../../shared/sync/sync.engine';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';

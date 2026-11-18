@@ -23,3 +23,25 @@ export class ConflictError extends Error {
         this.name = 'ConflictError';
     }
 }
+
+/** Thrown by write() when the server returned an unexpected status code. */
+export class WebDavError extends Error {
+    readonly status: number;
+    readonly kind: 'auth' | 'forbidden' | 'not-found' | 'server' | 'unexpected';
+
+    constructor(status: number) {
+        super(`WebDAV request failed with status ${status}`);
+        this.name = 'WebDavError';
+        this.status = status;
+        this.kind = this.setStatusKind(status);
+    }
+    private setStatusKind(status: number): typeof this.kind {
+        switch (status) {
+            case 401: return 'auth';
+            case 403: return 'forbidden';
+            case 404: return 'not-found';
+            case 500: return 'server';
+            default: return 'unexpected';
+        }
+    }
+}

@@ -2,8 +2,9 @@
 // between "devices", and per-device fake IndexedDB + storage.local. Nothing here touches a real browser.
 
 import { vi } from 'vitest';
-import type { Hermidata } from '../scripts/shared/types';
-import { HermidataSync } from '../scripts/shared/db/sync';
+import type { Hermidata, SyncBackend } from '../scripts/shared/types';
+import { HermidataSync } from '../scripts/shared/sync/sync.engine';
+import { ConflictError } from '../scripts/shared/utils/dedicatedErrors';
 
 export const clone = <T>(v: T): T => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
 type Changes = Record<string, { oldValue?: unknown; newValue?: unknown }>;
@@ -22,6 +23,8 @@ export class FakeSyncArea {
         this.quota = quota;
         this.notify = notify;
     }
+    /** Like the real storage.sync.QUOTA_BYTES, so code that reads the limit from the API sees the fake one. */
+    get QUOTA_BYTES(): number { return this.quota; }
 
     private size(d: Record<string, unknown>) {
         return Object.entries(d).reduce((n, [k, v]) => n + k.length + JSON.stringify(v).length, 0);
@@ -155,7 +158,7 @@ export const sorted = (list: Hermidata[]) => [...list].sort((a, b) => a.id.local
 export const devices: Array<{ sync: HermidataSync }> = [];
 export const resetDevices = () => { devices.length = 0; };
 
-export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = [], opts: { push?: boolean } = {}) {
+export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = [], opts: { push?: boolean; backend?: SyncBackend } = {}) {
     const db = new Map<string, Hermidata>(initial.map(h => [h.id, clone(h)]));
     const notices = { tooBig: [] as number[], nearlyFull: [] as number[], errors: [] as string[] };
     let fetchCount = 0;
@@ -169,7 +172,7 @@ export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = 
         onTooBig: kb => notices.tooBig.push(kb),
         onNearlyFull: kb => notices.nearlyFull.push(kb),
         onError: msg => notices.errors.push(msg),
-    }, cloud.apiForDevice());
+    }, cloud.apiForDevice(), opts.backend);
     devices.push({ sync });
 
     return {
@@ -190,6 +193,7 @@ export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = 
             sync.schedulePush();
         },
         add(h: Hermidata) { db.set(h.id, clone(h)); sync.schedulePush(); },
+        /** a user delete: remove locally and record a tombstone, like deleteHermidata() does */
         remove(key: string) { db.delete(key); sync.recordDelete(key); },
         /**
          * An RSS refresh: only the per-device cache (lastFetched / latestItem) changes, then the app calls
@@ -226,3 +230,49 @@ export async function settle(ms = 60_000) {
 }
 export const realSetTimeout = globalThis.setTimeout; // captured at import, before fake timers replace it
 export const realTick = (ms = 1) => new Promise<void>(r => realSetTimeout(r, ms));
+
+// ------------------------------------------------ a generic in-memory backend
+
+/**
+ * A shared remote that speaks the SyncBackend interface with ETag-style versions, like a WebDAV file would.
+ * Each device calls connect() to get its own view of it.
+ */
+export class FakeRemote {
+    blob: string | null = null;
+    version = 0;
+    writes = 0;                       // successful writes: the number of real publishes
+    private watchers = new Set<() => void>();
+
+    private readonly maxBytes?: number;
+
+    constructor(maxBytes?: number) {
+        this.maxBytes = maxBytes;
+    }
+
+    connect(): SyncBackend {
+        return {
+            capabilities: { conditionalWrite: true, canWatch: true },
+            read: async (ifNoneMatch?: string) => {
+                if (this.blob === null) return null;
+                const version = String(this.version);
+                if (ifNoneMatch === version) return 'unchanged' as const;
+                return { data: this.blob, version };
+            },
+            write: async (data: string, ifMatch?: string) => {
+                if (ifMatch !== undefined && ifMatch !== String(this.version)) throw new ConflictError();
+                if (this.maxBytes !== undefined && data.length > this.maxBytes) {
+                    return { status: 'too-big' as const, neededBytes: data.length };
+                }
+                this.blob = data;
+                this.version++;
+                this.writes++;
+                for (const w of this.watchers) Promise.resolve().then(w);
+                return { status: 'written' as const, version: String(this.version) };
+            },
+            watch: (onChange: () => void) => {
+                this.watchers.add(onChange);
+                return () => { this.watchers.delete(onChange); };
+            },
+        };
+    }
+}
