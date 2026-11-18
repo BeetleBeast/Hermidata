@@ -158,6 +158,7 @@ export type {
     WebDavProblem,
     WebDavConfig,
     AlarmsLike,
-    
+    SyncBackendConfig,
+    SyncSwitchMode,
 
 } from './sync';

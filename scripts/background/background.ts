@@ -4,6 +4,7 @@ import { initContextMenus } from './contextMenus'
 import { initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/sync/sync.engine'
+import { initSyncAlarmListener } from '../shared/sync/syncAlarms'
 import { migrationSteps } from '../shared/migration'
 import { getAllHermidata } from '../shared/db/Storage'
 import { scheduleCull } from './culling'
@@ -38,6 +39,7 @@ initTabs();
 initMessaging();
 initContextMenus();
 initInstalled();
+initSyncAlarmListener();
 
 // Phase 2: async startup. Things that need migrated data.
 (async () => {

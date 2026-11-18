@@ -128,6 +128,141 @@ nav {
     border-color: var(--danger);
 }
 
+/* ---------- Library sync ---------- */
+
+.Account_Connection .library-sync-card {
+    margin-top: 16px;
+}
+
+.sync-choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.sync-choices .choice {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    white-space: normal;
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms;
+}
+.sync-choices .choice input { position: absolute; opacity: 0; pointer-events: none; }
+.sync-choices .choice span { font-size: 0.8rem; color: var(--text-muted); }
+.sync-choices .choice:hover { border-color: var(--accent-active-soft); }
+.sync-choices .choice:has(input:checked) {
+    border-color: var(--accent-active-soft);
+    background: color-mix(in srgb, var(--accent-active-soft) 12%, transparent);
+}
+.sync-choices .choice:has(input:focus-visible) { outline: 2px solid var(--accent-active-soft); outline-offset: 2px; }
+
+.webdav-setup {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.webdav-setup[hidden] { display: none; }
+
+.webdav-field {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+.webdav-field input { width: 100%; box-sizing: border-box; }
+
+.webdav-credentials {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+
+.webdav-url-check,
+.sync-status {
+    margin: 0;
+    padding: 9px 12px;
+    border-left: 3px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-input);
+    color: var(--text);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+.webdav-url-check[hidden],
+.sync-status:empty { display: none; }
+.webdav-url-check[data-tone="warning"],
+.sync-status[data-tone="warning"] { border-left-color: var(--warning); }
+.webdav-url-check[data-tone="error"],
+.sync-status[data-tone="error"] { border-left-color: var(--danger); }
+.sync-status[data-tone="success"] { border-left-color: var(--success); }
+
+.sync-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sync-actions button { margin: 0; }
+.sync-actions button[hidden] { display: none; }
+
+.sync-choice-dialog {
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background-color: var(--surface-raised);
+    color: var(--text);
+}
+.sync-choice-dialog::backdrop { background: rgb(0 0 0 / 0.5); }
+.sync-choice-dialog h3 { margin: 0 0 6px; }
+.sync-choice-dialog p { margin: 0 0 14px; color: var(--text-muted); }
+
+.sync-choice-options {
+    display: grid;
+    gap: 10px;
+}
+.sync-choice-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    margin: 0;
+    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+.sync-choice-option span { font-size: 0.8rem; color: var(--text-muted); white-space: normal; }
+.sync-choice-option:hover,
+.sync-choice-option:focus-visible { border-color: var(--accent-active-soft); }
+
+.sync-choice-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0 0;
+    padding: 0;
+}
+.sync-choice-actions button { margin: 0; }
+
+@media (max-width: 640px) {
+    .sync-choices,
+    .webdav-credentials { grid-template-columns: 1fr; }
+}
+
 .settings-target-highlight {
     position: relative;
     z-index: 2;

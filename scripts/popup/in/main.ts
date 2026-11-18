@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     setTimeout( async () => checkSyncQuota(), 500);
+    // look for changes from other devices now instead of waiting for the next poll (fire and forget)
+    ext.runtime.sendMessage({ type: 'SYNC_REFRESH' }).catch(() => undefined);
 });
 
 document.addEventListener('keydown', async (e) => shortcutEventListener(e));

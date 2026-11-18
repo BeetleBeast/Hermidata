@@ -3,6 +3,7 @@ import { ImportsAndExports } from "./build/ImportsAndExports";
 import { ExtensionBehavior } from "./build/ExtensionBehavior";
 import { DefaultBookmarkInputs } from "./build/DefaultBookmarkInputs";
 import { Account_Connection } from "./build/Account_Connection";
+import { LibrarySync } from "./build/LibrarySync";
 import { ContentTypesAndStatuses } from "./build/ContentTypesAndStatuses";
 import { TagManagement } from "./build/TagManagement";
 import { FolderMapping } from "./build/FolderMapping";
@@ -15,6 +16,8 @@ export class BuildController {
     private readonly sectionInitializationPromises = new Map<string, Promise<void>>();
 
     private readonly accountConnection = new Account_Connection();
+
+    private readonly librarySync = new LibrarySync();
     
     private readonly extensionBehavior = new ExtensionBehavior();
     
@@ -158,6 +161,7 @@ export class BuildController {
         switch (sectionId) {
             case 'account-connection':
                 await this.accountConnection.init();
+                await this.librarySync.init();
                 break;
             case 'extension-behavior':
                 await this.extensionBehavior.init();
@@ -210,23 +214,12 @@ export class BuildController {
         }
     }
     private async resetPage(sectionId: string) {
-        // confirm reset
-        // const elements = {
-        //     container: getElement<HTMLDivElement>(".promptSection"),
-        //     label: getElement<HTMLDivElement>(".promptLabel"),
-        //     btn1: getElement<HTMLDivElement>(".genericButton1"),
-        //     btn2: getElement<HTMLDivElement>(".genericButton2"),
-        // }
-        // const Confirmation = await customConfirm("Are you sure you want to reset all settings?", {
-        //     accept: "Reset",
-        //     reject: "Cancel",
-        //     elements,
-        // });
         
         // reset page values to current settings
         switch (sectionId) {
             case 'account-connection':
                 await this.accountConnection.resetValues();
+                await this.librarySync.resetValues();   // discards unsaved edits; never switches the backend
                 break;
             case 'extension-behavior':
                 await this.extensionBehavior.resetValues();

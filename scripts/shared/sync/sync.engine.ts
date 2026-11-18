@@ -5,8 +5,11 @@ import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from '../db/db';
 import { BrowserSyncBackend } from './BrowserSyncBackend';
-import type { RemoteBlob, SyncBackend, WriteResult } from '../types';
+import type { RemoteBlob, SyncBackend, SyncBackendConfig, SyncSwitchMode, WriteResult } from '../types';
 import { ConflictError } from '../utils/dedicatedErrors';
+import { createBackend, loadSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, validateWebDavUrl } from './syncConfig';
+import { backgroundAlarms } from './syncAlarms';
+import { POLL_ALARM } from './WebDavBackend';
 
 
 // ---------------------------------------------------------------- constants
@@ -132,6 +135,7 @@ const toKb = (bytes: number) => Math.round(bytes / 1024);
  * - per-novel conflict resolution by newest meta.updated
  * - deletes are tombstones, so merging never resurrects a deleted novel
  * - nothing is ever pushed before the first pull has finished
+ * - switching backends starts over: pull first, then publish (or adopt the remote copy when asked to)
  */
 export class HermidataSync {
     private pushTimer: ReturnType<typeof setTimeout> | undefined;
@@ -144,7 +148,8 @@ export class HermidataSync {
 
     private readonly deps: SyncDeps;
     private readonly api: typeof ext;                   // device-local state: tombstones, flags
-    private readonly backend: SyncBackend;
+    private backend: SyncBackend;
+    private stopWatching: (() => void) | undefined;
 
     constructor(deps: SyncDeps, api: typeof ext = ext, backend?: SyncBackend) {
         this.deps = deps;
@@ -156,8 +161,31 @@ export class HermidataSync {
 
     /** Call synchronously at the top level of the background script (MV3 requirement). */
     start(): void {
-        this.backend.watch?.(() => this.schedulePull());
+        this.stopWatching = this.backend.watch?.(() => this.schedulePull());
         this.enqueue(() => this.pull());
+    }
+
+    /**
+     * Points this device at another backend and starts over with pull-before-push: an empty remote gets this
+     * device's library, an empty device gets the remote's, and when both have one they are merged, unless
+     * storage.local holds the adopt flag, in which case the remote copy replaces the local library.
+     * `persist` runs inside the queue, after any work on the old backend, so the saved choice and the
+     * running backend never disagree.
+     */
+    switchBackend(backend: SyncBackend, opts: { persist?: () => Promise<void> } = {}): Promise<void> {
+        return this.enqueue(async () => {
+            this.stopWatching?.();
+            clearTimeout(this.pushTimer);
+            clearTimeout(this.pullTimer);
+            await opts.persist?.();
+
+            this.backend = backend;
+            this.known = null;
+            this.ready = false;
+            this.incompleteRetries = 0;
+            this.stopWatching = backend.watch?.(() => this.schedulePull());
+            await this.pull();
+        });
     }
 
     /** Call after every local put. Cheap: debounced into one write per burst. */
@@ -225,12 +253,16 @@ export class HermidataSync {
         // remote exists but isn't fully readable yet: stay not-ready so we never overwrite it
         if (result === 'incomplete') { this.retryIncomplete(); return; }
         this.incompleteRetries = 0;
-        if (result === 'none') { if (!this.ready) this.markReady(true); return; }
+        if (result === 'none') {
+            if (!this.ready) { await this.clearAdoptIfPending(); this.markReady(true); }
+            return;
+        }
 
         // our own write, or a version we already merged
         if (result === 'unchanged') { if (!this.ready) this.markReady(false); return; }
 
-        await this.mergeRemote(result.snapshot, result.blob);
+        if (!this.ready && await this.adoptPending()) await this.adoptRemote(result.snapshot, result.blob);
+        else await this.mergeRemote(result.snapshot, result.blob);
         if (!this.ready) this.markReady(false);
     }
 
@@ -288,6 +320,32 @@ export class HermidataSync {
 
         // converges: after one push the remote is not behind
         if (pushIfBehind && (behindOnEntries || missingLocal)) this.schedulePush();
+    }
+
+    // ------------------------------------------------------------------ adopt
+
+    private async adoptPending(): Promise<boolean> {
+        const got = await this.api.storage.local.get(SYNC_ADOPT_KEY);
+        return got[SYNC_ADOPT_KEY] === true;
+    }
+
+    private async clearAdoptIfPending(): Promise<void> {
+        if (await this.adoptPending()) await this.api.storage.local.set({ [SYNC_ADOPT_KEY]: false });
+    }
+
+    /** "Use the server copy": this device's library becomes exactly the published one, newer local edits included. */
+    private async adoptRemote(remote: Snapshot, blob: RemoteBlob): Promise<void> {
+        const local = await this.loadLocalMap();
+        const remoteIds = new Set(remote.entries.map(r => r.id));
+
+        for (const id of local.keys()) {
+            if (!remoteIds.has(id)) await this.deps.remove(id);            // no tombstone: the remote never had it
+        }
+        for (const r of remote.entries) await this.takeRemoteEntry(r, local.get(r.id), {});
+
+        await this.saveTombstones(this.pruneTombstones({ ...remote.tombstones }));
+        this.known = blob;
+        await this.api.storage.local.set({ [SYNC_ADOPT_KEY]: false });
     }
 
     private async loadLocalMap(): Promise<Map<string, Hermidata>> {
@@ -547,5 +605,34 @@ const sync = new HermidataSync({
 export const pushToSync = (_entry?: Hermidata) => sync.schedulePush();
 /** Call after every deleteHermidata() — removes entry from sync too */
 export const removeFromSync = (id: string) => sync.recordDelete(id);
-/** Register in background.ts — listens for changes from other devices */
-export const initSync = () => sync.start();
+const backendEnv = () => ({ api: ext, getDeviceId, alarms: backgroundAlarms() });
+
+/** Register in background.ts — starts syncing through the backend this device is configured for */
+export const initSync = () => { void startConfiguredSync(); };
+
+async function startConfiguredSync(): Promise<void> {
+    const config = await loadSyncConfig(ext.storage.local);
+    if (config.kind === 'browser') {
+        void backgroundAlarms()?.clear(POLL_ALARM);                 // a poll alarm left over from WebDAV
+        sync.start();
+        return;
+    }
+    await sync.switchBackend(createBackend(config, backendEnv()));
+}
+
+/** Check the remote for changes now, e.g. when the popup opens. */
+export const refreshSync = () => sync.refresh();
+
+/** Saves the new backend for this device and switches to it. Background only. */
+export async function switchSyncBackend(config: SyncBackendConfig, mode: SyncSwitchMode = 'merge'): Promise<void> {
+    if (config.kind === 'webdav') {
+        const check = validateWebDavUrl(config.url);
+        if (!check.ok) throw new Error(check.error);
+        config = { ...config, url: check.url };
+    } else {
+        void backgroundAlarms()?.clear(POLL_ALARM);
+    }
+    await sync.switchBackend(createBackend(config, backendEnv()), {
+        persist: () => saveSyncConfig(ext.storage.local, config, mode),
+    });
+}

@@ -87,7 +87,15 @@ export type WebDavConfig = {
     alarms?: AlarmsLike;
 };
 
-export type WebDavProblem = 'auth' | 'forbidden' | 'folder' | 'server' | 'network';
+/** Which backend this device syncs through. Per device, kept in storage.local, never in the synced Settings. */
+export type SyncBackendConfig =
+    | { kind: 'browser' }
+    | { kind: 'webdav'; url: string; username?: string; password?: string; pollMinutes?: number };
+
+/** What to do when this device and the new backend both already hold a library. */
+export type SyncSwitchMode = 'merge' | 'adopt';
+
+export type WebDavProblem ='auth' | 'forbidden' | 'folder' | 'server' | 'network';
 
 export type ConnectionTest =
     | { ok: true; conditionalWrite: boolean; note?: string }

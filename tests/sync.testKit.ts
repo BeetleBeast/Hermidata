@@ -87,7 +87,10 @@ export class FakeCloud {
             storage: {
                 sync: this.area,
                 local: new FakeLocalArea(),
-                onChanged: { addListener: (fn: any) => this.listeners.push(fn) },
+                onChanged: {
+                    addListener: (fn: any) => this.listeners.push(fn),
+                    removeListener: (fn: any) => { this.listeners = this.listeners.filter(l => l !== fn); },
+                },
             },
         };
     }
@@ -162,6 +165,7 @@ export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = 
     const db = new Map<string, Hermidata>(initial.map(h => [h.id, clone(h)]));
     const notices = { tooBig: [] as number[], nearlyFull: [] as number[], errors: [] as string[] };
     let fetchCount = 0;
+    const api = cloud.apiForDevice();
 
     const sync = new HermidataSync({
         getAll: async () => [...db.values()].map(clone),
@@ -172,11 +176,13 @@ export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = 
         onTooBig: kb => notices.tooBig.push(kb),
         onNearlyFull: kb => notices.nearlyFull.push(kb),
         onError: msg => notices.errors.push(msg),
-    }, cloud.apiForDevice(), opts.backend);
+    }, api, opts.backend);
     devices.push({ sync });
 
     return {
         db, sync, notices,
+        /** this device's own storage.local (tombstones, flags, sync config) */
+        local: api.storage.local as FakeLocalArea,
         list: () => sorted([...db.values()]),
         start: async () => {
             // newer builds have a pull-only first run; this is a no-op on builds without enablePush

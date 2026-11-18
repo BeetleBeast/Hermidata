@@ -53,6 +53,54 @@
                 </div>
                 <p id="accountAuthStatus" class="account-auth-status" role="status" aria-live="polite"></p>
             </div>
+
+            <div class="card account-connection-card library-sync-card">
+                <div>
+                    <h3>Library sync</h3>
+                    <p>Choose where this device keeps its synced library. Devices only sync with devices that use the same place.</p>
+                </div>
+                <p id="syncCurrentTarget" class="account-auth-status" data-state="connected"></p>
+
+                <fieldset class="sync-choices">
+                    <legend class="sr-only">Sync through</legend>
+                    <label class="choice" for="syncBackendBrowser">
+                        <input type="radio" id="syncBackendBrowser" name="syncBackend" value="browser">
+                        <strong>Browser sync</strong>
+                        <span>Your browser account. No setup, about 100 KB of space.</span>
+                    </label>
+                    <label class="choice" for="syncBackendWebdav">
+                        <input type="radio" id="syncBackendWebdav" name="syncBackend" value="webdav">
+                        <strong>Your own server (WebDAV)</strong>
+                        <span>Nextcloud, ownCloud, rclone, a NAS, or any WebDAV server.</span>
+                    </label>
+                </fieldset>
+
+                <div id="webdavSetup" class="webdav-setup" hidden>
+                    <div class="webdav-field">
+                        <label for="webdavUrl">Sync file URL</label>
+                        <input type="url" id="webdavUrl" placeholder="https://cloud.example.com/remote.php/dav/files/me/Hermidata/hermidata.sync" autocomplete="off" spellcheck="false">
+                        <p class="field-hint">The full address of the file, including its name. The folder is created if it does not exist.</p>
+                        <p id="webdavUrlCheck" class="webdav-url-check" role="status" aria-live="polite" hidden></p>
+                    </div>
+                    <div class="webdav-credentials">
+                        <div class="webdav-field">
+                            <label for="webdavUser">Username</label>
+                            <input type="text" id="webdavUser" autocomplete="off" spellcheck="false">
+                        </div>
+                        <div class="webdav-field">
+                            <label for="webdavPass">Password or app password</label>
+                            <input type="password" id="webdavPass" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <p class="field-hint">Stored only on this device, never synced. Prefer an app password where your server offers one.</p>
+                </div>
+
+                <div class="sync-actions">
+                    <button id="testWebdav" type="button" class="btn-ghost" hidden>Test connection</button>
+                    <button id="applySyncBackend" type="button">Save and switch</button>
+                </div>
+                <p id="syncStatus" class="sync-status" role="status" aria-live="polite"></p>
+            </div>
         </section>
         <section class="section-content Extension_Behavior" data-active="false">
             <!-- Appearance & general -->
@@ -661,6 +709,25 @@
                 <button id="resetSettingsBtn" class="footerBtn btn-danger" type="button" popovertargetaction="toggle" popovertarget="reset-dialog">Reset section</button>
             </div>
         </footer>
+        <dialog id="syncChoiceDialog" class="sync-choice-dialog" aria-labelledby="syncChoiceTitle">
+            <form method="dialog" class="sync-choice-form">
+                <h3 id="syncChoiceTitle">Both have a library</h3>
+                <p id="syncChoiceText">This device and the new sync location both already hold a library. How should they be combined?</p>
+                <div class="sync-choice-options">
+                    <button type="submit" value="merge" class="sync-choice-option">
+                        <strong>Merge both</strong>
+                        <span>Keep everything. Where the same entry exists on both, the most recently edited version wins.</span>
+                    </button>
+                    <button type="submit" value="adopt" class="sync-choice-option">
+                        <strong>Use the server copy</strong>
+                        <span>Replace this device's library with the one on the server. Entries only on this device are removed.</span>
+                    </button>
+                </div>
+                <menu class="sync-choice-actions">
+                    <button type="submit" value="cancel" class="btn-ghost">Cancel</button>
+                </menu>
+            </form>
+        </dialog>
         <dialog id="reset-dialog" class="reset-dialog" popover>
             <form method="dialog" class="reset-dialog-form">
                 <h3>Reset this section?</h3>
