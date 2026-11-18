@@ -14,52 +14,24 @@ const notifyUser = typeof document !== "undefined";
 
 export async function updateChapterProgress( hermidata: HermidataModel, pastPrompts?: PastHermidataPromptOptions ): Promise<boolean> {
     try {
-        let needsToMigrate = false
-    
         const newChapterNumber = hermidata.GetChapter();
-        
+
         const key = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl(), false);
         const data = await getHermidataViaKey(key);
-    
-        
-        let entry: HermidataModel | null = null;
-    
-        if (data) entry = new HermidataModel(data);
-        else {
-            // id entry is new/can't be found in storage
-            const Hermidata: Hermidata | null = new PastHermidata(hermidata, pastPrompts).pastHermidata;
-            if (Hermidata) entry = new HermidataModel(Hermidata);
-            else entry = new HermidataModel(await makeHermidata(hermidata.title, hermidata.GetUrl(), hermidata.novelType));
-        }
-    
-        if (!entry) {
-            new ErrorMessage("Could not find the saved item to update its chapter progress.", undefined, {
-                consoleLevel: 'error',
-                notifyUser,
-                notificationTarget,
-                details: [hermidata.title]
-            }).sendMessage();
-            return false;
-        }
-    
-        if ( entry.title !== hermidata.title || entry.novelType !== hermidata.novelType || key !== entry.id) needsToMigrate = true
-        
+
+        // not stored under the computed key: look for the saved item ( e.g. found by alt title ), otherwise it is new
+        const past = data ? null : await new PastHermidata(hermidata, pastPrompts).init();
+        const entry = new HermidataModel(data ?? past ?? await makeHermidata(hermidata.title, hermidata.GetUrl(), hermidata.novelType));
+
+        // a found item keeps its own id, so it is updated in place instead of copied under a new key
+        const saveKey = past ? entry.id : key;
+
         const oldChapterNumber = entry.GetChapter(hermidata.chapter.bookmarkInUse) || entry.GetChapter();
         if (newChapterNumber >= oldChapterNumber) {
 
-            entry.Update(key, hermidata, newChapterNumber);
-            await saveHermidata(key, entry.toJSON());
+            entry.Update(saveKey, hermidata, newChapterNumber);
+            await saveHermidata(saveKey, entry.toJSON());
             console.log(`[HermidataV3] Updated ${hermidata.title} to chapter ${newChapterNumber}`);
-        }
-        if (needsToMigrate) {
-            const past = new PastHermidata(hermidata, pastPrompts);
-            await past.init().catch(error => new ErrorMessage("Could not migrate the saved item before updating its progress.", undefined, {
-                consoleLevel: 'error',
-                notifyUser,
-                notificationTarget,
-                details: [error]
-            }).sendMessage());
-            return false
         }
         return true
     } catch (error) {
