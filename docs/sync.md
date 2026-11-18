@@ -17,6 +17,7 @@ and a phone on your WebDAV server do not see each other's changes.
 - [What gets synced](#what-gets-synced)
 - [Setting up a WebDAV server](#setting-up-a-webdav-server)
 - [Switching a device over](#switching-a-device-over)
+- [Encryption (optional)](#encryption-optional)
 - [Troubleshooting](#troubleshooting)
 - [Security and privacy](#security-and-privacy)
 - [For developers](#for-developers)
@@ -131,6 +132,69 @@ sync keep working.
 
 ---
 
+## Encryption (optional)
+
+Hermidata can encrypt the synced library so that only your own devices can read it. The server, or your browser
+vendor, then only stores data it cannot read. Each device's own library is not changed.
+
+**Should you turn it on?**
+
+- **WebDAV: recommended** for a server you do not fully control. Without it, anyone who can read files on the
+  server (its admin, or anyone with your account) can read your library.
+- **Browser sync: optional.** Your browser already protects synced data: Firefox encrypts it end to end, and
+  Chrome encrypts it with your Google account (or with your own sync passphrase, if you set one in Chrome). Turn it
+  on if you want only your own devices to be able to read the library. It costs about 2 KB of the 100 KB space.
+
+### Turning it on
+
+1. Open **Settings → Account & Connection → Encryption**.
+2. Choose a passphrase of at least 10 characters (a few unrelated words work well) and click **Turn on encryption**.
+   The fields are ordinary new-password / current-password forms with a hidden username ("Hermidata library"), so a
+   password manager can generate, save and fill the passphrase for you. This is a good place to keep it, and its
+   notes are a good place for the recovery keys.
+3. Hermidata shows **5 recovery keys**. Download them as a text file or copy them, store them somewhere safe away
+   from this device, tick *I have saved these recovery keys*, and click **Continue**. They are only shown once.
+   Nothing is encrypted until you click Continue.
+4. On each of your other devices, open the same settings and enter the passphrase once. Until then, that device
+   shows a notice and pauses syncing: it never overwrites the encrypted library and never publishes in the clear.
+
+### Recovery keys
+
+If you forget the passphrase, open the Encryption settings on a locked device, choose **Forgot the passphrase? Use
+a recovery key**, and enter one recovery key together with a new passphrase. Each recovery key works **once**;
+the card shows how many are left. Devices that are already unlocked keep working throughout.
+
+When only one or two are left, create new ones under **Create new recovery keys** (this needs the passphrase). The
+new set replaces the old one completely.
+
+**There is no other way back.** If you lose the passphrase and every recovery key, the synced copy cannot be read
+by anyone, including the developer. The library on each of your devices is not affected, though:
+
+- On a device that is **still unlocked**, turn encryption off (or off and on again with a new passphrase).
+- If **no device is unlocked**, open *Lost the passphrase and every recovery key?* on one of them and choose
+  **Replace the synced copy**. It publishes that device's library, encrypted with a new passphrase, over the
+  unreadable copy. Unlock your other devices with the new passphrase and their entries are merged back in. Only
+  what existed solely in the unreadable copy is lost.
+
+### Changing the passphrase, turning it off
+
+- **Change the passphrase** under *Change the passphrase*. Devices that are already unlocked keep working; new
+  devices need the new passphrase.
+- **Turn off encryption** publishes the library readable again, for every device that syncs with it.
+
+### What is protected, and what is not
+
+- Protected: every entry, marker, note, tag and deletion in the synced library, plus its integrity (a changed file
+  is refused, not merged).
+- Not protected by this: your settings (they sync through your browser account), Google Sheets exports, quick
+  backups and exports you save yourself, and the library stored in each browser.
+- Someone who can read the server still sees that a library exists, roughly how big it is, and when it changes.
+- A device that was unlocked keeps the key until encryption is turned off or that browser's site data is cleared.
+  Changing the passphrase does not lock it out. To lock out a lost device, turn encryption off and on again with a
+  new passphrase: that creates a new key.
+
+---
+
 ## Troubleshooting
 
 | What you see | What to check |
@@ -143,6 +207,10 @@ sync keep working.
 | *Could not reach the server.* | The address and port, that the server is running, and that this device can reach it (VPN, firewall, local network). |
 | *Hermidata needs your permission to contact …* | You declined the browser's permission prompt. Click **Save and switch** again and allow it. |
 | *Use https://. Plain http:// is only allowed for …* | Use the server's https address. |
+| *Paused: the synced library is encrypted…* | Another device turned on encryption. Enter the passphrase in **Settings → Account & Connection → Encryption**. |
+| *The passphrase is not correct.* | Check for typos and keyboard layout. Forgot it? Use a recovery key. |
+| *This recovery key does not unlock this library, or it was already used.* | Each key works once. Try another of your 5 keys. |
+| *The synced copy is damaged and cannot be decrypted* (also *[Sync] could not decrypt remote snapshot* in the console) | The file on the server is damaged or was changed. Hermidata leaves it alone. Restore it from a server backup, or use **Replace the synced copy** in the Encryption settings. |
 | Changes take a while to show up | WebDAV is checked every 5 minutes and when you open the popup. Browser sync can take longer when the browser is offline or signed out. |
 
 Sync problems are also written to the extension's console: open `chrome://extensions` (or `about:debugging` in
@@ -153,8 +221,11 @@ Firefox), find Hermidata, and inspect its service worker / background page. Mess
 ## Security and privacy
 
 - **No third party is involved** in WebDAV sync: the extension talks directly to the server you entered.
-- **The sync file is not encrypted.** It is compressed, not secret: anyone who can read files on the server (the
-  server admin, or someone with your account) can read your library. Optional encryption is planned.
+- **The sync file is readable unless you turn on [encryption](#encryption-optional).** Without it, the file is
+  only compressed: anyone who can read files on the server (the server admin, or someone with your account) can
+  read your library. With it, they see only ciphertext.
+- **The encryption key** is stored per device in the extension's IndexedDB as a non-extractable key: it can be
+  used on that device but not read back out, and the passphrase itself is never stored.
 - **The password is stored on this device only**, in the extension's local storage, unencrypted, like most
   browser extensions store credentials. It is never synced and never put in exports. Prefer an app password you
   can revoke.
@@ -186,9 +257,12 @@ The engine decides **what** to publish; a backend decides **where**. Exactly one
 | `scripts/shared/sync/WebDavBackend.ts` | One file over HTTP: ETag versions, `If-Match` / `If-None-Match`, `MKCOL`, alarm polling, `testConnection()` |
 | `scripts/shared/sync/syncConfig.ts` | Per-device config in `storage.local`, URL validation, host permission pattern, backend factory |
 | `scripts/shared/sync/syncAlarms.ts` | The one `alarms.onAlarm` listener, registered synchronously at startup (MV3), fanned out to the active backend |
+| `scripts/shared/sync/libraryCrypto.ts` | Envelope, data key wrapping (passphrase and recovery keys), rewrapping; WebCrypto only |
+| `scripts/shared/sync/keyStore.ts` | `IdbKeyStore`: unlocked data keys in IndexedDB (`hermidata-sync-keys`), non-extractable |
 | `scripts/shared/types/sync.ts` | `SyncBackend`, `RemoteBlob`, `WriteResult`, `SyncBackendConfig`, … |
 | `scripts/settings/build/LibrarySync.ts` | The settings card: form, permission request, test, first-run choice |
-| `scripts/background/syncSettings.ts` | Background handlers for `SYNC_SET_BACKEND` and `SYNC_REFRESH` |
+| `scripts/settings/build/LibraryEncryption.ts` | The encryption card: turn on/off, unlock, recover, change passphrase, recovery keys |
+| `scripts/background/syncSettings.ts` | Background handlers for `SYNC_SET_BACKEND`, `SYNC_REFRESH` and `SYNC_SET_ENCRYPTION` |
 
 ### The backend contract
 
@@ -210,6 +284,33 @@ before every write, and retries a conflicting write up to 4 times before reporti
 `latestItem`) stripped, and ISO timestamps packed to epoch milliseconds where that round-trips exactly. Tombstones
 map an entry id to its deletion time and expire after 30 days.
 
+**Encrypted**, the published string is an envelope instead:
+
+```text
+HMENC1.<base64url(JSON header)>.<base64 IV>.<base64 AES-256-GCM ciphertext of the gzip bytes>
+```
+
+- One random **data key** (AES-256-GCM) encrypts the gzip bytes, with a fresh 12-byte IV per write. The header
+  segment is the additional authenticated data, so an edited or swapped header fails to decrypt.
+- The header carries the data key **wrapped** (AES-GCM, bound to the key id) once with a key derived from the
+  passphrase (PBKDF2-SHA256, 600,000 iterations, random salt) and once per recovery key (HKDF-SHA256; recovery
+  keys are 160 random bits, shown as 32 Crockford base32 characters).
+- `kid` names the data key and changes only when encryption is turned on again; `rev` changes on every rewrap
+  (passphrase change, recovery key used, new recovery keys). Rewrapping never re-keys, so unlocked devices keep
+  working.
+- The prefix can never occur in a plain snapshot (plain snapshots are base64, which has no `.`), so plain and
+  encrypted snapshots are told apart without configuration.
+
+**Replacing an unreadable copy** (`replaceUnreadable()`) is the only path that writes over a snapshot the device
+cannot open. It is an explicit user choice, stored in `syncSealPending` as `{ header, replace: true }`, still
+conditional on the version it replaces, and it merges normally instead if the copy turns out to be readable.
+
+**How a push decides how to seal:** a choice made in Settings and not yet published wins; otherwise the device
+does what the published snapshot does (so turning encryption on or off on one device is followed by all);
+with nothing published it keeps doing what it last did. Without the key for that choice, it writes nothing.
+Because every encryption differs, the "cloud already holds this" check compares the decrypted plaintext and the
+header revision, not the stored string.
+
 ### Per-device state (`storage.local`)
 
 | Key | Content |
@@ -218,6 +319,10 @@ map an entry id to its deletion time and expire after 30 days.
 | `syncAdoptPending` | `true` while a "use the server copy" switch waits for its first successful pull |
 | `syncTombstones` | Deletions not yet expired |
 | `syncBlocked`, `syncWarnAt` | Quota state for the "too big" / "nearly full" warnings |
+| `syncSealHeader` | The envelope header of the newest snapshot this device knows, or `null` when it was plain |
+| `syncSealPending` | `{ header, replace? }` (header `null` turns encryption off) chosen in Settings, until a write carrying it succeeds |
+
+Unlocked data keys live in IndexedDB (`hermidata-sync-keys`, store `keys`, keyed by `kid`), not in `storage.local`.
 
 The synced `Settings` key in `storage.sync` is never touched by sync.
 
@@ -234,6 +339,8 @@ npx vitest run tests/sync          # every sync suite, against in-memory fakes
 | `sync.webdav.test.ts` | WebDAV requests, preconditions, folders, servers without ETags, `testConnection`, polling; the engine on WebDAV |
 | `sync.switch.test.ts` | Switching backends, merge and adopt |
 | `sync.config.test.ts` | URL validation, config storage, the alarm hub |
+| `sync.crypto.test.ts` | Envelope, passphrase and recovery keys, rewrapping, tampering, hostile headers |
+| `sync.encryption.test.ts` | The engine encrypted: turning it on and off, locked devices, rewraps, the plaintext dedupe, browser sync |
 
 `tests/sync.fakeDav.ts` has `FakeDavServer` (an in-memory WebDAV server behind a real `fetch` signature) and
 `FakeAlarms`.
@@ -263,3 +370,6 @@ need OAuth (Google Drive, Dropbox, OneDrive) are not planned unless requested.
   requested at install time for it.
 - Privacy policy: when the user configures a WebDAV server, the library is sent to that server and the
   credentials are stored locally on the device. No data goes to the developer or any other third party.
+- Privacy policy: optional end-to-end encryption of the synced library (AES-256-GCM, key derived from a passphrase
+  on the user's devices). The passphrase and recovery keys never leave the device; the developer cannot recover
+  them.

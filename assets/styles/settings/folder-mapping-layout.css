@@ -166,6 +166,14 @@ nav {
 }
 .sync-choices .choice:has(input:focus-visible) { outline: 2px solid var(--accent-active-soft); outline-offset: 2px; }
 
+.sync-form {
+    display: grid;
+    justify-items: start;
+    gap: 16px;
+    width: 100%;
+    margin: 0;
+}
+
 .webdav-setup {
     display: grid;
     gap: 12px;
@@ -257,6 +265,75 @@ nav {
     padding: 0;
 }
 .sync-choice-actions button { margin: 0; }
+
+/* ---------- Library encryption ---------- */
+
+.Account_Connection .library-encryption-card {
+    margin-top: 16px;
+}
+
+.library-encryption-card .badge {
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface-input);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.account-connection-card .encryption-reason {
+    font-size: 0.82rem;
+}
+
+.encryption-panel {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+}
+.encryption-panel[hidden] { display: none; }
+
+.encryption-details {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+.encryption-details > summary {
+    color: var(--text);
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+.encryption-details[open] > summary { margin-bottom: 12px; }
+.encryption-details[hidden] { display: none; }
+.encryption-danger { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+
+.recovery-key-input,
+.recovery-keys {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.04em;
+}
+
+.recovery-keys {
+    display: grid;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 12px 12px 12px 36px;
+    border-radius: 10px;
+    background: var(--surface-input);
+    color: var(--text);
+    font-size: 0.9rem;
+    user-select: all;
+}
+
+.recovery-keys-confirm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 0;
+    white-space: normal;
+}
 
 @media (max-width: 640px) {
     .sync-choices,

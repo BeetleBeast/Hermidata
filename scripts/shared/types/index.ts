@@ -160,5 +160,9 @@ export type {
     AlarmsLike,
     SyncBackendConfig,
     SyncSwitchMode,
+    EnvelopeHeader,
+    PassphraseSlot,
+    RecoverySlot,
+    KeyStore,
 
 } from './sync';

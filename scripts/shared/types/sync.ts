@@ -97,6 +97,43 @@ export type SyncSwitchMode = 'merge' | 'adopt';
 
 export type WebDavProblem ='auth' | 'forbidden' | 'folder' | 'server' | 'network';
 
+// ------------------------------------------------------------- encryption
+
+/** The data key wrapped with a key derived from the passphrase (PBKDF2-SHA256). */
+export interface PassphraseSlot {
+    salt: string;       // base64
+    iter: number;
+    iv: string;         // base64
+    wrapped: string;    // base64
+}
+
+/** The data key wrapped with a key derived from one recovery key (HKDF-SHA256). Removed once used. */
+export interface RecoverySlot {
+    id: string;
+    salt: string;
+    iv: string;
+    wrapped: string;
+}
+
+/**
+ * Travels in front of every encrypted snapshot. Not secret: it holds only salts and wrapped copies of the data key.
+ * kid names the data key (it changes only when encryption is turned on again); rev changes on every rewrap.
+ */
+export interface EnvelopeHeader {
+    v: 1;
+    kid: string;
+    rev: string;
+    pass: PassphraseSlot;
+    recovery: RecoverySlot[];
+}
+
+/** Where unlocked data keys live on a device: IndexedDB in the extension, a Map in tests. */
+export interface KeyStore {
+    get(kid: string): Promise<CryptoKey | undefined>;
+    set(kid: string, key: CryptoKey): Promise<void>;
+    delete(kid: string): Promise<void>;
+}
+
 export type ConnectionTest =
     | { ok: true; conditionalWrite: boolean; note?: string }
     | { ok: false; problem: WebDavProblem; message: string };

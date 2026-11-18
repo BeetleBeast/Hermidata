@@ -6,7 +6,7 @@ import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePath
 import { handleStartPickingFlow } from "./picking"
 import { ready, whenReady } from "./ready"
 import { showNotice } from "./notify"
-import { handleRefreshSync, handleSetSyncBackend } from "./syncSettings"
+import { handleRefreshSync, handleSetSyncBackend, handleSetSyncEncryption } from "./syncSettings"
 
 
 type Respond = (response?: unknown) => void;
@@ -30,6 +30,7 @@ const routes: Record<string, Route> = {
     SHOW_NOTICE_TOAST: { run: (m) => showNotice(m.message, m.closeAfterMs), respondsAsync: false },
     SYNC_SET_BACKEND: { run: (m, r) => handleSetSyncBackend(m.config, m.mode, r), respondsAsync: true },
     SYNC_REFRESH: { run: () => handleRefreshSync(), respondsAsync: false },
+    SYNC_SET_ENCRYPTION: { run: (m, r) => handleSetSyncEncryption(m.header ?? null, m.replace === true, r), respondsAsync: true },
 };
 
 export function initMessaging() {

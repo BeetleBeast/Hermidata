@@ -2,7 +2,7 @@
 // between "devices", and per-device fake IndexedDB + storage.local. Nothing here touches a real browser.
 
 import { vi } from 'vitest';
-import type { Hermidata, SyncBackend } from '../scripts/shared/types';
+import type { Hermidata, KeyStore, SyncBackend } from '../scripts/shared/types';
 import { HermidataSync } from '../scripts/shared/sync/sync.engine';
 import { ConflictError } from '../scripts/shared/utils/dedicatedErrors';
 
@@ -158,12 +158,21 @@ export const sorted = (list: Hermidata[]) => [...list].sort((a, b) => a.id.local
 
 // -------------------------------------------------------------- fake device
 
+/** A device's unlocked keys, in memory instead of IndexedDB. */
+export class MemoryKeyStore implements KeyStore {
+    keys = new Map<string, CryptoKey>();
+    async get(kid: string) { return this.keys.get(kid); }
+    async set(kid: string, key: CryptoKey) { this.keys.set(kid, key); }
+    async delete(kid: string) { this.keys.delete(kid); }
+}
+
 export const devices: Array<{ sync: HermidataSync }> = [];
 export const resetDevices = () => { devices.length = 0; };
 
-export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = [], opts: { push?: boolean; backend?: SyncBackend } = {}) {
+export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = [], opts: { push?: boolean; backend?: SyncBackend; keyStore?: KeyStore } = {}) {
     const db = new Map<string, Hermidata>(initial.map(h => [h.id, clone(h)]));
-    const notices = { tooBig: [] as number[], nearlyFull: [] as number[], errors: [] as string[] };
+    const notices = { tooBig: [] as number[], nearlyFull: [] as number[], errors: [] as string[], locked: 0 };
+    const keyStore = opts.keyStore ?? new MemoryKeyStore();
     let fetchCount = 0;
     const api = cloud.apiForDevice();
 
@@ -176,11 +185,13 @@ export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = 
         onTooBig: kb => notices.tooBig.push(kb),
         onNearlyFull: kb => notices.nearlyFull.push(kb),
         onError: msg => notices.errors.push(msg),
+        keyStore,
+        onLocked: () => { notices.locked++; },
     }, api, opts.backend);
     devices.push({ sync });
 
     return {
-        db, sync, notices,
+        db, sync, notices, keyStore,
         /** this device's own storage.local (tombstones, flags, sync config) */
         local: api.storage.local as FakeLocalArea,
         list: () => sorted([...db.values()]),

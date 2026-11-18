@@ -4,6 +4,7 @@ import { ExtensionBehavior } from "./build/ExtensionBehavior";
 import { DefaultBookmarkInputs } from "./build/DefaultBookmarkInputs";
 import { Account_Connection } from "./build/Account_Connection";
 import { LibrarySync } from "./build/LibrarySync";
+import { LibraryEncryption } from "./build/LibraryEncryption";
 import { ContentTypesAndStatuses } from "./build/ContentTypesAndStatuses";
 import { TagManagement } from "./build/TagManagement";
 import { FolderMapping } from "./build/FolderMapping";
@@ -18,6 +19,8 @@ export class BuildController {
     private readonly accountConnection = new Account_Connection();
 
     private readonly librarySync = new LibrarySync();
+
+    private readonly libraryEncryption = new LibraryEncryption();
     
     private readonly extensionBehavior = new ExtensionBehavior();
     
@@ -162,6 +165,7 @@ export class BuildController {
             case 'account-connection':
                 await this.accountConnection.init();
                 await this.librarySync.init();
+                await this.libraryEncryption.init();
                 break;
             case 'extension-behavior':
                 await this.extensionBehavior.init();
@@ -220,6 +224,7 @@ export class BuildController {
             case 'account-connection':
                 await this.accountConnection.resetValues();
                 await this.librarySync.resetValues();   // discards unsaved edits; never switches the backend
+                await this.libraryEncryption.resetValues();   // clears the inputs; never changes the encryption
                 break;
             case 'extension-behavior':
                 await this.extensionBehavior.resetValues();

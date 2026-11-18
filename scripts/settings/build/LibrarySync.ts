@@ -4,7 +4,7 @@ import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { getElement } from "../../shared/utils/Selection";
 import {
     createBackend, createWebDavBackend, DEFAULT_SYNC_CONFIG, describeTarget, loadSyncConfig, originPattern,
-    sameTarget, validateWebDavUrl,
+    sameConfig, sameTarget, validateWebDavUrl,
 } from "../../shared/sync/syncConfig";
 import { Build } from "../build";
 
@@ -61,9 +61,15 @@ export class LibrarySync extends Build {
         this.browserRadio?.addEventListener('change', () => this.toggleWebdavFields());
         this.webdavRadio?.addEventListener('change', () => this.toggleWebdavFields());
         this.urlInput?.addEventListener('input', () => this.showUrlCheck());
+        // editing the URL or the credentials makes the form differ from what is saved (autofill fires these too)
+        for (const input of [this.urlInput, this.userInput, this.passInput]) {
+            input?.addEventListener('input', () => this.toggleSaveButton());
+            input?.addEventListener('change', () => this.toggleSaveButton());
+        }
         // both handlers request the host permission before their first await: it needs the click's user gesture
         this.testBtn?.addEventListener('click', () => this.onTest());
-        this.applyBtn?.addEventListener('click', () => this.onApply());
+        // a real form submit (click or Enter), so password managers see the credentials being used and can save them
+        getElement<HTMLFormElement>("#syncForm")?.addEventListener('submit', e => { e.preventDefault(); this.onApply(); });
     }
 
     // --------------------------------------------------------------- form
@@ -89,7 +95,7 @@ export class LibrarySync extends Build {
         if (this.webdavSetup) this.webdavSetup.hidden = !webdav;
         if (this.testBtn) this.testBtn.hidden = !webdav;
 
-        this.toggleSaveButton(this.selectedKind());
+        this.toggleSaveButton();
     }
 
     private readForm(): FormResult {
@@ -118,14 +124,29 @@ export class LibrarySync extends Build {
         this.urlCheck.textContent = message;
         this.urlCheck.dataset.tone = check && !check.ok ? 'error' : 'warning';
     }
-    private toggleSaveButton(status: SyncBackendConfig['kind']) {
+    /** What the form says right now, without validating: only used to tell whether saving would change anything. */
+    private formConfig(): SyncBackendConfig {
+        if (this.selectedKind() === 'browser') return { kind: 'browser' };
+        const raw = this.urlInput?.value ?? '';
+        const check = validateWebDavUrl(raw);
+        return {
+            kind: 'webdav',
+            url: check.ok ? check.url : raw.trim(),
+            username: this.userInput?.value.trim() || undefined,
+            password: this.passInput?.value || undefined,
+        };
+    }
 
-        const samePageAsSavingLocation = this.saved.kind === status;
+    /** "Already Saved" only when the form matches what this device already uses: same place AND same credentials. */
+    private toggleSaveButton() {
+        if (this.busy) return;                                          // setBusy(false) calls this again
+
+        const alreadySaved = sameConfig(this.saved, this.formConfig());
 
         if (this.applyBtn) {
-            this.applyBtn.textContent =  samePageAsSavingLocation ? 'Already Saved' : 'Save and switch';
-            this.applyBtn.title = samePageAsSavingLocation ? 'This device has already been configured to sync with this storage location.' : 'Save and switch';
-            this.applyBtn.disabled = samePageAsSavingLocation;
+            this.applyBtn.textContent = alreadySaved ? 'Already Saved' : 'Save and switch';
+            this.applyBtn.title = alreadySaved ? 'This device has already been configured to sync with this storage location.' : 'Save and switch';
+            this.applyBtn.disabled = alreadySaved;
         }
     }
 
@@ -144,7 +165,8 @@ export class LibrarySync extends Build {
     private setBusy(busy: boolean) {
         this.busy = busy;
         if (this.testBtn) this.testBtn.disabled = busy;
-        if (this.applyBtn) this.applyBtn.disabled = busy;
+        if (busy) { if (this.applyBtn) this.applyBtn.disabled = true; }
+        else this.toggleSaveButton();                                   // not simply re-enabled: it may be "Already Saved"
     }
 
     // --------------------------------------------------------- permission
@@ -226,6 +248,7 @@ export class LibrarySync extends Build {
 
             this.saved = config;
             this.showCurrent();
+            document.dispatchEvent(new CustomEvent('hermidata:sync-target-changed'));   // the encryption card re-reads
             this.setStatus(this.switchedMessage(config, mode), 'success');
         } catch (err) {
             logConsoleError('[Sync] switching backend failed', err);

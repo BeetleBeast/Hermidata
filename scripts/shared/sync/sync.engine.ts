@@ -5,9 +5,13 @@ import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from '../db/db';
 import { BrowserSyncBackend } from './BrowserSyncBackend';
-import type { RemoteBlob, SyncBackend, SyncBackendConfig, SyncSwitchMode, WriteResult } from '../types';
+import type { EnvelopeHeader, KeyStore, RemoteBlob, SyncBackend, SyncBackendConfig, SyncSwitchMode, WriteResult } from '../types';
 import { ConflictError } from '../utils/dedicatedErrors';
-import { createBackend, loadSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, validateWebDavUrl } from './syncConfig';
+import { headerRev, isEnvelope, openSnapshot, readEnvelopeHeader, sealSnapshot } from './libraryCrypto';
+import { IdbKeyStore } from './keyStore';
+import {
+    createBackend, loadSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_SEAL_HEADER_KEY, SYNC_SEAL_PENDING_KEY, validateWebDavUrl,
+} from './syncConfig';
 import { backgroundAlarms } from './syncAlarms';
 import { POLL_ALARM } from './WebDavBackend';
 
@@ -17,6 +21,8 @@ import { POLL_ALARM } from './WebDavBackend';
 const TOMBSTONE_KEY = 'syncTombstones'; // storage.local
 const BLOCKED_KEY = 'syncBlocked'; // storage.local
 const WARN_AT_KEY = 'syncWarnAt'; // storage.local
+const SEAL_HEADER_KEY = SYNC_SEAL_HEADER_KEY;
+const SEAL_PENDING_KEY = SYNC_SEAL_PENDING_KEY;
 
 const TOMBSTONE_TTL_MS = 30 * 24 * 3_600 * 1_000;
 const PUSH_DEBOUNCE_MS = 3_000;
@@ -28,7 +34,12 @@ const MAX_PUSH_ATTEMPTS = 4;
 // -------------------------------------------------------------------- types
 
 type Snapshot = { entries: Hermidata[]; tombstones: Record<string, number> };
-type ReadResult = { blob: RemoteBlob; snapshot: Snapshot } | 'none' | 'incomplete' | 'unchanged';
+/** A published snapshot as this device knows it: what is stored, what it decrypts to, and how it was sealed. */
+type Known = { blob: RemoteBlob; plain: string; header: EnvelopeHeader | null };
+type ReadResult = { known: Known; snapshot: Snapshot } | 'none' | 'incomplete' | 'unchanged' | 'locked';
+type Opened = { plain: string; header: EnvelopeHeader | null } | 'locked' | 'undecodable';
+type SealTarget = { header: null } | { header: EnvelopeHeader; key: CryptoKey } | 'locked';
+type Outgoing = { data: string; plain: string; header: EnvelopeHeader | null };
 type Tombstones = Record<string, number>;
 type LocalState = { all: Hermidata[]; tombs: Tombstones };
 
@@ -44,6 +55,10 @@ export interface SyncDeps {
     onTooBig(neededKb: number): void;
     onNearlyFull(neededKb: number): void;
     onError(message: string, err: unknown): void;
+    /** Unlocked data keys for encrypted libraries. Defaults to the extension's IndexedDB store. */
+    keyStore?: KeyStore;
+    /** The synced library is encrypted and this device does not hold its key yet. Called once per key. */
+    onLocked?(): void;
 }
 
 // ------------------------------------------------------ compression helpers
@@ -143,7 +158,11 @@ export class HermidataSync {
     private queue: Promise<void> = Promise.resolve();   // serializes pull / merge / push
     private ready = false;                              // true once the first pull has finished
     private dirty = false;                              // local changes made before ready
-    private known: RemoteBlob | null = null;            // newest published snapshot we have merged or written
+    private known: Known | null = null;                 // newest published snapshot we have merged or written
+    private readonly keyCache = new Map<string, CryptoKey>();
+    private lockedKid: string | null = null;            // the key we last reported as missing
+    private sealRevStored: string | null | undefined;   // what SEAL_HEADER_KEY holds, once known
+    private unreadableVersion: string | undefined;      // version of a published snapshot that could not be opened
     private incompleteRetries = 0;
 
     private readonly deps: SyncDeps;
@@ -200,6 +219,42 @@ export class HermidataSync {
         this.schedulePull();
     }
 
+    /**
+     * How the library is published from now on: sealed with `header` (its key must already be in the key store),
+     * or plain with null. The choice is kept in storage.local until a write carrying it succeeds, so a failed
+     * write is retried with the next push. Resolves true when it was published right away.
+     */
+    async setEncryption(header: EnvelopeHeader | null): Promise<boolean> {
+        if (header && !await this.keyFor(header.kid)) throw new Error('This device does not hold the key for that encryption.');
+
+        let published = false;
+        await this.enqueue(async () => {
+            await this.api.storage.local.set({ [SEAL_PENDING_KEY]: { header } });
+            if (!this.ready) { this.dirty = true; return; }
+            await this.pushSnapshot();
+            published = await this.loadPendingSeal() === undefined;
+        });
+        return published;
+    }
+
+    /**
+     * Last resort when the published snapshot cannot be opened (passphrase and every recovery key lost, or the file
+     * is damaged): publish this device's library over it, sealed with `header` (or plain). Nothing of the
+     * unreadable copy is merged; other devices merge their own libraries back in once they can read the new one.
+     */
+    async replaceUnreadable(header: EnvelopeHeader | null): Promise<boolean> {
+        if (header && !await this.keyFor(header.kid)) throw new Error('This device does not hold the key for that encryption.');
+
+        let published = false;
+        await this.enqueue(async () => {
+            await this.api.storage.local.set({ [SEAL_PENDING_KEY]: { header, replace: true } });
+            this.ready = true;                                          // the user chose to skip the pull that cannot succeed
+            await this.pushSnapshot();
+            published = await this.loadPendingSeal() === undefined;
+        });
+        return published;
+    }
+
     /** Resolves when all currently queued work (pull / merge / push) has finished. Used by tests. */
     idle(): Promise<void> {
         return this.queue;
@@ -252,6 +307,7 @@ export class HermidataSync {
 
         // remote exists but isn't fully readable yet: stay not-ready so we never overwrite it
         if (result === 'incomplete') { this.retryIncomplete(); return; }
+        if (result === 'locked') return;                                // encrypted and no key yet: wait for unlock
         this.incompleteRetries = 0;
         if (result === 'none') {
             if (!this.ready) { await this.clearAdoptIfPending(); this.markReady(true); }
@@ -261,8 +317,8 @@ export class HermidataSync {
         // our own write, or a version we already merged
         if (result === 'unchanged') { if (!this.ready) this.markReady(false); return; }
 
-        if (!this.ready && await this.adoptPending()) await this.adoptRemote(result.snapshot, result.blob);
-        else await this.mergeRemote(result.snapshot, result.blob);
+        if (!this.ready && await this.adoptPending()) await this.adoptRemote(result.snapshot, result.known);
+        else await this.mergeRemote(result.snapshot, result.known);
         if (!this.ready) this.markReady(false);
     }
 
@@ -286,28 +342,105 @@ export class HermidataSync {
     // -------------------------------------------------------- reading remote
 
     private async readRemote(): Promise<ReadResult> {
-        const blob = await this.backend.read(this.known?.version);
+        const blob = await this.backend.read(this.known?.blob.version);
 
         if (blob === null) return 'none';
         if (blob === 'incomplete' || blob === 'unchanged') return blob;
-        if (blob.version === this.known?.version) return 'unchanged';  // backend without conditional reads
+        if (blob.version === this.known?.blob.version) return 'unchanged';  // backend without conditional reads
 
         return this.decodeSnapshot(blob);
     }
 
     private async decodeSnapshot(blob: RemoteBlob): Promise<ReadResult> {
+        const opened = await this.openBlob(blob);
+        if (opened === 'locked' || opened === 'undecodable') this.unreadableVersion = blob.version;
+        if (opened === 'locked') return 'locked';
+        if (opened === 'undecodable') return 'incomplete';
         try {
-            return { blob, snapshot: await decodePayload(blob.data) };
+            return { known: { blob, ...opened }, snapshot: await decodePayload(opened.plain) };
         } catch (err) {
             this.deps.onError('[Sync] could not decode remote snapshot', err);
             return 'incomplete';
         }
     }
 
+    // ------------------------------------------------------------ encryption
+
+    /** The packed snapshot inside a blob: as is when plain, decrypted when sealed. */
+    private async openBlob(blob: RemoteBlob): Promise<Opened> {
+        if (!isEnvelope(blob.data)) return { plain: blob.data, header: null };
+        try {
+            const header = readEnvelopeHeader(blob.data);
+            const key = await this.keyFor(header.kid);
+            if (!key) { this.reportLocked(header.kid); return 'locked'; }
+            this.lockedKid = null;
+            return { plain: await openSnapshot(blob.data, key), header };
+        } catch (err) {
+            this.deps.onError('[Sync] could not decrypt remote snapshot', err);
+            return 'undecodable';
+        }
+    }
+
+    private keyStore(): KeyStore {
+        return this.deps.keyStore ??= new IdbKeyStore();
+    }
+
+    /** Misses are not cached: unlocking in Settings stores the key, and the next read must find it. */
+    private async keyFor(kid: string): Promise<CryptoKey | undefined> {
+        const cached = this.keyCache.get(kid);
+        if (cached) return cached;
+        const key = await this.keyStore().get(kid);
+        if (key) this.keyCache.set(kid, key);
+        return key;
+    }
+
+    private reportLocked(kid: string): void {
+        if (this.lockedKid === kid) return;
+        this.lockedKid = kid;
+        this.deps.onLocked?.();
+    }
+
+    /** The choice made in Settings that is not published yet. undefined: none. */
+    private async loadPendingSeal(): Promise<EnvelopeHeader | null | undefined> {
+        return (await this.pendingRecord())?.header;
+    }
+
+    private async pendingRecord(): Promise<{ header: EnvelopeHeader | null; replace?: boolean } | undefined> {
+        const got = await this.api.storage.local.get(SEAL_PENDING_KEY);
+        return (got[SEAL_PENDING_KEY] as { header: EnvelopeHeader | null; replace?: boolean } | false | undefined) || undefined;
+    }
+
+    /**
+     * How this write is sealed: a pending choice from Settings wins; otherwise do what the published snapshot does,
+     * so a device follows when another one turns encryption on or off; with nothing published, keep the last way.
+     */
+    private async sealTarget(base: Known | null): Promise<SealTarget> {
+        const pending = await this.loadPendingSeal();
+        const header = pending !== undefined ? pending : base ? base.header : await this.lastSeal();
+        if (!header) return { header: null };
+
+        const key = await this.keyFor(header.kid);
+        if (!key) { this.reportLocked(header.kid); return 'locked'; }
+        return { header, key };
+    }
+
+    private async lastSeal(): Promise<EnvelopeHeader | null> {
+        const got = await this.api.storage.local.get(SEAL_HEADER_KEY);
+        return (got[SEAL_HEADER_KEY] as EnvelopeHeader | null | undefined) ?? null;
+    }
+
+    private async setKnown(known: Known): Promise<void> {
+        this.known = known;
+        const rev = headerRev(known.header);
+        if (rev === this.sealRevStored) return;
+        this.sealRevStored = rev;
+        await this.api.storage.local.set({ [SEAL_HEADER_KEY]: known.header });
+    }
+
     // ----------------------------------------------------------------- merge
 
     /** Folds a remote snapshot into the local library. pushIfBehind=false when the caller is about to write anyway. */
-    private async mergeRemote(remote: Snapshot, blob: RemoteBlob, pushIfBehind = true): Promise<void> {
+    private async mergeRemote(remote: Snapshot, known: Known, pushIfBehind = true): Promise<void> {
         const local = await this.loadLocalMap();
         const tombs = await this.loadTombstones();
 
@@ -316,7 +449,7 @@ export class HermidataSync {
         const missingLocal = this.remoteLacksLocal(remote.entries, local);
 
         await this.saveTombstones(this.pruneTombstones(tombs));
-        this.known = blob;
+        await this.setKnown(known);
 
         // converges: after one push the remote is not behind
         if (pushIfBehind && (behindOnEntries || missingLocal)) this.schedulePush();
@@ -334,7 +467,7 @@ export class HermidataSync {
     }
 
     /** "Use the server copy": this device's library becomes exactly the published one, newer local edits included. */
-    private async adoptRemote(remote: Snapshot, blob: RemoteBlob): Promise<void> {
+    private async adoptRemote(remote: Snapshot, known: Known): Promise<void> {
         const local = await this.loadLocalMap();
         const remoteIds = new Set(remote.entries.map(r => r.id));
 
@@ -344,7 +477,7 @@ export class HermidataSync {
         for (const r of remote.entries) await this.takeRemoteEntry(r, local.get(r.id), {});
 
         await this.saveTombstones(this.pruneTombstones({ ...remote.tombstones }));
-        this.known = blob;
+        await this.setKnown(known);
         await this.api.storage.local.set({ [SYNC_ADOPT_KEY]: false });
     }
 
@@ -415,36 +548,48 @@ export class HermidataSync {
 
     /** One read-merge-write round. 'conflict' means someone else wrote in between, so go again. */
     private async tryPush(): Promise<'done' | 'conflict'> {
-        const base = await this.readBase();
-        if (base === 'unusable') return 'done';                         // never write over what we cannot read
+        let base = await this.readBase();
+        let ifMatch = base === 'unusable' ? undefined : base?.blob.version;
+        if (base === 'unusable') {
+            // never write over what we cannot read, unless the user chose to replace it (replaceUnreadable)
+            if (this.unreadableVersion === undefined || !(await this.pendingRecord())?.replace) return 'done';
+            base = null;
+            ifMatch = this.unreadableVersion;
+        }
 
         const state = await this.collectLocalState();
         if (!state) return 'done';                                      // never publish an empty library
 
         const packed = await encodePayload(state.all, state.tombs);
-        if (base?.data === packed) return 'done';                       // e.g. an RSS-only refresh
+        const target = await this.sealTarget(base);
+        if (target === 'locked') return 'done';                         // cannot seal: never publish in the clear instead
 
-        return this.publish(packed, base?.version);
+        // e.g. an RSS-only refresh. Plaintext is compared because every encryption uses a fresh IV.
+        if (base?.plain === packed && headerRev(base.header) === headerRev(target.header)) return 'done';
+
+        const data = target.header ? await sealSnapshot(packed, target.header, target.key) : packed;
+        return this.publish({ data, plain: packed, header: target.header }, ifMatch);
     }
 
     /** What the write will be based on, after merging it. Null when nothing is published yet. */
-    private async readBase(): Promise<RemoteBlob | null | 'unusable'> {
-        const blob = await this.backend.read(this.known?.version);
+    private async readBase(): Promise<Known | null | 'unusable'> {
+        this.unreadableVersion = undefined;
+        const blob = await this.backend.read(this.known?.blob.version);
 
         if (blob === null) return null;
         if (blob === 'unchanged') return this.known;                    // we hold exactly what is published
         if (blob === 'incomplete') { this.retryIncomplete(); return 'unusable'; }
-        if (blob.version === this.known?.version) return blob;
+        if (blob.version === this.known?.blob.version) return this.known;
 
         const decoded = await this.decodeSnapshot(blob);
-        if (typeof decoded !== 'object') return 'unusable';             // undecodable: leave the remote alone
-        await this.mergeRemote(decoded.snapshot, blob, false);          // fold in what others wrote
-        return blob;
+        if (typeof decoded !== 'object') return 'unusable';             // undecodable or locked: leave the remote alone
+        await this.mergeRemote(decoded.snapshot, decoded.known, false); // fold in what others wrote
+        return decoded.known;
     }
 
-    private async publish(packed: string, ifMatch: string | undefined): Promise<'done' | 'conflict'> {
+    private async publish(out: Outgoing, ifMatch: string | undefined): Promise<'done' | 'conflict'> {
         try {
-            await this.afterWrite(await this.backend.write(packed, ifMatch), packed);
+            await this.afterWrite(await this.backend.write(out.data, ifMatch), out);
             return 'done';
         } catch (err) {
             if (err instanceof ConflictError) return 'conflict';
@@ -471,10 +616,14 @@ export class HermidataSync {
         }
     }
 
-    private async afterWrite(result: WriteResult, packed: string): Promise<void> {
+    private async afterWrite(result: WriteResult, out: Outgoing): Promise<void> {
         if (result.status === 'too-big') { await this.markBlocked(result.neededBytes); return; }
 
-        this.known = { data: packed, version: result.version };
+        await this.setKnown({ blob: { data: out.data, version: result.version }, plain: out.plain, header: out.header });
+        const pending = await this.loadPendingSeal();
+        if (pending !== undefined && headerRev(pending) === headerRev(out.header)) {
+            await this.api.storage.local.set({ [SEAL_PENDING_KEY]: false });
+        }
         await this.api.storage.local.set({ [BLOCKED_KEY]: false });
         if (result.nearlyFull !== undefined) await this.maybeWarn(result.nearlyFull);
     }
@@ -583,6 +732,13 @@ function notifySyncNearlyFull(kbCounter: string): void {
         notificationTarget: 'toast',
     }).sendMessage();
 }
+function notifySyncLocked(): void {
+    const message = '[Sync] Paused: the synced library is encrypted. Enter the passphrase in Settings → Account & Connection to keep syncing.';
+    console.warn(message);
+    void new WarningMessage(message, undefined, {
+        notificationTarget: 'toast',
+    }).sendMessage();
+}
 
 
 const sync = new HermidataSync({
@@ -599,6 +755,8 @@ const sync = new HermidataSync({
     onTooBig: kb => notifySyncTooBig(kbCounter(kb)),
     onNearlyFull: kb => notifySyncNearlyFull(kbCounter(kb)),
     onError: (msg, err) => logConsoleError(msg, err),
+    keyStore: new IdbKeyStore(),
+    onLocked: () => notifySyncLocked(),
 });
 
 /** Call after every putHermidata() — pushes just that one entry to sync */
@@ -622,6 +780,12 @@ async function startConfiguredSync(): Promise<void> {
 
 /** Check the remote for changes now, e.g. when the popup opens. */
 export const refreshSync = () => sync.refresh();
+
+/** Publish sealed with this header from now on (its key is already in the key store), or plain with null. Background only. */
+export const setSyncEncryption = (header: EnvelopeHeader | null) => sync.setEncryption(header);
+
+/** Last resort: publish this device's library over a synced copy that cannot be opened. Background only. */
+export const replaceUnreadableSync = (header: EnvelopeHeader | null) => sync.replaceUnreadable(header);
 
 /** Saves the new backend for this device and switches to it. Background only. */
 export async function switchSyncBackend(config: SyncBackendConfig, mode: SyncSwitchMode = 'merge'): Promise<void> {

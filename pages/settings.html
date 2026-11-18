@@ -75,31 +75,150 @@
                     </label>
                 </fieldset>
 
-                <div id="webdavSetup" class="webdav-setup" hidden>
-                    <div class="webdav-field">
-                        <label for="webdavUrl">Sync file URL</label>
-                        <input type="url" id="webdavUrl" placeholder="https://cloud.example.com/remote.php/dav/files/me/Hermidata/hermidata.sync" autocomplete="off" spellcheck="false">
-                        <p class="field-hint">The full address of the file, including its name. The folder is created if it does not exist.</p>
-                        <p id="webdavUrlCheck" class="webdav-url-check" role="status" aria-live="polite" hidden></p>
+                <form id="syncForm" class="sync-form">
+                    <div id="webdavSetup" class="webdav-setup" hidden>
+                        <div class="webdav-field">
+                            <label for="webdavUrl">Sync file URL</label>
+                            <input type="url" id="webdavUrl" placeholder="https://cloud.example.com/remote.php/dav/files/me/Hermidata/hermidata.sync" autocomplete="url" spellcheck="false">
+                            <p class="field-hint">The full address of the file, including its name. The folder is created if it does not exist.</p>
+                            <p id="webdavUrlCheck" class="webdav-url-check" role="status" aria-live="polite" hidden></p>
+                        </div>
+                        <div class="webdav-credentials">
+                            <div class="webdav-field">
+                                <label for="webdavUser">Username</label>
+                                <input type="text" id="webdavUser" name="username" autocomplete="username" spellcheck="false">
+                            </div>
+                            <div class="webdav-field">
+                                <label for="webdavPass">Password or app password</label>
+                                <input type="password" id="webdavPass" name="password" autocomplete="current-password">
+                            </div>
+                        </div>
+                        <p class="field-hint">Stored only on this device, never synced. Prefer an app password where your server offers one. Your password manager can fill this in and save it.</p>
                     </div>
+
+                    <div class="sync-actions">
+                        <button id="testWebdav" type="button" class="btn-ghost" hidden>Test connection</button>
+                        <button id="applySyncBackend" type="submit">Save and switch</button>
+                    </div>
+                </form>
+                <p id="syncStatus" class="sync-status" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="card account-connection-card library-encryption-card">
+                <div>
+                    <h3>Encryption <span class="badge">Optional</span></h3>
+                    <p>Encrypt the synced library so that only your own devices can read it. The library stored on each device is not changed.</p>
+                </div>
+                <p id="encryptionReason" class="encryption-reason"></p>
+                <p id="encryptionState" class="account-auth-status"></p>
+
+                <form id="encryptionEnable" class="encryption-panel" hidden>
+                    <input type="text" class="sr-only pm-username" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
                     <div class="webdav-credentials">
+                        <input hidden type="text" id="encription-UserName" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
                         <div class="webdav-field">
-                            <label for="webdavUser">Username</label>
-                            <input type="text" id="webdavUser" autocomplete="off" spellcheck="false">
+                            <label for="encryptionNewPass">Passphrase</label>
+                            <input type="password" id="encryptionNewPass" name="password" aria-autocomplete="new-password" aria-label="write a password" autocomplete="new-password">
                         </div>
                         <div class="webdav-field">
-                            <label for="webdavPass">Password or app password</label>
-                            <input type="password" id="webdavPass" autocomplete="new-password">
+                            <label for="encryptionNewPassConfirm">Repeat the passphrase</label>
+                            <input type="password" id="encryptionNewPassConfirm" name="password" aria-autocomplete="new-password" aria-label="Repeat the passphrase" autocomplete="new-password">
                         </div>
                     </div>
-                    <p class="field-hint">Stored only on this device, never synced. Prefer an app password where your server offers one.</p>
+                    <p class="field-hint">At least 10 characters; a few unrelated words work well. You need it once on every device. You also get 5 recovery keys in case you forget it. A password manager can generate and store the passphrase for you.</p>
+                    <div class="sync-actions"><button id="encryptionEnableBtn" type="submit">Turn on encryption</button></div>
+                </form>
+
+                <div id="encryptionUnlock" class="encryption-panel" hidden>
+                    <form id="encryptionUnlockForm" class="encryption-panel">
+                        <input type="text" class="sr-only pm-username" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
+                        <div class="webdav-field">
+                            <label for="encryptionUnlockPass">Passphrase</label>
+                            <input type="password" id="encryptionUnlockPass" autocomplete="current-password">
+                        </div>
+                        <div class="sync-actions"><button id="encryptionUnlockBtn" type="submit">Unlock</button></div>
+                    </form>
+                    <details class="encryption-details">
+                        <summary>Forgot the passphrase? Use a recovery key</summary>
+                        <form id="encryptionRecoverForm" class="encryption-panel">
+                            <div class="webdav-field">
+                                <label for="encryptionRecoveryKey">Recovery key</label>
+                                <input type="text" id="encryptionRecoveryKey" class="recovery-key-input" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore>
+                            </div>
+                            <input type="text" class="sr-only pm-username" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
+                            <div class="webdav-credentials">
+                                <div class="webdav-field">
+                                    <label for="encryptionRecoveryPass">New passphrase</label>
+                                    <input type="password" id="encryptionRecoveryPass" autocomplete="new-password">
+                                </div>
+                                <div class="webdav-field">
+                                    <label for="encryptionRecoveryPassConfirm">Repeat the new passphrase</label>
+                                    <input type="password" id="encryptionRecoveryPassConfirm" autocomplete="new-password">
+                                </div>
+                            </div>
+                            <p class="field-hint">Each recovery key works once. Other devices that are already unlocked keep working.</p>
+                            <div class="sync-actions"><button id="encryptionRecoverBtn" type="submit">Unlock and set the new passphrase</button></div>
+                        </form>
+                    </details>
                 </div>
 
-                <div class="sync-actions">
-                    <button id="testWebdav" type="button" class="btn-ghost" hidden>Test connection</button>
-                    <button id="applySyncBackend" type="button">Save and switch</button>
+                <details id="encryptionReplace" class="encryption-details encryption-danger" hidden>
+                    <summary>Lost the passphrase and every recovery key?</summary>
+                    <form id="encryptionReplaceForm" class="encryption-panel">
+                        <input type="text" class="sr-only pm-username" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
+                        <p class="field-hint">You can replace the synced copy with <strong>this device's library</strong>, encrypted with a new passphrase. Whatever only exists in the unreadable copy is lost. Your other devices keep their libraries: once they unlock with the new passphrase, their entries are merged back in.</p>
+                        <div class="webdav-credentials">
+                            <div class="webdav-field">
+                                <label for="encryptionReplacePass">New passphrase</label>
+                                <input type="password" id="encryptionReplacePass" autocomplete="new-password">
+                            </div>
+                            <div class="webdav-field">
+                                <label for="encryptionReplacePassConfirm">Repeat the new passphrase</label>
+                                <input type="password" id="encryptionReplacePassConfirm" autocomplete="new-password">
+                            </div>
+                        </div>
+                        <div class="sync-actions"><button id="encryptionReplaceBtn" type="submit" class="btn-danger">Replace the synced copy</button></div>
+                    </form>
+                </details>
+
+                <div id="encryptionManage" class="encryption-panel" hidden>
+                    <details class="encryption-details">
+                        <summary>Change the passphrase</summary>
+                        <form id="encryptionChangeForm" class="encryption-panel">
+                            <input type="text" class="sr-only pm-username" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
+                            <div class="webdav-field">
+                                <label for="encryptionCurrentPass">Current passphrase</label>
+                                <input type="password" id="encryptionCurrentPass" autocomplete="current-password">
+                            </div>
+                            <div class="webdav-credentials">
+                                <div class="webdav-field">
+                                    <label for="encryptionChangePass">New passphrase</label>
+                                    <input type="password" id="encryptionChangePass" autocomplete="new-password">
+                                </div>
+                                <div class="webdav-field">
+                                    <label for="encryptionChangePassConfirm">Repeat the new passphrase</label>
+                                    <input type="password" id="encryptionChangePassConfirm" autocomplete="new-password">
+                                </div>
+                            </div>
+                            <div class="sync-actions"><button id="encryptionChangeBtn" type="submit">Change passphrase</button></div>
+                        </form>
+                    </details>
+                    <details class="encryption-details">
+                        <summary>Create new recovery keys</summary>
+                        <form id="encryptionKeysForm" class="encryption-panel">
+                            <input type="text" class="sr-only pm-username" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
+                            <p class="field-hint">Replaces all recovery keys; the old ones stop working.</p>
+                            <div class="webdav-field">
+                                <label for="encryptionKeysPass">Passphrase</label>
+                                <input type="password" id="encryptionKeysPass" autocomplete="current-password">
+                            </div>
+                            <div class="sync-actions"><button id="encryptionKeysBtn" type="submit">Create new recovery keys</button></div>
+                        </form>
+                    </details>
+                    <div class="sync-actions"><button id="encryptionDisableBtn" type="button" class="btn-ghost">Turn off encryption</button></div>
                 </div>
-                <p id="syncStatus" class="sync-status" role="status" aria-live="polite"></p>
+
+                <p id="encryptionStatus" class="sync-status" role="status" aria-live="polite"></p>
             </div>
         </section>
         <section class="section-content Extension_Behavior" data-active="false">
@@ -709,6 +828,22 @@
                 <button id="resetSettingsBtn" class="footerBtn btn-danger" type="button" popovertargetaction="toggle" popovertarget="reset-dialog">Reset section</button>
             </div>
         </footer>
+        <dialog id="recoveryKeysDialog" class="sync-choice-dialog recovery-keys-dialog" aria-labelledby="recoveryKeysTitle">
+            <h3 id="recoveryKeysTitle">Save your recovery keys</h3>
+            <p>If you forget the passphrase, any one of these keys unlocks the library. Each key works once. Keep them somewhere safe, away from this device. <strong>They are only shown now.</strong></p>
+            <ol id="recoveryKeysList" class="recovery-keys"></ol>
+            <div class="sync-actions">
+                <button id="recoveryKeysDownload" type="button">Download as a text file</button>
+                <button id="recoveryKeysCopy" type="button" class="btn-ghost">Copy</button>
+            </div>
+            <label class="recovery-keys-confirm" for="recoveryKeysSaved">
+                <input type="checkbox" id="recoveryKeysSaved"> I have saved these recovery keys
+            </label>
+            <menu class="sync-choice-actions">
+                <button id="recoveryKeysCancel" type="button" class="btn-ghost">Cancel</button>
+                <button id="recoveryKeysDone" type="button" disabled>Continue</button>
+            </menu>
+        </dialog>
         <dialog id="syncChoiceDialog" class="sync-choice-dialog" aria-labelledby="syncChoiceTitle">
             <form method="dialog" class="sync-choice-form">
                 <h3 id="syncChoiceTitle">Both have a library</h3>

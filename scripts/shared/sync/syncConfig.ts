@@ -9,6 +9,10 @@ import { WebDavBackend } from "./WebDavBackend";
 export const SYNC_CONFIG_KEY = 'syncBackend';
 /** storage.local: true while a switch with "use the server copy" waits for its first pull. */
 export const SYNC_ADOPT_KEY = 'syncAdoptPending';
+/** storage.local: the header of the newest snapshot this device knows (null = published in the clear). */
+export const SYNC_SEAL_HEADER_KEY = 'syncSealHeader';
+/** storage.local: { header } chosen in Settings (null = turn encryption off), until a write carrying it succeeds. */
+export const SYNC_SEAL_PENDING_KEY = 'syncSealPending';
 
 export const DEFAULT_SYNC_CONFIG: SyncBackendConfig = { kind: 'browser' };
 
@@ -37,6 +41,13 @@ export async function saveSyncConfig(local: LocalArea, config: SyncBackendConfig
 export function sameTarget(a: SyncBackendConfig, b: SyncBackendConfig): boolean {
     if (a.kind !== b.kind) return false;
     return a.kind === 'browser' || a.url === (b as { url: string }).url;
+}
+
+/** Same place and same credentials: saving this again would change nothing. (The poll interval is not edited in the form.) */
+export function sameConfig(a: SyncBackendConfig, b: SyncBackendConfig): boolean {
+    if (!sameTarget(a, b)) return false;
+    if (a.kind === 'browser' || b.kind === 'browser') return true;
+    return (a.username ?? '') === (b.username ?? '') && (a.password ?? '') === (b.password ?? '');
 }
 
 export function describeTarget(config: SyncBackendConfig): string {

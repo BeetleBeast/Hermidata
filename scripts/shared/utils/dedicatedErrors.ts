@@ -45,3 +45,19 @@ export class WebDavError extends Error {
         }
     }
 }
+
+/** A passphrase or recovery key that does not unlock the library. */
+export class WrongSecretError extends Error {
+    constructor(message = 'This does not unlock the library.', options?: ErrorOptions) {
+        super(message, options);
+        this.name = 'WrongSecretError';
+    }
+}
+
+/** An encrypted snapshot that cannot be parsed or decrypted (damaged, tampered with, or a key mismatch). */
+export class MalformedEnvelopeError extends Error {
+    constructor(message = 'The encrypted library is damaged or cannot be read.', options?: ErrorOptions) {
+        super(message, options);
+        this.name = 'MalformedEnvelopeError';
+    }
+}

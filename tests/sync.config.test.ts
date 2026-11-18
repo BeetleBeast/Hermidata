@@ -12,7 +12,7 @@ extSlot.alarms = fakeAlarms;
 
 import {
     createBackend, DEFAULT_SYNC_CONFIG, describeTarget, isLocalOrPrivateHost, loadSyncConfig, originPattern,
-    sameTarget, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_CONFIG_KEY, validateWebDavUrl,
+    sameConfig, sameTarget, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_CONFIG_KEY, validateWebDavUrl,
 } from '../scripts/shared/sync/syncConfig';
 import { BrowserSyncBackend } from '../scripts/shared/sync/BrowserSyncBackend';
 import { POLL_ALARM, WebDavBackend } from '../scripts/shared/sync/WebDavBackend';
@@ -114,6 +114,18 @@ describe('sync config storage', () => {
         expect(sameTarget(a, { ...a, url: 'https://x.test/other.sync' })).toBe(false);
         expect(sameTarget(a, { kind: 'browser' })).toBe(false);
         expect(sameTarget({ kind: 'browser' }, { kind: 'browser' })).toBe(true);
+    });
+
+    it('sameConfig also compares the credentials, and treats missing and empty alike', () => {
+        const a = { kind: 'webdav' as const, url: 'https://x.test/h.sync', username: 'me', password: 'pw' };
+        expect(sameConfig(a, { ...a })).toBe(true);
+        expect(sameConfig(a, { ...a, pollMinutes: 10 })).toBe(true);
+        expect(sameConfig(a, { ...a, password: 'other' })).toBe(false);
+        expect(sameConfig(a, { ...a, username: 'you' })).toBe(false);
+        expect(sameConfig(a, { ...a, url: 'https://x.test/other.sync' })).toBe(false);
+        expect(sameConfig({ kind: 'webdav', url: 'https://x.test/h.sync' }, { kind: 'webdav', url: 'https://x.test/h.sync', username: '', password: '' })).toBe(true);
+        expect(sameConfig(a, { kind: 'browser' })).toBe(false);
+        expect(sameConfig({ kind: 'browser' }, { kind: 'browser' })).toBe(true);
     });
 
     it('describes the target for the UI', () => {
