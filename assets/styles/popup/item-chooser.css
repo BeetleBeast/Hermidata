@@ -2,19 +2,30 @@
 
 .saveActions {
     display: flex;
-    align-items: flex-end;
-    gap: 8px;
+    align-items: center;
+    gap: 14px;
 }
 
-/* secondary to Save: same shape, quieter so Save stays the obvious one-click action */
+/* a quiet text link, not a second button: Save stays the one obvious action */
 .saveSeparate {
-    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px; /* same offset as #save, so the two stay centred on each other */
+    padding: 4px 2px;
     color: var(--text-muted);
-    background-color: transparent;
-    border-color: var(--border);
+    font-size: 13px;
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 .saveSeparate:hover {
     color: var(--text);
+}
+.saveSeparate:focus-visible {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: 2px;
+    border-radius: 3px;
 }
 .saveSeparate:disabled {
     color: var(--text-disabled);
@@ -22,6 +33,9 @@
 }
 .saveSeparate[hidden] {
     display: none;
+}
+.saveSeparate-icon {
+    flex-shrink: 0;
 }
 
 /* --- item chooser ( ambiguous same-title match ) --- */
