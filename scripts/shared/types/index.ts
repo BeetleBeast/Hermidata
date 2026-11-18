@@ -22,6 +22,9 @@ export type {
     AllHermidata,
 
     AltCheck,
+    ItemResolveInput,
+    ScoredCandidate,
+    ItemResolution,
 
     InputArrayType,
     InputArraySheetType,

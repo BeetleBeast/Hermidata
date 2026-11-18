@@ -57,7 +57,7 @@ export type Relation = {
         position: number;
     },
     relatedWorks: {
-        type: 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary';
+        type: 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary' | 'adaptation';
         id: string;
     }[]
 } 
@@ -173,6 +173,24 @@ export type AltCheck = {
     relatedTitle: string | null;
     existingKey?: undefined;
 }
+
+/** What the current page tells us about the item being read */
+export type ItemResolveInput = {
+    title: string;
+    url: string;
+};
+
+export type ScoredCandidate = {
+    item: Hermidata;
+    score: number; // 0-1, weighted from url, title and host similarity
+    exactUrl: boolean; // a marker url points at the same series page
+};
+
+/** Outcome of matching the current page against saved items with the same title */
+export type ItemResolution =
+    | { kind: 'none' }
+    | { kind: 'match'; item: Hermidata; candidates: ScoredCandidate[] }
+    | { kind: 'ambiguous'; candidates: ScoredCandidate[] };
 
 export type InputArrayType = [string, AnyNovelType, number, string, AnyReadStatus, string, string[], string]
 export type InputArraySheetType = [string, AnyNovelType, number, string, AnyReadStatus, string, string, string]

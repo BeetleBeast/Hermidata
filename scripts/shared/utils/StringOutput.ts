@@ -73,6 +73,48 @@ export function getChapterFromUrl(url: string): string {
     }
     return '';
 }
+
+/** A path segment, or the part of a segment, that marks a chapter: "chapter", "ch12", "chapter-154" */
+function findChapterTokenIndex(tokens: string[]): number {
+    return tokens.findIndex((token, i) =>
+        urlAttachedRegex.test(token) || (isUrlKeyword(token) && urlPureNumberRegex.test(tokens[i + 1] ?? ''))
+    );
+}
+
+/**
+ * Reduces a chapter url to the series it belongs to, so two chapters of one series compare as equal
+ * @example
+ * 1. "https://www.site.com/series/foo/chapter-12?x=1" -> "site.com/series/foo"
+ * 2. "https://site.com/foo-chapter-12" -> "site.com/foo"
+ * 3. "https://site.com/foo/chapter/12" -> "site.com/foo"
+ */
+export function getSeriesUrl(url: string): string {
+    let parsed: URL;
+    try { parsed = new URL(url); }
+    catch { return ''; }
+
+    let path: string;
+    try { path = decodeURIComponent(parsed.pathname); }
+    catch { path = parsed.pathname; }
+
+    const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    const seriesSegs: string[] = [];
+
+    for (const seg of path.split('/').filter(Boolean)) {
+        const clean = seg.replace(/\.(?:html?|php|aspx?)$/i, '').toLowerCase();
+        if (isUrlKeyword(clean)) break; // "/chapter/12"
+
+        const tokens = clean.split(/[-_\s]+/).filter(Boolean);
+        const chapterIndex = findChapterTokenIndex(tokens);
+        if (chapterIndex === -1) {
+            seriesSegs.push(clean);
+            continue;
+        }
+        if (chapterIndex > 0) seriesSegs.push(tokens.slice(0, chapterIndex).join('-')); // "foo-chapter-12" keeps "foo"
+        break;
+    }
+    return [host, ...seriesSegs].join('/');
+}
 export type ChapterSource = 'titleKeyword' | 'titleSegment' | 'urlKeyword' | 'titleSingleNumber' | 'none';
 export interface ChapterResult { chapter: number; source: ChapterSource }
 
@@ -214,10 +256,15 @@ export function getMultipleTitles(data: PickedElementData, separator = '\n'): st
 }
 
 export function findByTitleOrAlt(title: string, allData: Record<string, Hermidata> ): Hermidata | undefined {
-    title = TrimTitle.trimTitle(title, '').title; // force trim title to remove any chapter info or site name
-    if (!title.trim()) return undefined;
+    return findAllByTitleOrAlt(title, allData)[0];
+}
 
-    const novel = Object.values(allData).find(novel => {
+/** Every saved item whose main or alt title equals the (trimmed) title */
+export function findAllByTitleOrAlt(title: string, allData: Record<string, Hermidata> ): Hermidata[] {
+    title = TrimTitle.trimTitle(title, '').title; // force trim title to remove any chapter info or site name
+    if (!title.trim()) return [];
+
+    return Object.values(allData).filter(novel => {
         const novelModel = new HermidataModel(novel);
 
         const sameMainTitle = TrimTitle.trimTitle(novelModel.title, novelModel.GetUrl()).title === title;
@@ -229,8 +276,6 @@ export function findByTitleOrAlt(title: string, allData: Record<string, Hermidat
 
         return sameMainTitle || sameAltTitle;
     });
-
-    return novel;
 }
 /** 
  * takes title and *domain* as input
