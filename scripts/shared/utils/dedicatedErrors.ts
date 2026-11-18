@@ -23,6 +23,20 @@ export class AmbiguousItemError extends Error {
     }
 }
 
+/** Only the title matches a saved item ( e.g. a site it was never saved from ): auto-save will not risk updating the wrong item. */
+export class UnsureMatchError extends Error {
+
+    public readonly url: string
+    public readonly title: string
+
+    constructor(url: string, title: string) {
+        super('This page might not be the saved item.');
+        this.url = url
+        this.title = title
+        this.name = 'UnsureMatchError';
+    }
+}
+
 export class SaveFailedError extends Error {
     constructor(message = 'Could not save chapter progress.', options?: ErrorOptions) {
         super(message, options);

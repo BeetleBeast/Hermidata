@@ -6,7 +6,8 @@ import { getChapterFromTitle } from "../../shared/utils/StringOutput";
 
 import { createSeparateItem, getPagePosition, updateChapterProgress } from "../core/save";
 import { PastHermidata, type PastHermidataPromptOptions } from "../core/Past";
-import { AmbiguousItemError, NoPastFoundError, SaveFailedError } from "../../shared/utils/dedicatedErrors";
+import { AmbiguousItemError, NoPastFoundError, SaveFailedError, UnsureMatchError } from "../../shared/utils/dedicatedErrors";
+import { getMatchConfidence } from "../core/ItemResolver";
 
 
 type SaveTargetOptions = {
@@ -65,13 +66,19 @@ export class HermidataService {
             currentChapter: getChapterFromTitle(tab.pageTitle, tab.url) || 0
         });
 
+        // decide before SetPast: it copies the saved item into the candidate by reference, so a refused save would still change the cached item
         const past = new PastHermidata(candidate, this.pastPrompts);
-        const hasPastAndSaved = await candidate.SetPast(past);
+        const found = await past.init();
 
         // several same-titled items and no clear winner: never guess without a UI to ask in
         if (past.resolution?.kind === 'ambiguous') throw new AmbiguousItemError(tab.url, past.resolution.candidates.length);
         // if no past was found, return
-        if (!hasPastAndSaved) throw new NoPastFoundError(tab.url);
+        if (!found) throw new NoPastFoundError(tab.url);
+        // only the title matches ( e.g. a site the item was never saved from ): without a UI to ask in, do not risk the wrong item
+        if (getMatchConfidence(past.resolution) === 'unsure') throw new UnsureMatchError(tab.url, candidate.title);
+
+        past.choose(found); // settled: SetPast reuses it instead of looking it up again
+        await candidate.SetPast(past);
 
         const saved = await this.saveHermidata(candidate);
         if (!saved) throw new SaveFailedError();

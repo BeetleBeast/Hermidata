@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveItem, scoreCandidate } from '../scripts/popup/core/ItemResolver';
+import { getMatchConfidence, resolveItem, scoreCandidate } from '../scripts/popup/core/ItemResolver';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { findAllByTitleOrAlt, generateHermidataHash, getSeriesUrl } from '../scripts/shared/utils/StringOutput';
 import type { AnyNovelType, Hermidata } from '../scripts/shared/types';
@@ -97,6 +97,30 @@ describe('resolveItem', () => {
         if (result.kind === 'none') throw new Error('expected candidates');
         const scores = result.candidates.map(candidate => candidate.score);
         expect(scores).toEqual([...scores].sort((a, b) => b - a));
+    });
+});
+
+describe('getMatchConfidence', () => {
+    const novel = createItem('Solo Leveling', 'Novel', 'https://novels.com/solo-leveling/chapter-3');
+    const manga = createItem('Solo Leveling', 'Manga', 'https://manga.com/solo-leveling/chapter-40');
+    const confidence = (url: string, items: Hermidata[]) => getMatchConfidence(resolveItem({ title: 'Solo Leveling', url }, items));
+
+    it('is exact when a marker is on the same series page', () => {
+        expect(confidence('https://novels.com/solo-leveling/chapter-9', [novel, manga])).toBe('exact');
+    });
+
+    it('is likely for a similar page on a known site', () => {
+        expect(confidence('https://novels.com/solo-leveling-v2/chapter-9', [novel])).toBe('likely');
+    });
+
+    it('is unsure when only the title matches, even for a single candidate', () => {
+        expect(confidence('https://elsewhere.com/read/solo-leveling-12', [novel])).toBe('unsure');
+    });
+
+    it('is null when nothing matched or the match is ambiguous', () => {
+        expect(getMatchConfidence(null)).toBeNull();
+        expect(confidence('https://novels.com/solo-leveling/chapter-9', [])).toBeNull();
+        expect(confidence('https://aggregator.com/solo-leveling/chapter-5', [novel, manga])).toBeNull();
     });
 });
 

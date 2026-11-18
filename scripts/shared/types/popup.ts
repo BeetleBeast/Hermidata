@@ -195,6 +195,14 @@ export type ItemResolution =
     | { kind: 'ambiguous'; candidates: ScoredCandidate[] };
 
 /**
+ * How sure we are that the page is the matched item
+ * - exact: the item has a marker on this very series page
+ * - likely: a similar page on a site the item is known from
+ * - unsure: only the title matches ( e.g. a site the item was never saved from )
+ */
+export type MatchConfidence = 'exact' | 'likely' | 'unsure';
+
+/**
  * How prominent "Save as separate item" is, from how sure the popup is that this page is the saved item
  * - hidden: no saved item has this title
  * - subtle: the page is clearly the saved item, the option stays reachable but nearly out of sight

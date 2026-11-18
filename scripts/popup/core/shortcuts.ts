@@ -6,9 +6,6 @@ import type { CurrentTab, KeyboardShortcutSettings, Settings } from "../../share
 import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getChapterFromTitle } from "../../shared/utils/StringOutput";
-import { ErrorMessage, WarningMessage } from "../../shared/utils/ErrorMessage";
-import { AmbiguousItemError } from "../../shared/utils/dedicatedErrors";
-import { HermidataService } from "../in/service";
 import { PastHermidata } from "./Past";
 import { matchesKeyboardShortcut, matchesShortcutKey } from "../../shared/utils/KeyboardShortcuts";
 
@@ -171,22 +168,13 @@ function closeWindow(typing: boolean) {
     }
     else window.close();
 }
-async function saveProgress(e: KeyboardEvent) {
+/**
+ * The shortcut is the Save button: it saves what the form shows ( chapter, type, tags... ) to the item that was matched or chosen,
+ * and a disabled button ( a save is already running ) ignores it
+ */
+function saveProgress(e: KeyboardEvent) {
     e.preventDefault();
-    setSaveInProgress(true);
-    try {
-        await (await getModeSwitcher()).saveCurrentHermidata();
-        setTimeout(() => window.close(), 400);
-        
-    } catch (error) {
-        if (error instanceof AmbiguousItemError) {
-            new WarningMessage(`${error.candidateCount} saved items match this page, so nothing was saved. ` + 'Use the Save buttons to save to the item you picked.').sendMessage();
-            return;
-        }
-        new ErrorMessage("Could not save this item.", undefined, { details: [error] }).sendMessage();
-    } finally {
-        setSaveInProgress(false);
-    }
+    document.querySelector<HTMLButtonElement>('#save')?.click();
 }
 async function focusOnSearchBar(e: KeyboardEvent) {
     e.preventDefault();
@@ -198,23 +186,11 @@ async function focusOnSearchBar(e: KeyboardEvent) {
     search.focus();
 }
 
-
-function setSaveInProgress(isSaving: boolean): void {
-    const button = document.querySelector<HTMLButtonElement>('#save');
-    if (!button) return;
-
-    button.disabled = isSaving;
-    button.setAttribute('aria-busy', String(isSaving));
-    button.dataset.saving = String(isSaving);
-}
-
 export class ModeSwitcher {
 
     private currentMode: "classic" | "rss" = "classic";
 
     private Hermidata: HermidataModel | null = null;
-
-    private past: PastHermidata | null = null;
 
     private RSS: RSS | null = null;
 
@@ -238,13 +214,6 @@ export class ModeSwitcher {
                 await this.RSS.openRSS();
                 break;
         }
-    }
-
-    public async saveCurrentHermidata(): Promise<void> {
-        const resolution = this.past?.resolution;
-        if (resolution?.kind === 'ambiguous') throw new AmbiguousItemError(this.Hermidata?.GetUrl() ?? '', resolution.candidates.length);
-        if (!this.Hermidata) throw new Error("Hermidata not initialized.");
-        await new HermidataService(await getSettings()).saveHermidata(this.Hermidata);
     }
 
     static async getCurrentTabInfo(): Promise<CurrentTab> {
@@ -278,10 +247,9 @@ export class ModeSwitcher {
         // set the values from the tab
         Hermidata.SetFromTab(CurrentTabInfo);
         // initialize the  PastHermidata class
-        this.past = new PastHermidata(Hermidata);
-        
+        const past = new PastHermidata(Hermidata);
         // create the Hermidata with all values set from a past if it exists
-        const hasPastAndSaved = await Hermidata.SetPast(this.past);
+        const hasPastAndSaved = await Hermidata.SetPast(past);
 
         // if no past was found, return
         if (!hasPastAndSaved) return null;

@@ -4,7 +4,7 @@ import { TrimTitle, findAllByTitleOrAlt, findByTitleOrAlt, generateHermidataHash
 import type { Hermidata, AllHermidata, AltCheck, AnyNovelType, ItemResolution } from "../../shared/types/index";
 import { customConfirm } from "../frontend/confirm";
 import { appendAltTitle } from "./save";
-import { resolveItem } from "./ItemResolver";
+import { getMatchConfidence, resolveItem } from "./ItemResolver";
 import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 export type PastHermidataPromptOptions = {
@@ -58,9 +58,7 @@ export class PastHermidata {
     }
     /** The matched item has a marker on this very series page: this page is that item, not a separate work */
     public get isExactMatch(): boolean {
-        if (this.resolution?.kind !== 'match') return false;
-        const matched = this.resolution.item;
-        return this.resolution.candidates.some(candidate => candidate.item.id === matched.id && candidate.exactUrl);
+        return getMatchConfidence(this.resolution) === 'exact';
     }
     public async checkForDuplicates(): Promise<Hermidata | false> {
         // get all Hermidata

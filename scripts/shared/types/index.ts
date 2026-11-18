@@ -25,6 +25,7 @@ export type {
     ItemResolveInput,
     ScoredCandidate,
     ItemResolution,
+    MatchConfidence,
     SeparateProminence,
     SeparateProminenceState,
 

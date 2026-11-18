@@ -6,7 +6,7 @@ import { Message, ErrorMessage, WarningMessage } from "../shared/utils/ErrorMess
 import { saveNovelDirect } from "./rssCache";
 import { ext } from "../shared/utils/BrowserCompat";
 import { whenReady } from "./ready";
-import { AmbiguousItemError, NoPastFoundError } from "../shared/utils/dedicatedErrors";
+import { AmbiguousItemError, NoPastFoundError, UnsureMatchError } from "../shared/utils/dedicatedErrors";
 
 type Command = "open-rss" | "open-library" | "save-hermidata";
 type ActiveWebTab = chrome.tabs.Tab & { id: number; title: string; url: string };
@@ -79,6 +79,7 @@ async function saveActiveTab(): Promise<void> {
     } catch (error) {
         // expected outcome: log quietly, show a helpful hint, not an error
         if (error instanceof AmbiguousItemError) return notifyAmbiguous(error);
+        if (error instanceof UnsureMatchError) return notifyUnsure(error);
         if (error instanceof NoPastFoundError) return notifyNoPast();
         notifySaveFailure(error);
     }
@@ -117,6 +118,13 @@ function notifySaveFailure(error: unknown): void {
 
 function notifyAmbiguous(error: AmbiguousItemError): void {
     new WarningMessage(`${error.candidateCount} saved items match this page, so nothing was saved. ` + 'Open the popup to choose which one to update.', undefined, {
+        notificationTarget: 'toast',
+        locationSender: 'background'
+    }).sendMessage();
+}
+
+function notifyUnsure(error: UnsureMatchError): void {
+    new WarningMessage(`Not sure this page is "${error.title}": you haven't saved it from this site yet, so nothing was saved. ` + 'Open the popup and save once to confirm.', undefined, {
         notificationTarget: 'toast',
         locationSender: 'background'
     }).sendMessage();

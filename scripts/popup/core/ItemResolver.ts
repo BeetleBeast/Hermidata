@@ -1,7 +1,7 @@
 import { CalcDiff, levenshteinDistance } from "./Past";
 import { getSeriesUrl, TrimTitle } from "../../shared/utils/StringOutput";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import type { Hermidata, ItemResolution, ItemResolveInput, ScoredCandidate } from "../../shared/types/index";
+import type { Hermidata, ItemResolution, ItemResolveInput, MatchConfidence, ScoredCandidate } from "../../shared/types/index";
 
 // Weights sum to 1, so a score is always between 0 and 1
 const URL_WEIGHT = 0.7;
@@ -49,6 +49,14 @@ export function scoreCandidate(input: ItemResolveInput, item: Hermidata): Scored
 
     const score = urlScore * URL_WEIGHT + titleScore * TITLE_WEIGHT + (knownHost ? HOST_WEIGHT : 0);
     return { item, score, exactUrl };
+}
+
+/** How sure a resolved match is; null when nothing matched or the match is ambiguous */
+export function getMatchConfidence(resolution: ItemResolution | null): MatchConfidence | null {
+    if (resolution?.kind !== 'match') return null;
+    const matched = resolution.candidates.find(candidate => candidate.item.id === resolution.item.id);
+    if (matched?.exactUrl) return 'exact';
+    return matched && matched.score >= MIN_MATCH_SCORE ? 'likely' : 'unsure';
 }
 
 /**

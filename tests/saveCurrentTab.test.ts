@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HermidataService } from '../scripts/popup/in/service';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash } from '../scripts/shared/utils/StringOutput';
-import { AmbiguousItemError, NoPastFoundError } from '../scripts/shared/utils/dedicatedErrors';
+import { AmbiguousItemError, NoPastFoundError, UnsureMatchError } from '../scripts/shared/utils/dedicatedErrors';
 import type { AnyNovelType, Hermidata, Settings } from '../scripts/shared/types';
 
 const store = vi.hoisted(() => ({ items: {} as Record<string, Hermidata> }));
@@ -69,6 +69,25 @@ describe('HermidataService.saveCurrentTab ( auto-save )', () => {
 
         await expect(save).rejects.toBeInstanceOf(AmbiguousItemError);
         await expect(save).rejects.toMatchObject({ candidateCount: 2, url: 'https://aggregator.com/solo-leveling/chapter-4' });
+        expect(store.items).toEqual(before);
+    });
+
+    it('saves a similar page on a site the item is known from', async () => {
+        setStore(novel);
+        const saved = await service().saveCurrentTab({ pageTitle: 'Solo Leveling Chapter 4', url: 'https://novels.com/solo-leveling-v2/chapter-4' });
+
+        expect(saved.id).toBe(novel.id);
+        expect(store.items[novel.id].chapter.latest).toBe(4);
+    });
+
+    it('does not save when only the title matches, e.g. a site the item was never saved from', async () => {
+        setStore(novel);
+        const before = structuredClone(store.items);
+
+        const save = service().saveCurrentTab({ pageTitle: 'Solo Leveling Chapter 4', url: 'https://elsewhere.com/read/solo-leveling-4' });
+
+        await expect(save).rejects.toBeInstanceOf(UnsureMatchError);
+        await expect(save).rejects.toMatchObject({ title: 'Solo Leveling' });
         expect(store.items).toEqual(before);
     });
 
