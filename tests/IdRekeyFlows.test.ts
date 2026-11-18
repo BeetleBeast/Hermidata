@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EditDetail } from '../scripts/library/build/edit';
 import { EventListener } from '../scripts/rss/build/EventListener';
 import { HermidataMigration } from '../scripts/shared/migration/Hermidata';
-import { updateHermidata } from '../scripts/shared/db/Storage';
+import { saveHermidata, updateHermidata } from '../scripts/shared/db/Storage';
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash, TrimTitle } from '../scripts/shared/utils/StringOutput';
 import type { Hermidata } from '../scripts/shared/types';
@@ -75,6 +75,7 @@ describe('ID rekey flows outside the database layer', () => {
         const changeHermidata = vi.fn().mockResolvedValue(undefined);
         setPrivate(editDetail, 'hermidata', hermidata);
         setPrivate(editDetail, 'changeHermidata', changeHermidata);
+        setPrivate(editDetail, 'AllHermidata', { [oldId]: hermidata.toJSON() });
 
         hermidata.title = 'Renamed Series';
         await callPrivate<Promise<void>>(editDetail, 'forceKeyUpdate');
@@ -82,6 +83,46 @@ describe('ID rekey flows outside the database layer', () => {
         const expectedId = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl());
         expect(hermidata.id).toBe(expectedId);
         expect(changeHermidata).toHaveBeenCalledWith(oldId, expectedId, hermidata.toJSON());
+    });
+
+    it('keeps the id of a separate item whose title hash belongs to another item', async () => {
+        const original = createHermidata();
+        const separate = createHermidata();
+        separate.id = '6f1c2a3e-0000-4000-8000-000000000001';
+        const editDetail: EditDetail = Object.create(EditDetail.prototype);
+        const changeHermidata = vi.fn().mockResolvedValue(undefined);
+        setPrivate(editDetail, 'hermidata', separate);
+        setPrivate(editDetail, 'changeHermidata', changeHermidata);
+        setPrivate(editDetail, 'AllHermidata', { [original.id]: original.toJSON(), [separate.id]: separate.toJSON() });
+
+        await callPrivate<Promise<void>>(editDetail, 'forceKeyUpdate');
+
+        expect(separate.id).toBe('6f1c2a3e-0000-4000-8000-000000000001');
+        expect(changeHermidata).not.toHaveBeenCalled();
+    });
+
+    it('renames an RSS entry in place when the new title hash belongs to another item', async () => {
+        const original = createHermidata();
+        const other = createHermidata('Renamed Series');
+        other.id = generateHermidataHash('Renamed Series', other.novelType, other.GetUrl(), false);
+        const oldId = original.id;
+        const entryItem = {
+            dataset: { hashKey: oldId },
+            className: `hermidata-item ${oldId}`,
+            querySelector: vi.fn().mockReturnValue(null),
+        };
+        const listener: EventListener = Object.create(EventListener.prototype);
+        const otherJSON = other.toJSON();
+        const allHermidata: Record<string, Hermidata> = { [oldId]: original.toJSON(), [other.id]: otherJSON };
+        setPrivate(listener, 'AllHermidata', allHermidata);
+        setPrivate(listener, 'getEntriesItem', vi.fn().mockReturnValue(entryItem));
+        setPrivate(listener, 'reloadContent', vi.fn().mockResolvedValue(undefined));
+
+        await callPrivate<Promise<void>>(listener, 'RenameItem', {} as HTMLDivElement);
+
+        expect(updateHermidata).not.toHaveBeenCalled();
+        expect(saveHermidata).toHaveBeenCalledWith(oldId, expect.objectContaining({ id: oldId, title: 'Renamed Series' }));
+        expect(allHermidata[other.id]).toBe(otherJSON);
     });
 
     it('rekeys and indexes an RSS entry after renaming it', async () => {

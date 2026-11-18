@@ -3,7 +3,7 @@ import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata, HERMIDATA_VERSION } from "../constants";
 import { isHermidataV1, isHermidataV10, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import { getImage, removeImage, saveImage, getSettings } from "../db/Storage";
-import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule } from "../types";
+import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule, type RelatedWorkType } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { openLink, generateBookmarkId, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
@@ -88,8 +88,15 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) return this.chapter.bookmarks[bookmarkInUseId];
         return this.chapter.bookmarks[this.chapter.bookmarkInUse];
     }
+    getAllBookmarks(): Bookmark[] {
+        return Object.values(this.chapter.bookmarks);
+    }
     GetUrl(bookmarkInUseId?: string): string {
         return this.getBookmark(bookmarkInUseId)?.url;
+    }
+    /** The url of every marker, skipping markers without one */
+    GetMarkerUrls(): string[] {
+        return this.getAllBookmarks().map(bookmark => bookmark.url).filter(Boolean);
     }
     GetChapter(bookmarkInUseId?: string): number {
         return this.getBookmark(bookmarkInUseId)?.current;
@@ -141,6 +148,15 @@ export class HermidataModel implements Hermidata {
     GetLatestChapter(): number { return this.chapter.latest; }
     GetAltSources(): string[] {
         return this.meta.altSources;
+    }
+    GetAltTitles(): string[] {
+        return this.meta.altTitles;
+    }
+    /** Links another item to this one ( one direction ); linking the same item twice is a no-op */
+    AddRelatedWork(type: RelatedWorkType, id: string): void {
+        const relations = this.meta.relations === 'None' ? { relatedWorks: [] } : this.meta.relations;
+        if (!relations.relatedWorks.some(work => work.id === id)) relations.relatedWorks.push({ type, id });
+        this.meta.relations = relations;
     }
     GetSourceOfLatestChapter(): string { 
         // find the source of the latest chapter

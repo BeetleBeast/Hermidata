@@ -2,9 +2,10 @@ import { detectAltTitleNeeded, PastHermidata } from "../popup/core/Past";
 import { appendAltTitle, makeHermidata } from "../popup/core/save";
 import { customConfirm } from "../popup/frontend/confirm";
 import { ext } from "../shared/utils/BrowserCompat";
-import { findByTitleOrAlt, getChapterFromTitle, generateRssFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
+import { findAllByTitleOrAlt, getChapterFromTitle, generateRssFeedId, generateHermidataHash, TrimTitle } from "../shared/utils/StringOutput";
+import { AmbiguousItemError } from "../shared/utils/dedicatedErrors";
 import { type RawFeed, type AltCheck, type Hermidata, type AnyNovelType, type Feed } from "../shared/types/index";
-import { getAllRawFeeds, getHermidataViaKey, getSettings, saveHermidata } from "../shared/db/Storage";
+import { getAllRawFeeds, getHermidataViaKey, saveHermidata } from "../shared/db/Storage";
 import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { ConsoleMessage } from "../shared/utils/ErrorMessage";
@@ -63,9 +64,8 @@ async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Pro
     const rawFeedsValues = Object.values({...rawFeeds});
     
     const hermidataValues = Object.values(AllHermidata);
-    const settings = await getSettings();
-    
-    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues, settings.ContentTypesAndStatuses.TYPE_OPTIONS);
+
+    const feedList: Record<string, RawFeed> = filterRawFeeds(rawFeedsValues, hermidataValues);
 
     return feedList;
 }
@@ -82,24 +82,20 @@ function getAllDomainFromHermidata(hermidataValues: Hermidata[]): Map<string, He
         return domainToHermidata;
 }
 
-function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_OPTIONS: AnyNovelType[]): Record<string, RawFeed> {
+/**
+ * Keeps the raw feeds that belong to a saved item, keyed by feed url.
+ * - keyed by url, not by title + type: same-titled items on different sites each keep their own feed
+ */
+function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[]): Record<string, RawFeed> {
 
     const filteredRawFeeds: Record<string, RawFeed> = {};
-    
+
     const allNonMatches: RawFeed[] = [];
     const linkedFeeds = new Map(hermidataValues.flatMap(novel =>
         novel.rss.map(feed => [feed.url, novel] as const)
     ));
-    
-    const domainToHermidata = getAllDomainFromHermidata(hermidataValues);
 
-    // Map trimmed hermidata title → Hermidata entry
-    // trim once here so we compare like-for-like
-    const titleMap = new Map<string, Hermidata>();
-    for (const novel of hermidataValues) {
-        const trimmed = TrimTitle.trimTitle(novel.title, novel.chapter.bookmarks[novel.chapter.bookmarkInUse].url).title;
-        titleMap.set(trimmed, novel);
-    }
+    const domainToHermidata = getAllDomainFromHermidata(hermidataValues);
 
     for (const feed of rawFeeds) {
         if (!feed.title || !feed.url ||!feed) continue;
@@ -119,11 +115,8 @@ function filterRawFeeds(rawFeeds: RawFeed[], hermidataValues: Hermidata[], TYPE_
             allNonMatches.push(feed);
             continue;
         }
-        
-        const type = matched?.novelType ?? TYPE_OPTIONS[0];
-        const id = generateHermidataHash(feedTitle, type, feed.url);
 
-        filteredRawFeeds[id] = Object.freeze({ ...feed, items: feed.latestItem });
+        filteredRawFeeds[feed.url] = Object.freeze({ ...feed, items: feed.latestItem });
         // filteredRawFeeds[id] = feed;
     }
 
@@ -193,28 +186,12 @@ export function updateFeed(hermidata: Hermidata, allFeeds: Record<string, RawFee
  * @param {String} title - the RSS Feed title
  * @param {String} type - the RSS input type
  * @param {Object} rssData  - the RSS feed data
+ * @param {String} itemId - the saved item to link to; without it the item is looked up by title
 */
-export async function linkRSSFeed(title: string, type: AnyNovelType, url: string, rssData: RawFeed) {
-    // check if new entry is inside database
-    const altCheck = await detectAltTitleNeeded(title, type, rssData.domain, url);
-    const AllHermidata = await PastHermidata.getAllHermidata();
-
-    const existingEntry = findByTitleOrAlt(title, AllHermidata)
-    const resolvedTitle = existingEntry ? existingEntry.title : title;
-    const resolvedType = existingEntry ? existingEntry.novelType : type;
-    const key = generateHermidataHash( resolvedTitle, resolvedType);
-
-    const KeysToFetch = [key];
-    if (altCheck.relatedKey && altCheck.relatedKey !== key) KeysToFetch.push(altCheck.relatedKey)
-    
-    const stored: Record<string, Hermidata> = {};
-    for (const key of KeysToFetch) {
-        const obj = await getHermidataViaKey(key);
-        if (!obj) continue;
-        stored[key] = obj;
-    }
-
-    const entry: Hermidata = await getEntry(title, stored, altCheck, resolvedType, url, key);
+export async function linkRSSFeed(title: string, type: AnyNovelType, url: string, rssData: RawFeed, itemId?: string) {
+    // the caller knows which item it means: link exactly that one, not the first item sharing its title
+    const known = itemId ? await getHermidataViaKey(itemId) : null;
+    const { entry, saveKey } = known ? { entry: known, saveKey: known.id } : await findEntryByTitle(title, type, url, rssData);
 
     const newFeed: Feed = {
         id: generateRssFeedId(rssData.latestItem.title, rssData.url),
@@ -233,8 +210,36 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     const latestChapter = rssData.latestItem.chapter;
     if (latestChapter) entry.chapter.latest = latestChapter;
 
-    const saveKey = stored[key] ? key : altCheck.relatedKey ?? key;
     await saveHermidata(saveKey, entry);
+}
+
+/** Finds ( or makes ) the item for a feed by its title; refuses to pick between several same-titled items */
+async function findEntryByTitle(title: string, type: AnyNovelType, url: string, rssData: RawFeed): Promise<{ entry: Hermidata, saveKey: string }> {
+    // check if new entry is inside database
+    const altCheck = await detectAltTitleNeeded(title, type, rssData.domain, url);
+    const AllHermidata = await PastHermidata.getAllHermidata();
+
+    const sameTitled = findAllByTitleOrAlt(title, AllHermidata);
+    if (sameTitled.length > 1) throw new AmbiguousItemError(url, sameTitled.length);
+
+    const existingEntry = sameTitled[0];
+    const resolvedTitle = existingEntry ? existingEntry.title : title;
+    const resolvedType = existingEntry ? existingEntry.novelType : type;
+    const key = generateHermidataHash( resolvedTitle, resolvedType);
+
+    const KeysToFetch = [key];
+    if (altCheck.relatedKey && altCheck.relatedKey !== key) KeysToFetch.push(altCheck.relatedKey)
+
+    const stored: Record<string, Hermidata> = {};
+    for (const key of KeysToFetch) {
+        const obj = await getHermidataViaKey(key);
+        if (!obj) continue;
+        stored[key] = obj;
+    }
+
+    const entry: Hermidata = await getEntry(title, stored, altCheck, resolvedType, url, key);
+    const saveKey = stored[key] ? key : altCheck.relatedKey ?? key;
+    return { entry, saveKey };
 }
 
 async function getEntry(title: string, stored: Record<string, Hermidata>, altCheck: AltCheck, type: AnyNovelType, url: string, key: string): Promise<Hermidata> {

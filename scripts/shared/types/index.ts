@@ -22,6 +22,12 @@ export type {
     AllHermidata,
 
     AltCheck,
+    ItemResolveInput,
+    ScoredCandidate,
+    ItemResolution,
+    MatchConfidence,
+    SeparateProminence,
+    SeparateProminenceState,
 
     InputArrayType,
     InputArraySheetType,
@@ -54,6 +60,7 @@ export type {
     Migration,
 
     ReleaseSchedule,
+    RelatedWorkType,
 
 } from "./popup";
 

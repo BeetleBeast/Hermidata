@@ -790,7 +790,9 @@ export class ImportsAndExports extends Build {
             const value: [AnyNovelType, Hermidata] = [(NovelTypeChanger.value as AnyNovelType), this.finalAllHermidatas[hermidata.id]];
             // save immediately and remove from list to review
             const newHermidataList = await AutoSetAllHermidata.setHermidataType(value);
-            await this.setHermidata(newHermidataList.id, newHermidataList);
+            const toSave = AutoSetAllHermidata.withoutStored({ [newHermidataList.id]: newHermidataList }, await this.getAllHermidata());
+            if (toSave[newHermidataList.id]) await this.setHermidata(newHermidataList.id, newHermidataList);
+            else this.temporaryStatus(`"${newHermidataList.title}" is already in your library, so it was not imported.`, this.massImportFromBookmarkFolderStatus);
 
             // remove from list to review
             this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);
@@ -806,12 +808,13 @@ export class ImportsAndExports extends Build {
     }
     private async massImportFromBookmarkFolderSaveAllBtnClick() {
 
-        await this.finalizeAllHermidatas(this.finalAllHermidatas);
+        const skipped = await this.finalizeAllHermidatas(this.finalAllHermidatas);
         this.massImportFromBookmarkFolderCheckContainer!.innerHTML = '';
         this.updateBookmarkImportState();
-        this.temporaryStatus('Done', this.massImportFromBookmarkFolderStatus);
+        this.temporaryStatus(skipped ? `Done. ${skipped} already in your library, so not imported.` : 'Done', this.massImportFromBookmarkFolderStatus);
     }
-    private async finalizeAllHermidatas(data: Record<string, Hermidata>) {
+    /** @returns how many items were not imported because they are already stored */
+    private async finalizeAllHermidatas(data: Record<string, Hermidata>): Promise<number> {
         const newArray = new Array<[AnyNovelType, Hermidata]>();
         for (const hermidata of Object.values(data)) {
             newArray.push([hermidata.novelType, hermidata]);
@@ -821,7 +824,7 @@ export class ImportsAndExports extends Build {
         // set it on record
         const hermidatas: Record<string, Hermidata> = newHermidataList.reduce((acc, hermidata) => ({ ...acc, [hermidata.id]: hermidata }), {});
         // save
-        await this.saveAllHermidatas(hermidatas);
+        return this.saveAllHermidatas(hermidatas);
     }
     private getBrowserRoot() {
         const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox") ? "Bookmarks Menu" : "Bookmarks";
@@ -829,12 +832,15 @@ export class ImportsAndExports extends Build {
     }
 
 
-    private async saveAllHermidatas(hermidata: Record<string, Hermidata>) {
+    /** @returns how many items were not imported because they are already stored */
+    private async saveAllHermidatas(hermidata: Record<string, Hermidata>): Promise<number> {
         // Get existing storage
         const existingData = await this.getAllHermidata();
-        // Merge
-        const mergedDataRecord: Record<string, Hermidata> = { ...existingData, ...hermidata };
+        // Merge, without letting an imported item replace a stored one
+        const newOnly = AutoSetAllHermidata.withoutStored(hermidata, existingData);
+        const mergedDataRecord: Record<string, Hermidata> = { ...existingData, ...newOnly };
         // Save
         await this.putAllHermidata(mergedDataRecord);
+        return Object.keys(hermidata).length - Object.keys(newOnly).length;
     }
 }

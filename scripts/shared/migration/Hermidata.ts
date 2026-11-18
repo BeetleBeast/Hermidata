@@ -321,46 +321,6 @@ export class HermidataMigration {
     }
 
 
-    /**
-    *  Detect if two Hermidata entries refer to the same series (by title similarity)
-    */
-    private static isSameSeries(a: Hermidata, b: Hermidata): boolean {
-        if (!a || !b) return false;
-        const titleA = TrimTitle.trimTitle(a.title || '', a.chapter.bookmarks[a.chapter.bookmarkInUse].url ?? '').title.toLowerCase();
-        const titleB = TrimTitle.trimTitle(b.title || '', b.chapter.bookmarks[b.chapter.bookmarkInUse].url ?? '').title.toLowerCase();
-        if (!titleA || !titleB) return false;
-
-        // Exact match or fuzzy match (ignoring punctuation)
-        return (
-            titleA === titleB ||
-            titleA.replaceAll(/\W/g, "") === titleB.replaceAll(/\W/g, "")
-        );
-    }
-    /**
-     * Entry point to migrate duplicates by user selection
-     * Migrates a list of Hermidata objects by finding and merging duplicates
-     * @param objs - list of Hermidata objects that are potential duplicates of the same series
-     * @param confirmMigration - function to confirm migration
-     * @returns - merged Hermidata object or Error if migration was cancelled or failed
-     */
-    public static async migrateCopy(
-        objs: Hermidata[],
-        confirmMigration: (newer: HermidataModel, older: HermidataModel) => Promise<boolean> = confirmMigrationPrompt
-    ): Promise<Hermidata | Error> {
-        // Compare pairs and pick which one is newer vs older
-        for (let i = 0; i < objs.length; i++) {
-            for (let j = i + 1; j < objs.length; j++) {
-                const obj1 = objs[i];
-                const obj2 = objs[j];
-                if (this.isSameSeries(obj1, obj2) && obj1.novelType !== obj2.novelType) {
-                    return await this.migrationSteps(obj1, obj2, confirmMigration);
-                }
-            }
-        }
-        console.warn("No migratable pair found, returning most recent");
-        objs.sort((a, b) => new Date(b.meta.updated || 0).getTime() - new Date(a.meta.updated || 0).getTime());
-        return objs[0] || {};
-    }
     private static async migrationSteps(
         obj1: Hermidata,
         obj2: Hermidata,
@@ -506,8 +466,8 @@ export class HermidataMigration {
                 relations: newer.meta.relations ?? older.meta.relations,
             }
         }
-        // step 3. save & remove key
-        updateHermidata(oldKey, newKey, merged);
+        // step 3. save & remove key ( awaited, so a save right after the merge finds the merged item )
+        await updateHermidata(oldKey, newKey, merged);
 
         return merged;
     

@@ -47,6 +47,13 @@ export class AutoSetAllHermidata {
             return newHermidata;
         }
     }
+    /**
+     * The imported items whose id is still free: an import never replaces a stored item
+     * ( one saved while the import was being reviewed, or an unrelated item with a colliding hash )
+     */
+    public static withoutStored(imported: Record<string, Hermidata>, stored: Record<string, Hermidata>): Record<string, Hermidata> {
+        return Object.fromEntries(Object.entries(imported).filter(([id]) => !stored[id]));
+    }
     /** get all bookmarks in folder */
     private async getBookmarkChildren(folderId: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
         // 
