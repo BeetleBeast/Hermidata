@@ -57,7 +57,7 @@ export class BuildController {
     private readonly openFolderMapping = getElement<HTMLButtonElement>(`#open${this.navigations.get('folder-mapping')}`);
     private readonly openImport_Export = getElement<HTMLButtonElement>(`#open${this.navigations.get('import-export')}`);
     private readonly openBrowserBookmarkImport = getElement<HTMLButtonElement>("#openBrowserBookmarkImport");
-    private readonly goToExtensionSettings = getElement<HTMLButtonElement>("#goToExtensionSettings");
+    private readonly goToAccountSettings = getElement<HTMLButtonElement>("#goToAccountSettings");
     private spreadsheetHighlightTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(devMode = false) {
@@ -79,7 +79,7 @@ export class BuildController {
         this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, 'folder-mapping'));
         this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, 'import-export'));
         this.openBrowserBookmarkImport?.addEventListener('click', (e) => this.navigateTo(e, 'browser-bookmark-import'));
-        this.goToExtensionSettings?.addEventListener('click', () => this.openSpreadsheetSaveSettings());
+        this.goToAccountSettings?.addEventListener('click', () => this.openSpreadsheetUrlSettings());
 
         this.cancelResetDialog?.addEventListener('click', () => this.closeResetDialog());
         this.resetBtn?.addEventListener('click', () => this.resetPage(this.currentSection));
@@ -136,26 +136,24 @@ export class BuildController {
         }
     }
 
-    private async openSpreadsheetSaveSettings() {
-        if (!this.openExtension_Behavior) return;
-        await this.navigateTo(this.openExtension_Behavior, 'extension-behavior');
+    private async openSpreadsheetUrlSettings() {
+        if (!this.openAccount_Connection) return;
+        await this.navigateTo(this.openAccount_Connection, 'account-connection');
 
-        const target = getElement<HTMLInputElement>("#SaveToGoogleSpreadsheet");
-        const targetRow = target?.closest<HTMLElement>(".setting");
+        const input = getElement<HTMLInputElement>("#spreadsheetUrl");
         const setup = getElement<HTMLElement>("#spreadsheetSetup");
-        if (!target || !targetRow) return;
+        if (!input || !setup) return;
 
-        const highlightTargets = [targetRow, ...(target.checked && setup ? [setup] : [])];
-        highlightTargets.forEach(element => element.classList.add("settings-target-highlight"));
-        target.focus({ preventScroll: true });
-        targetRow.scrollIntoView({
+        setup.classList.add("settings-target-highlight");
+        input.focus({ preventScroll: true });
+        setup.scrollIntoView({
             behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
             block: "center"
         });
 
         if (this.spreadsheetHighlightTimeout) clearTimeout(this.spreadsheetHighlightTimeout);
         this.spreadsheetHighlightTimeout = setTimeout(() => {
-            highlightTargets.forEach(element => element.classList.remove("settings-target-highlight"));
+            setup.classList.remove("settings-target-highlight");
             this.spreadsheetHighlightTimeout = null;
         }, 2400);
     }

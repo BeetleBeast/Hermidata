@@ -2,6 +2,7 @@ import { defaultSettings } from "../constants";
 import { setSettings } from "../db/Storage";
 import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping, type FolderRule, type NotificationTypes, type SaveTargets, type DefaultChoice } from "../types";
 import { DEFAULT_KEYBOARD_SHORTCUTS } from "../utils/KeyboardShortcuts";
+import { DEFAULT_SHEET_NAME } from "../sheets/sheetConfig";
 
 type FolderEntry = { path: string }
 
@@ -83,7 +84,13 @@ interface oldSettingsV6 {
     FolderMapping: FolderMapping,
 }
 
-type oldSettingsV7 = Omit<Settings, "version" | "ExtensionBehaviour"> & {
+/** Settings as they were at version 8: the current shape without the sheet tab name. */
+type oldSettingsV8 = Omit<Settings, "version" | "AccountAndConnections"> & {
+    version: 8;
+    AccountAndConnections: { spreadsheetUrl: string };
+};
+
+type oldSettingsV7 = Omit<oldSettingsV8, "version" | "ExtensionBehaviour"> & {
     version: 7;
     ExtensionBehaviour: Omit<Settings["ExtensionBehaviour"], "KeyboardShortcuts"> & {
         KeyboardShortcuts?: Settings["ExtensionBehaviour"]["KeyboardShortcuts"];
@@ -112,6 +119,7 @@ export class SettingsMigration {
         if (version <= 5) current = this.migrateV5toV6(current as oldSettingsV5);
         if (version <= 6) current = this.migrateV6toV7(current as oldSettingsV6);
         if (version <= 7) current = this.migrateV7toV8(current as oldSettingsV7);
+        if (version <= 8) current = this.migrateV8toV9(current as oldSettingsV8);
 
         await setSettings(current as Settings);
     }
@@ -193,7 +201,7 @@ export class SettingsMigration {
             FolderMapping: data.FolderMapping,
         };
     }
-    private static migrateV7toV8(data: oldSettingsV7): Settings {
+    private static migrateV7toV8(data: oldSettingsV7): oldSettingsV8 {
         return {
             ...data,
             version: 8,
@@ -205,6 +213,13 @@ export class SettingsMigration {
                     ...(data.ExtensionBehaviour.KeyboardShortcuts ?? {}),
                 },
             },
+        };
+    }
+    private static migrateV8toV9(data: oldSettingsV8): Settings {
+        return {
+            ...data,
+            version: 9,
+            AccountAndConnections: { ...data.AccountAndConnections, sheetName: DEFAULT_SHEET_NAME },
         };
     }
     public static migrateFolderMapping( old: oldFolderMapping, root: string ): FolderMapping {

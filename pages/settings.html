@@ -37,12 +37,27 @@
     </aside>
     <main class="main content">
         <section class="section-content Account_Connection" data-active="false">
-            <div class="card account-connection-card">
+            <div id="googleSpreadsheetCard" class="card account-connection-card" hidden>
                 <div>
-                    <h3>Account & Connection</h3>
-                    <p>Google Spreadsheet setup is located with the save destination it configures.</p>
+                    <h3>Google Spreadsheet & account</h3>
+                    <p>The spreadsheet Hermidata saves entries to, and the Google account it signs in with. Shown while "Google Spreadsheet" is turned on in Extension behavior.</p>
                 </div>
-                <button id="goToExtensionSettings" type="button">Open spreadsheet save settings</button>
+                <div id="spreadsheetSetup" class="spreadsheet-setup">
+                    <label for="spreadsheetUrl">Google Spreadsheet URL</label>
+                    <div class="spreadsheet-url-row">
+                        <input type="url" id="spreadsheetUrl" placeholder="Paste Google Sheet URL" />
+                    </div>
+                    <label for="spreadsheetTabName">Tab name</label>
+                    <div class="spreadsheet-url-row">
+                        <input type="text" id="spreadsheetTabName" placeholder="Sheet1" autocomplete="off" spellcheck="false" />
+                    </div>
+                    <p class="field-hint">The tab at the bottom of the spreadsheet that entries are written to. Row 1 is kept for your column titles; entries go in columns A to H from row 2.</p>
+                    <div class="spreadsheet-url-row">
+                        <button id="saveSpreadsheetUrl" type="button">Save</button>
+                        <button id="testSpreadsheetUrl" type="button" class="btn-ghost">Test connection</button>
+                    </div>
+                    <p id="statusSheetURL" role="status" aria-live="polite"></p>
+                </div>
                 <div class="account-connection-divider"></div>
                 <div class="account-connection-logout">
                     <div>
@@ -113,7 +128,6 @@
                 <p id="encryptionState" class="account-auth-status"></p>
 
                 <form id="encryptionEnable" class="encryption-panel" hidden>
-                    <input type="text" class="sr-only pm-username" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
                     <div class="webdav-credentials">
                         <input hidden type="text" id="encription-UserName" name="username" autocomplete="username" value="Hermidata library" readonly tabindex="-1" aria-hidden="true">
                         <div class="webdav-field">
@@ -401,20 +415,13 @@
                 <div class="setting">
                     <div class="setting-text">
                         <label for="SaveToGoogleSpreadsheet">Google Spreadsheet</label>
-                        <p>Sync entries to a spreadsheet. Configure its URL here.</p>
+                        <p>Also save entries to a spreadsheet. Its URL is set in Account & Connection.</p>
                     </div>
                     <input type="checkbox" id="SaveToGoogleSpreadsheet" class="switch" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
                 </div>
-                <div id="spreadsheetSetup" class="spreadsheet-setup" hidden>
-                    <label for="spreadsheetUrl">Google Spreadsheet URL</label>
-                    <div class="spreadsheet-url-row">
-                        <input type="url" id="spreadsheetUrl" placeholder="Paste Google Sheet URL" />
-                        <button id="saveSpreadsheetUrl" type="button">Save URL</button>
-                        <button id="testSpreadsheetUrl" type="button" class="btn-ghost">Test connection</button>
-                    </div>
-                    <p class="field-hint">Save the spreadsheet URL before expecting entries to sync.</p>
-                    <p id="statusSheetURL" role="status" aria-live="polite"></p>
-                    <p id="spreadsheetTargetReminder" class="spreadsheet-reminder" hidden>Google Sheets is selected, but no spreadsheet URL has been saved yet.</p>
+                <div id="spreadsheetTargetReminder" class="spreadsheet-reminder" hidden>
+                    <p>Google Spreadsheet is selected, but no spreadsheet URL has been saved yet.</p>
+                    <button id="goToAccountSettings" type="button" class="btn-ghost">Set the URL in Account & Connection</button>
                 </div>
             </div>
 

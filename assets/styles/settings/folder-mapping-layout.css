@@ -374,8 +374,9 @@ nav {
 }
 
 .spreadsheet-setup {
-    padding: 14px 0 16px;
-    border-top: 1px solid var(--border);
+    display: grid;
+    gap: 8px;
+    width: 100%;
 }
 
 .spreadsheet-url-row {
@@ -395,6 +396,9 @@ nav {
 }
 
 .spreadsheet-reminder {
+    display: grid;
+    justify-items: start;
+    gap: 8px;
     padding: 9px 12px;
     border-left: 3px solid var(--accent-dark);
     color: var(--text);
@@ -641,6 +645,23 @@ nav {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+}
+
+/* Hidden username field for password managers. Kept rendered (display: none would hide it from them), but the
+   generic input rules beat .sr-only's size and padding, so it is pinned to the viewport corner at 1px to stop it
+   from adding a horizontal scrollbar. */
+input.sr-only.pm-username {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 #tagEditContainer > *,
