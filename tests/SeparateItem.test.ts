@@ -85,6 +85,25 @@ describe('HermidataService.saveAsSeparateItem', () => {
     });
 });
 
+describe('retyping a separate item', () => {
+    it('changes its type in place, keeps its id and leaves the original untouched', async () => {
+        const original = await seed('Solo Leveling', 'Novel', 'https://novels.com/solo-leveling/chapter-3', 3);
+        const service = new HermidataService(settings, async () => true);
+        const page = createPage('Solo Leveling', 'Novel', 'https://other.com/solo-leveling/chapter-12', 12);
+        await service.saveAsSeparateItem(page);
+        const separateId = page.id;
+
+        // the popup keeps the item's own id when its type changes ( it is not stored under a title hash )
+        const retyped = new HermidataModel(store.items[separateId]);
+        retyped.novelType = 'Manga';
+        await service.saveHermidata(retyped);
+
+        expect(store.items[separateId]).toMatchObject({ id: separateId, novelType: 'Manga' });
+        expect(store.items[original.id]).toEqual(original);
+        expect(Object.keys(store.items)).toHaveLength(2);
+    });
+});
+
 describe('linkAsAdaptation', () => {
     it('links both items to each other, once', async () => {
         const novel = await seed('Solo Leveling', 'Novel', 'https://novels.com/solo-leveling/chapter-3', 3);

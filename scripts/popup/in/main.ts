@@ -409,7 +409,16 @@ class HermidataController {
 
         // 2. If the novel type has *not* changed, return true (no merge needed)
         if (!novelTypeChanged || !this.past.pastHermidata) return true;
-        
+
+        // an item not stored under the hash of its title and type ( a separate item ) has nothing to move:
+        // it keeps its id and the save changes its type in place
+        const past = this.past.pastHermidata;
+        if (past.id !== generateHermidataHash(past.title, past.novelType)) {
+            if (!await this.confirmNovelTypeChange(past, this.hermidata.novelType)) return false;
+            this.hermidata.id = past.id;
+            return true;
+        }
+
         // 3. If the novel type has changed, generate a new id
         const newId = generateHermidataHash(this.hermidata.title, this.hermidata.novelType);
 
@@ -429,15 +438,18 @@ class HermidataController {
         this.hermidata = new HermidataModel(newHermidata);
         return true;
     }
-    private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
+    private confirmNovelTypeChange(older: Hermidata, newType: AnyNovelType): Promise<boolean> {
         const msg = `
-            The Novel Type of "${older.title}" will changed from "${older.novelType}" to "${newer.novelType}".
+            The Novel Type of "${older.title}" will changed from "${older.novelType}" to "${newType}".
             <br>
             <br>
             Are you sure you want to change it?
         `;
+        return customConfirm(msg, { accept: "Change", reject: "Cancel"});
+    }
+    private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
         // 1. let user confirm the merge
-        const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
+        const confirmed = await this.confirmNovelTypeChange(older, newer.novelType);
 
         if (!confirmed) {
             logConsoleError('new Hermidata has different novel type and user declined to merge');
