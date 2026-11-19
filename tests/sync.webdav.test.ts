@@ -143,6 +143,42 @@ describe('WebDavBackend: writes', () => {
     });
 });
 
+describe('WebDavBackend: timeout', () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    /** A host that is powered off: the request never answers, and only an abort ends it. */
+    const hangingFetch: typeof fetch = (_input, init) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('The operation was aborted.', 'AbortError')));
+    });
+
+    it('aborts a request that never answers and rejects as a network failure, not a conflict', async () => {
+        const { backend } = setup(new FakeDavServer(), { fetch: hangingFetch });
+
+        const read = backend.read().catch(e => e);
+        await vi.advanceTimersByTimeAsync(15_000);
+        const err = await read;
+        expect(err).toBeInstanceOf(DOMException);
+        expect(err.name).toBe('AbortError');
+        expect(err).not.toBeInstanceOf(ConflictError);
+        expect(err).not.toBeInstanceOf(WebDavError);
+    });
+
+    it('a write to a hanging server rejects too, so the queue is not blocked', async () => {
+        const { backend } = setup(new FakeDavServer(), { fetch: hangingFetch });
+
+        const write = backend.write('x', '"1"').catch(e => e);
+        await vi.advanceTimersByTimeAsync(15_000);
+        expect((await write).name).toBe('AbortError');
+    });
+
+    it('does not abort a request that answers in time', async () => {
+        const { backend } = setup();
+        await expect(backend.read()).resolves.toBeNull();
+        expect(vi.getTimerCount()).toBe(0);                             // the timeout timer is cleaned up
+    });
+});
+
 describe.each([
     { name: 'without ETags', tweak: (s: FakeDavServer) => { s.noEtag = true; } },
     { name: 'with weak ETags', tweak: (s: FakeDavServer) => { s.weakEtag = true; } },
@@ -435,6 +471,59 @@ describe('engine on WebDAV', () => {
         await settle();
         expect(bmCurrent(b, novels[0].id, 'bm1')).toBe(31);
         expect(bmCurrent(b, novels[1].id, 'bm2')).toBe(32);
+    });
+
+    it('a failed push is retried on the next poll even though the remote is unchanged', async () => {
+        const { server, alarms, a, b, novels } = await pair();
+
+        server.failNext = 1;
+        a.edit(novels[0].id, h => { h.chapter.bookmarks['bm1'].current = 51; });
+        await settle();
+        expect(a.notices.errors).toEqual(['[Sync] task failed']);
+        expect(a.local.data['syncStatus']).toMatchObject({ ok: false });
+
+        alarms.fire();                                                  // no new edit: only the poll tick
+        await settle();
+        alarms.fire();
+        await settle();
+        expect(bmCurrent(b, novels[0].id, 'bm1')).toBe(51);
+        expect(a.local.data['syncStatus']).toMatchObject({ ok: true });
+    });
+
+    it('keeps retrying every poll while the server stays down, then publishes once', async () => {
+        const { server, alarms, a, b, novels } = await pair();
+
+        server.failNext = 1;
+        a.edit(novels[0].id, h => { h.chapter.bookmarks['bm1'].current = 52; });
+        await settle();
+
+        server.failNext = 100;
+        for (let i = 0; i < 3; i++) { alarms.fire(); await settle(); }
+        expect(a.local.data['syncStatus']).toMatchObject({ ok: false });
+
+        server.failNext = 0;
+        const puts = server.sent('PUT').length;
+        alarms.fire();
+        await settle();
+        expect(server.sent('PUT').length - puts).toBe(1);
+        alarms.fire();
+        await settle();
+        expect(bmCurrent(b, novels[0].id, 'bm1')).toBe(52);
+    });
+
+    it('a successful push stops the retrying: later polls send no PUT', async () => {
+        const { server, alarms, a, novels } = await pair();
+
+        server.failNext = 1;
+        a.edit(novels[0].id, h => { h.chapter.bookmarks['bm1'].current = 53; });
+        await settle();
+        alarms.fire();
+        await settle();
+
+        const puts = server.sent('PUT').length;
+        alarms.fire();
+        await settle();
+        expect(server.sent('PUT').length).toBe(puts);
     });
 
     it('an RSS-only refresh performs no PUT', async () => {
