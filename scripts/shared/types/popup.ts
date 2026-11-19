@@ -128,6 +128,8 @@ export interface Hermidata {
         altTitles: string[];
         originalRelease: string | null;
         novelStatus: AnyNovelStatus;
+        /** Result of the online alt-title lookup; absent until the lookup has run */
+        external?: ExternalMatch;
     };
 }
 
@@ -150,6 +152,13 @@ export type HermidataSortType = 'pubDate';
 
 
 export type AllHermidata = Record<string, Hermidata>;
+
+export type ExternalSource = 'anilist' | 'mangaupdates';
+export type ExternalLookupStatus = 'matched' | 'none' | 'ambiguous' | 'error';
+/** What the online alt-title lookup found for an item; only a match carries the server's series id */
+export type ExternalMatch =
+    | { status: 'matched'; source: ExternalSource; id: string; checkedAt: string }
+    | { status: Exclude<ExternalLookupStatus, 'matched'>; checkedAt: string };
 
 
 

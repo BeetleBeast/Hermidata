@@ -22,6 +22,9 @@ export type {
     AllHermidata,
 
     AltCheck,
+    ExternalMatch,
+    ExternalSource,
+    ExternalLookupStatus,
     ItemResolveInput,
     ScoredCandidate,
     ItemResolution,

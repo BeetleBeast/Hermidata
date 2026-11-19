@@ -76,6 +76,15 @@
             </svg>
           </div>
           <div id="hermidata-alternative-titles-list" data-closed="true"></div>
+          <div id="hermidata-alt-lookup" hidden>
+            <p id="hermidata-alt-lookup-status" aria-live="polite"></p>
+            <button id="hermidata-alt-lookup-btn" type="button" class="Btn">Look up</button>
+            <form id="hermidata-alt-lookup-form" hidden>
+              <input id="hermidata-alt-lookup-input" type="text" autocomplete="off" aria-label="Title or MangaUpdates / AniList link" placeholder="Title, or a MangaUpdates / AniList link" />
+              <button id="hermidata-alt-lookup-submit" type="submit" class="Btn">Search</button>
+            </form>
+            <ul id="hermidata-alt-lookup-candidates" hidden></ul>
+          </div>
         </div>
         <div id="hermidata-metadata-container">
           <div id="hermidata-novelType" class="hermidata-metadata-group-1" title="Novel Type" data-editing="false"></div>

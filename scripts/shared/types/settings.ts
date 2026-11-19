@@ -64,6 +64,8 @@ export interface Settings {
         AutoSubscribe: AutoSubscribe;
         SaveTarget: SaveTargets;
         AutoSetStatusScore: StatusScores;
+        /** Optional: settings saved before this existed lack it, and it counts as off */
+        AltTitleLookup?: { Enable: boolean };
     }
     DefaultBookmarkSettings: {
         DefaultChoice: DefaultChoice,

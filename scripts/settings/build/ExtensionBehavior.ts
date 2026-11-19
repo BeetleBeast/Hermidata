@@ -36,6 +36,8 @@ export class ExtensionBehavior extends Build {
         void this.CaptureKeyboardShortcut(event);
     };
 
+    private readonly enableAltTitleLookup = getElement<HTMLInputElement>("#enableAltTitleLookup");
+
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
     private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
     private readonly autoSubscribeThreshold = getElement<HTMLInputElement>("#autoSubscribeThreshold"); // input ( number )
@@ -63,6 +65,8 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionKeyboardShortcuts(settings);
         this.setValueKeyboardShortcuts(settings.ExtensionBehaviour.KeyboardShortcuts);
         await this.setBrowserShortcutLabels();
+        // Alt title lookup
+        this.setValueOptionAltTitleLookup(settings);
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
         // Auto Subscribe - Threshold
@@ -99,6 +103,8 @@ export class ExtensionBehavior extends Build {
             button.addEventListener("click", () => this.ResetKeyboardShortcut(button));
         });
         
+        this.enableAltTitleLookup?.addEventListener("change", (e) => this.EnableAltTitleLookup(e));
+
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
         this.autoSubscribeThreshold?.addEventListener("change", (e) => this.AutoSubscribeThreshold(e));
@@ -121,6 +127,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionKeyboardShortcuts(updatedSettings);
         this.setValueKeyboardShortcuts(updatedSettings.ExtensionBehaviour.KeyboardShortcuts);
         this.setValueOptionSaveTarget(updatedSettings);
+        this.setValueOptionAltTitleLookup(updatedSettings);
         this.updateSpreadsheetReminder(updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, updatedSettings.AccountAndConnections.spreadsheetUrl);
         document.dispatchEvent(new CustomEvent("hermidata:spreadsheet-target-changed", { detail: updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet }));
     }
@@ -303,6 +310,11 @@ export class ExtensionBehavior extends Build {
         this.keyboardShortcutStatus.textContent = message;
         this.keyboardShortcutStatus.style.color = isError ? "var(--danger)" : "var(--success)";
     }
+    private setValueOptionAltTitleLookup(settings: Settings) {
+        // settings saved before this option existed count as off
+        const enabled = settings.ExtensionBehaviour.AltTitleLookup?.Enable ?? false;
+        setElement<HTMLInputElement>("#enableAltTitleLookup", el => el.checked = enabled);
+    }
     private setValueOptionAutoSubscribe(settings: Settings) {
         const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
         setElement<HTMLInputElement>("#enableAutoSubscribe", el => el.checked = autoSubscribe);
@@ -385,6 +397,14 @@ export class ExtensionBehavior extends Build {
         await this.setSettings(updatedSettings);
         if (this.keyboardShortcutsList) this.keyboardShortcutsList.hidden = !isChecked;
         this.setShortcutStatus(isChecked ? "Keyboard shortcuts enabled." : "Keyboard shortcuts disabled.");
+    }
+    // Alt title lookup
+    private async EnableAltTitleLookup(e: Event) {
+        const isChecked = (e.target as HTMLInputElement).checked;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.AltTitleLookup = { Enable: isChecked };
+
+        await this.setSettings(updatedSettings);
     }
     // Auto Subscribe
     private async EnableAutoSubscribe(e: Event) {

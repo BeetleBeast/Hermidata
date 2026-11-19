@@ -11,6 +11,7 @@ import { lastAutoFeedCheck, lastFeedCheck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
 import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput"
 import { pushToSync, removeFromSync } from "../shared/sync/sync.engine"
+import { scheduleAltTitleLookup } from "./altTitles"
 
 let rssCache: Record<string, Hermidata> | null = null
 let rssCachePromise: Promise<Record<string, Hermidata>> | null = null
@@ -89,6 +90,7 @@ async function saveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, all
     }
 
     console.log('[Background] SAVE_NOVEL complete', errors.length ? { errors } : '');
+    scheduleAltTitleLookup(data.id); // in the background; does nothing unless the user switched the lookup on
     return errors.length === 0 ? true : { success: false, errors };
 }
 
