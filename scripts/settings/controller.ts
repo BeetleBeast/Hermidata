@@ -3,6 +3,8 @@ import { ImportsAndExports } from "./build/ImportsAndExports";
 import { ExtensionBehavior } from "./build/ExtensionBehavior";
 import { DefaultBookmarkInputs } from "./build/DefaultBookmarkInputs";
 import { Account_Connection } from "./build/Account_Connection";
+import { LibrarySync } from "./build/LibrarySync";
+import { LibraryEncryption } from "./build/LibraryEncryption";
 import { ContentTypesAndStatuses } from "./build/ContentTypesAndStatuses";
 import { TagManagement } from "./build/TagManagement";
 import { FolderMapping } from "./build/FolderMapping";
@@ -15,6 +17,10 @@ export class BuildController {
     private readonly sectionInitializationPromises = new Map<string, Promise<void>>();
 
     private readonly accountConnection = new Account_Connection();
+
+    private readonly librarySync = new LibrarySync();
+
+    private readonly libraryEncryption = new LibraryEncryption();
     
     private readonly extensionBehavior = new ExtensionBehavior();
     
@@ -51,7 +57,7 @@ export class BuildController {
     private readonly openFolderMapping = getElement<HTMLButtonElement>(`#open${this.navigations.get('folder-mapping')}`);
     private readonly openImport_Export = getElement<HTMLButtonElement>(`#open${this.navigations.get('import-export')}`);
     private readonly openBrowserBookmarkImport = getElement<HTMLButtonElement>("#openBrowserBookmarkImport");
-    private readonly goToExtensionSettings = getElement<HTMLButtonElement>("#goToExtensionSettings");
+    private readonly goToAccountSettings = getElement<HTMLButtonElement>("#goToAccountSettings");
     private spreadsheetHighlightTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(devMode = false) {
@@ -73,7 +79,7 @@ export class BuildController {
         this.openFolderMapping?.addEventListener('click', (e) => this.navigateTo(e, 'folder-mapping'));
         this.openImport_Export?.addEventListener('click', (e) => this.navigateTo(e, 'import-export'));
         this.openBrowserBookmarkImport?.addEventListener('click', (e) => this.navigateTo(e, 'browser-bookmark-import'));
-        this.goToExtensionSettings?.addEventListener('click', () => this.openSpreadsheetSaveSettings());
+        this.goToAccountSettings?.addEventListener('click', () => this.openSpreadsheetUrlSettings());
 
         this.cancelResetDialog?.addEventListener('click', () => this.closeResetDialog());
         this.resetBtn?.addEventListener('click', () => this.resetPage(this.currentSection));
@@ -130,26 +136,24 @@ export class BuildController {
         }
     }
 
-    private async openSpreadsheetSaveSettings() {
-        if (!this.openExtension_Behavior) return;
-        await this.navigateTo(this.openExtension_Behavior, 'extension-behavior');
+    private async openSpreadsheetUrlSettings() {
+        if (!this.openAccount_Connection) return;
+        await this.navigateTo(this.openAccount_Connection, 'account-connection');
 
-        const target = getElement<HTMLInputElement>("#SaveToGoogleSpreadsheet");
-        const targetRow = target?.closest<HTMLElement>(".setting");
+        const input = getElement<HTMLInputElement>("#spreadsheetUrl");
         const setup = getElement<HTMLElement>("#spreadsheetSetup");
-        if (!target || !targetRow) return;
+        if (!input || !setup) return;
 
-        const highlightTargets = [targetRow, ...(target.checked && setup ? [setup] : [])];
-        highlightTargets.forEach(element => element.classList.add("settings-target-highlight"));
-        target.focus({ preventScroll: true });
-        targetRow.scrollIntoView({
+        setup.classList.add("settings-target-highlight");
+        input.focus({ preventScroll: true });
+        setup.scrollIntoView({
             behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
             block: "center"
         });
 
         if (this.spreadsheetHighlightTimeout) clearTimeout(this.spreadsheetHighlightTimeout);
         this.spreadsheetHighlightTimeout = setTimeout(() => {
-            highlightTargets.forEach(element => element.classList.remove("settings-target-highlight"));
+            setup.classList.remove("settings-target-highlight");
             this.spreadsheetHighlightTimeout = null;
         }, 2400);
     }
@@ -158,6 +162,8 @@ export class BuildController {
         switch (sectionId) {
             case 'account-connection':
                 await this.accountConnection.init();
+                await this.librarySync.init();
+                await this.libraryEncryption.init();
                 break;
             case 'extension-behavior':
                 await this.extensionBehavior.init();
@@ -210,23 +216,13 @@ export class BuildController {
         }
     }
     private async resetPage(sectionId: string) {
-        // confirm reset
-        // const elements = {
-        //     container: getElement<HTMLDivElement>(".promptSection"),
-        //     label: getElement<HTMLDivElement>(".promptLabel"),
-        //     btn1: getElement<HTMLDivElement>(".genericButton1"),
-        //     btn2: getElement<HTMLDivElement>(".genericButton2"),
-        // }
-        // const Confirmation = await customConfirm("Are you sure you want to reset all settings?", {
-        //     accept: "Reset",
-        //     reject: "Cancel",
-        //     elements,
-        // });
         
         // reset page values to current settings
         switch (sectionId) {
             case 'account-connection':
                 await this.accountConnection.resetValues();
+                await this.librarySync.resetValues();   // discards unsaved edits; never switches the backend
+                await this.libraryEncryption.resetValues();   // clears the inputs; never changes the encryption
                 break;
             case 'extension-behavior':
                 await this.extensionBehavior.resetValues();

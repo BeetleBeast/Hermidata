@@ -51,16 +51,18 @@ export type ContentWarning = 'Nudity' | 'Violence' | 'Sex' | 'Language' | 'Mild 
 
 export type ReleaseSchedule = 'Once' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly' | 'Irregular' | 'Unknown';
 
+export type RelatedWorkType = 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary' | 'adaptation';
+
 export type Relation = {
-    series: {
+    series?: { // optional: an item can be related to others without being part of a series
         seriesId: string;
         position: number;
     },
     relatedWorks: {
-        type: 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary';
+        type: RelatedWorkType;
         id: string;
     }[]
-} 
+}
 
 export interface Bookmark { // new
     version: number;
@@ -173,6 +175,48 @@ export type AltCheck = {
     relatedTitle: string | null;
     existingKey?: undefined;
 }
+
+/** What the current page tells us about the item being read */
+export type ItemResolveInput = {
+    title: string;
+    url: string;
+};
+
+export type ScoredCandidate = {
+    item: Hermidata;
+    score: number; // 0-1, weighted from url, title and host similarity
+    exactUrl: boolean; // a marker url points at the same series page
+};
+
+/** Outcome of matching the current page against saved items with the same title */
+export type ItemResolution =
+    | { kind: 'none' }
+    | { kind: 'match'; item: Hermidata; candidates: ScoredCandidate[] }
+    | { kind: 'ambiguous'; candidates: ScoredCandidate[] };
+
+/**
+ * How sure we are that the page is the matched item
+ * - exact: the item has a marker on this very series page
+ * - likely: a similar page on a site the item is known from
+ * - unsure: only the title matches ( e.g. a site the item was never saved from )
+ */
+export type MatchConfidence = 'exact' | 'likely' | 'unsure';
+
+/**
+ * How prominent "Save as separate item" is, from how sure the popup is that this page is the saved item
+ * - hidden: no saved item has this title
+ * - subtle: the page is clearly the saved item, the option stays reachable but nearly out of sight
+ * - visible: matched, but not for certain
+ * - primary: the user said the page is none of the saved items, so a separate item is the likely save
+ */
+export type SeparateProminence = 'hidden' | 'subtle' | 'visible' | 'primary';
+
+export type SeparateProminenceState = {
+    hasSameTitled: boolean; // a saved item matched, or several did
+    declinedAll: boolean; // the user picked "None of these" in the chooser
+    exactMatch: boolean; // the matched item has a marker on this series page
+    typeChanged: boolean; // the Type in the form differs from the matched item's
+};
 
 export type InputArrayType = [string, AnyNovelType, number, string, AnyReadStatus, string, string[], string]
 export type InputArraySheetType = [string, AnyNovelType, number, string, AnyReadStatus, string, string, string]

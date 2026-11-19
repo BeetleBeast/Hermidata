@@ -201,7 +201,7 @@ async function init(HermidataUpdated: string, lastChecked: string, RSSLatestItem
     else return 0
 }
 async function logStatus(Hermidata: Hermidata): Promise<CalculateStatusReturnObject> {
-    const latestRssDate = HermidataModel.GetLatestRssFeed(Hermidata.rss)?.latestItem.pubDate;
+    const latestRssDate = HermidataModel.GetLatestRssFeed(Hermidata.rss)?.latestItem?.pubDate;
     const numberOfDaysInactive = await init(Hermidata.meta.updated, Hermidata.chapter.lastChecked, latestRssDate);
     
     const settings = await getSettings();

@@ -90,7 +90,7 @@ export abstract class Sort extends RssBuild {
                 const hash = this.GetHashItem(entry);
                 const feeds = this.AllHermidata[hash]?.rss ?? [];
                 const latestFeed = HermidataModel.GetLatestRssFeed(feeds);
-                return latestFeed ? new Date(latestFeed.latestItem[key]).getTime() || 0 : 0;
+                return latestFeed?.latestItem ? new Date(latestFeed.latestItem[key]).getTime() || 0 : 0;
             };
             const dateA = latestFeedDate(a);
             const dateB = latestFeedDate(b);

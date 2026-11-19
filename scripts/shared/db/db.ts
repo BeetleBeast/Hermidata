@@ -2,7 +2,7 @@ import { logConsoleError } from "../utils/ErrorMessage";
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { type Hermidata, type HermidataV11, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
 import { ext } from '../utils/BrowserCompat';
-import { pushToSync, removeFromSync } from './sync';
+import { pushToSync, removeFromSync } from '../sync/sync.engine';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings, HERMIDATA_VERSION } from '../constants';
 import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/oldVersions';

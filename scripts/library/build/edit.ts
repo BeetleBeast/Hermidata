@@ -3,7 +3,7 @@ import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, HermidataImageSource, Settings, SwitchConfig, TagMap } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { openLink, generateHermidataHash } from "../../shared/utils/StringOutput";
+import { openLink, generateHermidataHash, getFreeKey } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, LibraryBuilder } from "../build";
 import { Tags } from "./tags";
 
@@ -488,8 +488,9 @@ export class EditDetail extends LibraryBuilder {
     }
     /** update key if changes have been made */
     private async forceKeyUpdate() {
-        const newKey = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
         const oldKey = this.hermidata.id;
+        // never move onto a key another item holds ( a separate same-titled item keeps its own id )
+        const newKey = getFreeKey(oldKey, generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl()), this.AllHermidata);
         if (newKey === oldKey) return;
         const imageSource = this.hermidata.meta.image;
         if (imageSource.kind === 'stored' && imageSource.id === oldKey) this.hermidata.meta.image = { ...imageSource, id: newKey };

@@ -52,6 +52,8 @@ export interface Settings {
 
     AccountAndConnections: {
         spreadsheetUrl: string;
+        /** The tab rows are written to. Empty means the default tab. */
+        sheetName: string;
     }
     ExtensionBehaviour: {
         EnableLightMode: boolean;
@@ -116,3 +118,9 @@ export interface ElementsWithInputAndMenu {
     input: elementInput;
     menu: elementInput;
 }
+export type SheetProblem = 'auth' | 'no-access' | 'not-found' | 'no-tab' | 'server' | 'network';
+
+/** The answer to "can Hermidata write to this spreadsheet and tab?". */
+export type SheetCheck =
+    | { ok: true; title: string }
+    | { ok: false; problem: SheetProblem; message: string };

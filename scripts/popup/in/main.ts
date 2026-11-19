@@ -7,12 +7,15 @@ import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
 import { RSS } from '../../rss/main';
 import { getAllHermidata, getSettings } from '../../shared/db/Storage';
-import { checkSyncQuota } from '../../shared/db/sync';
+import { checkSyncQuota } from '../../shared/sync/sync.engine';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
+import { chooseItem } from '../frontend/itemChooser';
+import { linkAsAdaptation } from '../core/save';
+import { getSeparateProminence } from '../core/separateProminence';
 import { HermidataService } from "./service";
 import { shortcutEventListener } from "../core/shortcuts";
 
@@ -51,6 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     setTimeout( async () => checkSyncQuota(), 500);
+    // look for changes from other devices now instead of waiting for the next poll (fire and forget)
+    ext.runtime.sendMessage({ type: 'SYNC_REFRESH' }).catch(() => undefined);
 });
 
 document.addEventListener('keydown', async (e) => shortcutEventListener(e));
@@ -219,6 +224,8 @@ class HermidataController {
         
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
 
+        this.updateSeparateProminence();
+
         const state = stateConfig[this.getState()];
         setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
         setElement<HTMLTitleElement>('.RSSLinkState-title', el => el.textContent = state.tooltip);
@@ -232,6 +239,8 @@ class HermidataController {
     }
     private bindEvents(): void {
         getElement('#save')?.addEventListener('click', () => this.saveSheet());
+        getElement('#saveSeparate')?.addEventListener('click', () => this.saveAsSeparateItem());
+        getElement('#Type')?.addEventListener('change', () => this.updateSeparateProminence());
 
         getElement("#HDClassicBtn")?.addEventListener("click", (e) => this.RSS?.openClassic(e as PointerEvent));
         getElement("#HDRssBtn")?.addEventListener("click", async (e) => await this.RSS?.openRSS(e as PointerEvent));
@@ -310,12 +319,88 @@ class HermidataController {
         }
     }
     private setSaveInProgress(isSaving: boolean): void {
+        setElement<HTMLButtonElement>('#saveSeparate', el => el.disabled = isSaving);
+
         const button = getElement<HTMLButtonElement>('#save');
         if (!button) return;
 
         button.disabled = isSaving;
         button.setAttribute('aria-busy', String(isSaving));
         button.dataset.saving = String(isSaving);
+    }
+    /** Shows "Save as separate item" as prominently as the match calls for ( styled by .saveActions[data-separate] ) */
+    private updateSeparateProminence(): void {
+        const past = this.pastHermidata;
+        const type = getElement<HTMLSelectElement>('#Type')?.value;
+        const prominence = getSeparateProminence({
+            hasSameTitled: past !== null || this.past.isAmbiguous,
+            declinedAll: past === null && this.past.isAmbiguous,
+            exactMatch: this.past.isExactMatch,
+            typeChanged: past !== null && type !== undefined && type !== past.novelType,
+        });
+        setElement<HTMLDivElement>('.saveActions', el => el.dataset.separate = prominence);
+    }
+    /** Saves the page as its own item, leaving the same-titled saved item untouched */
+    private async saveAsSeparateItem(): Promise<void> {
+        if (this.isSaving || !this.service) return;
+        this.isSaving = true;
+        this.setSaveInProgress(true);
+        let closeAfterSave = false;
+
+        try {
+            const page = await this.createSeparatePage();
+            const original = this.pastHermidata;
+
+            // same title and type is the risky case ( two items that look identical ): ask first.
+            // a different type was chosen on purpose ( novel <-> manga ) and is asked about linking below
+            const sameTypeAsSaved = original !== null && original.novelType === page.novelType;
+            if (sameTypeAsSaved && !await customConfirm(
+                `Save this page as a new item? "${original.title}" (${original.novelType}) stays as it is.`,
+                { accept: "Save as new", reject: "Cancel" }
+            )) return;
+
+            // a different type of the same title is most likely an adaptation ( novel <-> manga )
+            const link = original !== null && original.novelType !== page.novelType && await customConfirm(
+                `Link "${page.title}" (${page.novelType}) and "${original.title}" (${original.novelType}) as adaptations of each other?`,
+                { accept: "Link", reject: "Don't link" }
+            );
+
+            await this.updateSettings(await getSettings());
+            const saved = await this.service.saveAsSeparateItem(page);
+
+            if (saved && link && original) await linkAsAdaptation(original.id, page.id).catch(error => new ErrorMessage("Saved the new item, but could not link it to the existing one.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage());
+
+            if (!this.Testing && saved) {
+                closeAfterSave = true;
+                setTimeout(() => window.close(), 400);
+            }
+        } catch (error) {
+            new ErrorMessage("Could not save this page as a separate item.", undefined, {
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage();
+        } finally {
+            if (!closeAfterSave) {
+                this.isSaving = false;
+                this.setSaveInProgress(false);
+            }
+        }
+    }
+    /** A fresh item from the current tab and the form, without the saved item's markers or history */
+    private async createSeparatePage(): Promise<HermidataModel> {
+        const { title, Type, Chapter, status, novelStatuses, notes } = this.getLatestValueFromUI();
+        if (!title || !Type || !status || !novelStatuses) throw new Error('Missing required fields');
+
+        const page = HermidataModel.from(Type, status, novelStatuses);
+        page.SetFromTab(await HermidataController.getCurrentTabInfo());
+        page.title = title;
+        page.SetChapter(Chapter);
+        page.meta.tags = this.tagsSystem.tags;
+        page.meta.notes = notes;
+        return page;
     }
     /** merge novel type if changed */
     private async updateNovelType(): Promise<boolean> {
@@ -324,9 +409,25 @@ class HermidataController {
 
         // 2. If the novel type has *not* changed, return true (no merge needed)
         if (!novelTypeChanged || !this.past.pastHermidata) return true;
-        
+
+        // an item not stored under the hash of its title and type ( a separate item ) has nothing to move:
+        // it keeps its id and the save changes its type in place
+        const past = this.past.pastHermidata;
+        if (past.id !== generateHermidataHash(past.title, past.novelType)) {
+            if (!await this.confirmNovelTypeChange(past, this.hermidata.novelType)) return false;
+            this.hermidata.id = past.id;
+            return true;
+        }
+
         // 3. If the novel type has changed, generate a new id
         const newId = generateHermidataHash(this.hermidata.title, this.hermidata.novelType);
+
+        // that title and type is already another saved item ( e.g. a separate manga ): merging into it would overwrite it
+        const holder = (await PastHermidata.getAllHermidata())[newId];
+        if (holder && holder.id !== this.past.pastHermidata.id) {
+            new WarningMessage(`"${holder.title}" (${holder.novelType}) is already saved, so the type was not changed and nothing was saved.`).sendMessage();
+            return false;
+        }
         this.hermidata.id = newId;
         
         // 4. If the user confirms the merge, merge the two hermidatas and return the new hermidata, else return false
@@ -337,15 +438,18 @@ class HermidataController {
         this.hermidata = new HermidataModel(newHermidata);
         return true;
     }
-    private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
+    private confirmNovelTypeChange(older: Hermidata, newType: AnyNovelType): Promise<boolean> {
         const msg = `
-            The Novel Type of "${older.title}" will changed from "${older.novelType}" to "${newer.novelType}".
+            The Novel Type of "${older.title}" will changed from "${older.novelType}" to "${newType}".
             <br>
             <br>
             Are you sure you want to change it?
         `;
+        return customConfirm(msg, { accept: "Change", reject: "Cancel"});
+    }
+    private async mergeNovelType(newer: Hermidata, older: Hermidata): Promise<Hermidata | false> {
         // 1. let user confirm the merge
-        const confirmed = await customConfirm(msg, { accept: "Change", reject: "Cancel"});
+        const confirmed = await this.confirmNovelTypeChange(older, newer.novelType);
 
         if (!confirmed) {
             logConsoleError('new Hermidata has different novel type and user declined to merge');
@@ -439,7 +543,16 @@ export async function startup(): Promise<{Hermidata: HermidataModel, past: PastH
     const past = new PastHermidata(Hermidata);
     // create the Hermidata with all values set from a past if it exists
     await Hermidata.SetPast(past);
-    
+
+    // several same-titled items and no clear winner: the user decides, nothing is picked for them
+    if (past.resolution?.kind === 'ambiguous') {
+        const chosen = await chooseItem(past.resolution.candidates);
+        if (chosen) {
+            past.choose(chosen);
+            await Hermidata.SetPast(past);
+        }
+    }
+
     return { Hermidata, past };
 }
 

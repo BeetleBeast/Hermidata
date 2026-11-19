@@ -22,6 +22,12 @@ export type {
     AllHermidata,
 
     AltCheck,
+    ItemResolveInput,
+    ScoredCandidate,
+    ItemResolution,
+    MatchConfidence,
+    SeparateProminence,
+    SeparateProminenceState,
 
     InputArrayType,
     InputArraySheetType,
@@ -54,6 +60,7 @@ export type {
     Migration,
 
     ReleaseSchedule,
+    RelatedWorkType,
 
 } from "./popup";
 
@@ -129,6 +136,8 @@ export type {
 
     DefaultChoice,
     Settings,
+    SheetProblem,
+    SheetCheck,
 
     elementInput,
     elementMenu,
@@ -146,3 +155,23 @@ export type {
     KeyboardShortcutSettings
 
 } from "./settings";
+
+export type {
+
+    SyncBackend,
+    SyncDeps,
+    RemoteBlob,
+    WriteResult,
+
+    ConnectionTest,
+    WebDavProblem,
+    WebDavConfig,
+    AlarmsLike,
+    SyncBackendConfig,
+    SyncSwitchMode,
+    EnvelopeHeader,
+    PassphraseSlot,
+    RecoverySlot,
+    KeyStore,
+
+} from './sync';

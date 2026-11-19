@@ -14,10 +14,11 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     dbGetImage,
     dbSaveAllImages,
     dbUpdateImageKey} from './db';
-import { pushToSync, removeFromSync } from './sync';
+import { pushToSync, removeFromSync } from '../sync/sync.engine';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { generateHermidataHash } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
+import { isValidGoogleSheetUrl } from '../sheets/sheetConfig';
 import { type RawFeed, type Settings, type AllSortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
@@ -324,7 +325,7 @@ export async function migrateSettings(_settings: Settings | undefined = undefine
 }
 
 // ============================================================
-// Google Sheet URL — kept in storage.sync (small, needed cross-device)
+// Google Sheet URL — kept in Settings.AccountAndConnections (old standalone storage.sync key is migrated on read)
 // ============================================================
 
 async function getSpreadsheetUrl(): Promise<string> {
@@ -361,10 +362,6 @@ export async function getGoogleSheetURL(): Promise<string> {
         logConsoleError('[Storage] getGoogleSheetURL:', error);
         return sheetUrlInput();
     }
-}
-
-export function isValidGoogleSheetUrl(url: string): boolean {
-    return /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9-_]+/.test(url);
 }
 
 export function sheetUrlInput(): Promise<string> {

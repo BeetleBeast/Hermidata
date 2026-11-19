@@ -3,7 +3,7 @@ import { dbAccess, saveHermidata, updateHermidata } from '../scripts/shared/db/S
 import { HermidataModel } from '../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash } from '../scripts/shared/utils/StringOutput';
 import { dbUpdateImageKey, deleteHermidata, putHermidata } from '../scripts/shared/db/db';
-import { pushToSync, removeFromSync } from '../scripts/shared/db/sync';
+import { pushToSync, removeFromSync } from '../scripts/shared/sync/sync.engine';
 
 vi.mock('../scripts/shared/db/db', () => ({
     getHermidataByKey: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('../scripts/shared/db/db', () => ({
     updateImageKey: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../scripts/shared/db/sync', () => ({
+vi.mock('../scripts/shared/sync/sync.engine', () => ({
     pushToSync: vi.fn().mockResolvedValue(undefined),
     removeFromSync: vi.fn().mockResolvedValue(undefined),
 }));

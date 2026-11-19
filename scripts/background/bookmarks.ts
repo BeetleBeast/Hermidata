@@ -7,6 +7,7 @@ import { updateIcon } from "./tabs";
 import { getTitleAndChapterFromUrl, TrimTitle } from "../shared/utils/StringOutput";
 import { FolderMapping } from "../settings/build/FolderMapping";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
+import { SHEET_FIRST_DATA_ROW } from "../shared/sheets/sheetConfig";
 
 declare const browser: typeof chrome | undefined;
 
@@ -126,7 +127,7 @@ export function shouldReplaceOrBlock(newEntry: InputArraySheetType, existingRows
 
         const chapterChanged = chapter !== oldChapterParsed;
 
-        if (chapterChanged) return { action: "replace", rowIndex: i + 2, replacedURL: oldUrl, replaceID: id };
+        if (chapterChanged) return { action: "replace", rowIndex: i + SHEET_FIRST_DATA_ROW, replacedURL: oldUrl, replaceID: id };
         
         else if (oldDate !== undefined && new Date(date).getTime() > new Date(oldDate).getTime()) return { action: "alert" };
         

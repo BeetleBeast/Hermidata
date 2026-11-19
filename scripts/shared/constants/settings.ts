@@ -1,5 +1,6 @@
 import type { FolderMapping, Settings } from "../types";
 import { DEFAULT_NOVEL_STATUSES, DEFAULT_NOVEL_TYPES, DEFAULT_READ_STATUSES, DEFAULT_TAG_COLOURS } from "./popup";
+import { DEFAULT_SHEET_NAME } from "../sheets/sheetConfig";
 import { DEFAULT_KEYBOARD_SHORTCUTS } from "../utils/KeyboardShortcuts";
 
 export const DEFAULT_FOLDER_MAPPING: FolderMapping = {
@@ -17,9 +18,10 @@ export const DEFAULT_FOLDER_MAPPING: FolderMapping = {
 
 
 export const defaultSettings: Settings = {
-    version: 8,
+    version: 9,
     AccountAndConnections: {
         spreadsheetUrl: '',
+        sheetName: DEFAULT_SHEET_NAME,
     },
     ExtensionBehaviour: {
         EnableLightMode: false,

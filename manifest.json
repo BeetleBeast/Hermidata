@@ -2,7 +2,7 @@
     "name": "Hermidata",
     "author": "BeetleB",
     "description": "Track your reading and watching progress across novels, manga, and anime. Save entries with one click, manage multiple read-thoughts per title with independent bookmarks, get notified of new chapters via RSS, and optionally sync to Google Sheets.",
-    "version": "0.26.2",
+    "version": "0.27.0",
     "manifest_version": 3,
     "permissions": [
         "contextMenus",
@@ -13,9 +13,11 @@
         "tabs",
         "scripting",
         "notifications",
-        "cookies"
+        "cookies",
+        "alarms"
     ],
     "host_permissions": [ "https://*.googleapis.com/*", "*://*/*" ],
+    "optional_host_permissions": [ "*://*/*" ],
     "browser_specific_settings": {
         "gecko": {
             "id": "{8cc11236-9806-4fa0-a3fa-8bf55309a1d0}",

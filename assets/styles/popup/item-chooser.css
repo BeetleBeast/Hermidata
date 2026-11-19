@@ -1,0 +1,226 @@
+/* --- save actions ( footer ) --- */
+
+.saveActions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/*
+ * "Save as separate item" has four stages, set on .saveActions[data-separate]:
+ * hidden ( only Save ) · subtle ( a dim icon, label on hover ) · visible ( a quiet link ) · primary ( the main button, Save secondary )
+ */
+
+/* visible ( the base look ): a quiet text link, Save stays the obvious action */
+.saveSeparate {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px; /* same offset as #save, so the two stay centred on each other */
+    padding: 4px 2px;
+    color: var(--text-muted);
+    font-size: 13px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.saveSeparate:hover {
+    color: var(--text);
+}
+.saveSeparate:focus-visible {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: 2px;
+}
+.saveSeparate:disabled {
+    color: var(--text-disabled);
+    cursor: wait;
+}
+.saveSeparate-icon {
+    flex-shrink: 0;
+}
+
+/* hidden: no saved item has this title */
+.saveActions[data-separate="hidden"] .saveSeparate {
+    display: none;
+}
+
+/* subtle: the page is clearly the saved item; reachable, nearly out of sight */
+.saveActions[data-separate="subtle"] .saveSeparate {
+    padding: 4px;
+    color: var(--text-disabled);
+}
+.saveActions[data-separate="subtle"] .saveSeparate-label {
+    /* still read by screen readers; shown beside the icon on hover / focus without moving the footer */
+    position: absolute;
+    left: calc(100% + 4px);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.saveActions[data-separate="subtle"] .saveSeparate:hover,
+.saveActions[data-separate="subtle"] .saveSeparate:focus-visible {
+    color: var(--text-muted);
+}
+.saveActions[data-separate="subtle"] .saveSeparate:hover .saveSeparate-label,
+.saveActions[data-separate="subtle"] .saveSeparate:focus-visible .saveSeparate-label {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0.08s; /* a short hover-intent delay, so sweeping the mouse past doesn't flash it */
+}
+
+/* the stages ease into each other instead of snapping */
+.saveSeparate {
+    transition: color 0.2s ease, background-color 0.3s ease, border-color 0.3s ease, padding 0.2s ease;
+}
+.saveActions:not([data-separate="hidden"]) .saveSeparate {
+    animation: saveSeparate-in 0.25s ease-out;
+}
+@keyframes saveSeparate-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* primary: the user said this page is none of the saved items, so a separate item is the likely save */
+.saveActions[data-separate="primary"] .saveSeparate {
+    padding: 8px 14px;
+    color: var(--text-highlight);
+    font-size: inherit;
+    background-color: var(--accent-hover-dark);
+    border: 1px solid var(--accent-soft);
+    transition: background-color 0.3s ease;
+}
+.saveActions[data-separate="primary"] .saveSeparate:hover {
+    background-color: var(--accent-active-dark);
+}
+.saveActions[data-separate="primary"] .saveSeparate:disabled {
+    color: var(--text-disabled);
+    background-color: var(--surface-disabled-dark);
+    border-color: var(--border);
+}
+.saveActions[data-separate="primary"] #save {
+    color: var(--text-muted);
+    background-color: transparent;
+    border-color: var(--border);
+}
+.saveActions[data-separate="primary"] #save:hover {
+    color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .saveActions .saveSeparate,
+    .saveActions[data-separate] .saveSeparate,
+    .saveActions[data-separate] .saveSeparate-label {
+        transition: none;
+    }
+    .saveActions:not([data-separate="hidden"]) .saveSeparate {
+        animation: none;
+    }
+}
+
+/* --- item chooser ( ambiguous same-title match ) --- */
+/* compact on purpose: the popup has little height, so one heading line and one line per candidate */
+
+.itemChooser {
+    width: min(460px, calc(100vw - 32px));
+    padding: 10px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    box-shadow: 0 8px 20px var(--shadow-soft);
+}
+.itemChooser::backdrop {
+    background: var(--overlay);
+}
+
+.itemChooser-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 2px 8px;
+}
+.itemChooser-header h4 {
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-highlight);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.itemChooser-none {
+    flex-shrink: 0;
+    padding: 2px;
+    color: var(--text-muted);
+    font-size: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+.itemChooser-none:hover {
+    color: var(--text);
+}
+.itemChooser-none:focus-visible,
+.itemChooser-option:focus-visible {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: 1px;
+}
+
+/* about three rows are visible; more scroll, so the dialog never grows past a fixed height */
+.itemChooser-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 126px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.itemChooser-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 10px;
+    text-align: left;
+    color: var(--text);
+    background-color: var(--surface-raised);
+    border: 1px solid var(--surface-input);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.itemChooser-option:hover {
+    background-color: var(--accent-hover-dark);
+    border-color: var(--accent-soft);
+}
+
+.itemChooser-option-type {
+    flex-shrink: 0;
+    padding: 0 8px;
+    color: var(--accent-hover-soft);
+    font-size: 12px;
+    border: 1px solid var(--accent-dark);
+    border-radius: 999px;
+}
+.itemChooser-option-meta {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .itemChooser-option {
+        transition: none;
+    }
+}

@@ -6,8 +6,6 @@ import type { CurrentTab, KeyboardShortcutSettings, Settings } from "../../share
 import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getChapterFromTitle } from "../../shared/utils/StringOutput";
-import { ErrorMessage } from "../../shared/utils/ErrorMessage";
-import { HermidataService } from "../in/service";
 import { PastHermidata } from "./Past";
 import { matchesKeyboardShortcut, matchesShortcutKey } from "../../shared/utils/KeyboardShortcuts";
 
@@ -170,18 +168,13 @@ function closeWindow(typing: boolean) {
     }
     else window.close();
 }
-async function saveProgress(e: KeyboardEvent) {
+/**
+ * The shortcut is the Save button: it saves what the form shows ( chapter, type, tags... ) to the item that was matched or chosen,
+ * and a disabled button ( a save is already running ) ignores it
+ */
+function saveProgress(e: KeyboardEvent) {
     e.preventDefault();
-    setSaveInProgress(true);
-    try {
-        await (await getModeSwitcher()).saveCurrentHermidata();
-        setTimeout(() => window.close(), 400);
-        
-    } catch (error) {
-        new ErrorMessage("Could not save this item.", undefined, { details: [error] }).sendMessage();
-    } finally {
-        setSaveInProgress(false);
-    }
+    document.querySelector<HTMLButtonElement>('#save')?.click();
 }
 async function focusOnSearchBar(e: KeyboardEvent) {
     e.preventDefault();
@@ -191,16 +184,6 @@ async function focusOnSearchBar(e: KeyboardEvent) {
     if (!search) return;
 
     search.focus();
-}
-
-
-function setSaveInProgress(isSaving: boolean): void {
-    const button = document.querySelector<HTMLButtonElement>('#save');
-    if (!button) return;
-
-    button.disabled = isSaving;
-    button.setAttribute('aria-busy', String(isSaving));
-    button.dataset.saving = String(isSaving);
 }
 
 export class ModeSwitcher {
@@ -231,11 +214,6 @@ export class ModeSwitcher {
                 await this.RSS.openRSS();
                 break;
         }
-    }
-
-    public async saveCurrentHermidata(): Promise<void> {
-        if (!this.Hermidata) throw new Error("Hermidata not initialized.");
-        await new HermidataService(await getSettings()).saveHermidata(this.Hermidata);
     }
 
     static async getCurrentTabInfo(): Promise<CurrentTab> {

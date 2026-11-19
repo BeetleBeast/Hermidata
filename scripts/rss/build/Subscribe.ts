@@ -1,6 +1,7 @@
 import { PastHermidata } from "../../popup/core/Past";
 import { getAllRawFeeds, getSettings, removeRawFeedByUrl, setSettings } from "../../shared/db/Storage";
-import { findByTitleOrAlt, generateRawFeedId, TrimTitle } from "../../shared/utils/StringOutput";
+import { findAllByTitleOrAlt, findByTitleOrAlt, generateRawFeedId, TrimTitle } from "../../shared/utils/StringOutput";
+import { resolveItem } from "../../popup/core/ItemResolver";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -9,7 +10,8 @@ import { customConfirm } from "../../popup/frontend/confirm";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { ErrorMessage } from "../../shared/utils/ErrorMessage";
+import { ErrorMessage, WarningMessage } from "../../shared/utils/ErrorMessage";
+import { AmbiguousItemError } from "../../shared/utils/dedicatedErrors";
 
 type match = {
     Hermidata: Hermidata,
@@ -83,11 +85,17 @@ export class Subscribe extends RssBuild {
             const currentType = getElement<HTMLInputElement>('#Type_HDRss')?.value as AnyNovelType || this.hermidata.novelType;
             const currentTitle = getElement<HTMLInputElement>('#title_HDRss')?.value || this.hermidata.title;
 
-            await linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed);
+            // a saved item ( also one picked in the chooser ) is linked by its id; an unsaved page falls back to its title
+            await linkRSSFeed(currentTitle, currentType, this.hermidata.GetUrl(), this.matchedFeed, this.hermidata.id || undefined);
             await this.reloadContent(notificationSection, allItemSection);
             console.log('Linked RSS to extension');
 
         } catch (e) {
+            if (e instanceof AmbiguousItemError) {
+                new WarningMessage(`${e.candidateCount} saved items have this title. Save this page first, then subscribe.`).sendMessage();
+                if (subscribeBtn) subscribeBtn.disabled = false;
+                return;
+            }
             new ErrorMessage("Failed to link RSS to extension. Please try again.", undefined, { 
                 notifyUser: true,
                 consoleLevel: 'error',
@@ -155,7 +163,7 @@ export class Subscribe extends RssBuild {
                 continue;
             }
             // 5. link matching feed
-            await linkRSSFeed(Hermidata.title, Hermidata.novelType, Hermidata.GetUrl(), RawFeed);
+            await linkRSSFeed(Hermidata.title, Hermidata.novelType, Hermidata.GetUrl(), RawFeed, Hermidata.id);
         }
         return true;
     }
@@ -182,8 +190,16 @@ export class Subscribe extends RssBuild {
             }
             const rawFeedTitle = RawFeed.latestItem.title ?? RawFeed.title; // use latest item title if available otherwise use raw feed title ( some feeds have no items )
             const rawFeedTitleTrimmed = TrimTitle.trimTitle(rawFeedTitle, RawFeed.url).title;
-            const matchedEntry = findByTitleOrAlt(rawFeedTitleTrimmed, allHermidata); // 100% match only
-            if (matchedEntry?.rss.some(feed => feed.url === RawFeed.url)) continue;
+            const sameTitled = findAllByTitleOrAlt(rawFeedTitleTrimmed, allHermidata); // 100% match only
+            if (sameTitled.some(entry => entry.rss.some(feed => feed.url === RawFeed.url))) continue;
+
+            // several same-titled items: only offer the feed for a clear winner ( e.g. the one read on this site )
+            const resolution = resolveItem({ title: rawFeedTitleTrimmed, url: RawFeed.url }, sameTitled);
+            if (resolution.kind === 'ambiguous') {
+                console.warn(`Found ${sameTitled.length} saved items titled "${rawFeedTitleTrimmed}", not offering ${RawFeed.url} for any of them`);
+                continue;
+            }
+            const matchedEntry = resolution.kind === 'match' ? resolution.item : undefined;
 
             // check if this check is a not excluded
             const settings = await getSettings();
