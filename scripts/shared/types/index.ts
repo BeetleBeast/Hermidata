@@ -169,6 +169,7 @@ export type {
     AlarmsLike,
     SyncBackendConfig,
     SyncSwitchMode,
+    SyncStatus,
     EnvelopeHeader,
     PassphraseSlot,
     RecoverySlot,

@@ -8,6 +8,7 @@ export const POLL_ALARM = 'hermidata-sync-poll';
 const DEFAULT_POLL_MINUTES = 5;
 const PROBE_FILE = 'hermidata-connection-test.tmp';
 const HASH_PREFIX = 'h:';   // versions derived from the content, for servers that give no usable ETag
+const REQUEST_TIMEOUT_MS = 15_000;   // a powered-off host must not hang the sync queue
 
 // ------------------------------------------------------------ small helpers
 
@@ -122,10 +123,18 @@ export class WebDavBackend implements SyncBackend {
 
     // ------------------------------------------------------------ transport
 
-    private send(method: string, url: string, init: { headers?: Record<string, string>; body?: string } = {}): Promise<Response> {
+    /** An aborted request rejects like any network failure (not a ConflictError or WebDavError), so the engine retries it later. */
+    private async send(method: string, url: string, init: { headers?: Record<string, string>; body?: string } = {}): Promise<Response> {
         const headers: Record<string, string> = { ...init.headers };
         if (this.authHeader) headers['Authorization'] = this.authHeader;
-        return this.doFetch(url, { method, headers, body: init.body, cache: 'no-store', credentials: 'omit' });
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        try {
+            return await this.doFetch(url, { method, headers, body: init.body, cache: 'no-store', credentials: 'omit', signal: controller.signal });
+        } finally {
+            clearTimeout(timer);
+        }
     }
 
     private check(res: Response): void {

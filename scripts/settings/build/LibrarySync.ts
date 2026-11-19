@@ -1,10 +1,10 @@
-import type { ConnectionTest, SyncBackendConfig, SyncSwitchMode, WebDavProblem } from "../../shared/types";
+import type { ConnectionTest, SyncBackendConfig, SyncStatus, SyncSwitchMode, WebDavProblem } from "../../shared/types";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { getElement } from "../../shared/utils/Selection";
 import {
     createBackend, createWebDavBackend, DEFAULT_SYNC_CONFIG, describeTarget, loadSyncConfig, originPattern,
-    sameConfig, sameTarget, validateWebDavUrl,
+    sameConfig, sameTarget, SYNC_STATUS_KEY, validateWebDavUrl,
 } from "../../shared/sync/syncConfig";
 import { Build } from "../build";
 
@@ -39,6 +39,7 @@ export class LibrarySync extends Build {
     private readonly applyBtn = getElement<HTMLButtonElement>("#applySyncBackend");
     private readonly status = getElement<HTMLParagraphElement>("#syncStatus");
     private readonly currentTarget = getElement<HTMLParagraphElement>("#syncCurrentTarget");
+    private readonly health = getElement<HTMLParagraphElement>("#syncHealth");
     private readonly choiceDialog = getElement<HTMLDialogElement>("#syncChoiceDialog");
 
     private saved: SyncBackendConfig = DEFAULT_SYNC_CONFIG;
@@ -49,6 +50,10 @@ export class LibrarySync extends Build {
         this.fill(this.saved);
         this.showCurrent();
         this.bindEvents();
+        await this.showHealth();
+        ext.storage.onChanged.addListener((changes, area) => {
+            if (area === 'local' && SYNC_STATUS_KEY in changes) this.renderHealth(changes[SYNC_STATUS_KEY].newValue as SyncStatus | undefined);
+        });
     }
 
     /** Discards unsaved edits in the form. Never switches the backend. */
@@ -153,6 +158,20 @@ export class LibrarySync extends Build {
     private showCurrent() {
         if (this.currentTarget) this.currentTarget.textContent = `This device syncs through: ${describeTarget(this.saved)}.`;
         
+    }
+
+    private async showHealth() {
+        const got = await ext.storage.local.get(SYNC_STATUS_KEY);
+        this.renderHealth(got[SYNC_STATUS_KEY] as SyncStatus | undefined);
+    }
+
+    /** The outcome of the last sync attempt: failures say it will retry, successes say when. Hidden until there is one. */
+    private renderHealth(status: SyncStatus | undefined) {
+        if (!this.health) return;
+        const when = status?.lastSyncAt ? `Last successful sync: ${new Date(status.lastSyncAt).toLocaleString()}.` : 'No successful sync yet.';
+        this.health.hidden = !status;
+        this.health.textContent = status?.ok === false ? `Server unreachable, will retry. ${when}` : when;
+        this.health.dataset.state = status?.ok === false ? 'signed-out' : 'connected';
     }
 
     private setStatus(text: string, tone: Tone = 'info') {
