@@ -57,7 +57,9 @@
     left: calc(100% + 4px);
     white-space: nowrap;
     pointer-events: none;
-    clip-path: inset(50%);
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
 }
 .saveActions[data-separate="subtle"] .saveSeparate:hover,
 .saveActions[data-separate="subtle"] .saveSeparate:focus-visible {
@@ -65,7 +67,21 @@
 }
 .saveActions[data-separate="subtle"] .saveSeparate:hover .saveSeparate-label,
 .saveActions[data-separate="subtle"] .saveSeparate:focus-visible .saveSeparate-label {
-    clip-path: none;
+    opacity: 1;
+    transform: none;
+    transition-delay: 0.08s; /* a short hover-intent delay, so sweeping the mouse past doesn't flash it */
+}
+
+/* the stages ease into each other instead of snapping */
+.saveSeparate {
+    transition: color 0.2s ease, background-color 0.3s ease, border-color 0.3s ease, padding 0.2s ease;
+}
+.saveActions:not([data-separate="hidden"]) .saveSeparate {
+    animation: saveSeparate-in 0.25s ease-out;
+}
+@keyframes saveSeparate-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
 }
 
 /* primary: the user said this page is none of the saved items, so a separate item is the likely save */
@@ -95,8 +111,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .saveActions[data-separate="primary"] .saveSeparate {
+    .saveActions .saveSeparate,
+    .saveActions[data-separate] .saveSeparate,
+    .saveActions[data-separate] .saveSeparate-label {
         transition: none;
+    }
+    .saveActions:not([data-separate="hidden"]) .saveSeparate {
+        animation: none;
     }
 }
 
