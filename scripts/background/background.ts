@@ -9,6 +9,7 @@ import { migrationSteps } from '../shared/migration'
 import { getAllHermidata } from '../shared/db/Storage'
 import { scheduleCull } from './culling'
 import { initShortcuts } from './shortcuts'
+import { initBackfillAlarm, resumeBackfill } from './altTitleBackfill'
 import { markFailed, markReady } from './ready'
 
 /*
@@ -40,6 +41,7 @@ initMessaging();
 initContextMenus();
 initInstalled();
 initSyncAlarmListener();
+initBackfillAlarm();
 
 // Phase 2: async startup. Things that need migrated data.
 (async () => {
@@ -51,6 +53,7 @@ initSyncAlarmListener();
         const cached = await getAllHermidata();
         scheduleCull(() => cached);
         markReady();
+        void resumeBackfill(); // an alt-title backfill that the browser interrupted
     } catch (e) {
         console.error('[Hermidata] startup failed', e);
         markFailed(e);

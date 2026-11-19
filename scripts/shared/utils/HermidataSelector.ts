@@ -495,6 +495,7 @@ export class HermidataModel implements Hermidata {
             altTitles: brokenHermidata?.meta?.altTitles ?? [alternativeRequired.title],
             originalRelease: brokenHermidata?.meta?.originalRelease ?? null,
             novelStatus: brokenHermidata?.meta?.novelStatus ?? 'Ongoing',
+            ...(brokenHermidata?.meta?.external ? { external: brokenHermidata.meta.external } : {}),
         };
         this.titleTrimming = brokenHermidata?.titleTrimming ?? { type: 'default' };
 

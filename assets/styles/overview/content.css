@@ -466,6 +466,51 @@
 	max-height: none;
 }
 
+/* online alt title lookup: only shown while the alt titles are open */
+#hermidata-alt-lookup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding-block: 6px;
+}
+
+#hermidata-alt-lookup[hidden],
+#hermidata-alt-lookup-form[hidden],
+#hermidata-alt-lookup-candidates[hidden],
+#hermidata-alternative-titles-list[data-closed="true"] ~ #hermidata-alt-lookup {
+    display: none;
+}
+
+#hermidata-alt-lookup-status {
+    margin: 0;
+    font-size: 0.85em;
+}
+
+#hermidata-alt-lookup-status[data-error="true"] {
+    color: var(--danger);
+}
+
+#hermidata-alt-lookup-form {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+
+#hermidata-alt-lookup-input {
+    flex: 1;
+    min-width: 0;
+}
+
+#hermidata-alt-lookup-candidates {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 #hermidata-alternative-title-button {
     cursor: pointer;
     -webkit-user-select: none;

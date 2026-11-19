@@ -44,6 +44,9 @@ export const defaultSettings: Settings = {
             onlyRSS: false,
             allowAllDateFields: false,
         },
+        AltTitleLookup: {
+            Enable: false,
+        },
     },
     ContentTypesAndStatuses: {
         TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],
