@@ -219,7 +219,7 @@ export class FeedItem {
     }
     private async getItemInfo(key: string, item: HermidataModel, isRSSItem: boolean = false): Promise<ItemInfo> {
         const title = findByTitleOrAlt(item.title, this.AllHermidata)?.title || item.title;
-        const url = item.GetLatestRssFeed()?.latestItem.link || item.GetUrl();
+        const url = item.GetLatestRssFeed()?.latestItem?.link || item.GetUrl();
         
         const useAutoDetectedChapter = extractChapterFromFeedItemTitle(title, item?.title, undefined, url);
         const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.GetChapter();
@@ -363,7 +363,7 @@ export class FeedItem {
     private showLatestDate(item: HermidataModel): { date: Date, originalDateVariable: string} {
 
         const latestRssFeed = item.GetLatestRssFeed();
-        const allDatesExceptBookmarks = latestRssFeed ? {
+        const allDatesExceptBookmarks = latestRssFeed?.latestItem ? {
             added: new Date(item.meta.added),
             updated: new Date(item.meta.updated),
             latestRss: new Date(latestRssFeed.latestItem.pubDate)

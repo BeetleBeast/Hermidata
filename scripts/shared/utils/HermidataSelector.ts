@@ -56,8 +56,9 @@ export class HermidataModel implements Hermidata {
     public static GetLatestRssFeed(feeds: Feed[], dateField: "pubDate" | "lastFetched" = "pubDate"): Feed | undefined {
         return feeds.reduce<Feed | undefined>((latest, feed) => {
             if (!latest) return feed;
-            const feedDate = Date.parse(dateField === "pubDate" ? String(feed.latestItem.pubDate) : feed.lastFetched ?? "") || 0;
-            const latestDate = Date.parse(dateField === "pubDate" ? String(latest.latestItem.pubDate) : latest.lastFetched ?? "") || 0;
+            // latestItem is a per-device cache: absent on a fresh device with synced data
+            const feedDate = Date.parse(dateField === "pubDate" ? String(feed.latestItem?.pubDate) : feed.lastFetched ?? "") || 0;
+            const latestDate = Date.parse(dateField === "pubDate" ? String(latest.latestItem?.pubDate) : latest.lastFetched ?? "") || 0;
             return feedDate > latestDate ? feed : latest;
         }, undefined);
     }
@@ -165,8 +166,8 @@ export class HermidataModel implements Hermidata {
         const sourceList = list.map(url => new URL(url).hostname.replace(/^www\./, ""));
 
 
-        const latestRss = HermidataModel.GetLatestRssFeed(this.rss.filter(feed => feed.latestItem.chapter >= this.chapter.latest));
-        if ((latestRss?.latestItem.chapter === this.chapter.latest ) || (latestRss && latestRss.latestItem.chapter >= this.chapter.latest)) return latestRss.domain;
+        const latestRss = HermidataModel.GetLatestRssFeed(this.rss.filter(feed => feed.latestItem?.chapter >= this.chapter.latest));
+        if ((latestRss?.latestItem?.chapter === this.chapter.latest ) || (latestRss?.latestItem && latestRss.latestItem.chapter >= this.chapter.latest)) return latestRss.domain;
 
         return sourceList[0];
     }
@@ -402,9 +403,9 @@ export class HermidataModel implements Hermidata {
         // title, novelType, url
         // if missing
         const alternativeRequired = {
-            title: brokenHermidata.title ?? brokenHermidata.rss?.[0]?.latestItem.title ?? brokenHermidata.rss?.[0]?.latestItem.rawTitle ?? brokenHermidata.rss?.[0]?.title ?? null,
+            title: brokenHermidata.title ?? brokenHermidata.rss?.[0]?.latestItem?.title ?? brokenHermidata.rss?.[0]?.latestItem?.rawTitle ?? brokenHermidata.rss?.[0]?.title ?? null,
             novelType: brokenHermidata.novelType ?? null,
-            url: brokenHermidata.chapter?.bookmarks?.[brokenHermidata.chapter.bookmarkInUse]?.url ?? brokenHermidata.rss?.[0]?.latestItem.link ?? null,
+            url: brokenHermidata.chapter?.bookmarks?.[brokenHermidata.chapter.bookmarkInUse]?.url ?? brokenHermidata.rss?.[0]?.latestItem?.link ?? null,
         }
         if (!alternativeRequired.title || !alternativeRequired.novelType || !alternativeRequired.url) {
             logConsoleError(`[Hermidata Selector] Missing required data.`, alternativeRequired, brokenHermidata);
@@ -609,19 +610,21 @@ export class HermidataModel implements Hermidata {
         const feedIndex = this.rss.findIndex(feed => feed.url === rawFeed.url);
         if (feedIndex === -1) return;
         const currentFeed = this.rss[feedIndex];
-        const latestFetchedIsNewer = new Date(rawFeed.latestItem.pubDate).getTime() > new Date(currentFeed.latestItem.pubDate).getTime();
-    
-        const isNew = (rawFeed.latestItem?.link !== currentFeed.latestItem?.link) && latestFetchedIsNewer;
-    
+        // no cached latestItem (fresh device with synced data): the fetched one is by definition the newest we know
+        const latestFetchedIsNewer = !currentFeed.latestItem
+            || new Date(rawFeed.latestItem.pubDate).getTime() > new Date(currentFeed.latestItem.pubDate).getTime();
+
+        const isNew = !!currentFeed.latestItem && (rawFeed.latestItem?.link !== currentFeed.latestItem?.link) && latestFetchedIsNewer;
+
         const latestChapter = latestFetchedIsNewer ? rawFeed.latestItem.chapter : currentFeed.latestItem.chapter;
     
         if (isNew) console.log(`
             New Release\n
             title: ${rawFeed.latestItem.title}\n
             New Chapter: ${rawFeed.latestItem.chapter}\n
-            Old Chapter: ${currentFeed.latestItem.chapter}\n
+            Old Chapter: ${currentFeed.latestItem?.chapter}\n
             new Date: ${new Date(rawFeed.latestItem.pubDate)}\n
-            old Date: ${new Date(currentFeed.latestItem.pubDate)}\n
+            old Date: ${currentFeed.latestItem ? new Date(currentFeed.latestItem.pubDate) : 'none'}\n
         `);
         
         
