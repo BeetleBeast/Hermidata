@@ -1,5 +1,6 @@
 import type { Hermidata } from "../types";
 import { shouldLookup } from "./altTitleLookup";
+import { kindOfType } from "./matching";
 
 /** Where the background keeps the backfill progress ( storage.local: every device runs its own ) */
 export const BACKFILL_STATE_KEY = 'altTitleBackfill';
@@ -25,6 +26,11 @@ export function dueForBackfill(items: Hermidata[], startedAt: number, now: numbe
             return external?.status !== 'error' || Date.parse(external.checkedAt) < startedAt;
         })
         .sort((a, b) => Number((b.rss?.length ?? 0) > 0) - Number((a.rss?.length ?? 0) > 0));
+}
+
+/** Items that already have their alt titles from an earlier lookup: they count as done from the start */
+export function alreadyMatched(items: Hermidata[]): number {
+    return items.filter(item => item?.id && kindOfType(item.novelType) && item.meta?.external?.status === 'matched').length;
 }
 
 /** Rough duration shown in the confirmation */

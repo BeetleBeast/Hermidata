@@ -3,7 +3,7 @@ import { backgroundAlarms } from "../shared/sync/syncAlarms";
 import { ext } from "../shared/utils/BrowserCompat";
 import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { isLookupEnabled } from "../shared/lookup/altTitleLookup";
-import { BACKFILL_BATCH_SIZE, BACKFILL_STATE_KEY, dueForBackfill, type BackfillState } from "../shared/lookup/backfill";
+import { alreadyMatched, BACKFILL_BATCH_SIZE, BACKFILL_STATE_KEY, dueForBackfill, type BackfillState } from "../shared/lookup/backfill";
 import { runAltTitleLookup } from "./altTitles";
 
 export const BACKFILL_ALARM = 'hermidata-alt-title-backfill';
@@ -32,8 +32,11 @@ export async function countBackfill(): Promise<number> {
 
 export async function startBackfill(): Promise<BackfillState> {
     const now = Date.now();
-    const total = dueForBackfill(await allItems(), now).length;
-    const state: BackfillState = { running: total > 0, total, done: 0, startedAt: new Date(now).toISOString() };
+    const items = await allItems();
+    const due = dueForBackfill(items, now).length;
+    // items matched earlier count as done from the start, so the total is every item the lookup covers
+    const done = due > 0 ? alreadyMatched(items) : 0;
+    const state: BackfillState = { running: due > 0, total: due + done, done, startedAt: new Date(now).toISOString() };
     await writeState(state);
     if (state.running) {
         backgroundAlarms()?.create(BACKFILL_ALARM, { periodInMinutes: 1 });
