@@ -8,6 +8,7 @@ import { ready, whenReady } from "./ready"
 import { showNotice } from "./notify"
 import { handleVerifySheet } from "./sheets"
 import { handleRefreshSync, handleSetSyncBackend, handleSetSyncEncryption } from "./syncSettings"
+import { countBackfill, startBackfill, stopBackfill } from "./altTitleBackfill"
 
 
 type Respond = (response?: unknown) => void;
@@ -33,6 +34,9 @@ const routes: Record<string, Route> = {
     SYNC_REFRESH: { run: () => handleRefreshSync(), respondsAsync: false },
     VERIFY_SHEET: { run: (m, r) => handleVerifySheet(m.url, m.sheetName, r), respondsAsync: true },
     SYNC_SET_ENCRYPTION: { run: (m, r) => handleSetSyncEncryption(m.header ?? null, m.replace === true, r), respondsAsync: true },
+    ALT_TITLE_BACKFILL_COUNT: { run: async (_, r) => r(await countBackfill()), respondsAsync: true },
+    ALT_TITLE_BACKFILL_START: { run: async (_, r) => r(await startBackfill()), respondsAsync: true },
+    ALT_TITLE_BACKFILL_STOP: { run: async (_, r) => { await stopBackfill(); r(true); }, respondsAsync: true },
 };
 
 export function initMessaging() {

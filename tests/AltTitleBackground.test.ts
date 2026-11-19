@@ -14,7 +14,8 @@ vi.mock('../scripts/shared/db/Storage', () => ({
     saveHermidata: vi.fn(async (key: string, entry: unknown) => { store.saved.push({ key, entry }); }),
 }));
 
-import { scheduleAltTitleLookup } from '../scripts/background/altTitles';
+import { scheduleAltTitleLookup, storedKeyOf } from '../scripts/background/altTitles';
+import { generateHermidataHash } from '../scripts/shared/utils/StringOutput';
 
 const dragonnap = { id: 203800, format: 'MANGA', title: { romaji: 'Dragon-eul Yugoehada', english: 'Dragonnap', native: null }, synonyms: ['Kidnapped Dragons'] };
 
@@ -75,5 +76,24 @@ describe('scheduleAltTitleLookup', () => {
         const { entry } = store.saved[0];
         expect(entry.meta.altTitles).toEqual(['Goblin Inc']);
         expect(entry.meta.external.status).toBe('error');
+    });
+
+    it('finds a new item, which the popup sends without an id, under the hash it was stored under', async () => {
+        vi.stubGlobal('fetch', server());
+        store.enabled = true;
+        const key = generateHermidataHash('Kidnapped Dragons', 'Manhwa', '', false);
+        store.items[key] = saved(key, 'Kidnapped Dragons');
+
+        const sentByPopup = { ...saved('', 'Kidnapped Dragons'), id: '' };
+        expect(storedKeyOf(sentByPopup)).toBe(key);
+
+        scheduleAltTitleLookup(storedKeyOf(sentByPopup));
+        await vi.waitFor(() => expect(store.saved).toHaveLength(1), { timeout: 8000 });
+        expect(store.saved[0].key).toBe(key);
+        expect(store.saved[0].entry.meta.external).toMatchObject({ status: 'matched', id: '203800' });
+    });
+
+    it('has no key for an item with neither an id nor a title', () => {
+        expect(storedKeyOf({ id: '', title: '', novelType: 'Manhwa' })).toBe('');
     });
 });
