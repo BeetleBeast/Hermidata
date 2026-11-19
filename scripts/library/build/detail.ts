@@ -3,6 +3,7 @@ import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { findByTitleOrAlt, openLink } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, LibraryBuilder } from "../build";
+import { AltTitleLookupPanel } from "./altLookup";
 
 export class Detail extends LibraryBuilder {
 
@@ -47,6 +48,9 @@ export class Detail extends LibraryBuilder {
 
         // 2. populate page
         await this.populateDetails();
+
+        // online alt title lookup ( stays hidden unless the user switched it on )
+        new AltTitleLookupPanel(this.hermidata, this.settings, item => this.saveHermidata(item.id, item)).init();
 
         this.addEventListener();
 

@@ -11,6 +11,9 @@ import {
     shortcutsConflict,
 } from "../../shared/utils/KeyboardShortcuts";
 import { Build } from "../build";
+import { ext } from "../../shared/utils/BrowserCompat";
+import { customConfirm } from "../../popup/frontend/confirm";
+import { BACKFILL_STATE_KEY, backfillLabel, backfillMinutes, type BackfillState } from "../../shared/lookup/backfill";
 
 export class ExtensionBehavior extends Build {
 
@@ -35,6 +38,11 @@ export class ExtensionBehavior extends Build {
     private readonly shortcutCaptureListener = (event: KeyboardEvent) => {
         void this.CaptureKeyboardShortcut(event);
     };
+
+    private readonly enableAltTitleLookup = getElement<HTMLInputElement>("#enableAltTitleLookup");
+    private readonly altTitleBackfill = getElement<HTMLDivElement>("#altTitleBackfill");
+    private readonly altTitleBackfillProgress = getElement<HTMLProgressElement>("#altTitleBackfillProgress");
+    private readonly altTitleBackfillStatus = getElement<HTMLParagraphElement>("#altTitleBackfillStatus");
 
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
     private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
@@ -63,6 +71,9 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionKeyboardShortcuts(settings);
         this.setValueKeyboardShortcuts(settings.ExtensionBehaviour.KeyboardShortcuts);
         await this.setBrowserShortcutLabels();
+        // Alt title lookup
+        this.setValueOptionAltTitleLookup(settings);
+        void this.watchAltTitleBackfill();
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
         // Auto Subscribe - Threshold
@@ -99,6 +110,8 @@ export class ExtensionBehavior extends Build {
             button.addEventListener("click", () => this.ResetKeyboardShortcut(button));
         });
         
+        this.enableAltTitleLookup?.addEventListener("change", (e) => this.EnableAltTitleLookup(e));
+
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
         this.autoSubscribeThreshold?.addEventListener("change", (e) => this.AutoSubscribeThreshold(e));
@@ -121,6 +134,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionKeyboardShortcuts(updatedSettings);
         this.setValueKeyboardShortcuts(updatedSettings.ExtensionBehaviour.KeyboardShortcuts);
         this.setValueOptionSaveTarget(updatedSettings);
+        this.setValueOptionAltTitleLookup(updatedSettings);
         this.updateSpreadsheetReminder(updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, updatedSettings.AccountAndConnections.spreadsheetUrl);
         document.dispatchEvent(new CustomEvent("hermidata:spreadsheet-target-changed", { detail: updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet }));
     }
@@ -303,6 +317,11 @@ export class ExtensionBehavior extends Build {
         this.keyboardShortcutStatus.textContent = message;
         this.keyboardShortcutStatus.style.color = isError ? "var(--danger)" : "var(--success)";
     }
+    private setValueOptionAltTitleLookup(settings: Settings) {
+        // settings saved before this option existed count as off
+        const enabled = settings.ExtensionBehaviour.AltTitleLookup?.Enable ?? false;
+        setElement<HTMLInputElement>("#enableAltTitleLookup", el => el.checked = enabled);
+    }
     private setValueOptionAutoSubscribe(settings: Settings) {
         const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
         setElement<HTMLInputElement>("#enableAutoSubscribe", el => el.checked = autoSubscribe);
@@ -385,6 +404,56 @@ export class ExtensionBehavior extends Build {
         await this.setSettings(updatedSettings);
         if (this.keyboardShortcutsList) this.keyboardShortcutsList.hidden = !isChecked;
         this.setShortcutStatus(isChecked ? "Keyboard shortcuts enabled." : "Keyboard shortcuts disabled.");
+    }
+    // Alt title lookup
+    private async EnableAltTitleLookup(e: Event) {
+        const isChecked = (e.target as HTMLInputElement).checked;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.AltTitleLookup = { Enable: isChecked };
+
+        await this.setSettings(updatedSettings);
+
+        try {
+            if (isChecked) await this.offerAltTitleBackfill();
+            else await ext.runtime.sendMessage({ type: 'ALT_TITLE_BACKFILL_STOP' });
+        } catch (error) {
+            console.warn('[Settings] alt title backfill:', error);
+        }
+    }
+    /** Asks once whether to look up the items already saved; "Later" keeps the setting on, so items are looked up as they are saved */
+    private async offerAltTitleBackfill() {
+        const count = await ext.runtime.sendMessage({ type: 'ALT_TITLE_BACKFILL_COUNT' });
+        if (typeof count !== 'number' || count === 0) return;
+
+        const items = `${count} saved item${count === 1 ? '' : 's'}`;
+        const minutes = backfillMinutes(count);
+        // the dialog renders HTML: this text holds only a number and fixed words
+        const confirmed = await customConfirm(
+            `Look up alt titles for ${items} now?<br>` +
+            `Only each title is sent to AniList and MangaUpdates. It takes about ${minutes} minute${minutes === 1 ? '' : 's'} and runs in the background.`,
+            { accept: 'Look up now', reject: 'Later' }
+        );
+        if (confirmed) await ext.runtime.sendMessage({ type: 'ALT_TITLE_BACKFILL_START' });
+    }
+    /** The progress bar follows the background's progress as it is stored */
+    private async watchAltTitleBackfill() {
+        try {
+            const stored = await ext.storage.local.get(BACKFILL_STATE_KEY) as Record<string, BackfillState | undefined>;
+            this.renderAltTitleBackfill(stored?.[BACKFILL_STATE_KEY]);
+        } catch (error) {
+            console.warn('[Settings] could not read the alt title backfill progress:', error);
+        }
+        ext.storage.onChanged.addListener((changes, area) => {
+            if (area === 'local' && changes[BACKFILL_STATE_KEY]) this.renderAltTitleBackfill(changes[BACKFILL_STATE_KEY].newValue as BackfillState | undefined);
+        });
+    }
+    private renderAltTitleBackfill(state: BackfillState | undefined) {
+        if (!this.altTitleBackfill || !this.altTitleBackfillProgress || !this.altTitleBackfillStatus) return;
+        this.altTitleBackfill.hidden = !state || state.total === 0;
+        if (!state || state.total === 0) return;
+        this.altTitleBackfillProgress.max = state.total;
+        this.altTitleBackfillProgress.value = state.done;
+        this.altTitleBackfillStatus.textContent = backfillLabel(state);
     }
     // Auto Subscribe
     private async EnableAutoSubscribe(e: Event) {

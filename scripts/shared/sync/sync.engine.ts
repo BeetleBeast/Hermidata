@@ -5,12 +5,12 @@ import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from '../db/db';
 import { BrowserSyncBackend } from './BrowserSyncBackend';
-import type { EnvelopeHeader, KeyStore, RemoteBlob, SyncBackend, SyncBackendConfig, SyncSwitchMode, WriteResult } from '../types';
+import type { EnvelopeHeader, KeyStore, RemoteBlob, SyncBackend, SyncBackendConfig, SyncStatus, SyncSwitchMode, WriteResult } from '../types';
 import { ConflictError } from '../utils/dedicatedErrors';
 import { headerRev, isEnvelope, openSnapshot, readEnvelopeHeader, sealSnapshot } from './libraryCrypto';
 import { IdbKeyStore } from './keyStore';
 import {
-    createBackend, loadSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_SEAL_HEADER_KEY, SYNC_SEAL_PENDING_KEY, validateWebDavUrl,
+    createBackend, loadSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_SEAL_HEADER_KEY, SYNC_SEAL_PENDING_KEY, SYNC_STATUS_KEY, validateWebDavUrl,
 } from './syncConfig';
 import { backgroundAlarms } from './syncAlarms';
 import { POLL_ALARM } from './WebDavBackend';
@@ -158,6 +158,7 @@ export class HermidataSync {
     private queue: Promise<void> = Promise.resolve();   // serializes pull / merge / push
     private ready = false;                              // true once the first pull has finished
     private dirty = false;                              // local changes made before ready
+    private pendingPush = false;                        // a push failed (e.g. server down): retry on the next pull, even when the remote is unchanged
     private known: Known | null = null;                 // newest published snapshot we have merged or written
     private readonly keyCache = new Map<string, CryptoKey>();
     private lockedKid: string | null = null;            // the key we last reported as missing
@@ -201,6 +202,7 @@ export class HermidataSync {
             this.backend = backend;
             this.known = null;
             this.ready = false;
+            this.pendingPush = false;                                   // the first pull on the new backend decides what to publish
             this.incompleteRetries = 0;
             this.stopWatching = backend.watch?.(() => this.schedulePull());
             await this.pull();
@@ -274,8 +276,19 @@ export class HermidataSync {
     private enqueue(task: () => Promise<void>): Promise<void> {
         this.queue = this.queue
             .then(task)
-            .catch(err => this.deps.onError('[Sync] task failed', err));
+            .catch(async err => {
+                this.deps.onError('[Sync] task failed', err);
+                await this.recordStatus(false).catch(() => undefined);  // must never reject: it would break the queue
+            });
         return this.queue;
+    }
+
+    /** Remembers for Settings whether the last attempt worked; a failure keeps the time of the last success. */
+    private async recordStatus(ok: boolean): Promise<void> {
+        const got = await this.api.storage.local.get(SYNC_STATUS_KEY);
+        const previous = got[SYNC_STATUS_KEY] as SyncStatus | undefined;
+        const status: SyncStatus = { ok, lastSyncAt: ok ? Date.now() : previous?.lastSyncAt };
+        await this.api.storage.local.set({ [SYNC_STATUS_KEY]: status });
     }
 
     private schedulePull(): void {
@@ -301,8 +314,15 @@ export class HermidataSync {
 
     // ----------------------------------------------------------------- pull
 
-    /** The first pull is also the startup sync: only after it finishes is pushing allowed. */
+    /** One poll: read the remote, then retry a push that failed earlier. A poll that cannot reach the remote throws. */
     private async pull(): Promise<void> {
+        await this.pullRemote();
+        if (!this.pendingPush) await this.recordStatus(true);           // reachable, but unpublished edits are not "synced" yet
+        else this.schedulePush();                                       // pendingPush is only ever set once ready
+    }
+
+    /** The first pull is also the startup sync: only after it finishes is pushing allowed. */
+    private async pullRemote(): Promise<void> {
         const result = await this.readRemote();
 
         // remote exists but isn't fully readable yet: stay not-ready so we never overwrite it
@@ -540,10 +560,17 @@ export class HermidataSync {
     private async pushSnapshot(): Promise<void> {
         if (!this.ready) { this.dirty = true; return; }
 
+        this.pendingPush = true;                                        // cleared only by a push that got through
         for (let attempt = 0; attempt < MAX_PUSH_ATTEMPTS; attempt++) {
-            if (await this.tryPush() === 'done') return;
+            if (await this.tryPush() === 'done') { await this.pushSucceeded(); return; }
         }
+        this.pendingPush = false;                                       // conflicts are not an outage: the next change or write retries
         this.deps.onError('[Sync] gave up publishing after repeated conflicts', null);
+    }
+
+    private async pushSucceeded(): Promise<void> {
+        this.pendingPush = false;
+        await this.recordStatus(true);
     }
 
     /** One read-merge-write round. 'conflict' means someone else wrote in between, so go again. */

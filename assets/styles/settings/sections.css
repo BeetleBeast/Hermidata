@@ -452,3 +452,19 @@ nav {
         padding: 8px;
     }
 }
+/* alt title backfill progress */
+#altTitleBackfill[hidden] {
+    display: none;
+}
+
+#altTitleBackfillProgress {
+    width: 100%;
+    height: 8px;
+    accent-color: var(--accent-soft);
+}
+
+#altTitleBackfillStatus {
+    margin: 4px 0 0;
+    font-size: 0.85em;
+    color: var(--text-muted);
+}

@@ -6,7 +6,8 @@
     background-color: var(--shadow);
     align-items: center;
     justify-content: center;
-    position: absolute;
+    /* fixed, not absolute: on a page that scrolls ( settings ) it must cover the window, not the top of the page */
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -60,3 +61,17 @@
     color: var(--text);
 }
 
+/*
+ * The page behind an open dialog does not scroll, whichever kind of dialog it is.
+ * One rule each: a browser that does not know :popover-open drops only that rule.
+ * scrollbar-gutter keeps the width the scrollbar had, so the page does not jump sideways.
+ */
+html.prompt-open,
+html:has(dialog[open]) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+}
+html:has(:popover-open) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+}

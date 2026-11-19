@@ -142,7 +142,7 @@ function activateSetup(exceptionElement: HTMLElement | null, elements: DialogEle
     
     if (!container || !label || !btn1 || !btn2) return false;
 
-    
+    document.documentElement.classList.add('prompt-open'); // the page behind it does not scroll ( prompts.css )
     container.style.display = 'flex';
     container.style.flexDirection = contentDirection === 'vertical' ? 'column' : 'row';
     container.style.gap = contentDirection === 'vertical' ? '30px' : '10px';
@@ -154,6 +154,7 @@ function activateSetup(exceptionElement: HTMLElement | null, elements: DialogEle
 }
 function deactivateSetup(exceptionElement: HTMLElement | null = null, elements: DialogElements): boolean {
     activateOther(exceptionElement);
+    document.documentElement.classList.remove('prompt-open');
 
     const { container, label, btn1, btn2, input } = elements;
     if (!container || !label || !btn1 || !btn2) return false;

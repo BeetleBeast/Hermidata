@@ -95,6 +95,9 @@ export type SyncBackendConfig =
 /** What to do when this device and the new backend both already hold a library. */
 export type SyncSwitchMode = 'merge' | 'adopt';
 
+/** How the last sync attempt went on this device, for Settings. `lastSyncAt` is the last success (epoch ms). */
+export type SyncStatus = { ok: boolean; lastSyncAt?: number };
+
 export type WebDavProblem ='auth' | 'forbidden' | 'folder' | 'server' | 'network';
 
 // ------------------------------------------------------------- encryption

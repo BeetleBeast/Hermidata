@@ -22,6 +22,9 @@ export type {
     AllHermidata,
 
     AltCheck,
+    ExternalMatch,
+    ExternalSource,
+    ExternalLookupStatus,
     ItemResolveInput,
     ScoredCandidate,
     ItemResolution,
@@ -169,6 +172,7 @@ export type {
     AlarmsLike,
     SyncBackendConfig,
     SyncSwitchMode,
+    SyncStatus,
     EnvelopeHeader,
     PassphraseSlot,
     RecoverySlot,

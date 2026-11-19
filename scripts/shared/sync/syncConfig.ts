@@ -14,6 +14,9 @@ export const SYNC_SEAL_HEADER_KEY = 'syncSealHeader';
 /** storage.local: { header } chosen in Settings (null = turn encryption off), until a write carrying it succeeds. */
 export const SYNC_SEAL_PENDING_KEY = 'syncSealPending';
 
+/** storage.local: a SyncStatus, rewritten by the engine after every sync attempt. */
+export const SYNC_STATUS_KEY = 'syncStatus';
+
 export const DEFAULT_SYNC_CONFIG: SyncBackendConfig = { kind: 'browser' };
 
 // ------------------------------------------------------------------ storage
