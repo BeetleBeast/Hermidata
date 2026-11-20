@@ -55,11 +55,52 @@ function updateImageReference(entry: OnlyPlainHermidata, oldId: string, newId: s
     return image;
 }
 
+const ID_REDIRECTS_KEY = 'hermidataIdRedirects';
+
+/** Remember that an entry moved from `oldKey` to `newKey` so pages still holding the old id can follow it. */
+async function recordIdRedirect(oldKey: string, newKey: string): Promise<void> {
+    if (oldKey === newKey) return;
+    try {
+        const redirects = await readIdRedirects();
+        // keep chains short: everything that pointed at oldKey now points at newKey
+        for (const [from, to] of Object.entries(redirects)) if (to === oldKey) redirects[from] = newKey;
+        redirects[oldKey] = newKey;
+        delete redirects[newKey];
+        await new Promise<void>(resolve => ext.storage.local.set({ [ID_REDIRECTS_KEY]: redirects }, () => resolve()));
+    } catch (err) {
+        logConsoleError('[Storage] recordIdRedirect:', err);
+    }
+}
+function readIdRedirects(): Promise<Record<string, string>> {
+    return new Promise(resolve => {
+        ext.storage.local.get(ID_REDIRECTS_KEY, (result: Record<string, Record<string, string> | undefined>) => {
+            resolve({ ...(result?.[ID_REDIRECTS_KEY] ?? {}) });
+        });
+    });
+}
+/** Follow the redirect trail of an id that no longer exists. Returns the newest id, or null when there is none. */
+export async function resolveIdRedirect(id: string): Promise<string | null> {
+    try {
+        const redirects = await readIdRedirects();
+        let current = id;
+        const seen = new Set<string>();
+        while (redirects[current] && !seen.has(current)) {
+            seen.add(current);
+            current = redirects[current];
+        }
+        return current === id ? null : current;
+    } catch (err) {
+        logConsoleError('[Storage] resolveIdRedirect:', err);
+        return null;
+    }
+}
+
 export async function updateHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
     try {
         entry.id = newKey;
         entry.meta.updated = new Date().toISOString();
         entry.meta.image = updateImageReference(entry, oldKey, newKey); // update image key
+        void recordIdRedirect(oldKey, newKey); // open pages can still find this entry through its old id
 
         await putHermidata(entry, false)    // write new key to IndexedDB
         await deleteHermidata(oldKey, false) // remove old key from IndexedDB

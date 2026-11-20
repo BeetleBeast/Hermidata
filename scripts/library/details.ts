@@ -1,4 +1,4 @@
-import { dbAccess } from "../shared/db/Storage";
+import { dbAccess, resolveIdRedirect } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
 import { openLink } from "../shared/utils/StringOutput";
@@ -21,10 +21,33 @@ async function handleNavigation(): Promise<void> {
         const settings = await getDb.getSettings();
         const allHermidata = await getDb.getAllHermidata();
 
+        // the entry may have been renamed (new id) in the popup while this page was open
+        if (!await ensureEntryExists(allHermidata)) return;
+
         currentController = new Controller(allHermidata, settings);
 
         await currentController.init();
     }
+}
+
+/** Make sure the id in the url points at an existing entry, following id changes when needed. */
+async function ensureEntryExists(allHermidata: Record<string, Hermidata>): Promise<boolean> {
+    const match = window.location.hash.match(/^#\/id\/(.+)$/);
+    const id = match?.[1];
+    if (id && allHermidata[id]) return true;
+
+    const movedTo = id ? await resolveIdRedirect(id) : null;
+    if (movedTo && allHermidata[movedTo]) {
+        history.replaceState(null, '', `#/id/${movedTo}`);
+        return true;
+    }
+
+    const message = document.createElement('p');
+    message.className = 'hermidata-not-found';
+    message.textContent = 'This entry no longer exists, it may have been renamed, merged or deleted.';
+    document.body.prepend(message);
+    document.querySelector<HTMLButtonElement>('#back-btn')?.addEventListener('click', () => openLink('./Library.html', 'sameTab'));
+    return false;
 }
 
 export class Controller {

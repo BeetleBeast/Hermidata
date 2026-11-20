@@ -20,8 +20,11 @@ export class feed extends LibraryBuilder {
         this.setCheckBoxAtCorrectState();
         return Promise.resolve();
     }
-    public reload(): void {
-        
+    /** Rebuild every entry from the current data */
+    public async reload(): Promise<void> {
+        await this.buildFeedAll();
+
+        this.setCheckBoxAtCorrectState();
     }
     private setCheckBoxAtCorrectState() {
         const visibleElements = this.AllHermidataContainer?.querySelectorAll<HTMLDivElement>('div[aria-hidden="false"]');

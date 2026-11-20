@@ -25,8 +25,10 @@ export class HermidataMerge extends LibraryBuilder {
 
 
     }
-    protected reload(): void {
-        throw new Error("Method not implemented.");
+    /** Entries were rebuilt: hook the new checkboxes up again and refresh the panel */
+    public reload(): void {
+        this.addCheckboxListeners();
+        this.checkProgress();
     }
 
     constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
@@ -53,10 +55,13 @@ export class HermidataMerge extends LibraryBuilder {
         }
     }
 
-    private eventListener(): void {
+    private addCheckboxListeners(): void {
         this.getAllCheckboxes?.forEach(checkbox => {
             checkbox.addEventListener('change', () => this.checkProgress())
         })
+    }
+    private eventListener(): void {
+        this.addCheckboxListeners();
 
         // upon click press merge, visualize all checkboxes
         const mergeButton = document.querySelector<HTMLButtonElement>('#mergeTwoHermidatas');
