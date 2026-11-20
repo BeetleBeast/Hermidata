@@ -178,6 +178,9 @@ async function fetchAndParseRSS(feedUrl: string): Promise<[RawScrapedItem[], str
     const response = await fetch(feedUrl);
     if (!response.ok) throw new Error(`Feed fetch failed: ${feedUrl} (${response.status})`);
 
+    const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+    if (contentType.includes('html')) throw new Error(`Not a feed (HTML content-type): ${feedUrl}`);
+
     const text = await response.text();
     const parser = new DOMParser();
     const xml = parser.parseFromString(text, 'text/xml');
@@ -185,6 +188,10 @@ async function fetchAndParseRSS(feedUrl: string): Promise<[RawScrapedItem[], str
     if (xml.querySelector('parsererror')) {
         throw new Error(`XML parse error for feed: ${feedUrl}`);
     }
+
+    // Must be a real feed document (RSS / Atom / RDF), not an XHTML page
+    const root = xml.documentElement?.localName?.toLowerCase();
+    if (!root || !['rss', 'feed', 'rdf'].includes(root)) throw new Error(`Not a feed (root <${root}>): ${feedUrl}`);
 
     const items: RawScrapedItem[] = [...xml.querySelectorAll('item, entry')].slice(0, 10).map(item => ({
         title: item.querySelector('title')?.textContent?.trim() ?? '',
