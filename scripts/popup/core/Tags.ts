@@ -1,6 +1,7 @@
 import { getAllTags, setSettings, getSettings } from "../../shared/db/Storage";
 import { type AllHermidata, type Settings } from "../../shared/types";
 import { getElement } from "../../shared/utils/Selection";
+import { normalizeTag } from "../../shared/utils/StringOutput";
 import { levenshteinDistance, PastHermidata } from "./Past";
 
 type Colour = string;
@@ -255,11 +256,7 @@ export class TagsSystem {
         }
     }
     private normalizeTag(input: string): string {
-        return input
-            .trim()
-            .split(/\s+/)
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
+        return normalizeTag(input);
     }
     public async saveTags(settings: Settings | null): Promise<void> {
         if (!this._tags.size) return;

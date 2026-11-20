@@ -40,6 +40,7 @@ export type {
     Feed,
     RawFeed,
     FeedItem,
+    FeedExtras,
 
     AnyNovelType,
     AnyNovelStatus,

@@ -796,3 +796,15 @@ export class TrimTitle {
         return trimmedTitle;
     }
 }
+/**
+ * Tag casing used everywhere: each word gets a capital first letter, the rest lowercase.
+ * Matches what the tag input does (so "MMORPG" becomes "Mmorpg", on purpose).
+ */
+export function normalizeTag(input: string): string {
+    return input
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
