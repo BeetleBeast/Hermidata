@@ -25,5 +25,9 @@ export {
 } from './popup';
 
 export {
-    defaultSettings
+    defaultSettings,
+    DEFAULT_TOMBSTONE_TTL_DAYS,
+    MAX_TOMBSTONE_TTL_DAYS,
+    resolveTombstoneTtlDays,
+    DEFAULT_BOOKMARK_TITLE_FORMAT,
 } from './settings';

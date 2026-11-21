@@ -8,6 +8,7 @@ import { getTitleAndChapterFromUrl, TrimTitle } from "../shared/utils/StringOutp
 import { FolderMapping } from "../settings/build/FolderMapping";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { SHEET_FIRST_DATA_ROW } from "../shared/sheets/sheetConfig";
+import { bookmarkTitleValues, extractTitleFromFormattedBookmark, formatBookmarkTitle } from "../shared/utils/BookmarkTitle";
 
 declare const browser: typeof chrome | undefined;
 
@@ -15,8 +16,9 @@ let currentRequestId = 0;
 
 export async function writeToBookmarks(hermidata: HermidataModel) {
     const bookmarks = await searchValidBookmarks();
+    const titleFormat = (await getSettings()).ExtensionBehaviour.BookmarkTitleFormat;
     const rows: chrome.bookmarks.BookmarkTreeNode[] = bookmarks.filter(b => b.url);
-    rows.forEach(b => b.title = extractTitleFromBookmark(b.title));
+    rows.forEach(b => b.title = extractTitleFromFormattedBookmark(b.title, titleFormat));
 
     const decision = shouldReplaceOrBlock(hermidata.toInputArraySheetRow(), rows, false);
     if (decision.action === "append") {
@@ -28,6 +30,35 @@ export async function writeToBookmarks(hermidata: HermidataModel) {
     } else {
         console.log("Skipping bookmark entry.");
     }
+}
+
+/** The browser bookmarks of saved items whose title is not what the format gives. */
+async function findBookmarksToRename(format: string): Promise<{ id: string; title: string }[]> {
+    const bookmarksByUrl = new Map<string, chrome.bookmarks.BookmarkTreeNode[]>();
+    for (const bookmark of await searchValidBookmarks()) {
+        if (bookmark.url) bookmarksByUrl.set(bookmark.url, [...(bookmarksByUrl.get(bookmark.url) ?? []), bookmark]);
+    }
+    const renames: { id: string; title: string }[] = [];
+    for (const data of Object.values(await getAllHermidata())) {
+        const hermidata = new HermidataModel(data);
+        const title = formatBookmarkTitle(format, bookmarkTitleValues(hermidata));
+        for (const bookmark of bookmarksByUrl.get(hermidata.GetUrl()) ?? []) {
+            if (bookmark.title !== title) renames.push({ id: bookmark.id, title });
+        }
+    }
+    return renames;
+}
+
+/** How many bookmarks a rename to this format would change ( for the confirmation ) */
+export async function countBookmarkRenames(format: string): Promise<number> {
+    return (await findBookmarksToRename(format)).length;
+}
+
+/** Gives every saved item's browser bookmark a title in this format. Returns how many were renamed. */
+export async function renameBookmarks(format: string): Promise<number> {
+    const renames = await findBookmarksToRename(format);
+    for (const { id, title } of renames) await updateBookmark(id, { title });
+    return renames.length;
 }
 
 async function addBookmark(hermidata: HermidataModel) {
@@ -42,7 +73,7 @@ async function addBookmark(hermidata: HermidataModel) {
     : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
     const finalFolderId: string = await createNestedFolders(pathSegments, BrowserRoot);
-    const bookmarkTitle = `${hermidata.title} - Chapter ${hermidata.GetChapter() || '0'}`;
+    const bookmarkTitle = formatBookmarkTitle(settings.ExtensionBehaviour.BookmarkTitleFormat, bookmarkTitleValues(hermidata));
     const bookmark = await createBookmark({
         parentId: finalFolderId,
         title: bookmarkTitle,
@@ -55,10 +86,8 @@ async function addBookmark(hermidata: HermidataModel) {
 async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplaceReturn) {
     const { replacedURL: OldURL, replaceID: OldID } = decision;
     
-    const bookmarkTitle = `${hermidata.title} - Chapter ${hermidata.GetChapter() || '0'}`;
-    
-    
     const settings = await getSettings();
+    const bookmarkTitle = formatBookmarkTitle(settings.ExtensionBehaviour.BookmarkTitleFormat, bookmarkTitleValues(hermidata));
     const folderMapPath = FolderMapping.resolveFolder(hermidata.novelType, hermidata.GetReadStatus(), settings.FolderMapping);
     if (!folderMapPath) {
         console.warn("Folder mapping not found for", hermidata.novelType, hermidata.GetReadStatus());
@@ -378,9 +407,4 @@ async function createMissingFolders(baseId: string, pathSegments: string[], inde
     folder ??= await createBookmark({ parentId: baseId, title: pathSegments[index] });
     
     return createMissingFolders(folder.id, pathSegments, index + 1);
-}
-
-// ==== Bookmarking Functions ====
-function extractTitleFromBookmark(title: string) {
-    return title.split(" - Chapter ")[0].trim();
 }
