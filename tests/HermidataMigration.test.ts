@@ -137,3 +137,20 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
         expect(removeHermidata).not.toHaveBeenCalled();
     });
 });
+
+describe('HermidataMigration.mergeTwoHermidata alt sources', () => {
+    it('collects hostnames in altSources and never titles', async () => {
+        vi.stubGlobal('chrome', { ...chrome, tabs: { query: vi.fn().mockResolvedValue([]) } });
+        const newer = createHermidata('Manga', 'Series One');
+        const older = createHermidata('Manga', 'Series Two');
+        newer.source = 'a.example.com';
+        older.source = 'b.example.com';
+
+        const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
+        if (merged instanceof Error) throw merged;
+
+        expect(merged.meta.altSources).toEqual(expect.arrayContaining(['b.example.com']));
+        expect(merged.meta.altSources).not.toContain('Series One');
+        expect(merged.meta.altSources).not.toContain('Series Two');
+    });
+});
