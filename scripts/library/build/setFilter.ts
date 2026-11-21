@@ -106,7 +106,7 @@ export class filter extends Sort {
 
         container.append(label, hint, starRating);
 
-        this.StarRatingRange.range = new DualRangeSlider(starRating, { min: 3, max: 5 }, (range) => this.setStarRating(range));
+        this.StarRatingRange.range = new DualRangeSlider(starRating, { min: 0, max: 10 }, (range) => this.setStarRating(range));
     }
     private setStarRating(range: { min: number; max: number }) {
         this.selectedRange = range;

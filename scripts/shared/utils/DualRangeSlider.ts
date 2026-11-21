@@ -30,7 +30,7 @@ export class DualRangeSlider {
         this.step = 1;
         this.onChange = onChange;
 
-        this.value = { min: startValue.min ?? 3, max: startValue.max ?? 5 };
+        this.value = { min: startValue.min ?? 0, max: startValue.max ?? 10 };
 
         this.render();
         this.update(false);

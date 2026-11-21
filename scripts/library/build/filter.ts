@@ -17,7 +17,7 @@ export type ReverseSortsType = `Reverse-${BasicSortsType}`;
 
 export abstract class Sort extends LibraryBuilder {
 
-    protected selectedRange: { min: number, max: number } = { min: 0, max: 0 };
+    protected selectedRange: { min: number, max: number } = { min: 0, max: 10 };
 
     protected StarRatingRange: Controller;
 

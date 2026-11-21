@@ -62,6 +62,9 @@ export class FilterLogic extends Sort {
 
     private selectedIndex: number = -1;
 
+    /** Single source of truth for the active filters, shared by the checkbox, sort and star rating handlers */
+    private filters: Filters = { include: {}, exclude: {}, sort: 'Alphabetical' };
+
     constructor(AllHermidata: Record<string, Hermidata>, settings: Settings, StarRatingRange: Controller) {
         super(AllHermidata, settings, StarRatingRange);
     }
@@ -70,6 +73,8 @@ export class FilterLogic extends Sort {
         if (!this.libraryEntriesContainer || !this.searchInput || !this.autocompleteContainer) {
             throw new Error('One or more required elements not found');
         }
+
+        this.filters = await getLastLibraryFilters() ?? this.filters;
 
         await this.generalFilterOptionLogic(this.libraryEntriesContainer);
 
@@ -101,10 +106,8 @@ export class FilterLogic extends Sort {
         this.libraryEntriesContainer.hidden = !showFilters;
     }
     private tagSearchToggle() {
-        this.tagSearchMode.forEach(mode => mode?.addEventListener('click', async () => {
-            const filters = await getLastLibraryFilters();
-            if (!filters) return;
-            this.applyFiltersSortAndSearchToEntries(filters);
+        this.tagSearchMode.forEach(mode => mode?.addEventListener('click', () => {
+            this.applyFiltersSortAndSearchToEntries(this.filters);
         }));
     }
     private addTextQueryInputs(searchInput: HTMLInputElement, autocompleteContainer: HTMLDivElement) {
@@ -164,9 +167,8 @@ export class FilterLogic extends Sort {
     }
     /** Entries were rebuilt: apply the saved filters, sort and search to them again */
     public async reload(): Promise<void> {
-        const filters = await getLastLibraryFilters() ?? { include: {}, exclude: {}, sort: 'Alphabetical' } as Filters;
         // entries are rebuilt visible, so the searchable flag has to be recomputed from the filters
-        this.applyFiltersSortAndSearchToEntries(filters);
+        this.applyFiltersSortAndSearchToEntries(this.filters);
     }
     /** Count the amount of Elements are visible in the DOM, then write inside the counter and return it */
     private countVisibleEntries(hidden: boolean = false): number {
@@ -187,21 +189,15 @@ export class FilterLogic extends Sort {
     }
     private async setStarRatingFilter() {
 
-        // get default filters
-        const lastSort = await getLastLibraryFilters();
-        
-        const filters: Filters = lastSort ?? {
-            include: { starRating: this.addSubRange(this.selectedRange.min, this.selectedRange.max)},
-            exclude: {},
-            sort: "Alphabetical"
-        }
+        const filters = this.filters;
         // add default star rating value
         filters.include["starRating"] = this.addSubRange(this.selectedRange.min, this.selectedRange.max);
 
         const updateFilters = () => {
             filters.include["starRating"] = this.addSubRange(this.minEl?.valueAsNumber, this.maxEl?.valueAsNumber);
-            
+
             this.applyFiltersSortAndSearchToEntries(filters);
+            setLastLibraryFilters(filters);
         };
         // add event listeners
         this.minEl?.addEventListener('input', updateFilters);
@@ -225,11 +221,11 @@ export class FilterLogic extends Sort {
         for (const cb of checkboxes) {
             cb.dataset.state = "0";
         }
-        const filters: Filters = {
-            include: {}, // { type: ['Manga'], status: ['Ongoing'] }
-            exclude: {},
-            sort: 'Alphabetical'
-        };
+        // mutate the shared object so every handler sees the reset
+        const filters = this.filters;
+        filters.include = {};
+        filters.exclude = {};
+        filters.sort = 'Alphabetical';
         // reset the slider first so the filter labels below read the reset range
         this.StarRatingRange.range?.setValue(0, 10);
 
@@ -261,14 +257,8 @@ export class FilterLogic extends Sort {
 
 
     public async generalFilterOptionLogic(parent_section: HTMLElement): Promise<void> {
-        // state object for filters
-        const lastSort = await getLastLibraryFilters();
-        const filters: Filters = lastSort ?? {
-            include: {}, // { type: ['Manga'], status: ['Ongoing'] }
-            exclude: {},
-            sort: 'Alphabetical'
-        };
-    
+        const filters = this.filters;
+
         // find all custom checkboxes
         const checkboxes = parent_section.querySelectorAll<HTMLDivElement>(".custom-checkbox");
 
