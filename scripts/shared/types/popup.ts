@@ -268,6 +268,13 @@ export type FeedItem = {
     pubDate: Date,
     guid: string
 }
+
+/** Extra info a feed carries; applied to the matching Hermidata's meta, not stored on the feed */
+export type FeedExtras = {
+    author?: string,
+    categories?: string[],
+    image?: string
+}
 /** scripts file output */
 export type RawScrappedFeed = {
     title: string;

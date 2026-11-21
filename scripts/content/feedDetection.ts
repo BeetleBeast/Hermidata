@@ -71,10 +71,18 @@ export class FeedDetection {
                 'link[rel="alternate"][type="application/rss+xml"], link[rel="alternate"][type="application/atom+xml"]'
             )
         ];
-        return rssLinks.map(link => ({
-            title: link.getAttribute('title') || document.title,
-            url: new URL(link.getAttribute('href') || '', location.origin).href
-        }));
+        return rssLinks
+            .map(link => ({
+                title: link.getAttribute('title') || document.title,
+                url: new URL(link.getAttribute('href') || '', location.origin).href
+            }))
+            .filter(f => !this.isSelfLink(f.url));
+    }
+
+    /** A "feed" link pointing at the current page is an HTML page, not a feed. */
+    private isSelfLink(url: string): boolean {
+        const strip = (u: string) => u.split('#')[0].replace(/\/+$/, '');
+        return strip(url) === strip(location.href);
     }
     
     private async getRssFeedsInBody(feeds: Partial<RawScrappedFeed>[]): Promise<Partial<RawScrappedFeed>[]> {
@@ -94,6 +102,7 @@ export class FeedDetection {
             if (!isRssLike) continue;
     
             const fullUrl = new URL(href, location.origin).href;
+            if (this.isSelfLink(fullUrl)) continue;
             if (!existing.has(fullUrl)) {
                 existing.add(fullUrl);
                 feeds.push({
@@ -123,7 +132,7 @@ export class FeedDetection {
             try {
                 const response = await fetch(testUrl, { method: 'HEAD' });
                 const contentType = response.headers.get('Content-Type') || '';
-                if (response.ok && contentType.includes('xml')) {
+                if (response.ok && contentType.includes('xml') && !contentType.includes('html')) {
                     console.log('[Hermidata] Found RSS feed at default path:', testUrl);
                     feeds.push({ title: document.title, url: testUrl });
                     break; // one is enough

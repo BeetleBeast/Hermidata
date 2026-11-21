@@ -31,6 +31,11 @@ export abstract class LibraryBuilder {
     }
 
 
+    /** Swap in freshly loaded data, call before `reload()` so the builder works on the new records */
+    public setData(AllHermidata: Record<string, Hermidata>): void {
+        this.AllHermidata = AllHermidata;
+    }
+
     protected async init(): Promise<void> {
         this.AllHermidata = await PastHermidata.getAllHermidata();
         

@@ -17,6 +17,15 @@ export const DEFAULT_FOLDER_MAPPING: FolderMapping = {
 }
 
 
+export const DEFAULT_TOMBSTONE_TTL_DAYS = 30;
+export const MAX_TOMBSTONE_TTL_DAYS = 3_650;
+/** Whole days within 1..MAX_TOMBSTONE_TTL_DAYS; anything else falls back to the default */
+export function resolveTombstoneTtlDays(days: number | undefined): number {
+    return Number.isFinite(days) && days! >= 1 ? Math.min(Math.floor(days!), MAX_TOMBSTONE_TTL_DAYS) : DEFAULT_TOMBSTONE_TTL_DAYS;
+}
+/** Placeholders: {title} and {chapter} */
+export const DEFAULT_BOOKMARK_TITLE_FORMAT = '{title} - Chapter {chapter}';
+
 export const defaultSettings: Settings = {
     version: 9,
     AccountAndConnections: {
@@ -47,6 +56,8 @@ export const defaultSettings: Settings = {
         AltTitleLookup: {
             Enable: false,
         },
+        TombstoneTtlDays: DEFAULT_TOMBSTONE_TTL_DAYS,
+        BookmarkTitleFormat: DEFAULT_BOOKMARK_TITLE_FORMAT,
     },
     ContentTypesAndStatuses: {
         TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],

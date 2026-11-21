@@ -6,7 +6,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { Build } from "../build";
 import { AutoSetAllHermidata } from "../../shared/utils/AutoSetAllHermidata";
 import { levenshteinDistance } from "../../popup/core/Past";
-import { generateHermidataHash, TrimTitle } from "../../shared/utils/StringOutput";
+import { generateHermidataHash, normalizeTag, TrimTitle } from "../../shared/utils/StringOutput";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 
@@ -632,19 +632,43 @@ export class ImportsAndExports extends Build {
         };
         return map[malStatus] ?? "Planned";
     }
+    /** ISO timestamp -> MAL's YYYY-MM-DD; "0000-00-00" means unset */
+    private toMalDate(iso: string | undefined): string {
+        const d = iso ? new Date(iso) : null;
+        return d && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : "0000-00-00";
+    }
+    /** MAL's YYYY-MM-DD -> ISO timestamp; unset/invalid gives null */
+    private fromMalDate(value: string | undefined): string | null {
+        if (!value || value.startsWith("0000")) return null;
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? null : d.toISOString();
+    }
     private makeMalFromHermidata(hermidatas: Record<string, Hermidata>): string {
         const entries = Object.values(hermidatas).map(hermidata => {
         const bookmark = hermidata.chapter.bookmarks[hermidata.chapter.bookmarkInUse];
         const title = this.escapeXml(hermidata.title);
         const chaptersRead = bookmark?.current ?? hermidata.chapter.latest ?? 0;
         const malStatus = this.readStatusToMal(bookmark?.readStatus ?? "Planned");
+        const score = Math.min(10, Math.max(0, Math.round(Number(hermidata.meta.starRating) || 0)));
+        const queue = hermidata.meta.readingQueue;
+        const priority = queue ? (queue.priority >= 7 ? "HIGH" : queue.priority >= 4 ? "MEDIUM" : "LOW") : "LOW";
+        const startDate = this.toMalDate(hermidata.meta.added);
+        const finishDate = malStatus === "Completed" ? this.toMalDate(bookmark?.updatedAt ?? hermidata.meta.updated) : "0000-00-00";
+        const rereading = malStatus === "Reading" && (hermidata.chapter.revisitingCount ?? 0) > 0 ? 1 : 0;
 
         return `    <manga>
             <manga_title>${title}</manga_title>
+            <manga_chapters>${hermidata.chapter.latest ?? 0}</manga_chapters>
             <my_read_chapters>${chaptersRead}</my_read_chapters>
             <my_read_volumes>0</my_read_volumes>
+            <my_start_date>${startDate}</my_start_date>
+            <my_finish_date>${finishDate}</my_finish_date>
+            <my_scanalation_group>${this.escapeXml(hermidata.source ?? "")}</my_scanalation_group>
+            <my_score>${score}</my_score>
             <my_status>${malStatus}</my_status>
             <my_times_read>${hermidata.chapter.revisitingCount ?? 0}</my_times_read>
+            <my_priority>${priority}</my_priority>
+            <my_rereading>${rereading}</my_rereading>
             <my_tags>${this.escapeXml((hermidata.meta.tags ?? []).join(", "))}</my_tags>
             <my_comments>${this.escapeXml(hermidata.meta.notes ?? "")}</my_comments>
             <update_on_import>1</update_on_import>
@@ -664,13 +688,21 @@ export class ImportsAndExports extends Build {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, "text/xml");
         const entries = [...doc.querySelectorAll("manga")];
-        // TODO: fill in missing data
 
         const hermidatas = entries.map(entry => {
-            const title = entry.querySelector("manga_title")?.textContent?.trim() ?? "";
-            const chapter = Number(entry.querySelector("my_read_chapters")?.textContent ?? "0");
-            const malStatus = entry.querySelector("my_status")?.textContent?.trim() ?? "Plan to Read";
-            const readStatus = this.malToReadStatus(malStatus);
+            // read every direct child tag once, so any key MAL adds is available by name
+            const fields = new Map<string, string>();
+            for (const child of Array.from(entry.children)) {
+                fields.set(child.tagName.toLowerCase(), child.textContent?.trim() ?? "");
+            }
+            const num = (key: string): number => {
+                const n = Number(fields.get(key));
+                return Number.isFinite(n) && n > 0 ? n : 0;
+            };
+
+            const title = fields.get("manga_title") ?? "";
+            const chapter = num("my_read_chapters");
+            const readStatus = this.malToReadStatus(fields.get("my_status") ?? "Plan to Read");
 
             const trimmedTitle = TrimTitle.trimTitle(title, "").title;
             const hermidata = new HermidataModel(HermidataModel.from("Manga", readStatus, "Ongoing"));
@@ -678,6 +710,33 @@ export class ImportsAndExports extends Build {
             hermidata.id = generateHermidataHash(trimmedTitle, "Manga", "");
             hermidata.source = "MyAnimeList";
             hermidata.import = "MAL";
+
+            // total chapters known to MAL
+            const totalChapters = num("manga_chapters");
+            hermidata.chapter.latest = Math.max(totalChapters, chapter);
+            hermidata.chapter.revisitingCount = num("my_times_read");
+
+            // score is 0-10 on both sides
+            hermidata.meta.starRating = Math.min(10, num("my_score"));
+
+            // tags: MAL joins them with ", "
+            const tags = (fields.get("my_tags") ?? "").split(",").map(normalizeTag).filter(Boolean);
+            if (tags.length) hermidata.meta.tags = [...new Set(tags)];
+
+            // keep any note from title trimming, then add the MAL comment
+            const comment = fields.get("my_comments");
+            if (comment) hermidata.meta.notes = [hermidata.meta.notes, comment].filter(Boolean).join("\n");
+
+            const priority = (fields.get("my_priority") ?? "").toUpperCase();
+            const priorityValue = ({ HIGH: 8, MEDIUM: 5 } as Record<string, number>)[priority];
+            if (priorityValue && readStatus === "Planned") {
+                hermidata.meta.readingQueue = { readNext: false, priority: priorityValue, queueIndex: 0 };
+            }
+
+            const started = this.fromMalDate(fields.get("my_start_date"));
+            if (started) hermidata.meta.added = started;
+            const finished = this.fromMalDate(fields.get("my_finish_date"));
+            if (finished) hermidata.meta.updated = finished;
 
             return { id: hermidata.id, hermidata };
         });

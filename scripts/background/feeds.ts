@@ -1,11 +1,11 @@
 import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ext } from "../shared/utils/BrowserCompat";
-import type { Feed, FeedItem, RawFeed, Hermidata } from "../shared/types/index";
+import type { Feed, FeedItem, FeedExtras, RawFeed, Hermidata } from "../shared/types/index";
 import { getAllHermidata, getAllRawFeeds, getSettings, setAllHermidata, setAllRawFeeds } from "../shared/db/Storage";
 import { allHermidataCashed, setState } from "./state";
-import { generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput";
+import { generateRssFeedId, normalizeTag, TrimTitle } from "../shared/utils/StringOutput";
 import { XMLParser } from 'fast-xml-parser';
-import { getLatestToken, parseItems } from "./parseXML";
+import { getLatestToken, parseItems, parseFeedExtras } from "./parseXML";
 
 
 type Meta = {
@@ -85,6 +85,7 @@ async function webSearch() {
     const allNovelRSS = Object.values(allHermidata).flatMap(novel => novel?.rss ?? []);
 
     const allNewItemsKey: string[] = [];
+    const extrasByUrl = new Map<string, FeedExtras>();
 
     console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allNovelRSS.length}`);
 
@@ -145,6 +146,7 @@ async function webSearch() {
             lastToken: token,
         };
         allNewItemsKey.push(newFeed.id);
+        extrasByUrl.set(novel.url, parseFeedExtras(doc));
 
         // check if the feed is already in savedFeeds via token
         // const existingFeed = savedFeeds.find(f => f.lastToken === token);
@@ -181,6 +183,7 @@ async function webSearch() {
             relatedFeed.lastFetched = feed.lastFetched;
             relatedFeed.latestItem = feed.latestItem;
             if (allNewItemsKey.includes(related.id)) relatedFeed.Notified = true;
+            applyFeedExtras(related, extrasByUrl.get(feed.url));
 
             HermidataToUpdate.push(related);
         }
@@ -188,6 +191,24 @@ async function webSearch() {
     if (HermidataToUpdate.length > 0) await setAllHermidata(HermidataToUpdate);
 
     console.groupEnd();
+}
+/** Fill gaps in the Hermidata meta from feed info; never overwrites what the user already set */
+function applyFeedExtras(hermidata: Hermidata, extras?: FeedExtras) {
+    if (!extras) return;
+    const meta = hermidata.meta;
+    if (extras.author && !meta.author) meta.author = extras.author;
+    if (extras.categories?.length) {
+        const known = new Set(meta.tags.map(t => t.toLowerCase()));
+        for (const category of extras.categories) {
+            const tag = normalizeTag(category);
+            if (tag && !known.has(tag.toLowerCase())) {
+                meta.tags.push(tag);
+                known.add(tag.toLowerCase());
+            }
+        }
+    }
+    const hasRealImage = meta.image.kind === 'stored' || (meta.image.url && !meta.image.url.endsWith('icon48.png'));
+    if (extras.image && !hasRealImage) meta.image = { kind: 'url', url: extras.image };
 }
 function shouldSkipFeed(feed: RawFeed, allHermidata: Record<string, Hermidata>) {
     const novel = Object.values(allHermidata).find(novel => novel?.rss.some(rss => rss.url === feed.url));

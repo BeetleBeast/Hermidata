@@ -550,7 +550,21 @@ export class TrimTitle {
         }
         return result;
     }
+    /** Compiled regex sets per site name: building ~12 regexes for every title made large libraries slow */
+    private static readonly regexConfigCache = new Map<string, RegexConfig>();
+    /** Finished results per title + url; the same main and alt titles are trimmed again for every lookup */
+    private static readonly trimCache = new Map<string, TrimmedTitle>();
+    private static readonly TRIM_CACHE_LIMIT = 20000;
+
     private static setRegexConfig(siteName: string): RegexConfig {
+        let config = TrimTitle.regexConfigCache.get(siteName);
+        if (!config) {
+            config = TrimTitle.buildRegexConfig(siteName);
+            TrimTitle.regexConfigCache.set(siteName, config);
+        }
+        return config;
+    }
+    private static buildRegexConfig(siteName: string): RegexConfig {
         // Keep words lowercase; the /gi flag handles case-insensitive matching.
         // Localized keywords are included here (titles), but "ep"/"cap"/"bab" stay URL-only because they are real words
         const chapterKeywords = [...CHAPTER_KEYWORDS, ...LOCALIZED_TITLE_KEYWORDS, ...VOLUME_KEYWORDS];
@@ -772,6 +786,17 @@ export class TrimTitle {
     public static trimTitle(title: string, HermidataUrl: string): TrimmedTitle {
         if (!title?.trim()) return {title: '', note: ''};
 
+        const cacheKey = `${HermidataUrl}\u0000${title}`;
+        const cached = TrimTitle.trimCache.get(cacheKey);
+        if (cached) return { ...cached };
+
+        const trimmed = TrimTitle.computeTrimTitle(title, HermidataUrl);
+        if (TrimTitle.trimCache.size >= TrimTitle.TRIM_CACHE_LIMIT) TrimTitle.trimCache.clear();
+        TrimTitle.trimCache.set(cacheKey, trimmed);
+        return { ...trimmed };
+    }
+
+    private static computeTrimTitle(title: string, HermidataUrl: string): TrimmedTitle {
         // --- Site name ---
         const siteName = TrimTitle.extractDomainFromUrl(HermidataUrl);
         
@@ -795,4 +820,16 @@ export class TrimTitle {
 
         return trimmedTitle;
     }
+}
+/**
+ * Tag casing used everywhere: each word gets a capital first letter, the rest lowercase.
+ * Matches what the tag input does (so "MMORPG" becomes "Mmorpg", on purpose).
+ */
+export function normalizeTag(input: string): string {
+    return input
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
 }

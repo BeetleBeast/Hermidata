@@ -1,6 +1,6 @@
 import { ext } from "../shared/utils/BrowserCompat"
 import { getSettings } from "../shared/db/Storage"
-import { updateCurrentBookmarkAndIcon } from "./bookmarks"
+import { countBookmarkRenames, renameBookmarks, updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates } from "./feeds"
 import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSyncOperation } from "./rssCache"
 import { handleStartPickingFlow } from "./picking"
@@ -34,6 +34,8 @@ const routes: Record<string, Route> = {
     SYNC_REFRESH: { run: () => handleRefreshSync(), respondsAsync: false },
     VERIFY_SHEET: { run: (m, r) => handleVerifySheet(m.url, m.sheetName, r), respondsAsync: true },
     SYNC_SET_ENCRYPTION: { run: (m, r) => handleSetSyncEncryption(m.header ?? null, m.replace === true, r), respondsAsync: true },
+    BOOKMARK_RENAME_COUNT: { run: async (m, r) => r(await countBookmarkRenames(m.format)), respondsAsync: true },
+    BOOKMARK_RENAME_APPLY: { run: async (m, r) => r(await renameBookmarks(m.format)), respondsAsync: true },
     ALT_TITLE_BACKFILL_COUNT: { run: async (_, r) => r(await countBackfill()), respondsAsync: true },
     ALT_TITLE_BACKFILL_START: { run: async (_, r) => r(await startBackfill()), respondsAsync: true },
     ALT_TITLE_BACKFILL_STOP: { run: async (_, r) => { await stopBackfill(); r(true); }, respondsAsync: true },

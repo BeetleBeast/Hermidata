@@ -445,7 +445,7 @@ export class HermidataMigration {
                     newer.source || older.source,
                     older.meta?.altSources || [],
                     newer.meta?.altSources || [],
-                    [newer.title, older.title]
+                    [newer.source, older.source]
                 ),
                 altTitles: mergeAltTitles(
                     newTitle,

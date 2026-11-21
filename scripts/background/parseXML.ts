@@ -1,4 +1,4 @@
-import type { FeedItem } from "../shared/types";
+import type { FeedItem, FeedExtras } from "../shared/types";
 import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput";
 
 // A value that might come as a bare string, or as an object with #text (when it has attributes)
@@ -18,6 +18,12 @@ interface FeedItemRaw {
     published?: string;
     guid?: TextOrObj;
     id?: string;
+    author?: TextOrObj | { name?: string };
+    "dc:creator"?: TextOrObj;
+    category?: TextOrObj | { "@_term"?: string } | (TextOrObj | { "@_term"?: string })[];
+    enclosure?: { "@_url"?: string; "@_type"?: string };
+    "media:thumbnail"?: { "@_url"?: string };
+    "media:content"?: { "@_url"?: string };
 }
 
 interface RssChannel {
@@ -61,6 +67,39 @@ function linkOf(val: FeedItemRaw["link"]): string {
     // if (typeof val["@_href"] === "string") return val["@_href"];
     if (typeof val["#text"] === "string") return val["#text"];
     return "";
+}
+
+function authorOf(item: FeedItemRaw): string {
+    const a = item.author;
+    if (a && typeof a === "object" && "name" in a && typeof a.name === "string") return a.name.trim();
+    return (textOf(a as TextOrObj | undefined) || textOf(item["dc:creator"])).trim();
+}
+
+function categoriesOf(item: FeedItemRaw): string[] {
+    return toArray(item.category)
+        .map(c => (typeof c === "object" && c && "@_term" in c && c["@_term"]) || textOf(c as TextOrObj))
+        .map(c => String(c).trim())
+        .filter(Boolean);
+}
+
+function imageOf(item: FeedItemRaw): string {
+    const enclosure = item.enclosure;
+    if (enclosure?.["@_url"] && (enclosure["@_type"] ?? "").startsWith("image")) return enclosure["@_url"];
+    return item["media:thumbnail"]?.["@_url"] ?? item["media:content"]?.["@_url"] ?? "";
+}
+
+/** Author, categories and image from the latest item, for filling in Hermidata meta */
+export function parseFeedExtras(doc: ParsedFeedDoc): FeedExtras {
+    const first = (doc?.rss?.channel ? toArray(doc.rss.channel.item) : toArray(doc.feed?.entry))[0];
+    if (!first) return {};
+    const author = authorOf(first);
+    const categories = categoriesOf(first);
+    const image = imageOf(first);
+    return {
+        ...(author && { author }),
+        ...(categories.length && { categories }),
+        ...(image && { image }),
+    };
 }
 
 export function parseItems(doc: ParsedFeedDoc, title: string): FeedItem | null {

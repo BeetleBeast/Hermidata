@@ -1,3 +1,4 @@
+import { dbAccess } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
 import { feed } from "./build/feed";
@@ -48,7 +49,13 @@ export class Controller {
     }
 
     private async reload() {
+        const allHermidata = await new dbAccess().getAllHermidata();
+
+        for (const builder of [this.feed, this.filter, this.filterLogic, this.merger]) builder.setData(allHermidata);
+
         await this.feed.reload();
+        this.merger.reload();
+        await this.filterLogic.reload();
     }
 
     private setEventListener() {

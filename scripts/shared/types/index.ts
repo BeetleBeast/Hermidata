@@ -40,6 +40,7 @@ export type {
     Feed,
     RawFeed,
     FeedItem,
+    FeedExtras,
 
     AnyNovelType,
     AnyNovelStatus,
@@ -155,7 +156,10 @@ export type {
 
     NotificationTypes,
     SaveTargets,
-    KeyboardShortcutSettings
+    KeyboardShortcutSettings,
+    BookmarkTitleValues,
+    BookmarkTitlePlaceholder,
+    BookmarkTitleFormatPart
 
 } from "./settings";
 

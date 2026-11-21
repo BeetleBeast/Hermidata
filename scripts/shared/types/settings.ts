@@ -38,6 +38,26 @@ export type StatusScores = {
     allowAllDateFields: boolean
 }
 
+/** What each placeholder of the bookmark title format stands for */
+export type BookmarkTitleValues = {
+    title: string;
+    chapter: string | number;
+    type: string;
+    domain: string;
+}
+
+export type BookmarkTitlePlaceholder = {
+    token: string;
+    key: keyof BookmarkTitleValues;
+    label: string;
+    required: boolean;
+}
+
+/** One piece of a bookmark title format: literal text, or a placeholder */
+export type BookmarkTitleFormatPart =
+    | { kind: 'text'; text: string }
+    | { kind: 'placeholder'; placeholder: BookmarkTitlePlaceholder };
+
 export interface KeyboardShortcutSettings {
     openSettings: string;
     openLibraryPopup: string;
@@ -66,6 +86,10 @@ export interface Settings {
         AutoSetStatusScore: StatusScores;
         /** Optional: settings saved before this existed lack it, and it counts as off */
         AltTitleLookup?: { Enable: boolean };
+        /** Optional: settings saved before this existed lack it, and it counts as the default. Days a deletion is remembered for sync. */
+        TombstoneTtlDays?: number;
+        /** Optional: settings saved before this existed lack it, and it counts as the default. Uses {title} and {chapter}. */
+        BookmarkTitleFormat?: string;
     }
     DefaultBookmarkSettings: {
         DefaultChoice: DefaultChoice,
