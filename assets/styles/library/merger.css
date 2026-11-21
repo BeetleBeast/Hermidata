@@ -58,6 +58,11 @@
     }
 }
 
+/* keep the popup clear of its filter button */
+.filter-container .filter-dialog {
+    margin-top: 5px;
+}
+
 /* list container */
 .filter-checkbox-container {
     display: flex;

@@ -1,4 +1,4 @@
-import { defaultSettings } from "../../shared/constants";
+import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings, resolveTombstoneTtlDays } from "../../shared/constants";
 import { type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import {
@@ -11,6 +11,7 @@ import {
     shortcutsConflict,
 } from "../../shared/utils/KeyboardShortcuts";
 import { Build } from "../build";
+import { BookmarkTitleFormat } from "./BookmarkTitleFormat";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { customConfirm } from "../../popup/frontend/confirm";
 import { BACKFILL_STATE_KEY, backfillLabel, backfillMinutes, type BackfillState } from "../../shared/lookup/backfill";
@@ -44,6 +45,9 @@ export class ExtensionBehavior extends Build {
     private readonly altTitleBackfillProgress = getElement<HTMLProgressElement>("#altTitleBackfillProgress");
     private readonly altTitleBackfillStatus = getElement<HTMLParagraphElement>("#altTitleBackfillStatus");
 
+    private readonly bookmarkTitleFormat = new BookmarkTitleFormat();
+    private readonly tombstoneTtlDays = getElement<HTMLInputElement>("#tombstoneTtlDays");
+
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
     private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
     private readonly autoSubscribeThreshold = getElement<HTMLInputElement>("#autoSubscribeThreshold"); // input ( number )
@@ -74,6 +78,10 @@ export class ExtensionBehavior extends Build {
         // Alt title lookup
         this.setValueOptionAltTitleLookup(settings);
         void this.watchAltTitleBackfill();
+        // Bookmark title format
+        await this.bookmarkTitleFormat.init();
+        // Tombstone TTL
+        this.setValueOptionTombstoneTtl(settings);
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
         // Auto Subscribe - Threshold
@@ -112,6 +120,8 @@ export class ExtensionBehavior extends Build {
         
         this.enableAltTitleLookup?.addEventListener("change", (e) => this.EnableAltTitleLookup(e));
 
+        this.tombstoneTtlDays?.addEventListener("change", (e) => this.TombstoneTtlDays(e));
+
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
         this.autoSubscribeThreshold?.addEventListener("change", (e) => this.AutoSubscribeThreshold(e));
@@ -135,6 +145,8 @@ export class ExtensionBehavior extends Build {
         this.setValueKeyboardShortcuts(updatedSettings.ExtensionBehaviour.KeyboardShortcuts);
         this.setValueOptionSaveTarget(updatedSettings);
         this.setValueOptionAltTitleLookup(updatedSettings);
+        await this.bookmarkTitleFormat.resetValues();
+        this.setValueOptionTombstoneTtl(updatedSettings);
         this.updateSpreadsheetReminder(updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, updatedSettings.AccountAndConnections.spreadsheetUrl);
         document.dispatchEvent(new CustomEvent("hermidata:spreadsheet-target-changed", { detail: updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet }));
     }
@@ -322,6 +334,10 @@ export class ExtensionBehavior extends Build {
         const enabled = settings.ExtensionBehaviour.AltTitleLookup?.Enable ?? false;
         setElement<HTMLInputElement>("#enableAltTitleLookup", el => el.checked = enabled);
     }
+    private setValueOptionTombstoneTtl(settings: Settings) {
+        const days = settings.ExtensionBehaviour.TombstoneTtlDays ?? DEFAULT_TOMBSTONE_TTL_DAYS;
+        setElement<HTMLInputElement>("#tombstoneTtlDays", el => el.value = String(days));
+    }
     private setValueOptionAutoSubscribe(settings: Settings) {
         const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe;
         setElement<HTMLInputElement>("#enableAutoSubscribe", el => el.checked = autoSubscribe);
@@ -331,6 +347,7 @@ export class ExtensionBehavior extends Build {
         const browserBookmark = settings.ExtensionBehaviour.SaveTarget.BrowserBookmark;
         setElement<HTMLInputElement>("#SaveToGoogleSpreadsheet", el => el.checked = googleSpreadsheet);
         setElement<HTMLInputElement>("#SaveToBrowserBookmark", el => el.checked = browserBookmark);
+        this.bookmarkTitleFormat.setEnabled(browserBookmark);
     }
 
     // Enable Light Mode
@@ -419,6 +436,14 @@ export class ExtensionBehavior extends Build {
         } catch (error) {
             console.warn('[Settings] alt title backfill:', error);
         }
+    }
+    // Tombstone TTL
+    private async TombstoneTtlDays(e: Event) {
+        const input = e.target as HTMLInputElement;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.TombstoneTtlDays = resolveTombstoneTtlDays(Number(input.value));
+        input.value = String(updatedSettings.ExtensionBehaviour.TombstoneTtlDays);
+        await this.setSettings(updatedSettings);
     }
     /** Asks once whether to look up the items already saved; "Later" keeps the setting on, so items are looked up as they are saved */
     private async offerAltTitleBackfill() {
@@ -528,6 +553,7 @@ export class ExtensionBehavior extends Build {
         updatedSettings.ExtensionBehaviour.SaveTarget[settingsTarget] = isChecked;
 
         if (target === "Spreadsheet") this.updateSpreadsheetReminder(isChecked, updatedSettings.AccountAndConnections.spreadsheetUrl);
+        if (target === "Bookmark") this.bookmarkTitleFormat.setEnabled(isChecked);
         await this.setSettings(updatedSettings);
         if (target === "Spreadsheet") document.dispatchEvent(new CustomEvent("hermidata:spreadsheet-target-changed", { detail: isChecked }));
     }

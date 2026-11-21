@@ -156,7 +156,10 @@ export type {
 
     NotificationTypes,
     SaveTargets,
-    KeyboardShortcutSettings
+    KeyboardShortcutSettings,
+    BookmarkTitleValues,
+    BookmarkTitlePlaceholder,
+    BookmarkTitleFormatPart
 
 } from "./settings";
 

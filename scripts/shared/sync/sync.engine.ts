@@ -3,7 +3,8 @@ import type { Feed, Hermidata } from "../types";
 import { ext } from "../utils/BrowserCompat";
 import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 
-import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion } from '../db/db';
+import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion, getSettings } from '../db/db';
+import { resolveTombstoneTtlDays } from '../constants';
 import { BrowserSyncBackend } from './BrowserSyncBackend';
 import type { EnvelopeHeader, KeyStore, RemoteBlob, SyncBackend, SyncBackendConfig, SyncStatus, SyncSwitchMode, WriteResult } from '../types';
 import { ConflictError } from '../utils/dedicatedErrors';
@@ -24,7 +25,7 @@ const WARN_AT_KEY = 'syncWarnAt'; // storage.local
 const SEAL_HEADER_KEY = SYNC_SEAL_HEADER_KEY;
 const SEAL_PENDING_KEY = SYNC_SEAL_PENDING_KEY;
 
-const TOMBSTONE_TTL_MS = 30 * 24 * 3_600 * 1_000;
+const DAY_MS = 24 * 3_600 * 1_000;
 const PUSH_DEBOUNCE_MS = 3_000;
 const PULL_DEBOUNCE_MS = 1_500;
 const WARN_INTERVAL_MS = 24 * 3_600 * 1_000;
@@ -55,6 +56,8 @@ export interface SyncDeps {
     onTooBig(neededKb: number): void;
     onNearlyFull(neededKb: number): void;
     onError(message: string, err: unknown): void;
+    /** How many days a deletion is remembered. Defaults to DEFAULT_TOMBSTONE_TTL_DAYS. */
+    getTombstoneTtlDays?(): Promise<number | undefined>;
     /** Unlocked data keys for encrypted libraries. Defaults to the extension's IndexedDB store. */
     keyStore?: KeyStore;
     /** The synced library is encrypted and this device does not hold its key yet. Called once per key. */
@@ -307,8 +310,9 @@ export class HermidataSync {
         await this.api.storage.local.set({ [TOMBSTONE_KEY]: tombs });
     }
 
-    private pruneTombstones(t: Tombstones): Tombstones {
-        const cutoff = Date.now() - TOMBSTONE_TTL_MS;
+    private async pruneTombstones(t: Tombstones): Promise<Tombstones> {
+        const days = resolveTombstoneTtlDays(await this.deps.getTombstoneTtlDays?.());
+        const cutoff = Date.now() - days * DAY_MS;
         return Object.fromEntries(Object.entries(t).filter(([, at]) => at > cutoff));
     }
 
@@ -468,7 +472,7 @@ export class HermidataSync {
         const behindOnEntries = await this.applyRemoteEntries(remote.entries, local, tombs);
         const missingLocal = this.remoteLacksLocal(remote.entries, local);
 
-        await this.saveTombstones(this.pruneTombstones(tombs));
+        await this.saveTombstones(await this.pruneTombstones(tombs));
         await this.setKnown(known);
 
         // converges: after one push the remote is not behind
@@ -496,7 +500,7 @@ export class HermidataSync {
         }
         for (const r of remote.entries) await this.takeRemoteEntry(r, local.get(r.id), {});
 
-        await this.saveTombstones(this.pruneTombstones({ ...remote.tombstones }));
+        await this.saveTombstones(await this.pruneTombstones({ ...remote.tombstones }));
         await this.setKnown(known);
         await this.api.storage.local.set({ [SYNC_ADOPT_KEY]: false });
     }
@@ -627,7 +631,7 @@ export class HermidataSync {
     /** Local library plus live tombstones, or null when there is nothing worth publishing. */
     private async collectLocalState(): Promise<LocalState | null> {
         const all = await this.deps.getAll();
-        const tombs = this.pruneTombstones(await this.loadTombstones());
+        const tombs = await this.pruneTombstones(await this.loadTombstones());
         this.dropSupersededTombstones(tombs, all);
 
         const nothingToPublish = all.length === 0 && Object.keys(tombs).length === 0;
@@ -779,6 +783,7 @@ const sync = new HermidataSync({
         return res.isMigratedSuccessfully && isHermidataLatestVersion(res.result) ? res.result : null;
     },
     getDeviceId,
+    getTombstoneTtlDays: async () => (await getSettings())?.ExtensionBehaviour.TombstoneTtlDays,
     onTooBig: kb => notifySyncTooBig(kbCounter(kb)),
     onNearlyFull: kb => notifySyncNearlyFull(kbCounter(kb)),
     onError: (msg, err) => logConsoleError(msg, err),

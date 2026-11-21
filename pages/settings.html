@@ -237,6 +237,7 @@
             </div>
         </section>
         <section class="section-content Extension_Behavior" data-active="false">
+            <h2 class="settings-group">General</h2>
             <!-- Appearance & general -->
             <div class="card">
                 <div class="setting">
@@ -253,6 +254,35 @@
                         <p>Show extension actions in the right-click menu.</p>
                     </div>
                     <input id="AllowContextMenu" class="switch" type="checkbox" title="Allow context menu" checked>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card">
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="enableNotification">Notifications</label>
+                        <p>Get alerted when something changes.</p>
+                    </div>
+                    <input id="enableNotification" class="switch" type="checkbox" title="Enable Notification">
+                </div>
+
+                <div class="sub choices">
+                    <label class="choice" for="notificationBadge">
+                        <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
+                        <strong>Badge</strong>
+                        <span>Icon badge only</span>
+                    </label>
+                    <label class="choice" for="notificationMessageMinimum">
+                        <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With minimum description" value="MessageMinimum">
+                        <strong>Minimal</strong>
+                        <span>Short message</span>
+                    </label>
+                    <label class="choice" for="notificationMessageFull">
+                        <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
+                        <strong>Full</strong>
+                        <span>Complete details</span>
+                    </label>
                 </div>
             </div>
 
@@ -339,35 +369,69 @@
                 </div>
             </div>
 
-            <!-- Notifications -->
+            <h2 class="settings-group">Saving</h2>
+            <!-- Save target -->
             <div class="card">
+                <h3 id="saveTarget">Save target</h3>
+
                 <div class="setting">
                     <div class="setting-text">
-                        <label for="enableNotification">Notifications</label>
-                        <p>Get alerted when something changes.</p>
+                        <label for="InternalCollection">Internal collection</label>
+                        <p>Always on. Stored inside the extension.</p>
                     </div>
-                    <input id="enableNotification" class="switch" type="checkbox" title="Enable Notification">
+                    <input type="checkbox" id="InternalCollection" class="switch" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
                 </div>
-
-                <div class="sub choices">
-                    <label class="choice" for="notificationBadge">
-                        <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
-                        <strong>Badge</strong>
-                        <span>Icon badge only</span>
-                    </label>
-                    <label class="choice" for="notificationMessageMinimum">
-                        <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With minimum description" value="MessageMinimum">
-                        <strong>Minimal</strong>
-                        <span>Short message</span>
-                    </label>
-                    <label class="choice" for="notificationMessageFull">
-                        <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
-                        <strong>Full</strong>
-                        <span>Complete details</span>
-                    </label>
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="SaveToBrowserBookmark">Browser bookmark</label>
+                        <p>Also save as a bookmark in your browser.</p>
+                    </div>
+                    <input type="checkbox" id="SaveToBrowserBookmark" class="switch" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
+                </div>
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="SaveToGoogleSpreadsheet">Google Spreadsheet</label>
+                        <p>Also save entries to a spreadsheet. Its URL is set in Account & Connection.</p>
+                    </div>
+                    <input type="checkbox" id="SaveToGoogleSpreadsheet" class="switch" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
+                </div>
+                <div id="spreadsheetTargetReminder" class="spreadsheet-reminder" hidden>
+                    <p>Google Spreadsheet is selected, but no spreadsheet URL has been saved yet.</p>
+                    <button id="goToAccountSettings" type="button" class="btn-ghost">Set the URL in Account & Connection</button>
                 </div>
             </div>
 
+            <!-- Bookmark title format -->
+            <div class="card">
+                <div class="setting">
+                    <div class="setting-text">
+                        <label id="bookmarkTitleFormatLabel">Bookmark title format</label>
+                        <p>How a saved browser bookmark is named. Type your own text and click the blocks below to add the item's details where the cursor is. Title is required.</p>
+                    </div>
+                </div>
+                <div class="sub format-editor">
+                    <div id="bookmarkTitleFormat" class="input format-input" contenteditable="true" role="textbox" aria-multiline="false" aria-labelledby="bookmarkTitleFormatLabel" aria-describedby="bookmarkTitleFormatMessage" data-placeholder="Click Title below to start" spellcheck="false"></div>
+                    <div class="format-palette">
+                        <span class="format-palette-label" aria-hidden="true">Add</span>
+                        <div id="bookmarkTitlePlaceholders" class="format-palette-items" role="group" aria-label="Add to the format"></div>
+                    </div>
+                    <p id="bookmarkTitleFormatMessage" class="format-message" aria-live="polite" hidden></p>
+                    <div class="format-preview">
+                        <span class="format-preview-label">Preview</span>
+                        <div class="format-preview-bookmark">
+                            <span class="format-preview-icon" aria-hidden="true"></span>
+                            <div id="bookmarkTitlePreview" class="format-preview-title"></div>
+                        </div>
+                    </div>
+                    <div class="format-actions">
+                        <p id="bookmarkTitleFormatStatus" role="status" aria-live="polite"></p>
+                        <button id="resetBookmarkTitleFormat" type="button" class="btn-ghost">Use default</button>
+                        <button id="saveBookmarkTitleFormat" type="button">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="settings-group">Library &amp; automation</h2>
             <!-- Alt title lookup -->
             <div class="card">
                 <div class="setting">
@@ -410,37 +474,6 @@
                 </div>
             </div>
 
-            <!-- Save target -->
-            <div class="card">
-                <h3 id="saveTarget">Save target</h3>
-
-                <div class="setting">
-                    <div class="setting-text">
-                        <label for="InternalCollection">Internal collection</label>
-                        <p>Always on. Stored inside the extension.</p>
-                    </div>
-                    <input type="checkbox" id="InternalCollection" class="switch" name="SaveCollection" title="Internal Collection" value="Json" checked disabled>
-                </div>
-                <div class="setting">
-                    <div class="setting-text">
-                        <label for="SaveToBrowserBookmark">Browser bookmark</label>
-                        <p>Also save as a bookmark in your browser.</p>
-                    </div>
-                    <input type="checkbox" id="SaveToBrowserBookmark" class="switch" name="SaveCollection" title="Save as a browser Bookmark" checked value="Bookmark">
-                </div>
-                <div class="setting">
-                    <div class="setting-text">
-                        <label for="SaveToGoogleSpreadsheet">Google Spreadsheet</label>
-                        <p>Also save entries to a spreadsheet. Its URL is set in Account & Connection.</p>
-                    </div>
-                    <input type="checkbox" id="SaveToGoogleSpreadsheet" class="switch" name="SaveCollection" title="save to a Google Spreadsheet" value="Spreadsheet">
-                </div>
-                <div id="spreadsheetTargetReminder" class="spreadsheet-reminder" hidden>
-                    <p>Google Spreadsheet is selected, but no spreadsheet URL has been saved yet.</p>
-                    <button id="goToAccountSettings" type="button" class="btn-ghost">Set the URL in Account & Connection</button>
-                </div>
-            </div>
-
             <!-- Novel status -->
             <div class="card">
                 <h3 id="novelStatusAutoUpdate">Novel status auto-update <span class="badge">Beta</span></h3>
@@ -463,6 +496,17 @@
                     <p>Update status on any detected date change. May change statuses you didn't expect.</p>
                     </div>
                     <input type="checkbox" id="autoUpdateNovelStatusAllValue" class="switch" name="autoUpdateNovelStatus" title="auto update Novel Status" value="All">
+                </div>
+            </div>
+
+            <!-- Deleted entries -->
+            <div class="card">
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="tombstoneTtlDays">Remember deletions for (days)</label>
+                        <p>How long a deleted entry is remembered so other synced devices delete it too. A device that stays offline longer than this may bring the entry back. Default 30.</p>
+                    </div>
+                    <input type="number" id="tombstoneTtlDays" class="setting-input" min="1" max="3650" step="1" value="30">
                 </div>
             </div>
         </section>
