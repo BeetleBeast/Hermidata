@@ -8,6 +8,13 @@ body {
 html {
 	overflow: hidden !important;
 }
+/* The popup never scrolls at page level, so prompts.css's "keep the scrollbar gutter while a popover/dialog is open"
+   only adds a phantom scrollbar-wide strip that shifts the whole popup. Higher specificity: prompts.css loads later. */
+html:root.prompt-open,
+html:root:has(dialog[open]),
+html:root:has(:popover-open) {
+	scrollbar-gutter: auto;
+}
 body::after {
     content: "";
     display: block;

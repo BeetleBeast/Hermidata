@@ -29,9 +29,8 @@
 }
 
 .menu-item[data-danger= "true"]:hover {
-    color: var(--danger);
+    color: var(--text-dark);
     background-color: var(--danger);
-
 }
 
 .menu-item:hover {
