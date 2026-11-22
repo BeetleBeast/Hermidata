@@ -26,3 +26,22 @@ export interface RowActions {
     remove: (entry: Hermidata) => void;
     setPriority: (entry: Hermidata, priority: number) => void;
 }
+
+export interface PickActions {
+    open: (entry: Hermidata) => void;
+    again: () => void;
+    close: () => void;
+    /** False when the queue has only one title to pick from */
+    canPickAgain: boolean;
+}
+
+/** Reading position of an entry, in chapters or episodes */
+export interface QueueProgress {
+    unit: 'Ch.' | 'Ep.';
+    read: number;
+    latest: number;
+    /** 0-100; 0 when the latest chapter is unknown */
+    percent: number;
+}
+
+export type QueueIconName = 'grip' | 'more' | 'external' | 'play' | 'toTop' | 'toBottom' | 'trash' | 'info' | 'close' | 'shuffle' | 'check';

@@ -9,15 +9,20 @@ import {
     sortQueueByPriority,
     type QueuePosition,
 } from "./queue";
-import { buildRow, buildUpNext, revokeCovers } from "./render";
+import { buildAddRow, buildPickCard, buildRow, buildUpNext, resetCovers } from "./render";
 import type { QueueFilters, RowActions, RowOptions } from "./types";
 
 const TOAST_MS = 6000;
+const MAX_ADD_ROWS = 200;
 
 function requireElement<T extends HTMLElement>(selector: string): T {
     const node = document.querySelector<T>(selector);
     if (!node) throw new Error(`Reading list page is missing ${selector}`);
     return node;
+}
+
+function plural(count: number, word: string): string {
+    return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
 export class ReadingListController {
@@ -30,21 +35,31 @@ export class ReadingListController {
     private undoAction: (() => Promise<void>) | null = null;
     private toastTimer: number | undefined;
 
+    private readonly main = requireElement<HTMLElement>('#queue-main');
     private readonly summary = requireElement<HTMLElement>('#queue-summary');
     private readonly upNext = requireElement<HTMLElement>('#up-next');
-    private readonly upNextSection = this.upNext.closest('section') as HTMLElement;
+    private readonly upNextSection = requireElement<HTMLElement>('.rl-next');
+    private readonly queueSection = requireElement<HTMLElement>('.rl-queue');
     private readonly list = requireElement<HTMLOListElement>('#queue-list');
     private readonly listHeading = requireElement<HTMLElement>('#queue-heading');
+    private readonly queueCount = requireElement<HTMLElement>('#queue-count');
+    private readonly queueEnd = requireElement<HTMLButtonElement>('#queue-end-add');
     private readonly empty = requireElement<HTMLElement>('#queue-empty');
+    private readonly emptyTitle = requireElement<HTMLElement>('#queue-empty-title');
     private readonly emptyText = requireElement<HTMLElement>('#queue-empty-text');
     private readonly emptyAdd = requireElement<HTMLButtonElement>('#empty-add');
+    private readonly emptyClear = requireElement<HTMLButtonElement>('#empty-clear');
     private readonly reorderHint = requireElement<HTMLElement>('#reorder-hint');
-    private readonly pickResult = requireElement<HTMLElement>('#pick-result');
+    private readonly pickButton = requireElement<HTMLButtonElement>('#pick-for-me');
+    private readonly sortButton = requireElement<HTMLButtonElement>('#sort-by-priority');
+    private readonly pickDialog = requireElement<HTMLDialogElement>('#pick-dialog');
+    private readonly pickContent = requireElement<HTMLElement>('#pick-content');
     private readonly announce = requireElement<HTMLElement>('#sr-announce');
     private readonly toast = requireElement<HTMLElement>('#toast');
 
+    private readonly filterBar = requireElement<HTMLElement>('#queue-filters');
     private readonly search = requireElement<HTMLInputElement>('#queue-search');
-    private readonly filterPriority = requireElement<HTMLSelectElement>('#filter-priority');
+    private readonly filterPriority = requireElement<HTMLElement>('#filter-priority');
     private readonly filterType = requireElement<HTMLSelectElement>('#filter-type');
     private readonly filterSite = requireElement<HTMLSelectElement>('#filter-site');
     private readonly clearFilters = requireElement<HTMLButtonElement>('#clear-filters');
@@ -54,13 +69,14 @@ export class ReadingListController {
     private readonly addList = requireElement<HTMLUListElement>('#add-list');
     private readonly addPriority = requireElement<HTMLSelectElement>('#add-priority');
     private readonly addConfirm = requireElement<HTMLButtonElement>('#add-confirm');
+    private readonly addCount = requireElement<HTMLElement>('#add-count');
 
     private readonly actions: RowActions = {
         open: (entry) => void openLink(new HermidataModel(entry).GetUrl(), 'newTab'),
         openOverview: (entry) => void openLink('./Overview.html#/id/' + entry.id, 'sameTab'),
-        moveTo: (entry, index) => void this.commit(moveInQueue(this.all, entry.id, index)),
+        moveTo: (entry, index) => void this.commit(moveInQueue(this.all, entry.id, index)).then(() => this.focusHandle(entry.id)),
         remove: (entry) => void this.removeEntry(entry),
-        setPriority: (entry, priority) => void this.commit(setQueuePriority(this.all, entry.id, priority)),
+        setPriority: (entry, priority) => void this.commit(setQueuePriority(this.all, entry.id, priority)).then(() => this.focusPriority(entry.id)),
     };
 
     private readonly db: dbAccess;
@@ -78,6 +94,7 @@ export class ReadingListController {
     // -- data --
 
     private async load(): Promise<void> {
+        resetCovers();
         this.all = Object.values(await this.db.getAllHermidata());
         // repair imports (all index 0) and finished titles before showing anything
         const repairs = normaliseQueue(this.all);
@@ -95,8 +112,10 @@ export class ReadingListController {
             const byId = new Map(saved.map(entry => [entry.id, entry]));
             this.all = this.all.map(entry => byId.get(entry.id) ?? entry);
         } catch (error) {
-            new ErrorMessage('Could not update the reading list. Reloading it.', undefined, { details: [error] }).sendMessage();
-            await this.load();
+            new ErrorMessage('Could not update the reading list. Showing the saved version.', undefined, { details: [error] }).sendMessage();
+            // re-read without repairing: a repair that keeps failing must not retry forever
+            this.all = Object.values(await this.db.getAllHermidata());
+            this.render();
             return;
         }
 
@@ -106,7 +125,7 @@ export class ReadingListController {
 
     private async save(entry: Hermidata): Promise<Hermidata> {
         const stamped: Hermidata = { ...entry, meta: { ...entry.meta, updated: new Date().toISOString() } };
-        await this.db.setHermidata(stamped.id, stamped);
+        await this.db.updateHermidata(stamped); // the hermidata store uses in-line keys, so no separate key is passed
         try {
             await this.db.pushToSync(stamped);
         } catch (error) {
@@ -116,7 +135,7 @@ export class ReadingListController {
     }
 
     private async removeEntry(entry: Hermidata): Promise<void> {
-        await this.commit(removeFromQueue(this.all, entry.id), `Removed "${entry.title}" from the reading list.`);
+        await this.commit(removeFromQueue(this.all, entry.id), `Removed "${entry.title}"`);
     }
 
     // -- filters --
@@ -139,16 +158,28 @@ export class ReadingListController {
         return [entry.title, ...entry.meta.altTitles].some(title => title.toLowerCase().includes(needle));
     }
 
+    /** Refill a dropdown from the queue; it is hidden when there is nothing to choose between */
     private fillFilterSelect(select: HTMLSelectElement, values: string[], current: string): void {
-        const unique = [...new Set(values)].sort((a, b) => a.localeCompare(b));
+        const unique = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
         select.replaceChildren(new Option('Any', ''), ...unique.map(value => new Option(value, value)));
         select.value = unique.includes(current) ? current : '';
+        (select.closest('label') as HTMLElement).hidden = unique.length < 2 && !select.value;
+    }
+
+    private setPriorityRadio(value: string): void {
+        const radio = this.filterPriority.querySelector<HTMLInputElement>(`input[value="${value}"]`);
+        if (radio) radio.checked = true;
+    }
+
+    private resetFilters(): void {
+        this.search.value = '';
+        this.setPriorityRadio('');
+        this.setFilters({ search: '', priority: '', type: '', site: '' });
     }
 
     // -- render --
 
     private render(): void {
-        revokeCovers();
         const queue = getQueue(this.all);
         this.fillFilterSelect(this.filterType, queue.map(entry => entry.novelType), this.filters.type);
         this.fillFilterSelect(this.filterSite, queue.map(entry => entry.source), this.filters.site);
@@ -157,27 +188,45 @@ export class ReadingListController {
 
         const filtering = this.isFiltering;
         const visible = queue.filter(entry => this.matchesFilters(entry));
-        const highCount = queue.filter(entry => entry.meta.readingQueue && getPriorityBand(entry.meta.readingQueue.priority) === 'High').length;
 
-        this.summary.textContent = queue.length === 0 ? 'Nothing queued' : `${queue.length} queued · ${highCount} high priority`;
-        this.clearFilters.hidden = !filtering;
-        this.reorderHint.hidden = !(filtering && queue.length > 1);
-        (document.querySelector('#pick-for-me') as HTMLButtonElement).disabled = visible.length === 0;
-        (document.querySelector('#sort-by-priority') as HTMLButtonElement).disabled = filtering || queue.length < 2;
-
+        this.renderHeader(queue, visible, filtering);
         this.renderBody(queue, visible, filtering);
-        if (!this.pickResult.hidden && this.lastPickId && !visible.some(entry => entry.id === this.lastPickId)) this.pickResult.hidden = true;
+    }
+
+    private renderHeader(queue: Hermidata[], visible: Hermidata[], filtering: boolean): void {
+        const bandCount = (band: ReadingQueuePriorityBand) => queue.filter(entry => entry.meta.readingQueue && getPriorityBand(entry.meta.readingQueue.priority) === band).length;
+        const high = bandCount('High');
+
+        this.summary.textContent = queue.length === 0
+            ? 'Nothing queued yet'
+            : `${plural(queue.length, 'title')} queued${high ? ` · ${high} high priority` : ''}`;
+
+        this.filterPriority.querySelectorAll<HTMLElement>('[data-band-count]').forEach(count => {
+            const band = count.dataset.bandCount as ReadingQueuePriorityBand | '';
+            count.textContent = String(band ? bandCount(band) : queue.length);
+        });
+
+        this.filterBar.hidden = queue.length === 0;
+        this.clearFilters.hidden = !filtering;
+        this.reorderHint.hidden = !filtering;
+        this.pickButton.disabled = visible.length === 0;
+        this.sortButton.hidden = filtering;
+        this.sortButton.disabled = queue.length < 2;
     }
 
     private renderBody(queue: Hermidata[], visible: Hermidata[], filtering: boolean): void {
         const nothingToShow = visible.length === 0;
+        this.main.dataset.layout = filtering || nothingToShow ? 'flat' : 'split';
         this.empty.hidden = !nothingToShow;
         this.upNextSection.hidden = nothingToShow || filtering;
-        this.listHeading.parentElement!.hidden = nothingToShow;
+        this.queueSection.hidden = nothingToShow;
+        this.queueEnd.hidden = filtering;
         this.emptyAdd.hidden = filtering;
+        this.emptyClear.hidden = !filtering;
+        this.emptyTitle.textContent = filtering ? 'No matches' : 'Your reading list is empty';
         this.emptyText.textContent = filtering
-            ? 'No queued titles match the filters.'
-            : 'Nothing queued. Add a title from your library to start your reading list.';
+            ? 'No queued titles match these filters.'
+            : 'Queue the titles you want to read next and keep them in the order you like.';
 
         this.upNext.replaceChildren();
         this.list.replaceChildren();
@@ -194,8 +243,8 @@ export class ReadingListController {
         const rows = filtering ? visible : visible.slice(1);
         if (!filtering) this.upNext.append(buildUpNext(visible[0], optionsFor(visible[0]), this.actions));
         this.listHeading.textContent = filtering ? 'Matches' : 'Queue';
+        this.queueCount.textContent = filtering ? `${visible.length} of ${queue.length}` : String(rows.length);
         this.list.append(...rows.map(entry => buildRow(entry, optionsFor(entry), this.actions)));
-        this.listHeading.parentElement!.hidden = rows.length === 0;
     }
 
     // -- events --
@@ -203,28 +252,27 @@ export class ReadingListController {
     private bindEvents(): void {
         requireElement('#reloadData').addEventListener('click', () => void this.load());
         requireElement('#back-to-library').addEventListener('click', () => void openLink('Library.html', 'sameTab'));
-        requireElement('#sort-by-priority').addEventListener('click', () => void this.commit(sortQueueByPriority(this.all), 'Sorted by priority.'));
-        requireElement('#pick-for-me').addEventListener('click', () => this.pick());
+        this.sortButton.addEventListener('click', () => void this.commit(sortQueueByPriority(this.all), 'Sorted by priority'));
+        this.pickButton.addEventListener('click', () => this.pick());
+        this.pickDialog.addEventListener('click', (event) => { if (event.target === this.pickDialog) this.pickDialog.close(); });
 
         this.search.addEventListener('input', () => this.setFilters({ search: this.search.value.trim() }));
-        this.filterPriority.addEventListener('change', () => this.setFilters({ priority: this.filterPriority.value as ReadingQueuePriorityBand | '' }));
+        this.filterPriority.addEventListener('change', (event) => {
+            this.setFilters({ priority: (event.target as HTMLInputElement).value as ReadingQueuePriorityBand | '' });
+        });
         this.filterType.addEventListener('change', () => this.setFilters({ type: this.filterType.value }));
         this.filterSite.addEventListener('change', () => this.setFilters({ site: this.filterSite.value }));
-        this.clearFilters.addEventListener('click', () => {
-            this.search.value = '';
-            this.filterPriority.value = '';
-            this.setFilters({ search: '', priority: '', type: '', site: '' });
-        });
+        this.clearFilters.addEventListener('click', () => this.resetFilters());
+        this.emptyClear.addEventListener('click', () => this.resetFilters());
 
         requireElement('#toast-undo').addEventListener('click', () => void this.runUndo());
 
-        const main = requireElement('#queue-main');
-        main.addEventListener('keydown', (event) => this.onHandleKey(event));
-        main.addEventListener('dragstart', (event) => this.onDragStart(event));
-        main.addEventListener('dragover', (event) => this.onDragOver(event));
-        main.addEventListener('drop', (event) => this.onDrop(event));
-        main.addEventListener('dragend', () => { this.draggingId = null; });
-        main.addEventListener('click', (event) => this.closeOtherMenus(event));
+        this.main.addEventListener('keydown', (event) => this.onHandleKey(event));
+        this.main.addEventListener('dragstart', (event) => this.onDragStart(event));
+        this.main.addEventListener('dragover', (event) => this.onDragOver(event));
+        this.main.addEventListener('drop', (event) => this.onDrop(event));
+        this.main.addEventListener('dragend', () => this.endDrag());
+        document.addEventListener('click', (event) => this.closeOtherMenus(event));
 
         this.bindAddDialog();
     }
@@ -270,7 +318,9 @@ export class ReadingListController {
 
     private async moveGrabbed(id: string, toIndex: number, total: number, message?: string): Promise<void> {
         const target = Math.min(Math.max(toIndex, 0), total - 1);
-        await this.commit(moveInQueue(this.all, id, target));
+        const changed = moveInQueue(this.all, id, target);
+        if (changed.length) await this.commit(changed);
+        else this.render(); // a cancel without movement still has to clear the grabbed look
         this.announceText(message ?? `Moved to position ${target + 1} of ${total}.`);
         this.focusHandle(id);
     }
@@ -279,31 +329,61 @@ export class ReadingListController {
         document.querySelector<HTMLButtonElement>(`.rl-handle[data-handle-for="${CSS.escape(id)}"]`)?.focus();
     }
 
+    private focusPriority(id: string): void {
+        document.querySelector<HTMLSelectElement>(`select[data-priority-for="${CSS.escape(id)}"]`)?.focus();
+    }
+
     private announceText(text: string): void {
         this.announce.textContent = text;
     }
 
     // -- reorder: drag and drop --
 
+    private dropTarget(event: Event): HTMLElement | null {
+        return (event.target as HTMLElement).closest<HTMLElement>('[data-queue-id]');
+    }
+
     private onDragStart(event: DragEvent): void {
-        const id = (event.target as HTMLElement).closest<HTMLElement>('[data-queue-id]')?.dataset.queueId;
-        if (!id || this.isFiltering) return;
-        this.draggingId = id;
-        event.dataTransfer?.setData('text/plain', id);
+        const source = this.dropTarget(event);
+        if (!source?.dataset.queueId || this.isFiltering) return;
+        this.draggingId = source.dataset.queueId;
+        event.dataTransfer?.setData('text/plain', source.dataset.queueId);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+        // after the browser has captured the drag image
+        requestAnimationFrame(() => source.classList.add('is-dragging'));
     }
 
     private onDragOver(event: DragEvent): void {
-        if (this.draggingId && (event.target as HTMLElement).closest('[data-queue-id]')) event.preventDefault();
+        const target = this.dropTarget(event);
+        if (!this.draggingId || !target) return;
+        event.preventDefault();
+
+        this.clearDropMarkers(target);
+        if (target.dataset.queueId === this.draggingId) return;
+        const from = getQueue(this.all).findIndex(entry => entry.id === this.draggingId);
+        target.dataset.drop = from < Number(target.dataset.index) ? 'after' : 'before';
     }
 
     private onDrop(event: DragEvent): void {
-        const target = (event.target as HTMLElement).closest<HTMLElement>('[data-queue-id]');
+        const target = this.dropTarget(event);
         if (!this.draggingId || !target?.dataset.index) return;
         event.preventDefault();
 
         const id = this.draggingId;
-        this.draggingId = null;
+        this.endDrag();
         if (target.dataset.queueId !== id) void this.commit(moveInQueue(this.all, id, Number(target.dataset.index)));
+    }
+
+    private endDrag(): void {
+        this.draggingId = null;
+        this.clearDropMarkers();
+        this.main.querySelector('.is-dragging')?.classList.remove('is-dragging');
+    }
+
+    private clearDropMarkers(except?: HTMLElement): void {
+        this.main.querySelectorAll<HTMLElement>('[data-drop]').forEach(node => {
+            if (node !== except) delete node.dataset.drop;
+        });
     }
 
     // -- pick for me --
@@ -316,31 +396,16 @@ export class ReadingListController {
         if (!picked) return;
 
         this.lastPickId = picked.id;
-        const queue = picked.meta.readingQueue as { priority: number };
-
-        const text = document.createElement('p');
-        text.textContent = `How about "${picked.title}"? (${getPriorityBand(queue.priority)} priority)`;
-
-        const open = document.createElement('button');
-        open.type = 'button';
-        open.className = 'Btn';
-        open.textContent = 'Open';
-        open.addEventListener('click', () => this.actions.open(picked));
-
-        const again = document.createElement('button');
-        again.type = 'button';
-        again.className = 'Btn';
-        again.textContent = 'Pick again';
-        again.addEventListener('click', () => this.pick());
-
-        const dismiss = document.createElement('button');
-        dismiss.type = 'button';
-        dismiss.className = 'Btn';
-        dismiss.textContent = 'Dismiss';
-        dismiss.addEventListener('click', () => { this.pickResult.hidden = true; });
-
-        this.pickResult.replaceChildren(text, open, again, dismiss);
-        this.pickResult.hidden = false;
+        this.pickContent.replaceChildren(buildPickCard(picked, {
+            open: (entry) => {
+                this.pickDialog.close();
+                this.actions.open(entry);
+            },
+            again: () => this.pick(),
+            close: () => this.pickDialog.close(),
+            canPickAgain: visible.length > 1,
+        }));
+        if (!this.pickDialog.open) this.pickDialog.showModal();
     }
 
     // -- toast / undo --
@@ -383,15 +448,18 @@ export class ReadingListController {
         };
         requireElement('#open-add-dialog').addEventListener('click', open);
         this.emptyAdd.addEventListener('click', open);
+        this.queueEnd.addEventListener('click', open);
         requireElement('#add-cancel').addEventListener('click', () => this.addDialog.close());
+        requireElement('#add-close').addEventListener('click', () => this.addDialog.close());
         this.addSearch.addEventListener('input', () => this.renderAddList());
 
         requireElement<HTMLFormElement>('#add-form').addEventListener('submit', (event) => {
             event.preventDefault();
             const position = (document.querySelector<HTMLInputElement>('input[name="add-position"]:checked')?.value ?? 'bottom') as QueuePosition;
             const changed = addToQueue(this.all, [...this.selectedToAdd], clampPriority(Number(this.addPriority.value)), position);
+            const count = this.selectedToAdd.size;
             this.addDialog.close();
-            void this.commit(changed, `Added ${this.selectedToAdd.size} title${this.selectedToAdd.size === 1 ? '' : 's'} to the reading list.`);
+            void this.commit(changed, `Added ${plural(count, 'title')}`);
         });
     }
 
@@ -401,30 +469,27 @@ export class ReadingListController {
             .filter(entry => !isQueued(entry) && isQueueable(entry))
             .filter(entry => !needle || [entry.title, ...entry.meta.altTitles].some(title => title.toLowerCase().includes(needle)))
             .sort((a, b) => a.title.localeCompare(b.title))
-            .slice(0, 200);
+            .slice(0, MAX_ADD_ROWS);
 
-        this.addList.replaceChildren(...candidates.map(entry => {
-            const item = document.createElement('li');
-            const label = document.createElement('label');
-            const box = document.createElement('input');
-            box.type = 'checkbox';
-            box.checked = this.selectedToAdd.has(entry.id);
-            box.addEventListener('change', () => {
-                if (box.checked) this.selectedToAdd.add(entry.id);
-                else this.selectedToAdd.delete(entry.id);
-                this.addConfirm.disabled = this.selectedToAdd.size === 0;
-            });
-            label.append(box, ` ${entry.title}`, Object.assign(document.createElement('span'), { className: 'muted', textContent: ` · ${entry.novelType}` }));
-            item.append(label);
-            return item;
-        }));
+        this.addList.replaceChildren(...candidates.map(entry => buildAddRow(entry, this.selectedToAdd.has(entry.id), (checked) => {
+            if (checked) this.selectedToAdd.add(entry.id);
+            else this.selectedToAdd.delete(entry.id);
+            this.updateAddFooter();
+        })));
 
         if (candidates.length === 0) {
             const none = document.createElement('li');
-            none.className = 'muted';
-            none.textContent = needle ? 'No titles match.' : 'Every title that can be queued is already in the list.';
+            none.className = 'rl-add-empty';
+            none.textContent = needle ? 'No titles match your search.' : 'Every title that can be queued is already here.';
             this.addList.append(none);
         }
-        this.addConfirm.disabled = this.selectedToAdd.size === 0;
+        this.updateAddFooter();
+    }
+
+    private updateAddFooter(): void {
+        const count = this.selectedToAdd.size;
+        this.addCount.textContent = count ? `${count} selected` : 'Select titles to add';
+        this.addConfirm.disabled = count === 0;
+        this.addConfirm.textContent = count ? `Add ${plural(count, 'title')}` : 'Add';
     }
 }
