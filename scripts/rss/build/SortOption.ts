@@ -1,5 +1,6 @@
 import { type Hermidata, type Settings } from "../../shared/types/index";
 import { getSettings } from "../../shared/db/Storage";
+import { markAsCombobox, markAsOption, setActiveOption } from "../../shared/utils/Accessibility";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { Sort } from "./Sort";
 import { AllSorts, filterClassName, filterName } from "../../shared/constants";
@@ -30,10 +31,13 @@ export class SortOption extends Sort {
         searchInput.type = 'text';
         searchInput.placeholder = 'Search...';
         searchInput.className = 'search-input';
+        searchInput.setAttribute('aria-label', 'Search saved items');
+        searchInput.autocomplete = 'off';
         
         const autocompleteContainer = document.createElement('div');
         autocompleteContainer.className = 'autocompleteContainer';
 
+        markAsCombobox(searchInput, autocompleteContainer);
         searchInput.addEventListener('input', (e) => this.handleSearchInput(e, autocompleteContainer));
         searchInput.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer));
         document.addEventListener('click', e => {
@@ -131,12 +135,15 @@ export class SortOption extends Sort {
         const header = document.createElement('h4');
         header.textContent = title;
         header.className = 'filter-header-text';
+        header.id = `rss-${className}-label`;
 
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'filter-button Btn';
         button.textContent = title === filterName.Sort ? 'Alphabet' : 'Any';
-        button.setAttribute('aria-label', `Filter by ${title}`);
+        button.id = `rss-${className}-button`;
+        button.setAttribute('aria-labelledby', `${header.id} ${button.id}`); // "Type  Any · 8": the name plus the current choice
+        button.setAttribute('aria-haspopup', 'dialog');
 
         const popover = document.createElement('div');
         popover.id = `rss-${className}-dialog`;
@@ -148,6 +155,8 @@ export class SortOption extends Sort {
         if (className === filterClassName.Tag && useLargePopover) popover.classList.add('rss-filter-dialog-tags');
         if (useLargePopover) popover.classList.add('rss-filter-dialog-large');
         popover.setAttribute('popover', 'auto');
+        popover.setAttribute('role', 'dialog');
+        popover.setAttribute('aria-labelledby', header.id);
         button.setAttribute('popovertarget', popover.id);
         button.setAttribute('popovertargetaction', 'toggle');
         const longestItem = Math.max(title.length, ...filterItems.map(item => item.length));
@@ -217,6 +226,7 @@ export class SortOption extends Sort {
         for (const alTitle of suggestions) {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
+            markAsOption(div, suggestionBox);
             div.textContent = alTitle;
             div.addEventListener('click', () => {
                 const target = e.target as HTMLInputElement;
@@ -308,6 +318,7 @@ export class SortOption extends Sort {
         items.forEach((el, i) => {
             el.classList.toggle('highlighted', i === selectedIndex);
         });
+        setActiveOption(getElement<HTMLInputElement>('.search-input'), items, selectedIndex);
     }
 
     private generateDateFilterSection() {

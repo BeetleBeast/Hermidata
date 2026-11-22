@@ -1,5 +1,6 @@
 import { getAllTags, setSettings, getSettings } from "../../shared/db/Storage";
 import { type AllHermidata, type Settings } from "../../shared/types";
+import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { normalizeTag } from "../../shared/utils/StringOutput";
 import { levenshteinDistance, PastHermidata } from "./Past";
@@ -93,6 +94,7 @@ export class TagsSystem {
         // pill container
         const pill = document.createElement("div");
         pill.classList.add(`tag-pill`);
+        pill.setAttribute("role", "listitem");
         pill.dataset.color = color;
         
         pill.style.backgroundColor = color;
@@ -109,6 +111,7 @@ export class TagsSystem {
         removeButton.dataset.color = this.originalColorIsRedIsh(color) ? 'white' : color;
         removeButton.style.color = `contrast-color(${color})`;
         removeButton.textContent = "x";
+        makeButtonLike(removeButton, `Remove tag ${tag}`);
 
         removeButton.addEventListener('mouseover', () => {
             removeButton.style.color =  this.originalColorIsRedIsh(color) ? 'white' : 'red';

@@ -813,6 +813,7 @@ export class ImportsAndExports extends Build {
         NovelTypeCell.classList.add('tableCell-MIfBF');
         const NovelTypeChanger = document.createElement('select');
         NovelTypeChanger.className = 'massImportFromBookmarkFolder-NovelTypeChanger';
+        NovelTypeChanger.setAttribute('aria-label', `Type of ${hermidata.title}`);
 
         for (const novelType of Object.values(allNovelTypes)) {
             const option = document.createElement('option');
@@ -832,6 +833,7 @@ export class ImportsAndExports extends Build {
         const removeBtn = document.createElement('button');
         removeBtn.className = 'massImportFromBookmarkFolder-removeBtn';
         removeBtn.textContent = 'Remove';
+        removeBtn.setAttribute('aria-label', `Remove ${hermidata.title} from the import`);
         removeBtn.addEventListener('click', () => {
             this.massImportFromBookmarkFolderCheckContainer!.removeChild(item);
             delete this.finalAllHermidatas[hermidata.id];
@@ -844,6 +846,7 @@ export class ImportsAndExports extends Build {
         const addBtn = document.createElement('button');
         addBtn.className = 'massImportFromBookmarkFolder-addBtn';
         addBtn.textContent = 'Save';
+        addBtn.setAttribute('aria-label', `Save ${hermidata.title}`);
         addBtn.addEventListener('click', async () => {
             this.finalAllHermidatas[hermidata.id].novelType = NovelTypeChanger.value as AnyNovelType;
             const value: [AnyNovelType, Hermidata] = [(NovelTypeChanger.value as AnyNovelType), this.finalAllHermidatas[hermidata.id]];

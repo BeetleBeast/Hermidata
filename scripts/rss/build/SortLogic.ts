@@ -1,5 +1,6 @@
 import type { Filters, NormalSortsType } from "../../shared/types/index";
 import { getLastFilter, setLastFilter } from "../../shared/db/Storage";
+import { makeTriStateOption } from "../../shared/utils/Accessibility";
 import { Sort } from "./Sort";
 
 type RSSFilterOptionList = HTMLDivElement & { filterItems?: string[] };
@@ -117,6 +118,7 @@ export class SortLogic extends Sort {
             label.textContent = items[index];
 
             item.append(checkbox, label);
+            makeTriStateOption(item, checkbox, items[index]);
             fragment.appendChild(item);
         }
 

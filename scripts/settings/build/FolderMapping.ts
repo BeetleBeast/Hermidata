@@ -402,6 +402,7 @@ export class FolderMapping extends Build {
         const edit = document.createElement('input');
         edit.type = 'text';
         edit.className = 'folder-mapping-edit-alias';
+        edit.setAttribute('aria-label', `Folder name replacing ${OriginalName}`);
         edit.value = newAlias;
         edit.addEventListener('change', async () => {
             const updatedAlias = edit.value.trim();
@@ -412,6 +413,7 @@ export class FolderMapping extends Build {
         });
         const editBtn = document.createElement('button');
         editBtn.textContent = 'Save';
+        editBtn.setAttribute('aria-label', `Save alias for ${OriginalName}`);
         editBtn.addEventListener('click', async () => {
             const updatedAlias = edit.value.trim();
             if (!updatedAlias) return;
@@ -421,6 +423,7 @@ export class FolderMapping extends Build {
 
         const removeBtn = document.createElement('button')
         removeBtn.textContent = 'Remove'
+        removeBtn.setAttribute('aria-label', `Remove alias for ${OriginalName}`);
         removeBtn.addEventListener('click', async () => {
             await this.removeAliasFromFolderMapping(OriginalName, isNovelType);
             row.remove()
@@ -442,6 +445,8 @@ export class FolderMapping extends Build {
 
         const edit = document.createElement('input');
         edit.className = 'folder-mapping-edit-override';
+        const ruleName = `${type} + ${status}`;
+        edit.setAttribute('aria-label', `Folder path for ${ruleName}`);
         edit.type = 'text';
         edit.value = path;
         edit.addEventListener('change', async () => {
@@ -453,6 +458,7 @@ export class FolderMapping extends Build {
         });
         const editBtn = document.createElement('button');
         editBtn.textContent = 'Save';
+        editBtn.setAttribute('aria-label', `Save rule ${ruleName}`);
         editBtn.addEventListener('click', async () => {
             const updatedAlias = edit.value.trim();
             if (!updatedAlias) return;
@@ -464,6 +470,7 @@ export class FolderMapping extends Build {
 
         const removeBtn = document.createElement('button')
         removeBtn.textContent = 'Remove'
+        removeBtn.setAttribute('aria-label', `Remove rule ${ruleName}`);
         removeBtn.addEventListener('click', async () => {
             await this.removeFolderMappingRule(type, status)
             row.remove()

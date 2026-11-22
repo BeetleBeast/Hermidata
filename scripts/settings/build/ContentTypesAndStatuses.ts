@@ -71,11 +71,13 @@ export class ContentTypesAndStatuses extends Build {
         inputElement.type = "text";
         inputElement.classList = "EditORemoveItem-input";
         inputElement.value = input;
+        inputElement.setAttribute("aria-label", `Name ${input}`);
 
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.classList = "EditORemoveItem-removeBtn";
         removeBtn.textContent = "Remove";
+        removeBtn.setAttribute("aria-label", `Remove ${input}`);
         removeBtn.addEventListener("click", () => {
             const settings = this.settings;
             if (!settings) return;

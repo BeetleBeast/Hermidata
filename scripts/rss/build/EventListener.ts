@@ -3,6 +3,7 @@ import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, openLink, generateHermidataHash, getFreeKey, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
 import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
+import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { getHermidataWithRssFromBackground } from "../load";
@@ -23,6 +24,7 @@ export class EventListener extends RssBuild {
         for (let feed of notificationFeed) {
             feed.addEventListener('contextmenu', (e) => this.rightMouseClickOnItem(e, true, true));
             const hashItem = this.GetHashItem(feed);
+            makeButtonLike(feed, this.describeItem(feedListLocalReload[hashItem]), 'link');
             feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], true);
         }
         for (let items of allItems) {
@@ -34,8 +36,16 @@ export class EventListener extends RssBuild {
             const hashItem = this.GetHashItem(item);
             const entry = new HermidataModel(this.AllHermidata[hashItem]);
             items.addEventListener('contextmenu', (e) => this.rightMouseClickOnItem(e, false, entry.hasRSS()));
+            makeButtonLike(items, this.describeItem(this.AllHermidata[hashItem]), 'link');
             items.onclick = () => this.clickOnItem(this.AllHermidata[hashItem], false);
         }
+    }
+    /** Spoken name of a saved item: its title and what activating it does */
+    private describeItem(value: Hermidata | undefined): string {
+        if (!value) return 'Saved item';
+        const hermidata = new HermidataModel(value);
+        const linked = hermidata.hasRSS() ? 'linked to an RSS feed' : 'not linked to an RSS feed';
+        return `${hermidata.title}, ${linked}. Open the latest chapter, or press the context menu key for more actions`;
     }
     private async clickOnItem(value: Hermidata, isNotificationItem: boolean) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
@@ -55,6 +65,13 @@ export class EventListener extends RssBuild {
         // Create the menu container
         const menu = document.createElement("div");
         menu.className = "custom-context-menu";
+        menu.setAttribute("role", "menu");
+        menu.setAttribute("aria-label", "Item actions");
+        const returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const closeMenu = () => {
+            menu.remove();
+            if (returnFocusTo?.isConnected) returnFocusTo.focus();
+        };
 
         // Define your menu options
         const optionsNotification: MenuOptions[] = [
@@ -114,11 +131,17 @@ export class EventListener extends RssBuild {
                 const subMenu = document.createElement("div");
                 subMenu.className = "menu-item";
                 subMenu.textContent = opt.label;
+                subMenu.setAttribute("role", "menuitem");
+                subMenu.setAttribute("tabindex", "-1");
+                subMenu.setAttribute("aria-haspopup", "menu");
+                subMenu.setAttribute("aria-expanded", "false");
+                subMenuContainer.setAttribute("role", "none");
                 
                 const subMenuContainerContextMenu = this.createSubMenu(menu, opt.options);
                 let isAllowedToExit = true;
 
                 const closeSubMenu = () => {
+                    subMenu.setAttribute("aria-expanded", "false");
                     subMenuContainerContextMenu.style.display = "none";
                     if (this.activeSubMenu === subMenuContainerContextMenu) this.activeSubMenu = null;
                 };
@@ -128,6 +151,7 @@ export class EventListener extends RssBuild {
                     if (this.activeSubMenu && this.activeSubMenu !== subMenuContainerContextMenu) this.activeSubMenu.style.display = "none";
 
                     this.activeSubMenu = subMenuContainerContextMenu;
+                    subMenu.setAttribute("aria-expanded", "true");
                     isAllowedToExit = false;
                     this.setSubMenuPosition(subMenu, subMenuContainerContextMenu, menu);
                     subMenuContainerContextMenu.style.display = "block";
@@ -136,6 +160,20 @@ export class EventListener extends RssBuild {
                 
                 subMenu.addEventListener("mouseover", () => {
                     openSubMenu();
+                });
+                subMenu.addEventListener("keydown", (event) => {
+                    if (event.key !== "ArrowRight" && event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openSubMenu();
+                    subMenuContainerContextMenu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+                });
+                subMenuContainerContextMenu.addEventListener("keydown", (event) => {
+                    if (event.key !== "ArrowLeft" && event.key !== "Escape") return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeSubMenu();
+                    subMenu.focus();
                 });
 
                 subMenu.addEventListener("mouseout", () => {
@@ -166,14 +204,17 @@ export class EventListener extends RssBuild {
             }
             const itemContainer = document.createElement('span');
             itemContainer.className = "context-menu-item-container";
+            itemContainer.setAttribute("role", "none");
 
             const item = document.createElement("div");
             item.className = "menu-item";
+            item.setAttribute("role", "menuitem");
+            item.setAttribute("tabindex", "-1");
             item.dataset.danger = opt.danger === true ? "true" : "false";
             item.textContent = opt.label;
             item.addEventListener("click", () => {
             opt.action();
-            menu.remove();
+            closeMenu();
             });
             itemContainer.appendChild(item);
             menu.appendChild(itemContainer);
@@ -182,6 +223,22 @@ export class EventListener extends RssBuild {
         document.body.appendChild(menu);
 
         this.calculateMenuPosition(menu, e);
+
+        // keyboard: arrows move through the items, Escape closes and gives the focus back
+        const topLevelItems = () => Array.from(menu.querySelectorAll<HTMLElement>(':scope > .context-menu-item-container > [role="menuitem"]'));
+        menu.addEventListener("keydown", (event) => {
+            const items = topLevelItems();
+            const current = items.indexOf(document.activeElement as HTMLElement);
+            if (event.key === "ArrowDown") items[(current + 1) % items.length]?.focus();
+            else if (event.key === "ArrowUp") items[(current - 1 + items.length) % items.length]?.focus();
+            else if (event.key === "Home") items[0]?.focus();
+            else if (event.key === "End") items.at(-1)?.focus();
+            else if (event.key === "Escape") closeMenu();
+            else if (event.key === "Enter" || event.key === " ") (document.activeElement as HTMLElement | null)?.click();
+            else return;
+            event.preventDefault();
+        });
+        topLevelItems()[0]?.focus();
 
         // Remove when clicking elsewhere
         document.addEventListener("click", () => { menu.remove(); }, { once: true });
@@ -196,6 +253,7 @@ export class EventListener extends RssBuild {
 
         const subMenuDirectionDiv = document.createElement("span");
         subMenuDirectionDiv.className = "sub-menu-direction";
+        subMenuDirectionDiv.setAttribute("aria-hidden", "true");
 
         subMenuDirectionDiv.textContent = isRight ? ">" : "<";
         subMenuDirectionDiv.style.right = isRight ? "0%" : "90%";
@@ -266,10 +324,13 @@ export class EventListener extends RssBuild {
     private createSubMenu(menu: HTMLDivElement, options: subMenu["options"]) {
         const subMenuContainer = document.createElement("div");
         subMenuContainer.classList.add(`sub-menu-container`, `sub-menu-${menu.id}`);
+        subMenuContainer.setAttribute("role", "menu");
         for (const opt of options) {
             const item = document.createElement("div");
             item.classList.add("menu-item", "sub-menu-item");
             item.textContent = opt.label;
+            item.setAttribute("role", "menuitem");
+            item.setAttribute("tabindex", "-1");
             item.addEventListener("click", () => {
                 opt.action();
                 menu.remove();

@@ -3,6 +3,12 @@
 // while a picking session is already active on this page.
 const w = window as unknown as { __elementPickerActive?: boolean };
 
+/** id of the feedback window; the picker lets events inside it through so its buttons stay usable */
+export const PICKER_PANEL_ID = "__element-picker-feedback-window";
+
+/** Keys that keep working while picking: moving focus / scrolling the page is how keyboard users reach an element */
+const NAVIGATION_KEYS = new Set(["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End"]);
+
 export interface ElementPickerCallbacks {
     onHover?: (el: HTMLElement) => void;
     /** fired once an element is clicked and locked in, awaiting Confirm */
@@ -78,6 +84,7 @@ export class ElementPicker {
         // Capture phase so we intercept before the page's own handlers
         // (stops link navigation, button actions, etc. from firing on pick).
         document.addEventListener("mouseover", this.onMouseOver, true);
+        document.addEventListener("focusin", this.onFocusIn, true); // keyboard: the focused element is "hovered"
         document.addEventListener("click", this.onClick, true);
         document.addEventListener("keydown", this.onKeyDown, true);
     }
@@ -212,6 +219,7 @@ export class ElementPicker {
 
     private cleanup(): void {
         document.removeEventListener("mouseover", this.onMouseOver, true);
+        document.removeEventListener("focusin", this.onFocusIn, true);
         document.removeEventListener("click", this.onClick, true);
         document.removeEventListener("keydown", this.onKeyDown, true);
         if (this.hovered) this.clearOutline(this.hovered);
@@ -219,35 +227,59 @@ export class ElementPicker {
         w.__elementPickerActive = false;
     }
 
-    private onMouseOver = (e: MouseEvent): void => {
-        if (this.locked) return;
+    private isInsidePanel(target: EventTarget | null): boolean {
+        return target instanceof Element && target.closest(`#${PICKER_PANEL_ID}`) !== null;
+    }
 
-        const target = e.target as HTMLElement;
+    private highlight(target: HTMLElement): void {
+        if (this.locked || this.isInsidePanel(target)) return;
         if (target === this.hovered) return;
         if (this.hovered) this.clearOutline(this.hovered);
         this.hovered = target;
         this.setOutline(this.hovered);
         this.callbacks.onHover?.(target);
+    }
+
+    private pick(target: HTMLElement): void {
+        this.lockedData = this.extractData(target);
+        this.locked = true;
+
+        this.callbacks.onPick?.(this.lockedData);
+    }
+
+    private onMouseOver = (e: MouseEvent): void => {
+        this.highlight(e.target as HTMLElement);
+    };
+
+    private onFocusIn = (e: FocusEvent): void => {
+        this.highlight(e.target as HTMLElement);
     };
 
     private onClick = (e: MouseEvent): void => {
-        if (this.locked) return; // ignore clicks after the first one until repick is called
+        if (this.locked || this.isInsidePanel(e.target)) return; // ignore clicks after the first one until repick is called
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        const target = e.target as HTMLElement;
-        this.lockedData = this.extractData(target);
-        this.locked = true;
-        
-        this.callbacks.onPick?.(this.lockedData);
+        this.pick(e.target as HTMLElement);
     };
 
     private onKeyDown = (e: KeyboardEvent): void => {
+        if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            this.cancelPick();
+            return;
+        }
+        if (this.isInsidePanel(e.target) || NAVIGATION_KEYS.has(e.key)) return; // the panel's buttons and moving around the page keep working
+
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        if (e.key === "Escape") this.cancelPick();
+        // Enter / Space on the focused element picks it, like a click
+        const isActivation = e.key === "Enter" || e.key === " ";
+        if (isActivation && !this.locked && !e.repeat && e.target instanceof HTMLElement) this.pick(e.target);
     };
 }

@@ -1,5 +1,6 @@
 import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import type { Hermidata, Settings } from "../../shared/types";
+import { makeButtonLike, markAsCombobox, markAsOption, setActiveOption } from "../../shared/utils/Accessibility";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { findByTitleOrAlt, openLink } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, LibraryBuilder } from "../build";
@@ -64,6 +65,11 @@ export class Detail extends LibraryBuilder {
 
     private addEventListener(): void {
         
+        // keyboard + screen reader support for the div based controls
+        if (this.utilityMarkerSortChapter) makeButtonLike(this.utilityMarkerSortChapter, 'Sort by latest chapter');
+        if (this.utilityMarkerSortDate) makeButtonLike(this.utilityMarkerSortDate, 'Sort by date');
+        if (this.starRatingEdit) makeButtonLike(this.starRatingEdit, 'Edit star rating');
+
         // on clicked Sort button
         this.utilityMarkerSortChapter?.addEventListener('click', () => {
             const nextSortMode = this.sortMode === 'asc' ? 'desc' : 'asc';
@@ -78,8 +84,14 @@ export class Detail extends LibraryBuilder {
             this.sort();
         });
         // on clicked alt titles
+        if (this.altTitleBtn) {
+            makeButtonLike(this.altTitleBtn, 'Alternative titles');
+            this.altTitleBtn.setAttribute('aria-controls', 'hermidata-alternative-titles-list');
+            this.altTitleBtn.setAttribute('aria-expanded', 'false');
+        }
         this.altTitleBtn?.addEventListener('click', () => {
             this.altTitleContainer!.dataset.closed = this.altTitleContainer!.dataset.closed === 'true' ? 'false' : 'true';
+            this.altTitleBtn!.setAttribute('aria-expanded', String(this.altTitleContainer!.dataset.closed === 'false'));
             document.querySelector<SVGElement>('.hermidata-alternative-title-button-arrow')!.dataset.closed = this.altTitleContainer!.dataset.closed;
         });
         // on marker search
@@ -91,6 +103,7 @@ export class Detail extends LibraryBuilder {
         // on global search
         this.searchInput?.addEventListener('input', (e) => this.handleSearchInput(e, this.autocompleteContainer!));
         this.searchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, this.autocompleteContainer!));
+        markAsCombobox(this.searchInput, this.autocompleteContainer);
 
         // on clicked Edit star button
         this.starRatingEdit?.addEventListener('click', this.editStarRating);
@@ -110,6 +123,7 @@ export class Detail extends LibraryBuilder {
         currentButtonSelected.textContent = `${newSortArrow}  ${text}`;
 
         currentButtonSelected.dataset.sort = newSortMode;
+        currentButtonSelected.setAttribute('aria-label', `${currentButtonSelected.title}, ${newSortMode === 'asc' ? 'ascending' : 'descending'}`);
 
         this.sortMode = newSortMode;
 
@@ -131,6 +145,7 @@ export class Detail extends LibraryBuilder {
         // set edit button to save
         if (!this.starRatingEdit) return;
         this.starRatingEdit.textContent = 'Save';
+        this.starRatingEdit.setAttribute('aria-label', 'Save star rating');
         this.starRatingEdit.removeEventListener('click', this.editStarRating);
         this.starRatingEdit.addEventListener('click', this.saveStarRating);
 
@@ -155,6 +170,7 @@ export class Detail extends LibraryBuilder {
         input.step = '1';
         input.min = '0';
         input.max = '10';
+        input.setAttribute('aria-label', 'Star rating, 0 to 10');
         input.classList.add('hermidata-starRating', 'hermidata-starRating-input');
         input.id = 'hermidata-starRating';
         input.addEventListener('focusout', () => {
@@ -180,6 +196,7 @@ export class Detail extends LibraryBuilder {
         // set edit button text back to Edit
         if (!this.starRatingEdit) return;
         this.starRatingEdit.textContent = 'Edit';
+        this.starRatingEdit.setAttribute('aria-label', 'Edit star rating');
     }
 
     public setMarkersViewMode(newViewMode: 'chapter' | 'date'): void {
@@ -189,7 +206,10 @@ export class Detail extends LibraryBuilder {
         if (!currentButtonSelected) return;
 
         // toggle button
-        buttons.forEach(button => button.dataset.state = (button === currentButtonSelected) ? 'true' : 'false' );
+        buttons.forEach(button => {
+            button.dataset.state = (button === currentButtonSelected) ? 'true' : 'false';
+            button.setAttribute('aria-pressed', button.dataset.state);
+        });
         
         this.viewMode = newViewMode;
 
@@ -412,6 +432,7 @@ export class Detail extends LibraryBuilder {
             markerElementContainer.classList.add('hermidata-marker-container');
             markerElementContainer.dataset.id = marker.id;
             markerElementContainer.id = `hermidata-marker-container-${index}`;
+            markerElementContainer.setAttribute('role', 'listitem');
 
             // add marker row container
             const markerRowContainer = document.createElement('div');
@@ -421,6 +442,7 @@ export class Detail extends LibraryBuilder {
             const markerColor = document.createElement('div');
             markerColor.classList.add('hermidata-marker-color');
             markerColor.style.backgroundColor = marker.color;
+            markerColor.setAttribute('aria-hidden', 'true'); // decorative while viewing; a button while editing
 
             // add marker element
             const markerElement = document.createElement('div');
@@ -429,6 +451,7 @@ export class Detail extends LibraryBuilder {
             markerElement.dataset.id = marker.id;
             
             markerElement.addEventListener('click', PageDetailBuilder.handleMarkerClick);
+            makeButtonLike(markerElement, `Open marker ${marker.label}, chapter ${marker.current}`);
 
             // add marker chapter
             const markerChapter = document.createElement('div');
@@ -622,6 +645,7 @@ export class Detail extends LibraryBuilder {
         items.forEach((el, i) => {
             el.classList.toggle('highlighted', i === selectedIndex);
         });
+        setActiveOption(this.searchInput, items, selectedIndex);
     }
     private applySearchSelection(input: HTMLInputElement, suggestionBox: HTMLDivElement, value: string) {
         input.value = value;
@@ -659,6 +683,7 @@ export class Detail extends LibraryBuilder {
         for (const alTitle of suggestions) {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
+            markAsOption(div, suggestionBox);
             div.textContent = alTitle;
             div.addEventListener('click', () => {
                 const target = e.target as HTMLInputElement;

@@ -99,6 +99,7 @@ export class Tags {
             chip.textContent = tag;
             chip.classList.add('hermidata-tag-pill');
             chip.dataset.isSelected = String(isSelected);
+            chip.setAttribute('aria-pressed', String(isSelected));
 
             chip.addEventListener('click', () => {
                 if (this._selected.has(tag)) this._selected.delete(tag);
