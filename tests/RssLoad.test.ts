@@ -93,6 +93,19 @@ describe('getHermidataWithRss', () => {
         expect(result[hashId].rss[0].latestItem.chapter).toBe(10);
         expect(result[separateId].rss[0].latestItem.chapter).toBe(20);
     });
+
+    // a background refresh must never look like the newest edit to sync (last write wins on meta.updated),
+    // or it would overwrite real reading progress made on another device
+    it('leaves meta.updated alone when refreshing a feed', async () => {
+        const saved = createSaved(hashId, 'a.com', [linkedFeed('a.com', item(3, 'a.com', '2026-10-01'))]);
+        store.items = { [saved.id]: saved };
+        store.rawFeeds = { 'https://a.com/feed': rawFeed('a.com', item(10, 'a.com', '2026-11-01')) };
+
+        const result = await getHermidataWithRss();
+
+        expect(result[hashId].rss[0].latestItem.chapter).toBe(10);
+        expect(result[hashId].meta.updated).toBe(saved.meta.updated);
+    });
 });
 
 describe('linkRSSFeed', () => {
