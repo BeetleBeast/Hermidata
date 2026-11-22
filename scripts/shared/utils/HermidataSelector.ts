@@ -723,9 +723,13 @@ export class HermidataModel implements Hermidata {
     public IsLatestVersion(): boolean {
         return this.GetVersion() === this.latestVersion;
     }
-    /** open url and visit site or use default url */
-    public jumpToUrl = (url?: string): void => {
-        // TODO: make it more robust later
-        openLink(url ?? this.GetUrl(), 'newTab');
+    /**
+     * Open a custom url, or the url of the given bookmark (default: the bookmark in use).
+     * Scrolls to that bookmark's saved position.
+     */
+    public jumpToUrl = (url?: string, location: "newTab" | "newWindow" | "sameTab" = 'newTab', bookmarkInUseId?: string): void => {
+        const target = url ?? this.GetUrl(bookmarkInUseId);
+        if (!target) return;
+        openLink(target, location, this.GetScrollPosition(bookmarkInUseId) ?? 0);
     }
 }
