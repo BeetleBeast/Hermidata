@@ -631,7 +631,8 @@
     justify-content: center;
     cursor: pointer;
     background-color: var(--bg);
-    transition: all 0.2s ease;
+    /* state changes (icon, colour) must show instantly; "all 0.2s" made every click feel delayed */
+    transition: box-shadow 0.15s ease;
 }
 
 /* Hover highlight */
