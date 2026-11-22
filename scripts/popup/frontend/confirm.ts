@@ -143,6 +143,10 @@ function activateSetup(exceptionElement: HTMLElement | null, elements: DialogEle
     if (!container || !label || !btn1 || !btn2) return false;
 
     document.documentElement.classList.add('prompt-open'); // the page behind it does not scroll ( prompts.css )
+    if (!label.id) label.id = 'promptLabel';
+    container.setAttribute('role', 'dialog');
+    container.setAttribute('aria-modal', 'true');
+    container.setAttribute('aria-labelledby', label.id);
     container.style.display = 'flex';
     container.style.flexDirection = contentDirection === 'vertical' ? 'column' : 'row';
     container.style.gap = contentDirection === 'vertical' ? '30px' : '10px';
@@ -215,5 +219,6 @@ export function createDialog<T>(opts: DialogOptionsInput<T>): Promise<T> {
 
         btn1.addEventListener('click', onYes);
         btn2.addEventListener('click', onNo);
+        (input ?? btn1).focus();
     });
 }

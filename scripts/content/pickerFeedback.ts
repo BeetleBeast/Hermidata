@@ -1,4 +1,4 @@
-import { ElementPicker, type PickedElementData } from "./picker";
+import { ElementPicker, PICKER_PANEL_ID, type PickedElementData } from "./picker";
 
 
 export interface PickerFeedbackCallbacks {
@@ -7,14 +7,15 @@ export interface PickerFeedbackCallbacks {
     onRepick: () => void;
 }
 
-const CONTAINER_ID = "__element-picker-feedback-window";
-const HOVER_PROMPT = "Hover an element to preview its text…";
+const CONTAINER_ID = PICKER_PANEL_ID;
+const HOVER_PROMPT = "Hover or Tab to an element to preview its text, then click or press Enter to select it. Escape cancels.";
 
 
 export class PickerFeedbackView  {
 
     private container: HTMLDivElement | null = null;
     private textEl: HTMLDivElement | null = null;
+    private statusEl: HTMLDivElement | null = null;
     private confirmBtn: HTMLButtonElement | null = null;
 
     public createFeedbackWindow(callbacks: PickerFeedbackCallbacks): void {
@@ -23,6 +24,8 @@ export class PickerFeedbackView  {
 
         const container = document.createElement("div");
         container.id = CONTAINER_ID;
+        container.setAttribute("role", "dialog");
+        container.setAttribute("aria-label", "Element picker");
         Object.assign(container.style, {
             position: "fixed",
             bottom: "16px",
@@ -42,6 +45,7 @@ export class PickerFeedbackView  {
 
         const label = document.createElement("div");
         label.textContent = "Element picker";
+        label.setAttribute("aria-hidden", "true"); // the dialog already carries this name
         Object.assign(label.style, { fontWeight: "600", marginBottom: "6px", opacity: "0.8" });
 
         const textEl = document.createElement("div");
@@ -56,6 +60,13 @@ export class PickerFeedbackView  {
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
             border: "1px solid transparent",
+        });
+
+        // Announced to screen readers only once an element is selected; the hover preview changes too often to be read out
+        const statusEl = document.createElement("div");
+        statusEl.setAttribute("role", "status");
+        Object.assign(statusEl.style, {
+            position: "absolute", width: "1px", height: "1px", overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap",
         });
 
         const btnRow = document.createElement("div");
@@ -75,6 +86,9 @@ export class PickerFeedbackView  {
                 background: bg,
                 color: fg,
             });
+            // the page's own CSS can remove the default focus ring, so draw one
+            btn.addEventListener("focus", () => { btn.style.outline = "2px solid #8ab4ff"; btn.style.outlineOffset = "2px"; });
+            btn.addEventListener("blur", () => { btn.style.outline = ""; });
             return btn;
         };
 
@@ -93,11 +107,12 @@ export class PickerFeedbackView  {
         });
 
         btnRow.append(repickBtn, cancelBtn, confirmBtn);
-        container.append(label, textEl, btnRow);
+        container.append(label, textEl, statusEl, btnRow);
         document.body.appendChild(container);
 
         this.container = container;
         this.textEl = textEl;
+        this.statusEl = statusEl;
         this.confirmBtn = confirmBtn;
     }
 
@@ -119,12 +134,16 @@ export class PickerFeedbackView  {
         this.confirmBtn.disabled = !isFinal;
         this.confirmBtn.style.opacity = isFinal ? "1" : "0.5";
         this.confirmBtn.style.cursor = isFinal ? "pointer" : "not-allowed";
+
+        if (this.statusEl) this.statusEl.textContent = isFinal ? `Element selected: ${this.textEl.textContent}. Confirm, Repick or Cancel.` : "";
+        if (isFinal) this.confirmBtn.focus(); // keyboard users land on the next step
     }
 
     public destroyFeedbackWindow(): void {
         this.container?.remove();
         this.container = null;
         this.textEl = null;
+        this.statusEl = null;
         this.confirmBtn = null;
     }
 }

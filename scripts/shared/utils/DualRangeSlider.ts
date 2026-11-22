@@ -75,8 +75,8 @@ export class DualRangeSlider {
         this.trackFill = document.createElement("div");
         this.trackFill.className = "drs-track-fill";
     
-        this.minInput = this.makeRangeInput(["drs-thumb", "drs-thumb-min"]);
-        this.maxInput = this.makeRangeInput(["drs-thumb", "drs-thumb-max"]);
+        this.minInput = this.makeRangeInput(["drs-thumb", "drs-thumb-min"], "Minimum value");
+        this.maxInput = this.makeRangeInput(["drs-thumb", "drs-thumb-max"], "Maximum value");
         this.minInput.value = String(this.value.min);
         this.maxInput.value = String(this.value.max);
     
@@ -87,6 +87,7 @@ export class DualRangeSlider {
     
         const ticks = document.createElement("div");
         ticks.className = "drs-ticks";
+        ticks.setAttribute("aria-hidden", "true"); // the sliders already announce their value
         for (let v = this.min; v <= this.max; v += this.step) {
             const tick = document.createElement("span");
             tick.textContent = String(v);
@@ -105,9 +106,10 @@ export class DualRangeSlider {
 
     }
 
-    private makeRangeInput(classNames: string[]): HTMLInputElement {
+    private makeRangeInput(classNames: string[], label: string): HTMLInputElement {
         const input = document.createElement("input");
         input.type = "range";
+        input.setAttribute("aria-label", label);
         input.classList.add(...classNames);
         input.min = String(this.min);
         input.max = String(this.max);

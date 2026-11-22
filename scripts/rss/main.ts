@@ -7,6 +7,11 @@ import { BuildRSSController } from "./controller";
 import { getHermidataNotification } from "./load";
 
 
+function setActiveModeButton(button: HTMLButtonElement): void {
+    button.classList = "active Btn";
+    button.setAttribute("aria-pressed", "true");
+}
+
 let rssPreloadPromise: Promise<RssDOM> | null = null;
 
 let rssDOMCache: RssDOM | null = null;
@@ -37,7 +42,8 @@ export class RSS {
         const target = e?.currentTarget instanceof HTMLButtonElement
             ? e.currentTarget
             : getElement<HTMLButtonElement>("#HDClassicBtn");
-        if (target) target.classList = "active Btn";
+        if (target) setActiveModeButton(target);
+        setElement("#HDRssBtn", el => el.setAttribute("aria-pressed", "false"));
     }
 
     public async openRSS(e?: PointerEvent) {
@@ -99,7 +105,7 @@ export class RSS {
         }
     }
     public changePageToClassic() {
-        setElement("#HDRssBtn", el => el.classList = "Btn");
+        setElement("#HDRssBtn", el => { el.classList = "Btn"; el.setAttribute("aria-pressed", "false"); });
         setElement(".HDRss", el => el.style.opacity = String(0));
         setElement(".HDRss", el => el.style.display = 'none');
         setElement(".HDClassic", el => el.style.opacity = String(1));
@@ -185,8 +191,8 @@ export class RSS {
         const target = e?.currentTarget instanceof HTMLButtonElement
             ? e.currentTarget
             : getElement<HTMLButtonElement>("#HDRssBtn");
-        if (target) target.classList = "active Btn";
-        setElement("#HDClassicBtn", el => el.classList = "Btn");
+        if (target) setActiveModeButton(target);
+        setElement("#HDClassicBtn", el => { el.classList = "Btn"; el.setAttribute("aria-pressed", "false"); });
         setElement(".HDClassic", el => el.style.opacity = '0');
         setElement(".HDRss", el => el.style.display = 'block');
         setElement(".HDRss", el => el.style.opacity = '1');
@@ -242,6 +248,7 @@ export class RSS {
         const percent = this.percent > 100 ? 100 : this.percent;
 
         setElement('.loading-bar', el => el.style.width = `${percent}%`);
+        setElement('.loading-bar-container', el => el.setAttribute('aria-valuenow', String(percent)));
         if (label) setElement('.loading-bar-label', el => el.innerHTML = label);
     }
 

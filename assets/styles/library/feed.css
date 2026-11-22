@@ -546,3 +546,11 @@ body[data-list-mode="false"]
 .filtered {
 	display: none;
 }
+
+a.hermidata-item-title {
+	text-decoration: none;
+}
+.hermidata-item:focus-within {
+	outline: 2px solid var(--accent-soft);
+	outline-offset: 2px;
+}

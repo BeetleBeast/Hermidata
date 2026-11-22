@@ -1,6 +1,7 @@
 import { getLastLibraryFilters, setLastLibraryFilters, setLastLibrarySortOption } from "../../shared/db/Storage";
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { makeTriStateOption, markAsCombobox, markAsOption, setActiveOption } from "../../shared/utils/Accessibility";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import type { Controller } from "../controller";
 import { Sort, type AllSortsType, type BasicSortsType } from "./filter";
@@ -114,11 +115,13 @@ export class FilterLogic extends Sort {
         // Hermidata  bar
         searchInput?.addEventListener('input', (e) => this.handleSearchInput(e, autocompleteContainer));
         searchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer, '.autocomplete-item'));
+        markAsCombobox(searchInput, autocompleteContainer);
         // tags search bar
         this.tagsSearchInput?.addEventListener('input', (e) => this.handleTagsSearchInput(e));
         // Author search bar
         this.AuthorSearchInput?.addEventListener('input', (e) => this.handleAuthorSearchInput(e));
         this.AuthorSearchInput?.addEventListener('keydown', (e) => this.setupSearchBar(e, autocompleteContainer, '#Author-filter-suggestions'));
+        markAsCombobox(this.AuthorSearchInput, document.querySelector<HTMLElement>('#Author-filter-suggestions'));
         // ChapterCompletionFilter
         this.ChapterCompletionFilter?.addEventListener('input', (e) => this.applyChapterCompletionFilter(e));
     }
@@ -267,6 +270,8 @@ export class FilterLogic extends Sort {
         for (const cbWithLabel of checkboxesWithLabels) {
             cbWithLabel.removeEventListener("click", () => this.eventOnClick(cbWithLabel, filters));
             cbWithLabel.addEventListener("click", () => this.eventOnClick(cbWithLabel, filters));
+            const checkbox = cbWithLabel.querySelector<HTMLDivElement>('.custom-checkbox');
+            if (checkbox) makeTriStateOption(cbWithLabel, checkbox, checkbox.dataset.value ?? cbWithLabel.textContent?.trim() ?? '');
         };
         const makeActiveState = (cb: HTMLDivElement) => {
             const label = cb.nextElementSibling?.textContent?.trim();
@@ -561,6 +566,7 @@ export class FilterLogic extends Sort {
         for (const alTitle of suggestions) {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
+            markAsOption(div, suggestionBox);
             div.textContent = alTitle;
             div.addEventListener('click', () => {
                 const target = e.target as HTMLInputElement;
@@ -686,6 +692,7 @@ export class FilterLogic extends Sort {
         items.forEach((el, i) => {
             el.classList.toggle('highlighted', i === selectedIndex);
         });
+        setActiveOption(items[selectedIndex]?.closest('#search-suggestions') ? this.searchInput : this.AuthorSearchInput, items, selectedIndex);
     }
     private applyChapterCompletionFilter(e: Event) {
         const target = e.target as HTMLInputElement;
@@ -721,6 +728,7 @@ export class FilterLogic extends Sort {
             if (!author) continue;
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
+            markAsOption(div, authorSuggestionBox);
             div.textContent = author;
             div.addEventListener('click', () => {
                 const target = e.target as HTMLInputElement;
