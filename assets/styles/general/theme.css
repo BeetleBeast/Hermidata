@@ -131,7 +131,8 @@
 
 :root[data-theme="light"] .imgBookmark { fill: var(--text-muted); }
 :root[data-theme="light"] .marker-menu-trigger:hover .imgBookmark { fill: var(--accent-hover-soft); }
-:root[data-theme="light"] img.icon[title="Settings"] { filter: brightness(0) opacity(0.65); }
+:root[data-theme="light"] .openSettings .icon,
+:root[data-theme="light"] #openSettings .icon { filter: brightness(0) opacity(0.65); }
 
 /*
  * The default item image is a pale icon, so darken it in the Library, RSS feed, and Overview.
