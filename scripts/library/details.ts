@@ -4,6 +4,9 @@ import { getElement } from "../shared/utils/Selection";
 import { openLink } from "../shared/utils/StringOutput";
 import { Detail } from "./build/detail";
 import { EditDetail } from "./build/edit";
+import { initTheme } from "../shared/utils/Theme";
+
+void initTheme();
 
 let currentController: Controller | null = null;
 

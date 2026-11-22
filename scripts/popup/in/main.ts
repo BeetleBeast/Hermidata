@@ -18,6 +18,9 @@ import { linkAsAdaptation } from '../core/save';
 import { getSeparateProminence } from '../core/separateProminence';
 import { HermidataService } from "./service";
 import { shortcutEventListener } from "../core/shortcuts";
+import { initTheme } from "../../shared/utils/Theme";
+
+void initTheme();
 
 
 const stateConfig = {
