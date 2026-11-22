@@ -1,4 +1,7 @@
 import { BuildController } from "./controller";
+import { initTheme } from "../shared/utils/Theme";
+
+void initTheme();
 
 
 

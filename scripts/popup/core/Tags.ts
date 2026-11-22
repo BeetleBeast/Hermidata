@@ -99,6 +99,7 @@ export class TagsSystem {
         
         pill.style.backgroundColor = color;
         pill.style.color = `contrast-color(${color})`;
+        pill.style.setProperty('--tag-color', color);
         // pill text
         const pillText = document.createElement("p");
         pillText.classList.add("tag-pill-text");

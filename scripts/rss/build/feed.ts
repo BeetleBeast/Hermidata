@@ -303,6 +303,7 @@ export class FeedItem {
                 allTagsInString += `[${tagName}]`;
                 tagDiv.style.color = settings.TagManagement.tagColoring?.[tagName] || 'white';
                 tagDiv.dataset.TagColor = settings.TagManagement.tagColoring?.[tagName] || 'white';
+                tagDiv.style.setProperty('--tag-color', tagDiv.dataset.TagColor);
                 ElTagContainer.append(tagDiv)
             }
             ElTagContainer.dataset.tags = JSON.stringify(allTags);
