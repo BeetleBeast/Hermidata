@@ -1,4 +1,5 @@
-import type { Hermidata, ReadingQueue, ReadingQueuePriorityBand } from "../shared/types";
+import type { Hermidata, QueuePosition, ReadingQueue, ReadingQueuePriorityBand } from "../shared/types";
+import { HermidataModel } from "../shared/utils/HermidataSelector";
 
 export const QUEUE_PRIORITY_MIN = 1;
 export const QUEUE_PRIORITY_MAX = 10;
@@ -6,8 +7,6 @@ export const QUEUE_PRIORITY_DEFAULT = 5;
 
 /** Statuses that mean "done with it": such an entry leaves the queue */
 const FINISHED_STATUSES: readonly string[] = ['Finished', 'Dropped'];
-
-export type QueuePosition = 'top' | 'bottom';
 
 /** Status of the bookmark in use, or undefined when the entry has no usable bookmark */
 export function getActiveStatus(entry: Hermidata): string | undefined {
@@ -55,8 +54,11 @@ export function getQueue(all: readonly Hermidata[]): Hermidata[] {
         );
 }
 
+/** A copy of the entry with new queue data; the original stays untouched so it can be restored by undo */
 function withQueue(entry: Hermidata, queue: ReadingQueue | false): Hermidata {
-    return { ...entry, meta: { ...entry.meta, readingQueue: queue } };
+    const model = new HermidataModel(structuredClone(entry));
+    model.SetReadingQueue(queue);
+    return model.toJSON();
 }
 
 /**

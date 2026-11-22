@@ -1,4 +1,5 @@
-import type { Hermidata, ReadingQueuePriorityBand } from "../shared/types";
+import type { Hermidata, ReadingQueuePriorityBand } from "./popup";
+import type { HermidataModel } from "../utils/HermidataSelector";
 
 export interface QueueFilters {
     search: string;
@@ -6,6 +7,8 @@ export interface QueueFilters {
     type: string;
     site: string;
 }
+
+export type QueuePosition = 'top' | 'bottom';
 
 /** Where a row sits and what it may do */
 export interface RowOptions {
@@ -42,6 +45,18 @@ export interface QueueProgress {
     latest: number;
     /** 0-100; 0 when the latest chapter is unknown */
     percent: number;
+}
+
+/** A row whose handle is held for keyboard reordering */
+export interface GrabbedRow {
+    id: string;
+    originalIndex: number;
+}
+
+/** A cover waiting to scroll into view before it is loaded */
+export interface WaitingCover {
+    model: HermidataModel;
+    onLoad?: (url: string) => void;
 }
 
 export type QueueIconName = 'grip' | 'more' | 'external' | 'play' | 'toTop' | 'toBottom' | 'trash' | 'info' | 'close' | 'shuffle' | 'check';

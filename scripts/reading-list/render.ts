@@ -1,7 +1,6 @@
-import type { Hermidata, ReadingQueue } from "../shared/types";
+import type { Hermidata, PickActions, QueueIconName, QueueProgress, ReadingQueue, RowActions, RowOptions, WaitingCover } from "../shared/types";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getActiveStatus, getPriorityBand, QUEUE_PRIORITY_MAX, QUEUE_PRIORITY_MIN } from "./queue";
-import type { PickActions, QueueIconName, QueueProgress, RowActions, RowOptions } from "./types";
 
 const MAX_HERO_TAGS = 4;
 
@@ -22,7 +21,7 @@ const ICON_PATHS: Record<QueueIconName, string> = {
 // -- covers: loaded once when scrolled near, then reused so re-renders never flicker --
 
 const coverLoads = new Map<string, Promise<string | null>>();
-const waitingCovers = new WeakMap<Element, { model: HermidataModel; onLoad?: (url: string) => void }>();
+const waitingCovers = new WeakMap<Element, WaitingCover>();
 
 const coverObserver = new IntersectionObserver((observed) => {
     for (const { isIntersecting, target } of observed) {

@@ -1,5 +1,5 @@
 import type { dbAccess } from "../shared/db/Storage";
-import type { Hermidata, ReadingQueuePriorityBand } from "../shared/types";
+import type { GrabbedRow, Hermidata, QueueFilters, QueuePosition, ReadingQueuePriorityBand, RowActions, RowOptions } from "../shared/types";
 import { ErrorMessage } from "../shared/utils/ErrorMessage";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { openLink } from "../shared/utils/StringOutput";
@@ -7,10 +7,8 @@ import {
     addToQueue, clampPriority, getPriorityBand, getQueue, isQueueable, isQueued, moveInQueue, normaliseQueue,
     pickForMe, QUEUE_PRIORITY_DEFAULT, QUEUE_PRIORITY_MAX, QUEUE_PRIORITY_MIN, removeFromQueue, setQueuePriority,
     sortQueueByPriority,
-    type QueuePosition,
 } from "./queue";
 import { buildAddRow, buildPickCard, buildRow, buildUpNext, resetCovers } from "./render";
-import type { QueueFilters, RowActions, RowOptions } from "./types";
 
 const TOAST_MS = 6000;
 const MAX_ADD_ROWS = 200;
@@ -29,7 +27,7 @@ export class ReadingListController {
     private all: Hermidata[] = [];
     private filters: QueueFilters = { search: '', priority: '', type: '', site: '' };
     private selectedToAdd = new Set<string>();
-    private grabbed: { id: string; originalIndex: number } | null = null;
+    private grabbed: GrabbedRow | null = null;
     private draggingId: string | null = null;
     private lastPickId: string | null = null;
     private undoAction: (() => Promise<void>) | null = null;
@@ -124,14 +122,18 @@ export class ReadingListController {
     }
 
     private async save(entry: Hermidata): Promise<Hermidata> {
-        const stamped: Hermidata = { ...entry, meta: { ...entry.meta, updated: new Date().toISOString() } };
-        await this.db.updateHermidata(stamped); // the hermidata store uses in-line keys, so no separate key is passed
+        // a clone, so the copy kept in `this.all` (and used by undo) is never changed in place
+        const model = new HermidataModel(structuredClone(entry));
+        model.Touch();
+        const saved = model.toJSON();
+
+        await this.db.updateHermidata(saved); // the hermidata store uses in-line keys, so no separate key is passed
         try {
-            await this.db.pushToSync(stamped);
+            await this.db.pushToSync(saved);
         } catch (error) {
             console.warn('[Hermidata] Reading list sync push failed; the local copy is saved.', error);
         }
-        return stamped;
+        return saved;
     }
 
     private async removeEntry(entry: Hermidata): Promise<void> {
