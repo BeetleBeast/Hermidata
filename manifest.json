@@ -51,6 +51,7 @@
         "resources": [
             "dist/pages/Library.html",
             "dist/pages/Overview.html",
+            "dist/pages/ReadingList.html",
             "dist/scripts/RSS.js",
             "dist/assets/*"
     ],

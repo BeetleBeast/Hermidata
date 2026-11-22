@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hermidata — Reading list</title>
+<script src="/scripts/theme-init.js"></script>
+<link rel="stylesheet" href="../assets/styles/general/theme.css">
+<link rel="stylesheet" href="../assets/styles/general/errors.css">
+<link rel="stylesheet" href="../assets/styles/general/buttons.css">
+<link rel="stylesheet" href="../assets/styles/general/prompts.css">
+<link rel="stylesheet" href="../assets/styles/reading-list/base.css">
+</head>
+<body>
+
+  <header class="topBar">
+    <div>
+      <h1>Reading list</h1>
+      <p id="queue-summary" class="muted" aria-live="polite"></p>
+    </div>
+    <div class="toolbar">
+      <button type="button" id="pick-for-me" class="Btn">Pick for me</button>
+      <button type="button" id="sort-by-priority" class="Btn">Sort by priority</button>
+      <button type="button" id="open-add-dialog" class="Btn" aria-haspopup="dialog">+ Add titles</button>
+      <button type="button" id="reloadData" class="Btn">Reload</button>
+      <button type="button" id="back-to-library" class="Btn">Library</button>
+    </div>
+  </header>
+
+  <section id="queue-filters" aria-label="Filter the reading list">
+    <input id="queue-search" type="search" placeholder="Search queue..." aria-label="Search the reading list" autocomplete="off" />
+    <label>Priority
+      <select id="filter-priority">
+        <option value="">Any</option>
+        <option value="High">High (7-10)</option>
+        <option value="Medium">Medium (4-6)</option>
+        <option value="Low">Low (1-3)</option>
+      </select>
+    </label>
+    <label>Type <select id="filter-type"><option value="">Any</option></select></label>
+    <label>Site <select id="filter-site"><option value="">Any</option></select></label>
+    <button type="button" id="clear-filters" class="Btn" hidden>Clear filters</button>
+  </section>
+
+  <p id="reorder-hint" class="muted" hidden>Clear the filters to reorder the list.</p>
+
+  <section id="pick-result" aria-live="polite" hidden></section>
+
+  <main id="queue-main">
+    <section aria-labelledby="up-next-heading">
+      <h2 id="up-next-heading">Up next</h2>
+      <div id="up-next"></div>
+    </section>
+    <section aria-labelledby="queue-heading">
+      <h2 id="queue-heading">Queue</h2>
+      <ol id="queue-list"></ol>
+    </section>
+    <div id="queue-empty" hidden>
+      <p id="queue-empty-text"></p>
+      <button type="button" id="empty-add" class="Btn">+ Add titles</button>
+    </div>
+  </main>
+
+  <dialog id="add-dialog" aria-labelledby="add-dialog-title">
+    <form method="dialog" id="add-form">
+      <h2 id="add-dialog-title">Add titles to the reading list</h2>
+      <input id="add-search" type="search" placeholder="Search your library..." aria-label="Search your library" autocomplete="off" />
+      <ul id="add-list" aria-label="Titles you can add"></ul>
+      <div class="add-options">
+        <label>Priority <select id="add-priority"></select></label>
+        <fieldset>
+          <legend>Add to</legend>
+          <label><input type="radio" name="add-position" value="bottom" checked> Bottom</label>
+          <label><input type="radio" name="add-position" value="top"> Top</label>
+        </fieldset>
+      </div>
+      <div class="add-actions">
+        <button type="button" id="add-cancel" class="Btn">Cancel</button>
+        <button type="submit" id="add-confirm" class="Btn" disabled>Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite" hidden>
+    <span id="toast-text"></span>
+    <button type="button" id="toast-undo" class="Btn">Undo</button>
+  </div>
+  <p id="sr-announce" class="sr-only" aria-live="assertive"></p>
+
+<script src="../scripts/reading-list/main.ts" type="module"></script>
+</body>
+</html>

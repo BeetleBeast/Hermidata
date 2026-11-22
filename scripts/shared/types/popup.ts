@@ -84,6 +84,13 @@ export interface Bookmark { // new
     url: string;
 }
 
+export interface ReadingQueue {
+    readNext: boolean; // true if it is the first in the queue
+    priority: number; // 1-10
+    queueIndex: number;
+}
+
+export type ReadingQueuePriorityBand = 'High' | 'Medium' | 'Low';
 
 export interface Hermidata {
     version: number;
@@ -113,11 +120,7 @@ export interface Hermidata {
         language?: string; // optional
         translator?: string; // optional
 
-        readingQueue: {
-            readNext: boolean; // true if it is the first in the queue
-            priority: number; // 1-10
-            queueIndex: number;
-        } | false; // false if not in queue
+        readingQueue: ReadingQueue | false; // false if not in queue
 
         relations: Relation | 'None';
 

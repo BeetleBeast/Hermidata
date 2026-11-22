@@ -14,6 +14,8 @@ export type {
     
     Hermidata,
     Bookmark,
+    ReadingQueue,
+    ReadingQueuePriorityBand,
 
     OnlyPlainHermidata,
 
