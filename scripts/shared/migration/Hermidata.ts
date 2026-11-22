@@ -455,7 +455,7 @@ export class HermidataMigration {
                 ),
                 added: older.meta?.added || base.meta.added,
                 updated: new Date().toISOString(),
-                originalRelease: older.meta?.originalRelease || newer.meta?.originalRelease || null, // TODO: do something with it
+                originalRelease: older.meta?.originalRelease || newer.meta?.originalRelease || null,
                 novelStatus: newer.meta?.novelStatus || older.meta?.novelStatus,
 
                 contentRating: newer.meta.contentRating ?? older.meta.contentRating,
@@ -991,7 +991,7 @@ export class HermidataMigration {
                 altTitles: older.meta?.altTitles ?? [older.title],
                 added: older.meta?.added ?? new Date().toISOString(),
                 updated: older.meta?.updated ?? new Date().toISOString(),
-                originalRelease: null, // TODO: do something with it
+                originalRelease: null,
                 novelStatus: 'Ongoing'
             }
         }
@@ -1037,7 +1037,7 @@ export class HermidataMigration {
                 altSources: [data.source],
                 added: data.meta?.added ?? new Date().toISOString(),
                 updated: data.meta?.updated ?? new Date().toISOString(),
-                originalRelease: data.meta?.originalRelease ?? null, // TODO: do something with it
+                originalRelease: data.meta?.originalRelease ?? null,
                 novelStatus: data.meta?.novelStatus ?? 'Ongoing',
                 bookmarkInUse: bookmark.id
             }
@@ -1071,7 +1071,7 @@ export class HermidataMigration {
                 altSources: data.meta?.altSources ?? [data.source],
                 added: data.meta?.added ?? new Date().toISOString(),
                 updated: data.meta?.updated ?? new Date().toISOString(),
-                originalRelease: data.meta?.originalRelease ?? null, // TODO: do something with it
+                originalRelease: data.meta?.originalRelease ?? null,
                 novelStatus: data.meta?.novelStatus ?? 'Ongoing'
             }
         }
@@ -1114,7 +1114,7 @@ export class HermidataMigration {
                 altSources: data.meta?.altSources ?? [data.source],
                 added: data.meta?.added ?? new Date().toISOString(),
                 updated: data.meta?.updated ?? new Date().toISOString(),
-                originalRelease: data.meta?.originalRelease ?? null, // TODO: do something with it
+                originalRelease: data.meta?.originalRelease ?? null,
                 novelStatus: data.meta?.novelStatus ?? 'Ongoing'
             }
         }

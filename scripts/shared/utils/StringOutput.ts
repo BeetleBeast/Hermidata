@@ -349,7 +349,7 @@ async function createTabForLocation( url: string, location: 'newTab' | 'newWindo
 
         case 'newWindow': {
             const win = await ext.windows.create({ url });
-            return win?.tabs?.[0]; // TODO: still no way to set Y position for a brand-new window's initial paint
+            return win?.tabs?.[0]; // still no way to set Y position for a brand-new window's initial paint
         }
 
         case 'sameTab':
@@ -690,35 +690,33 @@ export class TrimTitle {
      *    e.g. "The Generic Title Chapter 3 English online test.com" -> "The Generic Title"
     */
     private static stripChapterBlock(title: string, regexUsed: RegexConfig): string {
-        // TODO: rewrite this method for better readability
-        regexUsed.chapterRemoveRegexV3.lastIndex = 0;
+        const block = TrimTitle.findChapterBlock(title, regexUsed.chapterRemoveRegexV3);
 
-        let match: RegExpExecArray | null;
-        let blockStart = -1;
-        let blockEnd = -1;
-        while ((match = regexUsed.chapterRemoveRegexV3.exec(title)) !== null) {
-            if (blockStart === -1) blockStart = match.index;
-            blockEnd = match.index + match[0].length;
-            if (match[0].length === 0) regexUsed.chapterRemoveRegexV3.lastIndex++; // avoid infinite loop on zero-width match
-        }
-
-        if (blockStart === -1) {
+        if (!block) {
             // no number-based marker found; still strip a dangling keyword at the end
             // ("The Maid is a Vampire Chapter"), but never return an empty string
             return title.replace(regexUsed.trailingBareKeywordRegex, '').trim() || title;
         }
 
-        const prefix = title.slice(0, blockStart).trim();
-        const rawSuffix = title.slice(blockEnd);
+        const prefix = title.slice(0, block.start).trim();
+        const rawSuffix = title.slice(block.end);
 
-        const subtitleMarker = /^\s*[:\-–—|]\s*/;
-        const hasMarker = subtitleMarker.test(rawSuffix);
-        const suffix = rawSuffix.replace(subtitleMarker, '').trim();
+        const subtitleSeparator = /^\s*[:\-–—|]\s*/;
+        const continuesTitle = subtitleSeparator.test(rawSuffix);
+        const suffix = rawSuffix.replace(subtitleSeparator, '').trim();
 
-        if (hasMarker && suffix) return suffix;
-        if (prefix) return prefix;
-        if (suffix) return suffix;
-        return '';
+        if (continuesTitle && suffix) return suffix;
+        return prefix || suffix;
+    }
+    /** Span from the start of the first chapter marker to the end of the last one, or null when there is none. */
+    private static findChapterBlock(title: string, chapterRegex: RegExp): { start: number, end: number } | null {
+        let start = -1;
+        let end = -1;
+        for (const match of title.matchAll(new RegExp(chapterRegex.source, chapterRegex.flags.includes('g') ? chapterRegex.flags : `${chapterRegex.flags}g`))) {
+            if (start === -1) start = match.index;
+            end = match.index + match[0].length;
+        }
+        return start === -1 ? null : { start, end };
     }
 
     private static makeTitle(filter: string[], regexUsed: RegexConfig, HermidataUrl: string): TrimmedTitle | null {

@@ -706,26 +706,22 @@ export async function checkSyncQuota(): Promise<void> {
     const used_Items = (await ext.storage.sync.getKeys()).length;
     const used_bytes = await ext.storage.sync.getBytesInUse();
     const used_bytes_per_item = 1070 // average
-    const used_write_operations = 0 // TODO
     // 2. get max usage
     const max_items = getMaxItemsCount();
     const max_bytes = getMaxByteCount();
     const max_bytes_per_item = getMaxByteCountPerItem();
-    const max_write_operations = getMaxWriteOperations();
     // 3. log current usage
     console.group('[Sync] Current usage');
     
     console.log(`[Sync] Used ${used_Items} of ${max_items} items (${Math.round(used_Items / max_items * 100)}%)`);
     console.log(`[Sync] Used ${used_bytes} of ${max_bytes} bytes (${Math.round( used_bytes / max_bytes * 100)}%)`);
     console.log(`[Sync] Used ${used_bytes_per_item} of ${max_bytes_per_item} bytes per item (${Math.round( used_bytes_per_item / max_bytes_per_item * 100)}%)`);
-    console.log(`[Sync] Used ${used_write_operations} of ${max_write_operations} write operations per hour (${Math.round( used_write_operations / max_write_operations * 100)}%)`);
     // 4. warn if close to limit
 
     if (
         used_Items >( max_items * 0.9) ||
         used_bytes > (max_bytes * 0.9) ||
-        used_bytes_per_item > (max_bytes_per_item * 0.9) ||
-        used_write_operations > (max_write_operations * 0.9)
+        used_bytes_per_item > (max_bytes_per_item * 0.9)
     ) console.warn('[Sync] Approaching sync storage limit')
 
     console.groupEnd();
@@ -742,11 +738,6 @@ function getMaxByteCountPerItem(): number {
     const MAX = ext.storage.sync.QUOTA_BYTES_PER_ITEM ?? 8192;
     return MAX;
 }
-function getMaxWriteOperations(): number {
-    const MAX = ext.storage.sync.MAX_WRITE_OPERATIONS_PER_HOUR ?? 1800;
-    return MAX;
-}
-
 const kbCounter = (kb: number) => `${kb}KB --> ${Math.round(kb / getMaxByteCount() * 100)}% of max ${getMaxByteCount()}`;
 
 function notifySyncTooBig(kbCounter: string): void {

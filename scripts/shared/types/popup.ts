@@ -145,8 +145,6 @@ language [x]
 
 */
 
-// FIXME: make sure originalRelease is there
-
 export type HermidataDateType = 'added' | 'updated' | 'originalRelease';
 export type HermidataSortType = 'pubDate';
 
@@ -258,7 +256,7 @@ export type RawFeed = {
     latestItem: FeedItem,
     lastToken: string | null
 }
-// FIXME: lastToken && guid have been added; check if it works
+
 export type FeedItem = {
     id: string, // based on title + link
     rawTitle: string, // the title as it appears in the feed

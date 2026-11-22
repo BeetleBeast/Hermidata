@@ -448,28 +448,42 @@ export class HermidataMerge extends LibraryBuilder {
     }
     /* returns the record to keep and the reason why */
     private calculateSuggestion(selectedItems: Hermidata[]): { recordToKeep: 'A' | 'B', record: Hermidata, reason: string, finalString: string } {
-        // letter to keep
-        const itemOne = selectedItems[0];
-        const itemTwo = selectedItems[1];
-        // TODO: make this better
-        // temporary
-        const letterToKeep = itemOne.title.length > itemTwo.title.length ? 'B' : 'A';
-        const recordToKeep = letterToKeep === 'A' ? itemOne : itemTwo;
-        const amountOfFields = Object.keys(recordToKeep).filter(k => {
-            const key = k as keyof Hermidata;
-            const attribute = recordToKeep[key];
-            if (typeof attribute === "number") return attribute > 0;
-            else if (typeof attribute === "string") return attribute.length > 0;
-            else if (typeof attribute === "boolean") return attribute;
-        }).length;
+        const [itemOne, itemTwo] = selectedItems;
+        const filledOne = this.countFilledFields(itemOne);
+        const filledTwo = this.countFilledFields(itemTwo);
 
+        // 1. most filled in fields wins
+        // 2. tie: furthest reading progress wins
+        // 3. tie: record A
+        let letterToKeep: 'A' | 'B';
+        let reason: string;
+        if (filledOne !== filledTwo) {
+            letterToKeep = filledOne > filledTwo ? 'A' : 'B';
+            const difference = Math.abs(filledOne - filledTwo);
+            reason = `it has ${difference} more field${difference > 1 ? 's' : ''} filled in`;
+        } else if (itemOne.chapter.latest !== itemTwo.chapter.latest) {
+            letterToKeep = itemOne.chapter.latest > itemTwo.chapter.latest ? 'A' : 'B';
+            reason = 'it is further along in the story';
+        } else {
+            letterToKeep = 'A';
+            reason = 'both records are equally complete';
+        }
 
         return {
             recordToKeep: letterToKeep,
-            record: itemOne,
-            reason: `it has ${amountOfFields} more field${amountOfFields > 1 ? 's' : ''} filled in`,
-            finalString: `keep record ${letterToKeep}, it has ${amountOfFields} more field${amountOfFields > 1 ? 's' : ''} filled in`
+            record: letterToKeep === 'A' ? itemOne : itemTwo,
+            reason,
+            finalString: `keep record ${letterToKeep}, ${reason}`
         }
+    }
+    /* counts the fields that hold a meaningful value, looking inside nested objects and arrays */
+    private countFilledFields(value: unknown): number {
+        if (typeof value === 'number') return value > 0 ? 1 : 0;
+        if (typeof value === 'string') return value.trim().length > 0 ? 1 : 0;
+        if (typeof value === 'boolean') return value ? 1 : 0;
+        if (Array.isArray(value)) return value.length > 0 ? 1 : 0;
+        if (value && typeof value === 'object') return Object.values(value).reduce<number>((sum, child) => sum + this.countFilledFields(child), 0);
+        return 0; // null / undefined
     }
     private createElementOfRecord(label: string, content: string, className: string, isNumericValue?: boolean): HTMLDivElement {
         const containerElement = document.createElement('div');
@@ -548,9 +562,6 @@ export class HermidataMerge extends LibraryBuilder {
 
         // latest chapter
         const latestChapterContainer = this.createElementOfRecord('Latest Chapter:', String(record.GetChapter()) ?? 'Unknown', 'latest-chapter');
-
-        // TODO: think of more attributes to add
-        // Other??
 
         // tags
         const tagsContainer = this.createTagsOfRecord(record.meta.tags);

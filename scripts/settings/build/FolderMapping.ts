@@ -440,8 +440,7 @@ export class FolderMapping extends Build {
 
         const label = document.createElement('span')
         label.className = 'folder-mapping-label';
-        label.textContent = `${type} + ${status} → `
-        // TODO: make the text content better
+        label.textContent = `${type} · ${status} → `
 
         const edit = document.createElement('input');
         edit.className = 'folder-mapping-edit-override';
