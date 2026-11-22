@@ -37,29 +37,41 @@ export class Toast {
         return host;
     }
     private static buildToast(host: HTMLElement, message: string, closeAfterMs: number): HTMLElement {
-        const el = this.buildElement(message);
+        const el = this.buildElement();
         host.attachShadow({ mode: 'closed' }).appendChild(el);
         document.documentElement.appendChild(host);
+        // A live region is only announced when its text changes after it is in the page, so the message goes in last
+        requestAnimationFrame(() => { el.textContent = message; }); // textContent, never innerHTML
         return el;
     }
     private static setAnimation(host: HTMLElement, el: HTMLElement, closeAfterMs: number) {
-        el.animate([this.hidden, this.shown], { duration: 200, easing: 'ease-out' });
+        if (!this.prefersReducedMotion()) el.animate([this.hidden, this.shown], { duration: 200, easing: 'ease-out' });
 
         let timer: ReturnType<typeof setTimeout>;
         const dismiss = () => {
             clearTimeout(timer);
+            document.removeEventListener('keydown', onKeyDown, true);
             void this.dismiss(el, host);
         };
+        // listens only; the page still receives the key
+        const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') dismiss(); };
 
         el.addEventListener('click', dismiss, { once: true });
+        document.addEventListener('keydown', onKeyDown, true);
+        // the toast stays while it is hovered, so it can be read at any pace
+        el.addEventListener('mouseenter', () => clearTimeout(timer));
+        el.addEventListener('mouseleave', () => { timer = setTimeout(dismiss, closeAfterMs); });
         timer = setTimeout(dismiss, closeAfterMs);
     }
+    private static prefersReducedMotion(): boolean {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
 
-    private static buildElement(message: string): HTMLElement {
+    private static buildElement(): HTMLElement {
         const el = document.createElement('div');
         el.setAttribute('role', 'status');
         el.setAttribute('aria-live', 'polite');
-        el.textContent = message; // textContent, never innerHTML
+        el.setAttribute('aria-atomic', 'true');
 
         Object.assign(el.style, {
             all: 'initial',          // keep first
@@ -80,6 +92,7 @@ export class Toast {
         return el;
     }
     private static async dismiss(div: HTMLElement, host: HTMLElement) {
+        if (this.prefersReducedMotion()) return host.remove();
         await div.animate([this.shown, this.hidden], {
             duration: 200,
             easing: 'ease-in',

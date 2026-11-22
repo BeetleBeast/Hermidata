@@ -1,6 +1,7 @@
 import { saveHermidata } from "../../shared/db/Storage";
 import { generateBookmarkId } from "../../shared/utils/StringOutput";
 import type { Bookmark } from "../../shared/types";
+import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { ColorPicker } from "../frontend/ColorPicker";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
@@ -347,6 +348,8 @@ export class BookmarkController {
             }
         });
 
+        makeButtonLike(bookmarkContainer, `Use marker ${bookmark.label}, chapter ${lastChapter}`);
+        bookmarkContainer.setAttribute('aria-pressed', String(isActiveBookmark));
         bookmarkContainer.append(bookmarkLabel, bookmarkChapter);
         this.bookmarkMenu!.appendChild(bookmarkContainer);
     }
@@ -373,6 +376,7 @@ export class BookmarkController {
         bookmarkLabel.setAttribute('name', 'marker label');
         bookmarkLabel.setAttribute('type', 'text');
         bookmarkLabel.setAttribute('title', 'rename this marker');
+        bookmarkLabel.setAttribute('aria-label', `Rename marker ${value.label}`);
         bookmarkLabel.value = value.label;
 
         bookmarkLabel.addEventListener('focusout', async () => {
@@ -400,12 +404,14 @@ export class BookmarkController {
         </g>`;
         bookmarkSVG.style.fill = value.color;
         bookmarkSVG.style.cursor = 'pointer';
+        makeButtonLike(bookmarkSVG, `Change colour of marker ${value.label}`);
         this.createColorPicker(bookmarkSVG, key);
 
         if (!value.isPrimary) {
             const bookmarkDelete = document.createElement('div');
             bookmarkDelete.className = 'bookmarkDelete';
             bookmarkDelete.textContent = 'Remove';
+            makeButtonLike(bookmarkDelete, `Remove marker ${value.label}`);
             bookmarkDelete.addEventListener('click', async () => {
                 try {
                     await this.removeBookmark(key);

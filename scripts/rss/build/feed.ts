@@ -1,6 +1,7 @@
 import { findByTitleOrAlt, extractChapterFromFeedItemTitle } from "../../shared/utils/StringOutput";
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
 import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
+import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 
@@ -74,6 +75,12 @@ export class FeedItem {
             localStorage.setItem('notificationLastDirection', JSON.stringify(feedHeaderSymbol.dataset.feedState));
         });
         title.appendChild(feedHeaderSymbol);
+
+        // the header folds the notification list: a button that reports open ( 'down' ) / closed ( 'up' )
+        makeButtonLike(container, 'Notifications');
+        const syncExpanded = () => container.setAttribute('aria-expanded', String(feedHeaderSymbol.dataset.feedState === 'down'));
+        syncExpanded();
+        new MutationObserver(syncExpanded).observe(feedHeaderSymbol, { attributes: true, attributeFilter: ['data-feed-state'] });
 
         parent_section.appendChild(container)
     }
@@ -296,6 +303,7 @@ export class FeedItem {
                 allTagsInString += `[${tagName}]`;
                 tagDiv.style.color = settings.TagManagement.tagColoring?.[tagName] || 'white';
                 tagDiv.dataset.TagColor = settings.TagManagement.tagColoring?.[tagName] || 'white';
+                tagDiv.style.setProperty('--tag-color', tagDiv.dataset.TagColor);
                 ElTagContainer.append(tagDiv)
             }
             ElTagContainer.dataset.tags = JSON.stringify(allTags);

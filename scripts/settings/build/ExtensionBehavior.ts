@@ -13,6 +13,7 @@ import {
 import { Build } from "../build";
 import { BookmarkTitleFormat } from "./BookmarkTitleFormat";
 import { ext } from "../../shared/utils/BrowserCompat";
+import { applyLightMode } from "../../shared/utils/Theme";
 import { customConfirm } from "../../popup/frontend/confirm";
 import { BACKFILL_STATE_KEY, backfillLabel, backfillMinutes, type BackfillState } from "../../shared/lookup/backfill";
 
@@ -354,6 +355,7 @@ export class ExtensionBehavior extends Build {
     private async EnableLightMode(e: Event) {
         const event = e.target as HTMLInputElement;
         const isChecked = event.checked;
+        applyLightMode(isChecked);
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.EnableLightMode = isChecked;
 

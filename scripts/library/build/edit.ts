@@ -2,10 +2,24 @@ import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
 import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, HermidataImageSource, Settings, SwitchConfig, TagMap } from "../../shared/types";
+import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { openLink, generateHermidataHash, getFreeKey } from "../../shared/utils/StringOutput";
 import { PageDetailBuilder, LibraryBuilder } from "../build";
 import { Tags } from "./tags";
+
+/** Accessible names of the fields that are swapped for an input while editing, keyed by the id of the displayed element */
+const EDIT_FIELD_LABELS: Record<string, string> = {
+    'hermidata-title': 'Title',
+    'hermidata-alternative-titles-list': 'Alternative titles',
+    'hermidata-novelType': 'Novel type',
+    'hermidata-contentRating': 'Content rating',
+    'hermidata-releaseDate': 'Release date',
+    'hermidata-novelStatus': 'Novel status',
+    'hermidata-starRating': 'Star rating',
+    'hermidata-sources': 'Sources',
+    'hermidata-author': 'Author',
+};
 
 type ImageUrlImport = { kind: 'url'; url: string; blob: Blob };
 type ImageFileImport = { kind: 'file'; file: Blob | File };
@@ -292,7 +306,7 @@ export class EditDetail extends LibraryBuilder {
             const newElement = document.createElement(switchTo);
 
             // 2. copy attributes
-            for (const attr of element.attributes) newElement.setAttribute(attr.name, attr.value);
+            this.copyAttributes(element, newElement);
             newElement.dataset.editing = 'false';
 
             // 3. transfer content
@@ -636,6 +650,7 @@ export class EditDetail extends LibraryBuilder {
         altTitleButton?.addEventListener('click', () => {
             altTitles!.dataset.closed = altTitles!.dataset.closed === 'true' ? 'false' : 'true';
             document.querySelector<SVGElement>('.hermidata-alternative-title-button-arrow')!.dataset.closed = altTitles!.dataset.closed;
+            document.querySelector('#hermidata-alternative-title-button')?.setAttribute('aria-expanded', String(altTitles!.dataset.closed === 'false'));
         });
         
     }
@@ -649,7 +664,7 @@ export class EditDetail extends LibraryBuilder {
         const newElement = document.createElement('textarea');
 
         // 2. copy attributes
-        for (const attr of altTitlesContainer.attributes) newElement.setAttribute(attr.name, attr.value);
+        this.copyAttributes(altTitlesContainer, newElement);
         newElement.dataset.editing = 'true';
 
         // 3. transfer content
@@ -671,7 +686,8 @@ export class EditDetail extends LibraryBuilder {
             const newElement = document.createElement(switchTo);
 
             // 2. copy attributes
-            for (const attr of element.attributes) newElement.setAttribute(attr.name, attr.value);
+            this.copyAttributes(element, newElement);
+            newElement.setAttribute('aria-label', 'Change cover image');
             newElement.dataset.editing = 'true';
 
             // 3. transfer content
@@ -775,8 +791,11 @@ export class EditDetail extends LibraryBuilder {
             const markerElement = marker.querySelector<HTMLDivElement>('.hermidata-marker');
             markerElement!.dataset.editing = 'true';
 
-            // disable event listeners
+            const markerName = marker.querySelector<HTMLDivElement>('.hermidata-marker-label')?.textContent ?? '';
+
+            // disable event listeners ( and the button role: the row holds inputs while editing )
             markerElement?.removeEventListener('click', PageDetailBuilder.handleMarkerClick);
+            for (const attribute of ['role', 'tabindex', 'aria-label']) markerElement?.removeAttribute(attribute);
 
             // colour
             const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
@@ -785,20 +804,23 @@ export class EditDetail extends LibraryBuilder {
             colour.dataset.editing = 'true';
             
             colour.addEventListener('click', this.setMarkerColourHandler );
+            colour.removeAttribute('aria-hidden');
+            makeButtonLike(colour, `Change colour of marker ${markerName}`);
             // chapter
             const chapter = marker.querySelector<HTMLDivElement>('.hermidata-marker-chapter');
             if (!chapter) continue;
             // trim chapter
             chapter.textContent = chapter.textContent.replace('Ch. ', '');
-            this.switchElement(chapter, 'input', 'number', true, 'set');
+            this.switchElement(chapter, 'input', 'number', true, 'set').setAttribute('aria-label', `Chapter of marker ${markerName}`);
             // label
             const label = marker.querySelector<HTMLDivElement>('.hermidata-marker-label');
             if (!label) continue;
-            this.switchElement(label, 'input', 'text', true, 'set');
+            this.switchElement(label, 'input', 'text', true, 'set').setAttribute('aria-label', `Label of marker ${markerName}`);
             // read status
             const readStatus = marker.querySelector<HTMLDivElement>('.hermidata-marker-readStatus');
             if (!readStatus) continue;
             const select = this.switchElement(readStatus, 'select', true, 'set');
+            select.setAttribute('aria-label', `Read status of marker ${markerName}`);
             // set read status options
             this.setReadStatusOptions(select, readStatus.textContent);
 
@@ -807,7 +829,7 @@ export class EditDetail extends LibraryBuilder {
             const notes = marker.querySelector<HTMLDivElement>('.hermidata-marker-notes-inner');
             if (!notes || !notesContainer) continue;
             notesContainer.dataset.editing = 'true';
-            this.switchElement(notes, 'input', 'text', true, 'set');
+            this.switchElement(notes, 'input', 'text', true, 'set').setAttribute('aria-label', `Notes of marker ${markerName}`);
         }
     }
     private setMarkerColour = (colour: HTMLDivElement, defaultColor: string, rect: DOMRect) => {
@@ -836,12 +858,18 @@ export class EditDetail extends LibraryBuilder {
 
             // enable event listeners
             markerElement?.addEventListener('click', PageDetailBuilder.handleMarkerClick);
+            if (markerElement) {
+                const bookmark = this.hermidata.getBookmark(markerId);
+                makeButtonLike(markerElement, `Open marker ${bookmark.label}, chapter ${bookmark.current}`);
+            }
 
             // colour
             const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
             if (!colour) continue;
             const defaultColor = this.hermidata.getBookmark(markerId).color;
             colour.removeEventListener('click', this.setMarkerColourHandler);
+            for (const attribute of ['role', 'tabindex', 'aria-label']) colour.removeAttribute(attribute);
+            colour.setAttribute('aria-hidden', 'true');
             colour.dataset.editing = 'false';
             colour.style.backgroundColor =  resetInfo ? defaultColor : colour.style.backgroundColor;
             // chapter
@@ -968,7 +996,7 @@ export class EditDetail extends LibraryBuilder {
             const newElement = document.createElement(switchTo);
 
             // 2. copy attributes
-            for (const attr of element.attributes) newElement.setAttribute(attr.name, attr.value);
+            this.copyAttributes(element, newElement);
             newElement.dataset.editing = 'true';
 
             // 3. transfer content
@@ -983,7 +1011,6 @@ export class EditDetail extends LibraryBuilder {
             if (option) newElement.append(option, ...options);
 
             // 3.4 set original value as selected
-            // TODO: check if it works
             newElement.selectedIndex = Array.from(newElement.options).findIndex(opt => opt.value === value);
             
             // 4. replace element
@@ -1029,14 +1056,12 @@ export class EditDetail extends LibraryBuilder {
         }
 
         // 2. copy attributes
-        for (const attr of element.attributes) {
-            if (attr.name === 'style' && element instanceof HTMLTextAreaElement && switchTo === 'div') {
-                const strippedStyle = this.removeStyleProperty(attr.value, 'height');
-                if (strippedStyle) newElement.setAttribute('style', strippedStyle);
-                continue;
-            }
-            else newElement.setAttribute(attr.name, attr.value);
-        }
+        this.copyAttributes(element, newElement, (attr) => {
+            if (attr.name !== 'style' || !(element instanceof HTMLTextAreaElement) || switchTo !== 'div') return false;
+            const strippedStyle = this.removeStyleProperty(attr.value, 'height');
+            if (strippedStyle) newElement.setAttribute('style', strippedStyle);
+            return true;
+        });
         newElement.dataset.editing = set === 'reset' ? 'false' : 'true';
 
         // 3. transfer content
@@ -1051,6 +1076,24 @@ export class EditDetail extends LibraryBuilder {
 
         // 5. return new element
         return newElement;
+    }
+    /**
+     * Copies the attributes of the element being replaced. The role is not copied ( a "group" must not turn an input
+     * into a group ); a control is named after the field it edits and a plain div gets its group role back.
+     * `handled` can take over single attributes, returning true when it did.
+     */
+    private copyAttributes(from: HTMLElement, to: HTMLElement, handled?: (attr: Attr) => boolean): void {
+        for (const attr of from.attributes) {
+            if (attr.name === 'role' || handled?.(attr)) continue;
+            to.setAttribute(attr.name, attr.value);
+        }
+        const isControl = to instanceof HTMLInputElement || to instanceof HTMLSelectElement || to instanceof HTMLTextAreaElement;
+        const fieldLabel = EDIT_FIELD_LABELS[from.id];
+        if (isControl && fieldLabel) to.setAttribute('aria-label', fieldLabel);
+        if (to instanceof HTMLDivElement && fieldLabel) {
+            to.setAttribute('aria-label', fieldLabel);
+            to.setAttribute('role', 'group');
+        } else if (!isControl) to.removeAttribute('aria-label'); // a heading, image or unnamed div keeps its own content as name
     }
     private isValueElement(element: HTMLElement): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
         return element instanceof HTMLInputElement
@@ -1107,13 +1150,28 @@ export class EditDetail extends LibraryBuilder {
         const tabButtons = this.popover.querySelectorAll<HTMLButtonElement>('.tab-btn');
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
-                tabButtons.forEach(b => b.classList.remove('active'));
+                tabButtons.forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-selected', 'false');
+                    b.tabIndex = -1;
+                });
                 btn.classList.add('active');
+                btn.setAttribute('aria-selected', 'true');
+                btn.tabIndex = 0;
 
                 const mode = btn.dataset.mode;
                 this.popover?.querySelectorAll<HTMLDivElement>('.image-changer-panel').forEach(panel => {
                     panel.hidden = panel.dataset.panel !== mode;
                 });
+            });
+            // arrow keys move between the tabs
+            btn.addEventListener('keydown', (e) => {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                const tabs = Array.from(tabButtons);
+                const step = e.key === 'ArrowRight' ? 1 : -1;
+                const next = tabs[(tabs.indexOf(btn) + step + tabs.length) % tabs.length];
+                next.focus();
+                next.click();
             });
         });
 

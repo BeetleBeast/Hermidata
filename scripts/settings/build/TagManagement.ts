@@ -75,6 +75,7 @@ export class TagManagement extends Build {
         inputElement.type = "text";
         inputElement.classList = "EditORemoveItem-input";
         inputElement.id = `editTagInput-${input}`;
+        inputElement.setAttribute("aria-label", `Tag name ${input}`);
         inputElement.value = input;
         inputElement.dataset.tag = input;
 
@@ -82,6 +83,7 @@ export class TagManagement extends Build {
         updateBtn.type = "button";
         updateBtn.classList = "EditORemoveItem-updateBtn";
         updateBtn.textContent = "Update";
+        updateBtn.setAttribute("aria-label", `Update tag ${input}`);
         updateBtn.addEventListener("click", () => {
             const editTagInput = getElement<HTMLInputElement>(`#editTagInput-${input}`);
             if (!editTagInput) return;
@@ -97,6 +99,7 @@ export class TagManagement extends Build {
         removeBtn.type = "button";
         removeBtn.classList = "EditORemoveItem-removeBtn";
         removeBtn.textContent = "Remove";
+        removeBtn.setAttribute("aria-label", `Remove tag ${input}`);
         removeBtn.addEventListener("click", () => {
             item.remove(); // remove front-end
             this.deleteTag(input); // remove back-end
@@ -209,6 +212,7 @@ export class TagManagement extends Build {
         input.type = "color";
         input.value = this.tagColoring[tag];
         input.dataset.tag = tag;
+        input.setAttribute("aria-label", `Color of tag ${tag}`);
         input.dataset.color = this.tagColoring[tag];
 
         input.addEventListener("input", async () => {

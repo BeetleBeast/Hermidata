@@ -2,6 +2,7 @@ import { CONTENT_RATING_MAP, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import type { Controller } from "../controller";
 import { Sort } from "./filter";
@@ -204,14 +205,27 @@ export class filter extends Sort {
         labelAny.textContent = 'Any';
 
         // include / exclude tags logic
+        radioContainer.setAttribute('role', 'radiogroup');
+        radioContainer.setAttribute('aria-label', 'Inclusion mode');
+        makeButtonLike(radioAll, 'All tags must match', 'radio');
+        makeButtonLike(radioAny, 'Any tag may match', 'radio');
+        const syncRadios = () => {
+            radioAll.setAttribute('aria-checked', radioAll.dataset.state ?? 'false');
+            radioAny.setAttribute('aria-checked', radioAny.dataset.state ?? 'false');
+        };
+        for (const decorativeLabel of [labelAll, labelAny]) decorativeLabel.setAttribute('aria-hidden', 'true');
+
         radioAll?.addEventListener('click', () => {
             radioAll!.dataset.state = 'true';
             radioAny!.dataset.state = 'false';
+            syncRadios();
         })
         radioAny?.addEventListener('click', () => {
             radioAll!.dataset.state = 'false';
             radioAny!.dataset.state = 'true';
+            syncRadios();
         })
+        syncRadios();
 
         radioContainer.append(radioAll, labelAll, radioAny, labelAny);
 
@@ -233,6 +247,7 @@ export class filter extends Sort {
         searchInput.type = 'text';
         searchInput.placeholder = 'Search genres & themes...';
         searchInput.id = 'tag-search-input';
+        searchInput.setAttribute('aria-label', 'Search genres & themes');
         searchInput.classList.add('genres-themes-search-input');
 
         searchInputContainer.append(searchIcon, searchInput);

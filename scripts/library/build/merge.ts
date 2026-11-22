@@ -156,6 +156,7 @@ export class HermidataMerge extends LibraryBuilder {
         // counter
         const counter = document.createElement('p');
         counter.className = 'merger-dialog-counter';
+        counter.setAttribute('role', 'status');
         const amount = this.getAllItemWithSelectedCheckboxes?.length || 0;
         counter.textContent = `${amount} selected`;
         
@@ -164,6 +165,7 @@ export class HermidataMerge extends LibraryBuilder {
         const exitButton = document.createElement('button');
         exitButton.className = 'merger-dialog-exit';
         exitButton.textContent = 'x';
+        exitButton.setAttribute('aria-label', 'Close merge panel');
         exitButton.addEventListener('click', this.closeMergePanel);
 
         // text
@@ -220,7 +222,7 @@ export class HermidataMerge extends LibraryBuilder {
         // blue suggestion text
         const blueSuggestion = document.createElement('p');
         blueSuggestion.className = 'merger-dialog-suggestion';
-        const infoIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="info-icon" x="0px" y="0px" width="100" height="100" viewBox="0 0 48 48">
+        const infoIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="info-icon" aria-hidden="true" x="0px" y="0px" width="100" height="100" viewBox="0 0 48 48">
             <path class="cls-1" fill="#2196f3" d="M44,24c0,11.045-8.955,20-20,20S4,35.045,4,24S12.955,4,24,4S44,12.955,44,24z"></path>
             <path class="cls-2" fill="#fff" d="M22 22h4v11h-4V22zM26.5 16.5c0 1.379-1.121 2.5-2.5 2.5s-2.5-1.121-2.5-2.5S22.621 14 24 14 26.5 15.121 26.5 16.5z"></path>
             </svg>`;
@@ -446,28 +448,42 @@ export class HermidataMerge extends LibraryBuilder {
     }
     /* returns the record to keep and the reason why */
     private calculateSuggestion(selectedItems: Hermidata[]): { recordToKeep: 'A' | 'B', record: Hermidata, reason: string, finalString: string } {
-        // letter to keep
-        const itemOne = selectedItems[0];
-        const itemTwo = selectedItems[1];
-        // TODO: make this better
-        // temporary
-        const letterToKeep = itemOne.title.length > itemTwo.title.length ? 'B' : 'A';
-        const recordToKeep = letterToKeep === 'A' ? itemOne : itemTwo;
-        const amountOfFields = Object.keys(recordToKeep).filter(k => {
-            const key = k as keyof Hermidata;
-            const attribute = recordToKeep[key];
-            if (typeof attribute === "number") return attribute > 0;
-            else if (typeof attribute === "string") return attribute.length > 0;
-            else if (typeof attribute === "boolean") return attribute;
-        }).length;
+        const [itemOne, itemTwo] = selectedItems;
+        const filledOne = this.countFilledFields(itemOne);
+        const filledTwo = this.countFilledFields(itemTwo);
 
+        // 1. most filled in fields wins
+        // 2. tie: furthest reading progress wins
+        // 3. tie: record A
+        let letterToKeep: 'A' | 'B';
+        let reason: string;
+        if (filledOne !== filledTwo) {
+            letterToKeep = filledOne > filledTwo ? 'A' : 'B';
+            const difference = Math.abs(filledOne - filledTwo);
+            reason = `it has ${difference} more field${difference > 1 ? 's' : ''} filled in`;
+        } else if (itemOne.chapter.latest !== itemTwo.chapter.latest) {
+            letterToKeep = itemOne.chapter.latest > itemTwo.chapter.latest ? 'A' : 'B';
+            reason = 'it is further along in the story';
+        } else {
+            letterToKeep = 'A';
+            reason = 'both records are equally complete';
+        }
 
         return {
             recordToKeep: letterToKeep,
-            record: itemOne,
-            reason: `it has ${amountOfFields} more field${amountOfFields > 1 ? 's' : ''} filled in`,
-            finalString: `keep record ${letterToKeep}, it has ${amountOfFields} more field${amountOfFields > 1 ? 's' : ''} filled in`
+            record: letterToKeep === 'A' ? itemOne : itemTwo,
+            reason,
+            finalString: `keep record ${letterToKeep}, ${reason}`
         }
+    }
+    /* counts the fields that hold a meaningful value, looking inside nested objects and arrays */
+    private countFilledFields(value: unknown): number {
+        if (typeof value === 'number') return value > 0 ? 1 : 0;
+        if (typeof value === 'string') return value.trim().length > 0 ? 1 : 0;
+        if (typeof value === 'boolean') return value ? 1 : 0;
+        if (Array.isArray(value)) return value.length > 0 ? 1 : 0;
+        if (value && typeof value === 'object') return Object.values(value).reduce<number>((sum, child) => sum + this.countFilledFields(child), 0);
+        return 0; // null / undefined
     }
     private createElementOfRecord(label: string, content: string, className: string, isNumericValue?: boolean): HTMLDivElement {
         const containerElement = document.createElement('div');
@@ -547,9 +563,6 @@ export class HermidataMerge extends LibraryBuilder {
         // latest chapter
         const latestChapterContainer = this.createElementOfRecord('Latest Chapter:', String(record.GetChapter()) ?? 'Unknown', 'latest-chapter');
 
-        // TODO: think of more attributes to add
-        // Other??
-
         // tags
         const tagsContainer = this.createTagsOfRecord(record.meta.tags);
 
@@ -619,6 +632,8 @@ export class HermidataMerge extends LibraryBuilder {
             container.classList.add('merger-dialog-warning-field-container');
             container.dataset.field = field;
             container.id = `merger-dialog-warning-field-${field}`;
+            container.setAttribute('role', 'radiogroup');
+            container.setAttribute('aria-label', this.trimFieldName(field));
 
             // field
             const fieldElement = document.createElement('p');
@@ -677,6 +692,7 @@ export class HermidataMerge extends LibraryBuilder {
         input.dataset.value = value;
         input.dataset.record = recordLetter;
         input.checked = recordLetter === suggestedLetterToKeep;
+        input.setAttribute('aria-label', `Use "${value}" from record ${recordLetter}`);
 
         // value
         const valueElement = document.createElement('p');

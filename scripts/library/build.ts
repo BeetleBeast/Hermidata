@@ -167,11 +167,12 @@ export abstract class LibraryBuilder {
 
 export class PageDetailBuilder {
 
-    static hermidata: HermidataModel;
+    static hermidata: HermidataModel | undefined;
 
     /** NOTE: when using make sure there is a local hermidata used */
-    static handleMarkerClick = (event: MouseEvent) => {
-        // FIXME: this doesn't work
+    static handleMarkerClick = (event: MouseEvent): void => {
+        if (!this.hermidata) return;
+
         const marker = (event.target as HTMLElement).closest<HTMLElement>('.hermidata-marker-container');
         if (!marker) return;
 

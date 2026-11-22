@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hermidata</title>
+    <script src="/scripts/theme-init.js"></script>
     <link rel="stylesheet" href="../assets/styles/popup/classic.css">
     <link rel="stylesheet" href="../assets/styles/marker/general.css">
     <link rel="stylesheet" href="../assets/styles/marker/main-menu.css">
@@ -21,9 +22,9 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=progress_activity" />
 </head>
 <body>
-    <div id="header" class="HDSwitcher">
-        <button id="HDClassicBtn" type="button" class="Btn active">Classic</button>
-        <button id="HDRssBtn" type="button" class="Btn">RSS</button>
+    <div id="header" class="HDSwitcher" role="group" aria-label="View mode">
+        <button id="HDClassicBtn" type="button" class="Btn active" aria-pressed="true">Classic</button>
+        <button id="HDRssBtn" type="button" class="Btn" aria-pressed="false">RSS</button>
     </div>
 <section id="body" class="HDClassic">
     <section class="main">
@@ -37,31 +38,31 @@
                     </g>
                 </svg>
             </button>
-            <input id="title" class="autoInput" data-name="Title" type="text" spellcheck="false" placeholder="Title" />
-            <button class="openSettings" type="button" >
-                <img alt="0" class="icon" class="imgSettings" src='../assets/icon/settings_24.png' title="Settings"/>
+            <input id="title" class="autoInput" data-name="Title" type="text" spellcheck="false" placeholder="Title" aria-label="Title" />
+            <button class="openSettings" type="button" aria-label="Open settings" title="Settings">
+                <img alt="" class="icon imgSettings" src='../assets/icon/settings_24.png'/>
             </button>
         </div>
         <div class="table-2-container">
             <table class="table-2">
                 <thead>
                     <tr>
-                    <th class="HEADER">Chapter</th>
-                    <th class="HEADER">Type</th>
-                    <th class="HEADER">Read Status</th>
-                    <th class="HEADER">Novel Status</th>
+                    <th class="HEADER" scope="col">Chapter</th>
+                    <th class="HEADER" scope="col">Type</th>
+                    <th class="HEADER" scope="col">Read Status</th>
+                    <th class="HEADER" scope="col">Novel Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td><div class="chapter-container">
-                                <p id="previousChapter" class="autoInput" data-name="PreviousChapter" type="number"></p>
-                                <span id="chapterArrow">=></span>
-                                <input id="chapter" class="autoInput" data-name="Chapter" type="number" placeholder="Chapter"/>
+                                <p id="previousChapter" class="autoInput" data-name="PreviousChapter" type="number" aria-label="Previous chapter"></p>
+                                <span id="chapterArrow" aria-hidden="true">=></span>
+                                <input id="chapter" class="autoInput" data-name="Chapter" type="number" placeholder="Chapter" aria-label="Current chapter"/>
                         </td></div>
-                        <td><select id="Type" class="autoInput" data-name="Type" type="text" title="Type"></select></td>
-                        <td><select id="status" class="autoInput" data-name="Status" type="text" title="Status"></select></td>
-                        <td><select id="NovelStatus" class="autoInput" data-name="NovelStatus" type="text" title="NovelStatus"></select></td>
+                        <td><select id="Type" class="autoInput" data-name="Type" type="text" title="Type" aria-label="Type"></select></td>
+                        <td><select id="status" class="autoInput" data-name="Status" type="text" title="Status" aria-label="Read status"></select></td>
+                        <td><select id="NovelStatus" class="autoInput" data-name="NovelStatus" type="text" title="NovelStatus" aria-label="Novel status"></select></td>
                     </tr>
                 </tbody>
             </table>
@@ -69,18 +70,18 @@
         <div class="table-1-container">
             <table class="table-1">
                 <tr class="table-1-tags-container">
-                    <th class="HEADER tags-header">Tags</th>
+                    <th class="HEADER tags-header" scope="row">Tags</th>
                     <td class="tags-container">
                         <div class="autocomplete-wrapper">
-                            <input id="tags" class="autoInput" data-name="Tag" type="text" placeholder="add tag..." />
+                            <input id="tags" class="autoInput" data-name="Tag" type="text" placeholder="add tag..." aria-label="Add tag" autocomplete="off" />
                             <span class="autocomplete-ghost" aria-hidden="true"></span>
                         </div>
-                        <div id="tag-pill-container"></div>
+                        <div id="tag-pill-container" role="list" aria-label="Tags"></div>
                     </td>
                 </tr>
                 <tr>
-                    <th class="HEADER notes-header">Notes</th>
-                    <td><input id="notes" class="autoInput" data-name="Notes" type="text" placeholder="optional..." /></td>
+                    <th class="HEADER notes-header" scope="row">Notes</th>
+                    <td><input id="notes" class="autoInput" data-name="Notes" type="text" placeholder="optional..." aria-label="Notes" /></td>
                 </tr>
             </table>
         </div>
@@ -99,12 +100,12 @@
                 </button>
             </div>
             <div class="RSSLinkState-container">
-                <svg class="RSSLinkState-svg">
+                <svg class="RSSLinkState-svg" role="img" aria-label="this Item is not linked to a RSS feed">
                     <g class="RSSLinkState-g">
                         <polygon points="0,-12 12,0 0,12 -12,0" class="RSSLinkState-polygon"><title class="RSSLinkState-title">this Item is not linked to a RSS feed</title></polygon>
                     </g>
                 </svg>
-                <h3 id="isNewHermidata"></h3>
+                <h3 id="isNewHermidata" role="status" aria-live="polite"></h3>
             </div>
             <div class="versionContainer">Version: <span class="version">v0.18.4</span></div>
         </div>
@@ -112,24 +113,24 @@
 </section>
 <section class="HDRss">
     <div id="HDRss-subscribe-container">
-        <input id="title_HDRss" class="HDRss_Input" data-name="Title" type="text" spellcheck="false" placeholder="Title" disabled />
-        <select id="Type_HDRss" class="HDRss_Input" data-name="Type" title="Type" disabled></select>
+        <input id="title_HDRss" class="HDRss_Input" data-name="Title" type="text" spellcheck="false" placeholder="Title" aria-label="Title" disabled />
+        <select id="Type_HDRss" class="HDRss_Input" data-name="Type" title="Type" aria-label="Type" disabled></select>
         <button id="subscribeBtn" type="button" class="Btn" disabled>Subscribe to new RSS feed</button>
     </div>
-    <section id="sort-RSS-entries"><!-- Dynamic load sort items--></section>
-    <section id="RSS-Notification"><!-- Dynamic load items--></section>
-    <section id="All-RSS-entries"><!-- Dynamic load items--></section>
+    <section id="sort-RSS-entries" aria-label="Sort and filter RSS entries"><!-- Dynamic load sort items--></section>
+    <section id="RSS-Notification" aria-label="RSS notifications"><!-- Dynamic load items--></section>
+    <section id="All-RSS-entries" aria-label="All RSS entries"><!-- Dynamic load items--></section>
     <footer>
         <button type="button" id="clear-notifications" class="Btn">Clear notifications</button>
-        <button type="button" id="openLibraryBtn" class="library-btn Btn">Open Library page</button>
-        <div id="RSS-latest-sync-div">RSS: <span id="lastSync">Never</span></div> 
+        <button type="button" id="openLibraryBtn" class="library-btn Btn" aria-label="Open Library page in a new tab">Open Library page</button>
+        <div id="RSS-latest-sync-div" role="status">RSS: <span id="lastSync">Never</span></div> 
         <button type="button" id="RSS-sync-Manual" class="Btn">Manual sync</button>
         <span id="version">v1.4.3</span>
     </footer>
 </section>
 <section class="promptSection">
     <label for="genericInput" class="genericLabel"></label>
-    <input id="genericInput" class="genericInput" title="title" type="text"></input>
+    <input id="genericInput" class="genericInput" title="title" type="text" />
     <div class="genericPromptBtns">
         <button type="button" class="genericButton1 Btn" >Save</button>
         <button type="button" class="genericButton2 Btn" >Cancel</button>
@@ -150,7 +151,7 @@
             <input type="text" id="bookmarkNotesInput" placeholder="type here..."/>
         </label>
         <label for="bookmarkColorInput" id="bookmarkColorInput-label">color
-            <button type="button" id="bookmarkColorInput"></button>
+            <button type="button" id="bookmarkColorInput" aria-label="Choose marker color"></button>
         </label>
     </div>
     <div class="buttonContainer">
@@ -172,9 +173,9 @@
     </div>
     <div id="bookmarkMenuManager"> <!-- Dynamic load Bookmarks --> </div>
     <nav id="bookmarkManagerPagination" class="marker-pagination" aria-label="Manage markers pages" hidden>
-        <button type="button" class="marker-page-previous Btn">Previous</button>
+        <button type="button" class="marker-page-previous Btn" aria-label="Previous page">Previous</button>
         <span class="marker-page-status" aria-live="polite"></span>
-        <button type="button" class="marker-page-next Btn">Next</button>
+        <button type="button" class="marker-page-next Btn" aria-label="Next page">Next</button>
     </nav>
     <button type="button" class="addNewBookmarkBtn" id="addNewBookmarkBtn-manager" popovertarget="bookmark-add-marker" popovertargetaction="show">Add Marker</button>
     <br>
@@ -194,9 +195,9 @@
     </div>
     <div class="bookmarkMenu"> <!-- Dynamic load Bookmark label + chapter current --> </div>
     <nav id="bookmarkMenuPagination" class="marker-pagination" aria-label="Markers pages" hidden>
-        <button type="button" class="marker-page-previous Btn">Previous</button>
+        <button type="button" class="marker-page-previous Btn" aria-label="Previous page">Previous</button>
         <span class="marker-page-status" aria-live="polite"></span>
-        <button type="button" class="marker-page-next Btn">Next</button>
+        <button type="button" class="marker-page-next Btn" aria-label="Next page">Next</button>
     </nav>
     <button type="button" class="addNewBookmarkBtn" id="addNewBookmarkBtn-Menu" popovertarget="bookmark-add-marker" popovertargetaction="show">Add Marker</button>
     <hr>
@@ -209,9 +210,9 @@
     </div>
     <ul class="itemChooser-list"> <!-- Dynamic load candidates --> </ul>
 </dialog>
-<section class="material-symbols-outlinedContainer">
+<section class="material-symbols-outlinedContainer" role="status" aria-live="polite" aria-label="Loading">
     <br>
-    <div class="loading-bar-container">
+    <div class="loading-bar-container" role="progressbar" aria-label="Loading progress" aria-valuemin="0" aria-valuemax="100">
         <div class="loading-bar"></div>
     </div>
     <br>

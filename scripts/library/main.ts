@@ -1,5 +1,8 @@
 import { dbAccess } from "../shared/db/Storage";
 import { Controller } from "./controller";
+import { initTheme } from "../shared/utils/Theme";
+
+void initTheme();
 
 document.addEventListener('DOMContentLoaded', async () => {
 

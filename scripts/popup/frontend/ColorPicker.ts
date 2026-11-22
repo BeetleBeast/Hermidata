@@ -61,6 +61,8 @@ export class ColorPicker {
         element.className = 'colorPicker';
         element.id = 'ColorPicker';
         element.setAttribute('popover', 'manual');
+        element.setAttribute('role', 'dialog');
+        element.setAttribute('aria-label', 'Choose color');
 
         const header = document.createElement('div');
         header.className = 'colorPicker-header';

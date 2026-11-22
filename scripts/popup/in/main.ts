@@ -18,6 +18,9 @@ import { linkAsAdaptation } from '../core/save';
 import { getSeparateProminence } from '../core/separateProminence';
 import { HermidataService } from "./service";
 import { shortcutEventListener } from "../core/shortcuts";
+import { initTheme } from "../../shared/utils/Theme";
+
+void initTheme();
 
 
 const stateConfig = {
@@ -130,7 +133,7 @@ class HermidataController {
     }
 
     private forceSetClassic() {
-        setElement("#HDRssBtn", el => el.classList = "Btn");
+        setElement("#HDRssBtn", el => { el.classList = "Btn"; el.setAttribute("aria-pressed", "false"); });
         setElement(".HDRss", el => el.style.opacity = '0');
         setElement(".HDRss", el => el.style.display = 'none');
         setElement(".HDClassic", el => el.style.opacity = '1');
@@ -229,6 +232,7 @@ class HermidataController {
         const state = stateConfig[this.getState()];
         setElement<HTMLHeadingElement>('#isNewHermidata', el => el.textContent = state.text);
         setElement<HTMLTitleElement>('.RSSLinkState-title', el => el.textContent = state.tooltip);
+        setElement('.RSSLinkState-svg', el => el.setAttribute('aria-label', state.tooltip));
         setElement<SVGPolygonElement>('.RSSLinkState-polygon', el => el.style.fill = state.color);
         
         setElement<HTMLSpanElement>(".version", el => el.textContent = ext.runtime.getManifest().version);

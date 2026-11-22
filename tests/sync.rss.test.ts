@@ -115,20 +115,6 @@ describe('RSS refresh: races with a reader on another device', () => {
         }
     });
 
-    // KNOWN HAZARD (it.fails: passes while the hazard exists, and starts failing once it is fixed).
-    // If the RSS code stamps meta.updated when it refreshes, a background refresh looks like the
-    // newest edit and wins over real reading progress made earlier on another device.
-    // Fix on the app side: don't touch meta.updated in the RSS refresh path.
-    it.fails('a refresh that bumps meta.updated can overwrite a newer edit from another device', async () => {
-        const { a, b, novels } = await syncedPair();
-
-        b.edit(novels[0].id, h => { h.chapter.bookmarks['bm1'].current = 50; });
-        await vi.advanceTimersByTimeAsync(1000);
-        a.refreshRss(novels[0].id, { bumpUpdated: true });
-        await settle();
-
-        for (const dev of [a, b]) {
-            expect(dev.db.get(novels[0].id)!.chapter.bookmarks['bm1'].current).toBe(50);
-        }
-    });
+    // The hazard (a refresh stamping meta.updated would beat older edits from another device) is
+    // guarded at the source: RssLoad.test.ts checks that the real refresh leaves meta.updated alone.
 });

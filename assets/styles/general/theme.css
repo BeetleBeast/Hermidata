@@ -50,6 +50,133 @@
     --hr: #555;
 }
 
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bg: #d6dce6;
+    --surface: #dfe4ec;
+    --surface-raised: #e7ebf1;
+    --surface-input: #bcc6d5;
+    --surface-disabled-dark: #cdd4df;
+    --surface-disabled-soft: rgba(44, 58, 82, 0.07);
+
+    --text: #1c2638;
+    --text-highlight: #101827;
+    --text-muted: #3f4b60;
+    --text-disabled: #667186;
+
+    /* Text placed on danger and strong accent fills */
+    --text-dark: #ffffff;
+
+    --border: #a9b5c7;
+    --border-subtle: rgba(44, 58, 82, 0.12);
+
+    --accent-soft: #2f4c85;
+    --accent-dark: #3c5b99;
+    --accent-hover-soft: #2b4679;
+    --accent-hover-dark: #b1c1da;
+    --accent-active-soft: #32508a;
+    --accent-active-dark: #9db2d3;
+
+    --track-off: #a3afc1;
+
+    --danger: #8e3030;
+    --danger-hover: #7d2a2a;
+    --danger-active: #6b2424;
+    --success: #1f5b3c;
+    --warning: #62460c;
+
+    --cancel: #5e4c06;
+
+    --overlay: rgba(28, 38, 56, 0.4);
+    --shadow: rgba(28, 38, 56, 0.2);
+    --shadow-soft: rgba(28, 38, 56, 0.1);
+
+    --hr: #b4bfcf;
+}
+
+/* Components with colors that are fixed for the dark theme */
+:root[data-theme="light"] .search-icon { fill: var(--text-muted); }
+:root[data-theme="light"] .marker-sort { color-scheme: light; }
+:root[data-theme="light"] option:disabled,
+:root[data-theme="light"] .option-excluded { background: var(--surface-disabled-dark); }
+:root[data-theme="light"] #hermidata-readLatest-btn:hover {
+    background-color: var(--accent-hover-soft);
+    color: var(--text-dark);
+}
+:root[data-theme="light"] .merger-dialog-record-letter[data-suggested="true"] { color: var(--success); }
+:root[data-theme="light"] .merger-dialog-record-continue-button[data-suggested="true"],
+:root[data-theme="light"] .merger-dialog-button-merge {
+    background-color: var(--success);
+    color: #fff;
+}
+:root[data-theme="light"] .Extension_Behavior .badge.good {
+    color: var(--success);
+    border-color: color-mix(in srgb, var(--success) 40%, transparent);
+}
+:root[data-theme="light"] .Extension_Behavior .badge.warn {
+    color: var(--warning);
+    border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+:root[data-theme="light"] .tag-pill-removeX:hover { color: #fff; }
+:root[data-theme="light"] td,
+:root[data-theme="light"] th { border-color: var(--border); }
+:root[data-theme="light"] #resetFilters,
+:root[data-theme="light"] #resetFilters:hover {
+    background-color: var(--accent-dark);
+    border-color: var(--accent-dark);
+    color: var(--text-dark);
+}
+:root[data-theme="light"] #resetFilters:hover { background-color: var(--accent-hover-soft); }
+
+:root[data-theme="light"] .imgBookmark { fill: var(--text-muted); }
+:root[data-theme="light"] .marker-menu-trigger:hover .imgBookmark { fill: var(--accent-hover-soft); }
+:root[data-theme="light"] img.icon[title="Settings"] { filter: brightness(0) opacity(0.65); }
+
+/*
+ * The default item image is a pale icon, so darken it in the Library, RSS feed, and Overview.
+ * A filter also tints the element's own frame, so the frame is cleared on these elements.
+ * In Overview edit mode the image is a button with the icon as its inline background.
+ */
+:root[data-theme="light"] .hermidata-item-image[src*="assets/icon/icon48.png"],
+:root[data-theme="light"] img#hermidata-img[src*="assets/icon/icon48.png"],
+:root[data-theme="light"] button#hermidata-img[style*="assets/icon/icon48.png"] {
+    filter: brightness(0) opacity(0.6);
+    border-color: transparent;
+    box-shadow: none;
+}
+:root[data-theme="light"] button#hermidata-img[style*="assets/icon/icon48.png"] { background-color: transparent; }
+:root[data-theme="light"] #hermidata-img-container:has(> button#hermidata-img[style*="assets/icon/icon48.png"]) {
+    outline: 1px dashed var(--border);
+}
+
+/*
+ * Tag colors are user-chosen and usually picked for a dark background.
+ * Light mode shows each one as a soft tint with darkened text in the same hue.
+ * !important is needed because the tag scripts set these colors inline.
+ */
+:root[data-theme="light"] .tag-pill,
+:root[data-theme="light"] .tag-div {
+    background-color: color-mix(in oklab, var(--tag-color, var(--accent-dark)) 20%, var(--surface-raised)) !important;
+    border: 1px solid color-mix(in oklab, var(--tag-color, var(--accent-dark)) 45%, var(--border));
+    color: var(--text) !important;
+}
+:root[data-theme="light"] .tag-div {
+    padding: 0 5px;
+    border-radius: 4px;
+}
+@supports (color: oklch(from red l c h)) {
+    :root[data-theme="light"] .tag-pill,
+    :root[data-theme="light"] .tag-div {
+        color: oklch(from var(--tag-color, var(--accent-dark)) min(l, 0.38) min(c, 0.13) h) !important;
+    }
+}
+:root[data-theme="light"] .tag-pill .tag-pill-removeX { color: inherit !important; }
+:root[data-theme="light"] .tag-pill .tag-pill-removeX:hover {
+    background: none;
+    color: var(--danger) !important;
+}
+
 body {
 	background-color: var(--bg);
 	color: var(--text);
@@ -59,3 +186,14 @@ body {
 	transition: height 0.6s ease;
 }
 
+
+/* Visible keyboard focus for the div/span/svg controls made focusable for accessibility ( see utils/Accessibility.ts ) */
+[role="button"]:focus-visible,
+[role="checkbox"]:focus-visible,
+[role="radio"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="option"]:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: 2px;
+}

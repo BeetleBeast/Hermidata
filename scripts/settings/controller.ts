@@ -91,7 +91,10 @@ export class BuildController {
         this.currentSection = sectionId;
         
         // Update button active states
-        document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach(btn => btn.dataset.active = "false" );
+        document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach(btn => {
+            btn.dataset.active = "false";
+            btn.removeAttribute('aria-current');
+        });
         
         // Hide all content sections
         document.querySelectorAll<HTMLElement>('.section-content').forEach(section => section.dataset.active = "false" );
@@ -101,6 +104,7 @@ export class BuildController {
         const container = getElement<HTMLElement>(`.${activeElementClassName}`);
         if (container) container.dataset.active = "true";
         target.dataset.active = "true";
+        target.setAttribute('aria-current', 'page');
         
         // Initialize section on first visit
         if (!this.initializedSections.has(sectionId)) {

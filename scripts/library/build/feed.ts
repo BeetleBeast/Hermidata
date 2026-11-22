@@ -114,7 +114,7 @@ export class feed extends LibraryBuilder {
         const date = this.buildDate(entry);
 
         // checkMark
-        const checkbox = this.buildCheckbox();
+        const checkbox = this.buildCheckbox(entry.title);
 
         // append
         container.append(site, img, novelType, title, chapter, date, checkbox);
@@ -132,10 +132,13 @@ export class feed extends LibraryBuilder {
         container.addEventListener('click', () => openLink('./Overview.html#/id/' + entry.id, 'sameTab'));
         container.addEventListener('mouseover', (e) => this.transformCheckboxPosition(e, 'show'));
         container.addEventListener('mouseout', (e) => this.transformCheckboxPosition(e, 'hide'));
+        // keyboard users reveal the hover-only checkbox by focusing into the entry
+        container.addEventListener('focusin', (e) => this.transformCheckboxPosition(e, 'show'));
+        container.addEventListener('focusout', (e) => this.transformCheckboxPosition(e, 'hide'));
 
         return container;
     }
-    private transformCheckboxPosition(event: MouseEvent, entry: 'show' | 'hide') {
+    private transformCheckboxPosition(event: Event, entry: 'show' | 'hide') {
         const container = event.currentTarget as HTMLDivElement;
         const checkbox = container.querySelector<HTMLInputElement>('.hermidata-item-checkbox-invisible-container');
         if (!checkbox) return;
@@ -205,9 +208,12 @@ export class feed extends LibraryBuilder {
             if (img.complete) settle();
         });
     }
-    private buildTitle(entry: Hermidata): HTMLDivElement {
-        const title = document.createElement('div');
+    private buildTitle(entry: Hermidata): HTMLAnchorElement {
+        // a real link: focusable, announced as a link and opened with Enter. The entry click handler does the navigation.
+        const title = document.createElement('a');
         title.className = "hermidata-item-title";
+        title.href = './Overview.html#/id/' + entry.id;
+        title.addEventListener('click', (e) => e.preventDefault());
 
         title.textContent = entry.title;
 
@@ -265,6 +271,7 @@ export class feed extends LibraryBuilder {
     private buildNovelTypeSVG(entry: HermidataModel): SVGSVGElement {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('class', 'hermidata-item-novelType-svg');
+        svg.setAttribute('aria-hidden', 'true');
         svg.setAttribute('width', '25px');
         svg.setAttribute('height', '25px');
 
@@ -320,7 +327,7 @@ export class feed extends LibraryBuilder {
 
         return novelType;
     }
-    private buildCheckbox(): HTMLDivElement {
+    private buildCheckbox(title: string): HTMLDivElement {
         const checkboxContainer = document.createElement('div');
         checkboxContainer.className = "hermidata-item-checkbox-container";
 
@@ -333,6 +340,7 @@ export class feed extends LibraryBuilder {
         checkbox.type = "checkbox";
         checkbox.checked = false;
         checkbox.ariaChecked = 'false';
+        checkbox.setAttribute('aria-label', `Select ${title}`);
 
         const value = this.viewMode === 'list' ? '-20px' : '10px';
 
