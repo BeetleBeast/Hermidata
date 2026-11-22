@@ -1,0 +1,18 @@
+name: enforce-pr-flow
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only Development may be merged into main
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REF" != "Development" ]; then
+            echo "PRs into main must come from Development (got: $HEAD_REF)."
+            exit 1
+          fi
