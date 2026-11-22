@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hermidata — Reading list</title>
+<script src="/scripts/theme-init.js"></script>
+<link rel="stylesheet" href="../assets/styles/general/theme.css">
+<link rel="stylesheet" href="../assets/styles/general/errors.css">
+<link rel="stylesheet" href="../assets/styles/general/buttons.css">
+<link rel="stylesheet" href="../assets/styles/general/prompts.css">
+<link rel="stylesheet" href="../assets/styles/reading-list/base.css">
+</head>
+<body>
+
+  <header class="rl-header">
+    <div class="rl-header-inner">
+      <div class="rl-heading">
+        <button type="button" id="back-to-library" class="rl-back">
+          <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+          Library
+        </button>
+        <h1>Reading list</h1>
+        <p id="queue-summary" aria-live="polite"></p>
+      </div>
+      <div class="rl-header-actions">
+        <button type="button" id="reloadData" class="rl-icon-btn" aria-label="Reload the reading list" title="Reload">
+          <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 6.2M20 5v6h-6"/></svg>
+        </button>
+        <button type="button" id="pick-for-me" class="rl-btn">
+          <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.5c2 0 3.2 1 4.3 2.6l2.4 4.8C14.3 16 15.5 17 17.5 17H21M3 17h3.5c1.4 0 2.4-.5 3.2-1.3M21 7h-3.5c-1.4 0-2.4.5-3.2 1.3M18 4l3 3-3 3M18 14l3 3-3 3"/></svg>
+          Pick for me
+        </button>
+        <button type="button" id="open-add-dialog" class="rl-btn rl-btn-primary" aria-haspopup="dialog">
+          <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add titles
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="rl-page">
+    <section id="queue-filters" aria-label="Filter the reading list">
+      <div class="rl-search">
+        <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>
+        <input id="queue-search" type="search" placeholder="Search your queue" aria-label="Search the reading list" autocomplete="off" />
+      </div>
+      <div id="filter-priority" class="rl-segments" role="radiogroup" aria-label="Filter by priority">
+        <label><input type="radio" name="queue-priority" value="" checked><span>All <b data-band-count=""></b></span></label>
+        <label><input type="radio" name="queue-priority" value="High"><span><i class="rl-dot" data-band="high"></i>High <b data-band-count="High"></b></span></label>
+        <label><input type="radio" name="queue-priority" value="Medium"><span><i class="rl-dot" data-band="medium"></i>Medium <b data-band-count="Medium"></b></span></label>
+        <label><input type="radio" name="queue-priority" value="Low"><span><i class="rl-dot" data-band="low"></i>Low <b data-band-count="Low"></b></span></label>
+      </div>
+      <label class="rl-select"><span>Type</span><select id="filter-type"><option value="">Any</option></select></label>
+      <label class="rl-select"><span>Site</span><select id="filter-site"><option value="">Any</option></select></label>
+      <button type="button" id="clear-filters" class="rl-link-btn" hidden>Clear filters</button>
+    </section>
+
+    <main id="queue-main" data-layout="split">
+      <section class="rl-next" aria-labelledby="up-next-heading">
+        <h2 id="up-next-heading">Up next</h2>
+        <div id="up-next">
+          <div class="rl-skeleton rl-skeleton-hero" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="rl-queue" aria-labelledby="queue-heading">
+        <div class="rl-section-head">
+          <h2 id="queue-heading">Queue</h2>
+          <span id="queue-count"></span>
+          <p id="reorder-hint" hidden>Clear the filters to reorder.</p>
+          <button type="button" id="sort-by-priority" class="rl-link-btn">
+            <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            Sort by priority
+          </button>
+        </div>
+        <ol id="queue-list">
+          <li class="rl-skeleton" aria-hidden="true"></li>
+          <li class="rl-skeleton" aria-hidden="true"></li>
+          <li class="rl-skeleton" aria-hidden="true"></li>
+          <li class="rl-skeleton" aria-hidden="true"></li>
+        </ol>
+        <button type="button" id="queue-end-add" class="rl-queue-end">
+          <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add more titles
+        </button>
+      </section>
+
+      <div id="queue-empty" hidden>
+        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M12 14c6-3 14-3 20 2v36c-6-5-14-5-20-2zM52 14c-6-3-14-3-20 2v36c6-5 14-5 20-2z"/></svg>
+        <h2 id="queue-empty-title"></h2>
+        <p id="queue-empty-text"></p>
+        <button type="button" id="empty-add" class="rl-btn rl-btn-primary">Add titles</button>
+        <button type="button" id="empty-clear" class="rl-btn">Clear filters</button>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="pick-dialog" aria-label="Picked for you">
+    <div id="pick-content"></div>
+  </dialog>
+
+  <dialog id="add-dialog" aria-labelledby="add-dialog-title">
+    <form method="dialog" id="add-form">
+      <div class="rl-dialog-head">
+        <h2 id="add-dialog-title">Add to your reading list</h2>
+        <button type="button" id="add-close" class="rl-icon-btn" aria-label="Close">
+          <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="rl-search">
+        <svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>
+        <input id="add-search" type="search" placeholder="Search your library" aria-label="Search your library" autocomplete="off" />
+      </div>
+      <ul id="add-list" aria-label="Titles you can add"></ul>
+      <div class="rl-add-options">
+        <label class="rl-select"><span>Priority</span><select id="add-priority"></select></label>
+        <div class="rl-segments" role="radiogroup" aria-label="Where to add">
+          <label><input type="radio" name="add-position" value="bottom" checked><span>Bottom</span></label>
+          <label><input type="radio" name="add-position" value="top"><span>Top</span></label>
+        </div>
+      </div>
+      <div class="rl-dialog-foot">
+        <span id="add-count"></span>
+        <button type="button" id="add-cancel" class="rl-btn">Cancel</button>
+        <button type="submit" id="add-confirm" class="rl-btn rl-btn-primary" disabled>Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite" hidden>
+    <span id="toast-text"></span>
+    <button type="button" id="toast-undo" class="rl-link-btn">Undo</button>
+  </div>
+  <p id="sr-announce" class="sr-only" aria-live="assertive"></p>
+
+<script src="../scripts/reading-list/main.ts" type="module"></script>
+</body>
+</html>

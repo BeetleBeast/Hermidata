@@ -1,4 +1,16 @@
-export type { 
+export type {
+    QueueFilters,
+    QueuePosition,
+    RowOptions,
+    RowActions,
+    PickActions,
+    QueueProgress,
+    GrabbedRow,
+    WaitingCover,
+    QueueIconName,
+} from "./readingList";
+
+export type {
     RegexConfig,
     TrimmedTitle,
 
@@ -14,6 +26,8 @@ export type {
     
     Hermidata,
     Bookmark,
+    ReadingQueue,
+    ReadingQueuePriorityBand,
 
     OnlyPlainHermidata,
 
