@@ -20,6 +20,8 @@ export {
 
 export {
     AllSorts,
+    DEFAULT_SORT,
+    REVERSED_SUFFIX,
     filterClassName,
     filterName,
 } from './popup';

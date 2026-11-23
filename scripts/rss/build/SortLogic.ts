@@ -1,6 +1,7 @@
 import type { Filters, NormalSortsType } from "../../shared/types/index";
 import { getLastFilter, setLastFilter } from "../../shared/db/Storage";
-import { makeTriStateOption } from "../../shared/utils/Accessibility";
+import { DEFAULT_SORT, REVERSED_SUFFIX, filterName } from "../../shared/constants";
+import { makeSortOption, makeTriStateOption } from "../../shared/utils/Accessibility";
 import { Sort } from "./Sort";
 
 type RSSFilterOptionList = HTMLDivElement & { filterItems?: string[] };
@@ -14,13 +15,16 @@ export class SortLogic extends Sort {
         const filters: Filters = lastSort ?? {
             include: {}, // { type: ['Manga'], status: ['Ongoing'] }
             exclude: {},
-            sort: ''
+            sort: DEFAULT_SORT
         };
+        // One sort is always active; filters saved before that rule may hold none
+        filters.sort ||= DEFAULT_SORT;
     
         // Keep setup steps separate: large menus render after opening; small menus are ready immediately.
         this.attachPopoverListeners(parent_section, filters);
         this.populateSmallFilterPopovers(parent_section, filters);
         this.attachFilterOptionListener(parent_section, filters);
+        this.attachDialogControlListeners(parent_section, filters);
 
         // Restore the compact button labels independently of when each menu's options are rendered.
         for (const section of parent_section.querySelectorAll<HTMLElement>(".filter-section")) {
@@ -69,18 +73,23 @@ export class SortLogic extends Sort {
         }, 0);
     }
 
+    /** Search inside a long list and clear a section's selection; both live in the popover */
+    private attachDialogControlListeners(parentSection: HTMLElement, filters: Filters): void {
+        parentSection.addEventListener("input", event => {
+            const input = event.target;
+            if (!(input instanceof HTMLInputElement) || !input.matches(".rss-filter-search")) return;
+            this.searchFilterList(input, filters);
+        });
+        parentSection.addEventListener("click", event => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const clear = target.closest<HTMLButtonElement>(".rss-filter-clear");
+            if (clear) this.clearSection(clear, filters);
+        });
+    }
+
     private applySavedFilters(filters: Filters): void {
-        const hasFilters = Object.values(filters.include || {}).some(values => values.length > 0)
-            || Object.values(filters.exclude || {}).some(values => values.length > 0)
-            || Boolean(filters.sort);
-        if (!hasFilters) {
-            this.updateEmptyState();
-            return;
-        }
-
         this.applyFilterToEntries(filters);
-        if (!filters.sort) return;
-
         this.applySortToEntries(filters.sort);
         this.applySortToNotification();
     }
@@ -91,11 +100,48 @@ export class SortLogic extends Sort {
         const title = section?.querySelector(".filter-header-text")?.textContent?.trim();
         if (!list || !title) return;
 
+        this.appendFilterOptions(list, this.getListItems(list), title, filters);
+        list.addEventListener("scroll", () => this.handleFilterListScroll(list, title, filters));
+        popover.dataset.populated = "true";
+    }
+
+    /** The options the list currently offers: all of them, or those matching the popover's search */
+    private getListItems(list: HTMLDivElement): string[] {
         const items = (list as RSSFilterOptionList).filterItems;
         if (!items) throw new Error("RSS filter options were not attached to the list");
-        this.appendFilterOptions(list, items, title, filters);
-        list.addEventListener("scroll", () => this.handleFilterListScroll(list, items, title, filters));
-        popover.dataset.populated = "true";
+        const query = list.dataset.query;
+        return query ? items.filter(item => item.toLowerCase().includes(query)) : items;
+    }
+
+    private searchFilterList(input: HTMLInputElement, filters: Filters): void {
+        const popover = input.closest<HTMLElement>(".rss-filter-dialog");
+        const list = popover?.querySelector<HTMLDivElement>(".rss-filter-list");
+        const title = this.getSectionTitle(input);
+        if (!list || !title) return;
+
+        list.dataset.query = input.value.trim().toLowerCase();
+        list.dataset.nextItemIndex = "0";
+        list.scrollTop = 0;
+        list.replaceChildren();
+        this.appendFilterOptions(list, this.getListItems(list), title, filters);
+    }
+
+    private clearSection(clear: HTMLButtonElement, filters: Filters): void {
+        const section = clear.closest<HTMLElement>(".filter-section");
+        const title = this.getSectionTitle(clear);
+        if (!section || !title) return;
+
+        filters.include[title] = [];
+        filters.exclude[title] = [];
+        // rows that are not rendered yet pick their (now empty) state up when they are
+        for (const checkbox of section.querySelectorAll<HTMLDivElement>(".custom-checkbox")) checkbox.dataset.state = "0";
+        this.updateFilterButton(section, filters);
+        this.applyFilterToEntries(filters);
+        setLastFilter(filters);
+    }
+
+    private getSectionTitle(element: Element): string | undefined {
+        return element.closest(".filter-section")?.querySelector(".filter-header-text")?.textContent?.trim();
     }
 
     private appendFilterOptions(list: HTMLDivElement, items: string[], title: string, filters: Filters): void {
@@ -118,7 +164,8 @@ export class SortLogic extends Sort {
             label.textContent = items[index];
 
             item.append(checkbox, label);
-            makeTriStateOption(item, checkbox, items[index]);
+            if (title === filterName.Sort) makeSortOption(item, checkbox, items[index]);
+            else makeTriStateOption(item, checkbox, items[index]);
             fragment.appendChild(item);
         }
 
@@ -130,7 +177,8 @@ export class SortLogic extends Sort {
         list.dataset.nextItemIndex = String(end);
     }
 
-    private handleFilterListScroll(list: HTMLDivElement, items: string[], title: string, filters: Filters): void {
+    private handleFilterListScroll(list: HTMLDivElement, title: string, filters: Filters): void {
+        const items = this.getListItems(list);
         const nextIndex = Number(list.dataset.nextItemIndex || "0");
         const nearBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 120;
         // Add another small batch only when the user approaches the end of the current list.
@@ -140,7 +188,7 @@ export class SortLogic extends Sort {
     }
 
     private getFilterState(section: string, label: string, filters: Filters): string {
-        if (section === "Sort") {
+        if (section === filterName.Sort) {
             if (filters.sort === label) return "1";
             if (filters.sort === `Reverse-${label}`) return "2";
             return "0";
@@ -151,44 +199,20 @@ export class SortLogic extends Sort {
     }
 
     private eventOnClick(cb: HTMLDivElement, filters: Filters) {
-        let state = Number.parseInt(cb.dataset.state || "0");
-
-        // cycle 0→1→2→0
-        state = (state + 1 ) % 3;
-        cb.dataset.state = state.toString();
-
         // find its label text (filter name)
         const label = cb.nextElementSibling?.textContent?.trim();
         // find which section it belongs to (Type, Status, etc.)
         const section = cb.closest(".filter-section")?.firstChild?.textContent?.trim();
         if (!label || !section) return;
 
-        if (section === "Sort") {
-            // Reset all sort checkboxes first
-            filters.sort = ''
-            const sortCheckboxes = cb.closest(".filter-section")?.querySelectorAll<HTMLDivElement>(".custom-checkbox");
-            if (!sortCheckboxes) return
-            for (const otherCb of sortCheckboxes) otherCb.dataset.state = "0";
-
-            // Enable current one
-            if (state === 1) {
-                cb.dataset.state = "1" 
-                filters.sort = label as NormalSortsType;
-            } else if (state === 2) {
-                cb.dataset.state = "2";
-                filters.sort = `Reverse-${label as NormalSortsType}`
-            }
-
-            // apply and persist
-            setLastFilter(filters);
-            if (filters.sort) {
-                this.applySortToEntries(filters.sort);
-                this.applySortToNotification();
-            }
-            const filterSection = cb.closest<HTMLElement>(".filter-section");
-            if (filterSection) this.updateFilterButton(filterSection, filters);
+        if (section === filterName.Sort) {
+            this.selectSort(cb, label as NormalSortsType, filters);
             return;
         }
+
+        // cycle 0→1→2→0
+        const state = (Number.parseInt(cb.dataset.state || "0") + 1) % 3;
+        cb.dataset.state = state.toString();
 
         // init arrays if not exist
         if (!filters.include[section]) filters.include[section] = [];
@@ -208,13 +232,33 @@ export class SortLogic extends Sort {
         setLastFilter(filters);
     };
 
+    /**
+     * Sort is a single choice that can never be emptied: picking another option selects it,
+     * picking the active one flips its direction (1 → 2 → 1), so exactly one row is always set.
+     */
+    private selectSort(cb: HTMLDivElement, label: NormalSortsType, filters: Filters): void {
+        const reverse = filters.sort === label; // the active, ascending option flips to reversed
+        filters.sort = reverse ? `Reverse-${label}` : label;
+
+        const filterSection = cb.closest<HTMLElement>(".filter-section");
+        for (const row of filterSection?.querySelectorAll<HTMLDivElement>(".custom-checkbox") ?? []) {
+            row.dataset.state = row === cb ? (reverse ? "2" : "1") : "0";
+        }
+
+        setLastFilter(filters);
+        this.applySortToEntries(filters.sort);
+        this.applySortToNotification();
+        if (filterSection) this.updateFilterButton(filterSection, filters);
+    }
+
     private updateFilterButton(section: HTMLElement, filters: Filters): void {
         const title = section.querySelector(".filter-header-text")?.textContent?.trim();
         const button = section.querySelector<HTMLButtonElement>(".filter-button");
         if (!title || !button) return;
 
-        if (title === "Sort") {
-            button.textContent = filters.sort || "Alphabet";
+        if (title === filterName.Sort) {
+            const reversed = filters.sort.startsWith("Reverse-");
+            button.textContent = `${filters.sort.replace("Reverse-", "")}${reversed ? REVERSED_SUFFIX : ""}`;
             return;
         }
 
@@ -226,6 +270,8 @@ export class SortLogic extends Sort {
         button.textContent = selected.size
             ? `${selected.size} of ${optionCount}`
             : `Any · ${optionCount}`;
+        const clear = section.querySelector<HTMLButtonElement>(".rss-filter-clear");
+        if (clear) clear.disabled = selected.size === 0;
     }
 
     private applyFilterToEntries(filters: Filters) {

@@ -1,5 +1,5 @@
 import { generateBookmarkId } from "../utils/StringOutput";
-import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NovelStatus, NovelType, ReadStatus } from "../types";
+import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NormalSortsType, NovelStatus, NovelType, ReadStatus } from "../types";
 
 export const HERMIDATA_VERSION = 12;
 
@@ -75,6 +75,9 @@ export const DEFAULT_TAG_COLOURS: Record<string, string> = {
 // RSS mode
 
 export const AllSorts: AllSortsType[] = ['Alphabet', 'Novel-Type', 'Recently-Added', 'Latest-Updates']
+/** The RSS list always has exactly one active sort, this one until the user picks another */
+export const DEFAULT_SORT: NormalSortsType = 'Alphabet'
+export const REVERSED_SUFFIX = ' (reversed)'
 
 export const filterClassName: FilterClassName = {
     Sort: 'filter-sort',

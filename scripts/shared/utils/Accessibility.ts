@@ -42,6 +42,23 @@ export function makeTriStateOption(row: HTMLElement, checkbox: HTMLElement, name
     new MutationObserver(sync).observe(checkbox, { attributes: true, attributeFilter: ['data-state'] });
 }
 
+/**
+ * A sort row is one radio: exactly one row is selected ( data-state 1 ascending / 2 reversed ), the
+ * rest are not selected ( 0 ). Like makeTriStateOption, it follows the data-state of `radio`.
+ */
+export function makeSortOption(row: HTMLElement, radio: HTMLElement, name: string): void {
+    makeButtonLike(row, name, 'radio');
+    for (const part of row.children) part.setAttribute('aria-hidden', 'true');
+
+    const sync = () => {
+        const state = radio.dataset.state ?? '0';
+        row.setAttribute('aria-checked', String(state !== '0'));
+        row.setAttribute('aria-label', `${name}, ${state === '2' ? 'selected, reversed' : state === '1' ? 'selected' : 'not selected'}`);
+    };
+    sync();
+    new MutationObserver(sync).observe(radio, { attributes: true, attributeFilter: ['data-state'] });
+}
+
 let comboboxCount = 0;
 
 /** A text input + the box that fills with suggestions announce as a combobox + listbox ( expanded while it has options ) */

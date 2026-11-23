@@ -3,7 +3,7 @@ import { getSettings } from "../../shared/db/Storage";
 import { markAsCombobox, markAsOption, setActiveOption } from "../../shared/utils/Accessibility";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { Sort } from "./Sort";
-import { AllSorts, filterClassName, filterName } from "../../shared/constants";
+import { AllSorts, filterClassName, filterName, REVERSED_SUFFIX } from "../../shared/constants";
 export class SortOption extends Sort {
 
     private allSearchableItems: Set<HTMLDivElement> = new Set();
@@ -145,12 +145,13 @@ export class SortOption extends Sort {
         button.setAttribute('aria-labelledby', `${header.id} ${button.id}`); // "Type  Any · 8": the name plus the current choice
         button.setAttribute('aria-haspopup', 'dialog');
 
+        const isSort = title === filterName.Sort;
         const popover = document.createElement('div');
         popover.id = `rss-${className}-dialog`;
         popover.className = 'filter-dialog rss-filter-dialog';
         const filterItems = items.filter(item => item !== '');
         button.dataset.optionCount = String(filterItems.length);
-        if (title !== filterName.Sort) button.textContent = `Any · ${filterItems.length}`;
+        if (!isSort) button.textContent = `Any · ${filterItems.length}`;
         const useLargePopover = filterItems.length > 8;
         if (className === filterClassName.Tag && useLargePopover) popover.classList.add('rss-filter-dialog-tags');
         if (useLargePopover) popover.classList.add('rss-filter-dialog-large');
@@ -159,16 +160,59 @@ export class SortOption extends Sort {
         popover.setAttribute('aria-labelledby', header.id);
         button.setAttribute('popovertarget', popover.id);
         button.setAttribute('popovertargetaction', 'toggle');
-        const longestItem = Math.max(title.length, ...filterItems.map(item => item.length));
+        // the sort button also spells out "(reversed)", so it needs room for that too
+        const longestItem = Math.max(title.length, ...filterItems.map(item => item.length)) + (isSort ? REVERSED_SUFFIX.length : 0);
         button.style.setProperty('--rss-filter-content-width', `${longestItem + 3}ch`);
 
         const innerList = document.createElement('div');
         innerList.className = 'rss-filter-list';
         (innerList as HTMLDivElement & { filterItems: string[] }).filterItems = filterItems;
-        popover.appendChild(innerList);
+
+        popover.append(this.createDialogHeader(title, filterItems.length, isSort));
+        if (useLargePopover && !isSort) popover.append(this.createDialogSearch(title));
+        popover.append(innerList);
+        if (isSort) popover.append(this.createDialogHint('Select the active option again to reverse the order.'));
         section.append(header, button, popover);
         return section;
     };
+    private createDialogHeader(title: string, optionCount: number, isSort: boolean): HTMLDivElement {
+        const heading = document.createElement('div');
+        heading.className = 'rss-filter-dialog-header';
+
+        const name = document.createElement('span');
+        name.className = 'rss-filter-dialog-title';
+        name.textContent = title;
+
+        const count = document.createElement('span');
+        count.className = 'rss-filter-dialog-count';
+        count.textContent = `${optionCount} ${optionCount === 1 ? 'option' : 'options'}`;
+
+        heading.append(name, count);
+        if (!isSort) {
+            const clear = document.createElement('button');
+            clear.type = 'button';
+            clear.className = 'rss-filter-clear';
+            clear.textContent = 'Clear';
+            clear.disabled = true; // enabled by SortLogic once something is selected
+            heading.append(clear);
+        }
+        return heading;
+    }
+    private createDialogSearch(title: string): HTMLInputElement {
+        const search = document.createElement('input');
+        search.type = 'search';
+        search.className = 'rss-filter-search';
+        search.placeholder = `Find in ${title.toLowerCase()}…`;
+        search.setAttribute('aria-label', `Find in ${title}`);
+        search.autocomplete = 'off';
+        return search;
+    }
+    private createDialogHint(text: string): HTMLParagraphElement {
+        const hint = document.createElement('p');
+        hint.className = 'rss-filter-hint';
+        hint.textContent = text;
+        return hint;
+    }
     private CreateMainContainer(settings: Settings): HTMLDivElement {
         const mainContainer = document.createElement('div');
 
