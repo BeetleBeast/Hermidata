@@ -413,10 +413,11 @@ input[type=number]::-webkit-inner-spin-button {
 
 /* Footer */
 
+/* three equal-weight columns keep the middle block centred however wide the save actions get */
 #Btn-Parent {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: self-end;
-    justify-content: space-between;
 }
 
 #save {
@@ -462,13 +463,13 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 .versionContainer {
+	justify-self: end;
 	margin: 5px;
 }
 
 /* RSS Link state visualization */
 
 .RSSLinkState-container {
-	width: 50%;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
