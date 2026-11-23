@@ -484,26 +484,28 @@
     border-color: var(--accent-dark);
 }
 
-.filter-section:has(.custom-checkbox[data-state="1"], .custom-checkbox[data-state="2"]) .filter-button {
-    border-color: var(--accent-dark);
+/* a button that has an active filter reads as "on"; sort always has one, so it is left out */
+.filter-section:not(.filter-sort):has(.custom-checkbox[data-state="1"], .custom-checkbox[data-state="2"]) .filter-button {
+    border-color: var(--accent-soft);
+    background: color-mix(in srgb, var(--accent-soft) 16%, var(--surface-input));
 }
 
 .rss-filter-dialog {
     position: fixed;
     inset: auto;
     position-area: bottom;
-    margin: 4px 0 0;
+    margin: 6px 0 0;
     box-sizing: border-box;
     width: max-content;
-    min-width: 180px;
-    max-width: min(300px, calc(100vw - 20px));
-    max-height: min(60vh, 360px);
+    min-width: 220px;
+    max-width: min(320px, calc(100vw - 20px));
+    max-height: min(70vh, 420px);
     overflow: hidden;
-    padding: 10px;
+    padding: 0;
     color: var(--text);
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 10px;
     box-shadow: var(--overlay) 0px 18px 40px -12px, var(--shadow) 0px 2px 6px;
     opacity: 0;
 }
@@ -511,11 +513,11 @@
 .rss-filter-dialog:popover-open {
     display: flex;
     flex-direction: column;
-    gap: 8px;
     opacity: 1;
     transition: opacity 150ms cubic-bezier(0, 0, 0.2, 1), display 150ms allow-discrete;
 }
 
+/* Long lists (more than 8 options) open as a centred panel with room for a search box */
 .rss-filter-dialog-large,
 .rss-filter-dialog-tags {
     position-area: none;
@@ -523,40 +525,129 @@
     top: 50%;
     left: 50%;
     margin: 0;
-    width: min(420px, calc(100vw - 24px));
-    max-width: min(420px, calc(100vw - 24px));
-    max-height: min(70vh, 440px);
+    width: min(440px, calc(100vw - 24px));
+    max-width: min(440px, calc(100vw - 24px));
+    max-height: min(80vh, 520px);
     transform: translate(-50%, -50%);
 }
 
 .rss-filter-dialog-tags {
-    width: min(560px, calc(100vw - 24px));
-    max-width: min(560px, calc(100vw - 24px));
+    width: min(600px, calc(100vw - 24px));
+    max-width: min(600px, calc(100vw - 24px));
+}
+
+.rss-filter-dialog::backdrop {
+    background: var(--overlay);
+}
+
+.rss-filter-dialog-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: none;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.rss-filter-dialog-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-highlight);
+}
+
+.rss-filter-dialog-count {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.rss-filter-clear {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    color: var(--accent-soft);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.rss-filter-clear:hover:not(:disabled) {
+    border-color: var(--accent-soft);
+}
+
+.rss-filter-clear:disabled {
+    color: var(--text-disabled);
+    cursor: default;
+}
+
+.rss-filter-search {
+    flex: none;
+    margin: 10px 14px 0;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--surface-input);
+    border-radius: 6px;
+}
+
+.rss-filter-search:focus {
+    outline: none;
+    border-color: var(--accent-soft);
 }
 
 .rss-filter-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 4px;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 2px;
+    flex: 1;
     min-width: 0;
-    max-height: min(52vh, 360px);
+    min-height: 0;
+    padding: 8px;
     overflow-y: auto;
     scrollbar-gutter: stable; /* popover is width:max-content; a scrollbar appearing after it opens would resize and shift it */
     align-content: start;
 }
 
+.rss-filter-dialog:not(.rss-filter-dialog-large) .rss-filter-list {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.rss-filter-list:empty::after {
+    content: "No matches";
+    grid-column: 1 / -1;
+    padding: 18px 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.rss-filter-hint {
+    flex: none;
+    margin: 0;
+    padding: 8px 14px 10px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-subtle);
+}
+
 .filter-item-list {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 4px;
-    border-radius: 4px;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
     cursor: pointer;
     user-select: none;
 }
 
-.filter-item-list:hover {
-    background: var(--accent-hover-dark);
+/* picked rows stay tinted so a long list still shows what is on; :where keeps hover (below) stronger */
+.filter-item-list:where(:has(.custom-checkbox[data-state="1"])) {
+    background: color-mix(in srgb, var(--accent-soft) 16%, transparent);
+}
+
+.filter-item-list:where(:has(.custom-checkbox[data-state="2"])) {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
 }
 
 .filter-item-checkbox {
@@ -564,12 +655,52 @@
 }
 
 .filter-item-label {
+    flex: 1;
     min-width: 0;
     font-size: 0.9rem;
     color: var(--text);
     overflow-wrap: anywhere;
     cursor: pointer;
     user-select: none;
+}
+
+/* Sort rows are radio buttons: one is always selected, picking it again reverses it */
+.filter-sort .custom-checkbox {
+    border-radius: 50%;
+}
+
+.filter-sort .custom-checkbox[data-state="1"],
+.filter-sort .custom-checkbox[data-state="2"] {
+    background: radial-gradient(circle, var(--accent-soft) 0 38%, transparent 42%);
+    border-color: var(--accent-soft);
+}
+
+.filter-sort .custom-checkbox[data-state="1"] ~ .filter-item-label,
+.filter-sort .custom-checkbox[data-state="2"] ~ .filter-item-label {
+    color: var(--text-highlight);
+    font-weight: 600;
+}
+
+.filter-sort .custom-checkbox[data-state="2"] ~ .filter-item-label::after {
+    content: "reversed";
+    margin-left: 8px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--accent-soft);
+    border: 1px solid var(--accent-soft);
+    border-radius: 999px;
+}
+
+/* the sort row is selected, not included or excluded: no tint for the excluded look */
+.filter-sort .filter-item-list:where(:has(.custom-checkbox[data-state="2"])) {
+    background: color-mix(in srgb, var(--accent-soft) 16%, transparent);
+}
+
+/* last, so hover still shows on picked rows */
+.filter-item-list:hover,
+.filter-item-list:focus-visible {
+    background: var(--accent-hover-dark);
 }
 
 @starting-style {
