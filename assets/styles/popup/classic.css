@@ -8,6 +8,13 @@ body {
 html {
 	overflow: hidden !important;
 }
+/* The popup never scrolls at page level, so prompts.css's "keep the scrollbar gutter while a popover/dialog is open"
+   only adds a phantom scrollbar-wide strip that shifts the whole popup. Higher specificity: prompts.css loads later. */
+html:root.prompt-open,
+html:root:has(dialog[open]),
+html:root:has(:popover-open) {
+	scrollbar-gutter: auto;
+}
 body::after {
     content: "";
     display: block;
@@ -413,10 +420,11 @@ input[type=number]::-webkit-inner-spin-button {
 
 /* Footer */
 
+/* three equal-weight columns keep the middle block centred however wide the save actions get */
 #Btn-Parent {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: self-end;
-    justify-content: space-between;
 }
 
 #save {
@@ -462,13 +470,13 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 .versionContainer {
+	justify-self: end;
 	margin: 5px;
 }
 
 /* RSS Link state visualization */
 
 .RSSLinkState-container {
-	width: 50%;
 	display: flex;
 	flex-direction: row;
 	align-items: center;

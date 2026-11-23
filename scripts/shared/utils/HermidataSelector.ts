@@ -3,7 +3,7 @@ import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata, HERMIDATA_VERSION } from "../constants";
 import { isHermidataV1, isHermidataV10, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import { getImage, removeImage, saveImage, getSettings } from "../db/Storage";
-import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule, type RelatedWorkType } from "../types";
+import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule, type RelatedWorkType, type ReadingQueue } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { openLink, generateBookmarkId, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
@@ -514,6 +514,14 @@ export class HermidataModel implements Hermidata {
 
         this.chapter.bookmarks[bookmarkInUseId ? bookmarkInUseId : this.chapter.bookmarkInUse].url = currentTab.url;
         this.chapter.bookmarks[bookmarkInUseId ? bookmarkInUseId : this.chapter.bookmarkInUse].current = currentTab.currentChapter;
+    }
+    /** `false` takes the entry out of the reading queue */
+    SetReadingQueue(queue: ReadingQueue | false): void {
+        this.meta.readingQueue = queue;
+    }
+    /** Mark the entry as changed now, so sync prefers this copy */
+    Touch(): void {
+        this.meta.updated = new Date().toISOString();
     }
     SetDefaultContextMenuValues(date: string, tags: string[], notes: string ): void {
         this.meta.updated = date;
