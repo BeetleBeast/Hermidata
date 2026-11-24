@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,151 +5,235 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hermidata</title>
   <script src="/scripts/theme-init.js"></script>
-  <link rel="stylesheet" href="../assets/styles/overview/base.css">
-  <link rel="stylesheet" href="../assets/styles/overview/content.css">
-  <link rel="stylesheet" href="../assets/styles/overview/editing.css">
   <link rel="stylesheet" href="../assets/styles/general/theme.css">
   <link rel="stylesheet" href="../assets/styles/general/errors.css">
   <link rel="stylesheet" href="../assets/styles/general/buttons.css">
-  <link rel="stylesheet" href="../assets/styles/general/context-menu.css">
   <link rel="stylesheet" href="../assets/styles/general/prompts.css">
-  <link rel="stylesheet" href="../assets/styles/general/loading.css">
-  <link rel="stylesheet" href="../assets/styles/general/dual-range-slider.css">
+  <link rel="stylesheet" href="../assets/styles/overview/base.css">
+  <link rel="stylesheet" href="../assets/styles/overview/content.css">
+  <link rel="stylesheet" href="../assets/styles/overview/editing.css">
 </head>
 <body>
 
-  <section id="header">
-    <button id="back-btn" type="button" class="Btn" title="Back">Back To Library</button>
+  <svg class="ov-sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></symbol>
+    <symbol id="i-reload" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5M15 9h.01"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 5v14M4 15l4 4 4-4M16 19V5M12 9l4-4 4 4"/></symbol>
+  </svg>
+
+  <header id="header" class="ov-header">
+    <button id="back-btn" type="button" class="ov-btn ov-btn-ghost" title="Back to Library">
+      <svg class="ov-icon" aria-hidden="true"><use href="#i-back"/></svg>
+      <span>Library</span>
+    </button>
+
     <div id="search-input-container">
       <div id="search-container">
-        <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
-        <input id="search" placeholder="Search..." type="search" aria-label="Search titles" autocomplete="off" />
+        <svg class="ov-icon search-icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="search" placeholder="Jump to another title…" type="search" aria-label="Search titles" autocomplete="off" />
       </div>
       <div id="search-suggestions" aria-label="Title suggestions"></div>
     </div>
-    <div id="header-utility-container">
-      <button id="cancel-edit-btn" type="button" class="Btn" title="Cancel" data-disabled="true" data-editing="false" hidden>Cancel</button>
-      <button id="edit-info-btn" type="button" class="Btn" title="Edit info page">Edit</button>
-      <div class="divider" data-editing="false"></div>
-      <button id="delete-info-btn" type="button" class="Btn" title="Delete info page" popovertargetaction="toggle" popovertarget="delete-dialog" data-disabled="true" data-editing="false" hidden>Delete</button>
-      <div id="delete-dialog" class="delete-dialog" popover role="alertdialog" aria-labelledby="delete-label">
-        <div id="delete-label"></div>
-        <div class="genericPromptBtns">
-          <button id="customPrompt-button-delete" type="button" class="Btn" title="Delete">Delete</button>
-          <button id="customPrompt-button-cancel" type="button" class="Btn" title="Cancel">Cancel</button>
+
+    <div class="ov-header-actions">
+      <p id="ov-save-state" class="ov-save-state" role="status" aria-live="polite"></p>
+      <button id="reload-info-btn" type="button" class="ov-icon-btn" title="Reload" aria-label="Reload">
+        <svg class="ov-icon" aria-hidden="true"><use href="#i-reload"/></svg>
+      </button>
+      <details id="ov-entry-menu" class="ov-menu">
+        <summary class="ov-icon-btn" title="More actions" aria-label="More actions">
+          <svg class="ov-icon" aria-hidden="true"><use href="#i-more"/></svg>
+        </summary>
+        <div class="ov-menu-list">
+          <button id="delete-info-btn" type="button" class="ov-menu-item ov-menu-danger">
+            <svg class="ov-icon" aria-hidden="true"><use href="#i-trash"/></svg>
+            Delete entry…
+          </button>
         </div>
-      </div>
-      <div class="divider" data-editing="false"></div>
-      <button id="reload-info-btn" type="button" class="Btn" title="reload info page">Reload</button>
+      </details>
     </div>
+  </header>
 
-  </section>
+  <main id="info-container" class="ov-page">
 
-  <section id="info-container">
-    <section id="hermidata-main">
-      <div id="hermidata-img-container"><!-- Dynamic load image --> </div>
-      <div id="imageChanger-dialog" popover class="image-changer-popover" role="dialog" aria-label="Change cover image">
-        <div class="image-changer-tabs" role="tablist" aria-label="Image source">
-          <button type="button" class="tab-btn active" data-mode="url" role="tab" aria-selected="true" aria-controls="imageChanger-panel-url">URL</button>
-          <button type="button" class="tab-btn" data-mode="file" role="tab" aria-selected="false" tabindex="-1" aria-controls="imageChanger-panel-file">Upload</button>
-        </div>
-
-        <div class="image-changer-panel" id="imageChanger-panel-url" data-panel="url" role="tabpanel">
-          <input type="text" id="imageChanger-url" placeholder="https://example.com/cover.jpg" aria-label="Image URL" />
-          <button type="button" id="imageChanger-url-confirm">Set</button>
-        </div>
-
-        <div class="image-changer-panel" id="imageChanger-panel-file" data-panel="file" role="tabpanel" hidden>
-          <input type="file" id="imageChanger-file" accept="image/*" aria-label="Upload an image file" />
-        </div>
+    <section id="hermidata-main" class="ov-hero" aria-label="Details">
+      <div class="ov-cover-col">
+        <button id="hermidata-cover-btn" type="button" class="ov-cover" aria-label="Change cover image">
+          <img id="hermidata-img" alt="" />
+          <span class="ov-cover-hint">
+            <svg class="ov-icon" aria-hidden="true"><use href="#i-image"/></svg>
+            Change cover
+          </span>
+        </button>
+        <button id="hermidata-readLatest-btn" type="button" class="ov-btn ov-btn-primary">
+          <svg class="ov-icon ov-icon-fill" aria-hidden="true"><use href="#i-play"/></svg>
+          Read latest
+        </button>
+        <p id="hermidata-latestRelease" class="ov-latest"></p>
       </div>
 
-      <button id="hermidata-readLatest-btn" type="button" class="Btn" title="Read latest chapter">Read Latest</button>
-      <div id="hermidata-info-container">
-        <h2 id="hermidata-title"></h2>
-        <div id="hermidata-alternative-titles-container">
-          <div id="hermidata-alternative-title-button" title="Alternative titles">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            <p id="hermidata-alternative-title-button-text"></p>
-            <svg class="hermidata-alternative-title-button-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" data-closed="true" aria-hidden="true">
-              <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <div id="hermidata-alternative-titles-list" data-closed="true"></div>
-          <div id="hermidata-alt-lookup" hidden>
-            <p id="hermidata-alt-lookup-status" aria-live="polite"></p>
-            <button id="hermidata-alt-lookup-btn" type="button" class="Btn">Look up</button>
-            <form id="hermidata-alt-lookup-form" hidden>
-              <input id="hermidata-alt-lookup-input" type="text" autocomplete="off" aria-label="Title or MangaUpdates / AniList link" placeholder="Title, or a MangaUpdates / AniList link" />
-              <button id="hermidata-alt-lookup-submit" type="submit" class="Btn">Search</button>
-            </form>
-            <ul id="hermidata-alt-lookup-candidates" hidden></ul>
-          </div>
-        </div>
-        <div id="hermidata-metadata-container">
-          <div id="hermidata-novelType" class="hermidata-metadata-group-1" title="Novel Type" role="group" aria-label="Novel type" data-editing="false"></div>
-          <div id="hermidata-contentRating" class="hermidata-metadata-group-1" title="Content Rating" role="group" aria-label="Content rating" data-editing="false"></div>
-          <div id="hermidata-releaseDate" class="hermidata-metadata-group-1" title="Release Date" role="group" aria-label="Release date" data-editing="false"></div>
-          <div id="hermidata-novelStatus" class="hermidata-metadata-group-1" title="Novel Status" role="group" aria-label="Novel status" data-editing="false"></div>
-        </div>
-        <div id="hermidata-starRating-container">
-          <span id="hermidata-starRating-star" aria-hidden="true">★ </span><div id="hermidata-starRating" title="Star Rating" role="group" aria-label="Star rating"></div>
-          <div id="hermidata-starRating-edit" title="Edit star rating">Edit</div>
-        </div>
-        <div id="hermidata-genres-container">
-          <div id="hermidata-genres-label" title="Genres">Genres</div>
-          <div id="hermidata-genres" class="hermidata-metadata-group-2 selected-tag-container" data-editing="false"></div>
-          <input id="filterInput-genres" class="filterInput" placeholder="Filter list..." aria-label="Filter genres" data-editing="false"/>
-          <div id="allTags-genres" class="filter-allTags-container" data-editing="false"></div>
-        </div>
-        <div id="hermidata-demographics-container">
-          <div id="hermidata-demographics-label" title="Demographics">Demographics</div>
-          <div id="hermidata-demographics" class="hermidata-metadata-group-2 selected-tag-container"></div>
-          <input id="filterInput-demographics" class="filterInput" placeholder="Filter list..." aria-label="Filter demographics" data-editing="false"/>
-          <div id="allTags-demographics" class="filter-allTags-container" data-editing="false"></div>
-        </div>
-        <div id="hermidata-sources-container">
-          <div id="hermidata-sources-label" title="Source(s)">Source(s)</div>
-          <div id="hermidata-sources" class="hermidata-metadata-group-2"></div>
-        </div>
-        <div id="hermidata-author-container">
-          <div id="hermidata-author-label" title="Author" data-editing="false">Author</div>
-          <div id="hermidata-author" class="hermidata-metadata-group-2"></div>
-        </div>
-        <div id="hermidata-latestRelease-container">
-          <div id="hermidata-latestRelease-label" title="Latest chapter Release">Latest Release</div>
-          <div id="hermidata-latestRelease" class="hermidata-metadata-group-2"></div>
-        </div>
-      </div>
+      <div id="hermidata-info-container" class="ov-info">
+        <textarea id="hermidata-title" class="ov-title ov-field" rows="1" aria-label="Title" spellcheck="false"></textarea>
 
-    </section>
-    <section id="hermidata-markers">
-      <div id="hermidata-markers-container">
-        <h3 id="hermidata-markers-label">Markers</h3>
-        <div id="hermidata-markers-utility-container" class="search-container-parent">
-          <div id="hermidata-markers-utility-search-container" class="search-container">
-            <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
-            <input id="search-marker" placeholder="Search chapter or marker label..." type="search" aria-label="Search chapter or marker label" />
-          </div>
-          <div id="hermidata-markers-utility-sort-container">
-            <div id="hermidata-markers-utility-sort-chapter" class="filter-button" title="Sort by latest chapter" data-state="true" data-sort="asc" aria-pressed="true">↓  Chapter</div>
-            <div id="hermidata-markers-utility-sort-date" class="filter-button" title="Sort by date" data-state="false" data-sort="asc" aria-pressed="false">↓  Date</div>
-            <div class="pill-indicator" aria-hidden="true"></div>
+        <div id="hermidata-alternative-titles-container" class="ov-alt">
+          <button id="hermidata-alternative-title-button" type="button" class="ov-disclosure" aria-expanded="false" aria-controls="hermidata-alternative-titles-panel">
+            <svg class="ov-icon ov-disclosure-arrow" aria-hidden="true"><use href="#i-chevron"/></svg>
+            <span>Also known as</span>
+            <span id="hermidata-alternative-title-count" class="ov-count"></span>
+          </button>
+          <div id="hermidata-alternative-titles-panel" class="ov-alt-panel" hidden>
+            <div id="hermidata-alternative-titles-list" class="ov-chip-list ov-chip-list-stacked" aria-label="Alternative titles"></div>
+            <div id="hermidata-alt-lookup" hidden>
+              <p id="hermidata-alt-lookup-status" aria-live="polite"></p>
+              <button id="hermidata-alt-lookup-btn" type="button" class="ov-btn ov-btn-small">Look up</button>
+              <form id="hermidata-alt-lookup-form" hidden>
+                <input id="hermidata-alt-lookup-input" type="text" autocomplete="off" aria-label="Title or MangaUpdates / AniList link" placeholder="Title, or a MangaUpdates / AniList link" />
+                <button id="hermidata-alt-lookup-submit" type="submit" class="ov-btn ov-btn-small">Search</button>
+              </form>
+              <ul id="hermidata-alt-lookup-candidates" hidden></ul>
+            </div>
           </div>
         </div>
-        <div id="hermidata-markers-list" role="list" aria-label="Markers">
-          <!-- markers go here -->
-        </div>
-      </div>
 
-    </section>
-    <section id="hermidata-notes">
-      <div id="hermidata-notes-container">
-        <label for="hermidata-notes-content" id="hermidata-notes-label">Notes</label>
-        <textarea id="hermidata-notes-content" readonly></textarea>
+        <dl class="ov-props">
+          <div class="ov-prop">
+            <dt><label for="hermidata-novelType">Type</label></dt>
+            <dd><select id="hermidata-novelType" class="ov-field ov-select"></select></dd>
+          </div>
+          <div class="ov-prop">
+            <dt><label for="hermidata-novelStatus">Status</label></dt>
+            <dd><select id="hermidata-novelStatus" class="ov-field ov-select"></select></dd>
+          </div>
+          <div class="ov-prop">
+            <dt><label for="hermidata-contentRating">Content</label></dt>
+            <dd><select id="hermidata-contentRating" class="ov-field ov-select"></select></dd>
+          </div>
+          <div class="ov-prop">
+            <dt><label for="hermidata-releaseDate">Released</label></dt>
+            <dd><input id="hermidata-releaseDate" class="ov-field" type="date" /></dd>
+          </div>
+          <div class="ov-prop">
+            <dt id="hermidata-starRating-label">Score</dt>
+            <dd>
+              <div id="hermidata-starRating" class="ov-score" role="radiogroup" aria-labelledby="hermidata-starRating-label"></div>
+            </dd>
+          </div>
+          <div class="ov-prop">
+            <dt><label for="hermidata-author">Author</label></dt>
+            <dd><input id="hermidata-author" class="ov-field" type="text" placeholder="Add author" autocomplete="off" /></dd>
+          </div>
+          <div class="ov-prop ov-prop-wide">
+            <dt id="hermidata-sources-label">Sources</dt>
+            <dd><div id="hermidata-sources" class="ov-chip-list" aria-labelledby="hermidata-sources-label"></div></dd>
+          </div>
+          <div class="ov-prop ov-prop-wide">
+            <dt id="hermidata-genres-label">Genres</dt>
+            <dd><div id="hermidata-genres" class="ov-tag-field" aria-labelledby="hermidata-genres-label"></div></dd>
+          </div>
+          <div class="ov-prop ov-prop-wide">
+            <dt id="hermidata-demographics-label">Demographic</dt>
+            <dd><div id="hermidata-demographics" class="ov-tag-field" aria-labelledby="hermidata-demographics-label"></div></dd>
+          </div>
+        </dl>
       </div>
     </section>
-  </section>
+
+    <section id="hermidata-markers" class="ov-card" aria-labelledby="hermidata-markers-label">
+      <div class="ov-card-head">
+        <h2 id="hermidata-markers-label">Markers <span id="hermidata-markers-count" class="ov-count"></span></h2>
+        <div class="ov-card-tools">
+          <div class="ov-search-small">
+            <svg class="ov-icon" aria-hidden="true"><use href="#i-search"/></svg>
+            <input id="search-marker" placeholder="Chapter or label" type="search" aria-label="Search chapter or marker label" />
+          </div>
+          <div id="hermidata-markers-utility-sort-container" class="ov-segmented" role="group" aria-label="Sort markers">
+            <button id="hermidata-markers-utility-sort-chapter" type="button" class="ov-segment" aria-pressed="true" data-sort="asc">Chapter <span class="ov-sort-dir" aria-hidden="true">↓</span></button>
+            <button id="hermidata-markers-utility-sort-date" type="button" class="ov-segment" aria-pressed="false" data-sort="asc">Date <span class="ov-sort-dir" aria-hidden="true">↓</span></button>
+            <button id="hermidata-markers-utility-sort-used" type="button" class="ov-segment" aria-pressed="false" data-sort="asc">Last used <span class="ov-sort-dir" aria-hidden="true">↓</span></button>
+          </div>
+        </div>
+      </div>
+      <ul id="hermidata-markers-list" class="ov-markers" aria-label="Markers"></ul>
+    </section>
+
+    <section id="hermidata-notes" class="ov-card">
+      <div class="ov-card-head">
+        <h2><label for="hermidata-notes-content" id="hermidata-notes-label">Notes</label></h2>
+      </div>
+      <textarea id="hermidata-notes-content" class="ov-notes ov-field" placeholder="Write anything you want to remember about this title…"></textarea>
+    </section>
+  </main>
+
+  <dialog id="imageChanger-dialog" class="ov-dialog" aria-labelledby="imageChanger-title">
+    <form method="dialog" class="ov-dialog-body">
+      <div class="ov-dialog-head">
+        <h2 id="imageChanger-title">Change cover</h2>
+        <button type="submit" class="ov-icon-btn" aria-label="Close"><svg class="ov-icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div id="imageChanger-source" class="ov-dialog-step">
+        <label for="imageChanger-url">Image link</label>
+        <div class="ov-inline-form">
+          <input type="url" id="imageChanger-url" placeholder="https://example.com/cover.jpg" />
+          <button type="button" id="imageChanger-url-confirm" class="ov-btn ov-btn-primary">Use link</button>
+        </div>
+        <p class="ov-dialog-or">or</p>
+        <label class="ov-btn ov-file-btn">
+          <svg class="ov-icon" aria-hidden="true"><use href="#i-image"/></svg>
+          Upload an image…
+          <input type="file" id="imageChanger-file" accept="image/*" class="sr-only" />
+        </label>
+        <button type="button" id="imageChanger-crop-current" class="ov-btn ov-btn-ghost ov-crop-current">
+          <svg class="ov-icon" aria-hidden="true"><use href="#i-crop"/></svg>
+          Crop the current cover
+        </button>
+      </div>
+
+      <div id="imageChanger-crop" class="ov-dialog-step ov-crop" hidden>
+        <div id="imageChanger-crop-frame" class="ov-crop-frame" tabindex="0" role="group" aria-label="Crop area" aria-describedby="imageChanger-crop-hint">
+          <img id="imageChanger-crop-img" alt="" draggable="false" />
+        </div>
+        <div class="ov-crop-zoom">
+          <label for="imageChanger-zoom">Zoom</label>
+          <input type="range" id="imageChanger-zoom" value="1" />
+        </div>
+        <p id="imageChanger-crop-hint" class="ov-crop-hint">Drag or use the arrow keys to move. Scroll, the slider or + and − to zoom.</p>
+        <div class="ov-dialog-foot ov-crop-foot">
+          <button type="button" id="imageChanger-crop-back" class="ov-btn ov-btn-ghost">Back</button>
+          <button type="button" id="imageChanger-crop-whole" class="ov-btn">Use whole image</button>
+          <button type="button" id="imageChanger-crop-save" class="ov-btn ov-btn-primary">Save cover</button>
+        </div>
+      </div>
+
+      <p id="imageChanger-error" class="ov-dialog-error" role="alert" hidden></p>
+    </form>
+  </dialog>
+
+  <dialog id="delete-dialog" class="ov-dialog" role="alertdialog" aria-labelledby="delete-label" aria-describedby="delete-description">
+    <form method="dialog" class="ov-dialog-body">
+      <h2 id="delete-label"></h2>
+      <p id="delete-description">This removes the entry, its markers and notes. It can't be undone.</p>
+      <div class="ov-dialog-foot">
+        <button id="customPrompt-button-cancel" type="submit" value="cancel" class="ov-btn">Cancel</button>
+        <button id="customPrompt-button-delete" type="submit" value="delete" class="ov-btn ov-btn-danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="ov-toast" class="ov-toast" hidden>
+    <span id="ov-toast-text"></span>
+    <button id="ov-toast-undo" type="button" class="ov-toast-undo">Undo</button>
+  </div>
 
 </body>
   <script src="../scripts/library/details.ts" type="module"></script>

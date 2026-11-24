@@ -101,6 +101,46 @@ describe('RSS refresh: correctness', () => {
     });
 });
 
+describe('RSS notifications: the seen marker', () => {
+    const seen = (chapter: number) => ({ chapter, link: `https://example.com/ch-${chapter}`, pubDate: '2026-11-10T00:00:00.000Z' });
+
+    it('clearing a notification on one device clears it on the other', async () => {
+        const { a, b, novels } = await syncedPair();
+
+        a.edit(novels[0].id, h => { (h.rss[0] as any).seen = seen(47); });
+        await settle();
+
+        expect((b.db.get(novels[0].id)!.rss[0] as any).seen).toEqual(seen(47));
+    });
+
+    it('an edit from a device without the marker does not bring a cleared notification back', async () => {
+        const { a, b, novels } = await syncedPair();
+        // B has a marker of its own ( a background check set it ) that it never published
+        const local = b.db.get(novels[0].id)!;
+        (local.rss[0] as any).seen = seen(47);
+        b.db.set(novels[0].id, local);
+
+        a.edit(novels[0].id, h => { h.chapter.bookmarks['bm1'].current = 12; });
+        await settle();
+
+        const got = b.db.get(novels[0].id)!;
+        expect(got.chapter.bookmarks['bm1'].current).toBe(12);
+        expect((got.rss[0] as any).seen).toEqual(seen(47));
+    });
+
+    it('of two markers, the one further along wins', async () => {
+        const { a, b, novels } = await syncedPair();
+        const local = b.db.get(novels[0].id)!;
+        (local.rss[0] as any).seen = seen(50);
+        b.db.set(novels[0].id, local);
+
+        a.edit(novels[0].id, h => { (h.rss[0] as any).seen = seen(47); });
+        await settle();
+
+        expect((b.db.get(novels[0].id)!.rss[0] as any).seen).toEqual(seen(50));
+    });
+});
+
 describe('RSS refresh: races with a reader on another device', () => {
     it('a refresh that leaves meta.updated alone never overwrites a newer edit', async () => {
         const { a, b, novels } = await syncedPair();

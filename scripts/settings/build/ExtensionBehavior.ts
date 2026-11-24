@@ -1,5 +1,6 @@
-import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings, resolveTombstoneTtlDays } from "../../shared/constants";
-import { type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
+import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings } from "../../shared/constants";
+import { resolveAutoSetStatusMode, resolveRssCheckInterval, resolveTombstoneTtlDays } from "../../shared/utils/SettingsValues";
+import { type AutoSetStatusMode, type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import {
     BROWSER_COMMAND_SHORTCUTS,
@@ -48,6 +49,7 @@ export class ExtensionBehavior extends Build {
 
     private readonly bookmarkTitleFormat = new BookmarkTitleFormat();
     private readonly tombstoneTtlDays = getElement<HTMLInputElement>("#tombstoneTtlDays");
+    private readonly rssCheckInterval = getElement<HTMLSelectElement>("#rssCheckInterval");
 
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
     private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
@@ -83,6 +85,8 @@ export class ExtensionBehavior extends Build {
         await this.bookmarkTitleFormat.init();
         // Tombstone TTL
         this.setValueOptionTombstoneTtl(settings);
+        // RSS check interval
+        this.setValueOptionRssCheckInterval(settings);
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
         // Auto Subscribe - Threshold
@@ -122,6 +126,7 @@ export class ExtensionBehavior extends Build {
         this.enableAltTitleLookup?.addEventListener("change", (e) => this.EnableAltTitleLookup(e));
 
         this.tombstoneTtlDays?.addEventListener("change", (e) => this.TombstoneTtlDays(e));
+        this.rssCheckInterval?.addEventListener("change", (e) => this.RssCheckInterval(e));
 
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
@@ -148,6 +153,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionAltTitleLookup(updatedSettings);
         await this.bookmarkTitleFormat.resetValues();
         this.setValueOptionTombstoneTtl(updatedSettings);
+        this.setValueOptionRssCheckInterval(updatedSettings);
         this.updateSpreadsheetReminder(updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, updatedSettings.AccountAndConnections.spreadsheetUrl);
         document.dispatchEvent(new CustomEvent("hermidata:spreadsheet-target-changed", { detail: updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet }));
     }
@@ -335,6 +341,10 @@ export class ExtensionBehavior extends Build {
         const enabled = settings.ExtensionBehaviour.AltTitleLookup?.Enable ?? false;
         setElement<HTMLInputElement>("#enableAltTitleLookup", el => el.checked = enabled);
     }
+    private setValueOptionRssCheckInterval(settings: Settings) {
+        const minutes = resolveRssCheckInterval(settings.ExtensionBehaviour.RssCheckIntervalMinutes);
+        setElement<HTMLSelectElement>("#rssCheckInterval", el => el.value = String(minutes));
+    }
     private setValueOptionTombstoneTtl(settings: Settings) {
         const days = settings.ExtensionBehaviour.TombstoneTtlDays ?? DEFAULT_TOMBSTONE_TTL_DAYS;
         setElement<HTMLInputElement>("#tombstoneTtlDays", el => el.value = String(days));
@@ -438,6 +448,14 @@ export class ExtensionBehavior extends Build {
         } catch (error) {
             console.warn('[Settings] alt title backfill:', error);
         }
+    }
+    // RSS check interval ( the background recreates its alarm when the synced settings change )
+    private async RssCheckInterval(e: Event) {
+        const select = e.target as HTMLSelectElement;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.RssCheckIntervalMinutes = resolveRssCheckInterval(Number(select.value));
+        select.value = String(updatedSettings.ExtensionBehaviour.RssCheckIntervalMinutes);
+        await this.setSettings(updatedSettings);
     }
     // Tombstone TTL
     private async TombstoneTtlDays(e: Event) {
@@ -572,32 +590,23 @@ export class ExtensionBehavior extends Build {
     // Auto Update Novel Status
     private setValueOptionAutoUpdateNovelStatus(settings: Settings) {
         if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
-        const autoUpdateNovelStatus = settings.ExtensionBehaviour.AutoSetStatusScore;
-        const RSSOnly = autoUpdateNovelStatus.onlyRSS;
-        const allowAll = autoUpdateNovelStatus.allowAllDateFields;
+        const mode = resolveAutoSetStatusMode(settings.ExtensionBehaviour.AutoSetStatusScore);
 
-        this.autoUpdateNovelStatusAllValue.checked = allowAll;
-        this.autoUpdateNovelStatusOnlyRSS.checked = RSSOnly;
+        this.autoUpdateNovelStatusAllValue.checked = mode === 'all';
+        this.autoUpdateNovelStatusOnlyRSS.checked = mode === 'rss';
     }
+    /** The two switches pick one mode: turning one on turns the other off, turning it off means off */
     private async AutoUpdateNovelStatus(e: Event, type: "onlyRSS" | "allowAll") {
         if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
-        const event = e.target as HTMLInputElement;
-        const isChecked = event.checked;
+        const isChecked = (e.target as HTMLInputElement).checked;
         const updatedSettings = await this.ensureSettingsUpToDate();
 
-        const settingsTarget = type == 'allowAll' ? 'allowAllDateFields' : 'onlyRSS';
-        if (!settingsTarget) return;
+        const mode: AutoSetStatusMode = !isChecked ? 'off' : type === 'allowAll' ? 'all' : 'rss';
 
-        // make sure only one can be checked at a time
-        if (settingsTarget == 'onlyRSS') {
-            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.allowAllDateFields = false;
-            this.autoUpdateNovelStatusAllValue.checked = false;
-        } else if (settingsTarget == 'allowAllDateFields') {
-            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.onlyRSS = false;
-            this.autoUpdateNovelStatusOnlyRSS.checked = false;
-        }
+        this.autoUpdateNovelStatusAllValue.checked = mode === 'all';
+        this.autoUpdateNovelStatusOnlyRSS.checked = mode === 'rss';
 
-        updatedSettings.ExtensionBehaviour.AutoSetStatusScore[settingsTarget] = isChecked;
+        updatedSettings.ExtensionBehaviour.AutoSetStatusScore = { mode };
         this.setSettings(updatedSettings);
     }
 

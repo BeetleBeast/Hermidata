@@ -158,6 +158,16 @@ describe('HermidataModel.UpdateBookmark', () => {
         expect(new Date(history[0].at).toISOString()).toBe(history[0].at);
         expect(history[0].at).not.toBe(markerId);
     });
+    it('marks the saved marker as used so it can be sorted by last used', () => {
+        const saved = createHermidata(5);
+        const current = createHermidata(6);
+        const markerId = current.chapter.bookmarkInUse;
+        saved.getBookmark(markerId).lastUsedAt = '2020-01-01T00:00:00.000Z';
+
+        saved.UpdateBookmark(current, 6);
+
+        expect(Date.parse(saved.getBookmark(markerId).lastUsedAt)).toBeGreaterThan(Date.parse('2020-01-01T00:00:00.000Z'));
+    });
 });
 
 describe('HermidataModel image source', () => {

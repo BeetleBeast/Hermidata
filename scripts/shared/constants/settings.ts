@@ -19,15 +19,14 @@ export const DEFAULT_FOLDER_MAPPING: FolderMapping = {
 
 export const DEFAULT_TOMBSTONE_TTL_DAYS = 30;
 export const MAX_TOMBSTONE_TTL_DAYS = 3_650;
-/** Whole days within 1..MAX_TOMBSTONE_TTL_DAYS; anything else falls back to the default */
-export function resolveTombstoneTtlDays(days: number | undefined): number {
-    return Number.isFinite(days) && days! >= 1 ? Math.min(Math.floor(days!), MAX_TOMBSTONE_TTL_DAYS) : DEFAULT_TOMBSTONE_TTL_DAYS;
-}
+/** Minutes between background RSS checks the user can pick */
+export const RSS_CHECK_INTERVALS = [30, 60, 180, 360] as const;
+export const DEFAULT_RSS_CHECK_INTERVAL = 60;
 /** Placeholders: {title} and {chapter} */
 export const DEFAULT_BOOKMARK_TITLE_FORMAT = '{title} - Chapter {chapter}';
 
 export const defaultSettings: Settings = {
-    version: 9,
+    version: 10,
     AccountAndConnections: {
         spreadsheetUrl: '',
         sheetName: DEFAULT_SHEET_NAME,
@@ -50,14 +49,14 @@ export const defaultSettings: Settings = {
         },
         EnableNotification: 'None',
         AutoSetStatusScore: {
-            onlyRSS: false,
-            allowAllDateFields: false,
+            mode: 'off',
         },
         AltTitleLookup: {
             Enable: false,
         },
         TombstoneTtlDays: DEFAULT_TOMBSTONE_TTL_DAYS,
         BookmarkTitleFormat: DEFAULT_BOOKMARK_TITLE_FORMAT,
+        RssCheckIntervalMinutes: DEFAULT_RSS_CHECK_INTERVAL,
     },
     ContentTypesAndStatuses: {
         TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],

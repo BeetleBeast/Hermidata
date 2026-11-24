@@ -1,4 +1,27 @@
-export type { 
+export type {
+    CommitOptions,
+    CommitChange,
+    SaveState,
+    ChipListOptions,
+    CoverSource,
+    TagPickerOptions,
+    MarkerSortKey,
+    SortDirection,
+} from "./overview";
+
+export type {
+    QueueFilters,
+    QueuePosition,
+    RowOptions,
+    RowActions,
+    PickActions,
+    QueueProgress,
+    GrabbedRow,
+    WaitingCover,
+    QueueIconName,
+} from "./readingList";
+
+export type {
     RegexConfig,
     TrimmedTitle,
 
@@ -14,6 +37,8 @@ export type {
     
     Hermidata,
     Bookmark,
+    ReadingQueue,
+    ReadingQueuePriorityBand,
 
     OnlyPlainHermidata,
 
@@ -38,6 +63,7 @@ export type {
     AllFeeds,
 
     Feed,
+    SeenMarker,
     RawFeed,
     FeedItem,
     FeedExtras,
@@ -118,8 +144,6 @@ export type {
     RssDOM,
     RSSData,
 
-    TagMap,
-    SwitchConfig,
 
     FuzzyHermidataMatches,
     FuzzyBookmarkMatches,
@@ -159,7 +183,10 @@ export type {
     KeyboardShortcutSettings,
     BookmarkTitleValues,
     BookmarkTitlePlaceholder,
-    BookmarkTitleFormatPart
+    BookmarkTitleFormatPart,
+    AutoSetStatusMode,
+    AutoSetStatusSettings,
+    LegacyAutoSetStatusSettings
 
 } from "./settings";
 

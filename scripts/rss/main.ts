@@ -4,7 +4,9 @@ import type { Hermidata, RSSData, RssDOM } from "../shared/types/index";
 import type { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
-import { getHermidataNotification } from "./load";
+import { getHermidataWithRssFromBackground, RSS_CHANGED_EVENT } from "./load";
+import { refreshNotificationSection } from "./build/feed";
+import { ext } from "../shared/utils/BrowserCompat";
 
 
 function setActiveModeButton(button: HTMLButtonElement): void {
@@ -15,6 +17,12 @@ function setActiveModeButton(button: HTMLButtonElement): void {
 let rssPreloadPromise: Promise<RssDOM> | null = null;
 
 let rssDOMCache: RssDOM | null = null;
+
+// notifications were cleared: the prebuilt view is stale
+if (typeof document !== 'undefined') document.addEventListener(RSS_CHANGED_EVENT, () => {
+    rssPreloadPromise = null;
+    rssDOMCache = null;
+});
 
 /*
 0. Cache constants
@@ -79,6 +87,7 @@ export class RSS {
             // If preloaded, use it instantly
             const dom = await (rssPreloadPromise ?? this.preloadRSS());
             this.insertRSSPage(dom, {notificationSec: notification, allSec: allSec});
+            refreshNotificationSection();
             
             this.changeLoadingBar(20, 'making sort section');
             await this.BuildRSS.makeSortSection(sortSection);
@@ -134,8 +143,8 @@ export class RSS {
             },
         };
 
-        // Build notification items
-        rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makeFeedItem(feeds, false, true));
+        // Build notification items ( only the unread ones, newest release first )
+        rssDomPackage.notifications.items.appendChild(await this.BuildRSS.makeFeedItem(feeds, false));
 
         // Build all items header
         rssDomPackage.allItems.header.appendChild(await this.BuildRSS.makeItemHeader());
@@ -148,7 +157,8 @@ export class RSS {
     public async preloadRSS(): Promise<RssDOM> {
         try {
             if (rssPreloadPromise) return rssPreloadPromise;
-
+            // the badge follows what the popup is about to show
+            void ext.runtime.sendMessage({ type: 'REFRESH_RSS_BADGE' }).catch(() => {});
 
             const data = await this.loadRSSData();
             rssDOMCache = await this.buildRSSDom(data);
@@ -166,7 +176,7 @@ export class RSS {
 
     private async loadRSSData(): Promise<RSSData> {
         const [feeds, hermidata] = await Promise.all([
-            getHermidataNotification(),
+            getHermidataWithRssFromBackground(),
             PastHermidata.getAllHermidata()
         ]);
         const merged = { ...hermidata, ...feeds }; // Overwrite stale hermidata entries with the updated RSS ones

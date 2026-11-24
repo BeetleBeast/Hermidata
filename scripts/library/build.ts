@@ -2,7 +2,6 @@ import { PastHermidata } from "../popup/core/Past";
 import { dbAccess } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import type { OnlyPlainHermidata } from "../shared/types/popup";
-import { HermidataModel } from "../shared/utils/HermidataSelector";
 
 export abstract class LibraryBuilder {
 
@@ -23,6 +22,12 @@ export abstract class LibraryBuilder {
     }
     protected removeHermidata(id: string): Promise<void> {
         return this.dbAccess.deleteHermidata(id);
+    }
+    protected pushToSync(entry: OnlyPlainHermidata): Promise<void> {
+        return this.dbAccess.pushToSync(entry);
+    }
+    protected removeFromSync(id: string): Promise<void> {
+        return this.dbAccess.removeFromSync(id);
     }
 
     constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
@@ -162,26 +167,5 @@ export abstract class LibraryBuilder {
         }
         */
     }
-}
-
-
-export class PageDetailBuilder {
-
-    static hermidata: HermidataModel | undefined;
-
-    /** NOTE: when using make sure there is a local hermidata used */
-    static handleMarkerClick = (event: MouseEvent): void => {
-        if (!this.hermidata) return;
-
-        const marker = (event.target as HTMLElement).closest<HTMLElement>('.hermidata-marker-container');
-        if (!marker) return;
-
-        const markerId = marker.dataset.id;
-        if (!markerId) return;
-        
-        const url = this.hermidata.chapter.bookmarks[markerId].url;
-
-        this.hermidata.jumpToUrl(url);
-    };
 }
 

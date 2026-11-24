@@ -1,7 +1,7 @@
 import { type Hermidata } from "../shared/types/index";
 import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
-import { FeedItem } from "./build/feed";
+import { FeedItem, refreshNotificationSection } from "./build/feed";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { getElement, setElement } from "../shared/utils/Selection";
 import { BuildRSSController } from "./controller";
@@ -39,9 +39,11 @@ export abstract class RssBuild {
                 PastHermidata.getAllHermidata()
             ]);
         
+            // makeFeedItem( ..., false ) keeps only the unread items
             NotificationSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(feeds, false));
             AllItemSection.appendChild(new FeedItem(this.AllHermidata).makeItemHeader());
-            AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem(hermidata, true));
+            AllItemSection.appendChild(await new FeedItem(this.AllHermidata).makeFeedItem({ ...hermidata, ...feeds }, true));
+            refreshNotificationSection();
 
             const sortSection = getElement<HTMLDivElement>("#sort-RSS-entries");
             if (!sortSection) throw new Error('sort section not found');

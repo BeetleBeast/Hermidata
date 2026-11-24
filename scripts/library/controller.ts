@@ -1,6 +1,7 @@
 import { dbAccess } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
+import { openLink } from "../shared/utils/StringOutput";
 import { feed } from "./build/feed";
 import { filter } from "./build/setFilter";
 import { FilterLogic } from "./build/filterLogic";
@@ -19,6 +20,7 @@ export class Controller {
     private readonly merger: HermidataMerge;
 
     private readonly reloadData = getElement<HTMLButtonElement>("#reloadData");
+    private readonly openReadingList = getElement<HTMLButtonElement>("#openReadingList");
 
     private readonly gridViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-grid");
     private readonly listViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-list");
@@ -61,6 +63,7 @@ export class Controller {
     private setEventListener() {
         this.removeEventListener();
         this.reloadData!.addEventListener('click', () => this.reload());
+        this.openReadingList?.addEventListener('click', () => void openLink('ReadingList.html', 'sameTab'));
 
         // viewMode toggle
         this.gridViewMode?.addEventListener('click', () => this.feed.setGridViewMode('grid'));

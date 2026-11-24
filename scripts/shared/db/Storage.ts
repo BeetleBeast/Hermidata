@@ -142,6 +142,20 @@ export async function getAllHermidata(): Promise<Record<string, OnlyPlainHermida
         return {};
     }
 }
+/**
+ * Saves edited entries in one transaction, the batch version of saveHermidata: each one is stamped as updated
+ * so sync ( newest meta.updated wins ) carries the change to other devices. Use setAllHermidata to write without that.
+ */
+export async function saveAllHermidata(entries: OnlyPlainHermidata[]): Promise<void> {
+    if (entries.length === 0) return;
+    const now = new Date().toISOString();
+    for (const entry of entries) entry.meta.updated = now;
+
+    await putAllHermidata(entries);
+    pushToSync();
+    PastHermidata.invalidateCache();
+    console.log(`[Storage] saved ${entries.length} edited entries`);
+}
 export async function setAllHermidata(hermidata: OnlyPlainHermidata[]): Promise<void> {
     try {
         await putAllHermidata(hermidata);
@@ -429,41 +443,6 @@ export function sheetUrlInput(): Promise<string> {
 export async function setSpreadsheetUrl(url: string): Promise<void> {
     const settings = await getSettings();
     await setSettings({ ...settings, AccountAndConnections : { ...settings.AccountAndConnections, spreadsheetUrl: url }});
-}
-
-// ============================================================
-// Notifications — kept in storage.local (device-specific, no sync needed)
-// ============================================================
-
-export async function getLocalNotificationItem(key: string): Promise<boolean> {
-    try {
-        return await new Promise<boolean>((resolve, reject) => {
-            ext.storage.local.get('clearedNotification', (result: { clearedNotification: Record<string, boolean> }) => {
-                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-                resolve(result?.clearedNotification?.[key] ?? false);
-            });
-        });
-    } catch (err) {
-        logConsoleError('[Storage] getLocalNotificationItem:', key, err);
-        return false;
-    }
-}
-
-export async function setNotificationList(key: string, value = true): Promise<Record<string, boolean>> {
-    try {
-        return await new Promise<Record<string, boolean>>((resolve, reject) => {
-            ext.storage.local.get('clearedNotification', (result: { clearedNotification: Record<string, boolean> }) => {
-                const combined = { ...result?.clearedNotification, [key]: value };
-                ext.storage.local.set({ clearedNotification: combined }, () => {
-                    if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-                    resolve(combined);
-                });
-            });
-        });
-    } catch (err) {
-        logConsoleError('[Storage] setNotificationList:', err);
-        return {};
-    }
 }
 
 // ============================================================

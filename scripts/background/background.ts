@@ -1,7 +1,7 @@
 import { initTabs } from './tabs'
 import { initMessaging, initInstalled } from './messaging'
 import { initContextMenus } from './contextMenus'
-import { initFeeds } from './feeds'
+import { initFeedListeners, initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/sync/sync.engine'
 import { initSyncAlarmListener } from '../shared/sync/syncAlarms'
@@ -42,6 +42,7 @@ initContextMenus();
 initInstalled();
 initSyncAlarmListener();
 initBackfillAlarm();
+initFeedListeners();
 
 // Phase 2: async startup. Things that need migrated data.
 (async () => {

@@ -5,10 +5,11 @@ import { dbUpdateImageKey, getAllRawFeeds, getDb, putRawFeed } from "../shared/d
 import type { DbCall, DbStore, Filters, Hermidata, RawFeed, RawScrapedItem, RawScrappedFeed, SyncCall } from "../shared/types"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
-import { checkFeedsForUpdates } from "./feeds"
 import { writeToSheet } from "./sheets"
-import { lastAutoFeedCheck, lastFeedCheck, setState } from "./state"
 import { HermidataModel } from "../shared/utils/HermidataSelector"
+import { getAllUnread } from "../shared/utils/Unread"
+import { PastHermidata } from "../popup/core/Past"
+import { updateUnreadBadge } from "./rssNotify"
 import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput"
 import { pushToSync, removeFromSync } from "../shared/sync/sync.engine"
 import { scheduleAltTitleLookup, storedKeyOf } from "./altTitles"
@@ -19,25 +20,49 @@ type SaveNovelResponse = true | { success: false; errors: string[] }
 const pendingNovelSaves = new Map<string, Promise<SaveNovelResponse>>()
 
 export function initRssCache() {
-    rssCachePromise = getHermidataWithRss().then(result => {
-        rssCache = structuredClone(result); // deep copy into cache
+    void rebuildRssCache().then(refreshBadgeFrom);
+}
+
+/** Rebuilds the cache from storage; a newer rebuild started meanwhile wins */
+export function rebuildRssCache(): Promise<Record<string, Hermidata>> {
+    // the popup and the background each keep their own copy of all items: re-read what the popup saved
+    PastHermidata.invalidateCache();
+    const promise: Promise<Record<string, Hermidata>> = getHermidataWithRss().then(result => {
+        if (rssCachePromise === promise) rssCache = structuredClone(result); // deep copy into cache
         return result;
     });
+    rssCache = null;
+    rssCachePromise = promise;
+    return promise;
+}
+
+/** The items with RSS as the popup sees them ( stored items merged with the raw feeds ) */
+export function getRssData(): Promise<Record<string, Hermidata>> {
+    if (rssCache) return Promise.resolve(rssCache);
+    return rssCachePromise ?? rebuildRssCache();
+}
+
+function refreshBadgeFrom(data: Record<string, Hermidata>): Promise<void> {
+    return updateUnreadBadge(getAllUnread(data).length);
+}
+
+/** From the popup when it opens: the badge follows what the popup will show */
+export function handleRefreshRssBadge(): void {
+    void getRssData().then(refreshBadgeFrom).catch(error => logConsoleError('[RSS] badge refresh failed:', error));
 }
 
 export function handleGetRSS(sendResponse: (r: unknown) => void): true {
-    if (rssCache) {
-        sendResponse({ status: 'ready', data: rssCache })
-    } else {
-        rssCachePromise?.then(data => sendResponse({ status: 'ready', data }))
-    }
+    getRssData()
+        .then(data => sendResponse({ status: 'ready', data }))
+        .catch(error => sendResponse({ status: 'failed', error: String(error) }));
     return true
 }
 
 export function handleInvalidateRSS(sendResponse: (r: unknown) => void): true {
-    rssCache = null
-    initRssCache()
-    sendResponse({ status: 'ok' })
+    const rebuilt = rebuildRssCache();
+    rebuilt.then(refreshBadgeFrom).catch(error => logConsoleError('[RSS] cache rebuild failed:', error));
+    // answer once the new data is there, so a GET_RSS right after sees it
+    rebuilt.then(() => sendResponse({ status: 'ok' }), () => sendResponse({ status: 'failed' }));
     return true
 }
 
@@ -92,28 +117,6 @@ async function saveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, all
     console.log('[Background] SAVE_NOVEL complete', errors.length ? { errors } : '');
     scheduleAltTitleLookup(storedKeyOf(data)); // in the background; does nothing unless the user switched the lookup on
     return errors.length === 0 ? true : { success: false, errors };
-}
-
-export function handleReloadRss(): true {
-    const now = Date.now()
-    if (now - lastFeedCheck >= 1000 *60 * 2) { // 2min passed
-        setState.lastFeedCheck(now);
-        checkFeedsForUpdates();
-        ext.runtime.sendMessage({ type: "SYNC_COMPLETED" });
-    } else {
-        console.log('Skipping - already checked recently')
-    }
-    return true
-}
-
-export function handleGetLastSync(sendResponse: (r: unknown) => void): true {
-    // Send the age in minutes (max 2 digits)
-    const diffMinutes = lastAutoFeedCheck
-    ? Math.min(99, Math.floor((Date.now() - lastAutoFeedCheck) / 60000))
-    : null;
-
-    sendResponse({ minutesAgo: diffMinutes });
-    return true
 }
 
 async function handleSaveRawFeeds(incomingFeeds: RawScrappedFeed[]): Promise<true> {
@@ -240,6 +243,12 @@ function buildFeedItem(raw: RawScrappedFeed): RawFeed {
     };
 }
 
+const settingsListeners = new Set<() => void>();
+/** Called after a page saved the settings through DB_OPERATION */
+export function onSettingsSaved(listener: () => void): void {
+    settingsListeners.add(listener);
+}
+
 export async function handleDbOperation( store: DbStore, call: DbCall, sendResponse: (r: unknown) => void): Promise<true> {
     try {
         const db = await getDb();
@@ -275,6 +284,9 @@ export async function handleDbOperation( store: DbStore, call: DbCall, sendRespo
                 break;
         }
         sendResponse({ success: true, result });
+        if (store === 'settings' && (call.operation === 'put' || call.operation === 'update')) {
+            for (const listener of settingsListeners) listener();
+        }
     } catch (err) {
         sendResponse({ success: false, error: String(err) });
     }

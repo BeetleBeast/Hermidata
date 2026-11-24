@@ -1,1224 +1,604 @@
-import { ColorPicker } from "../../popup/frontend/ColorPicker";
 import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
-import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, ContentRating, Hermidata, HermidataImageSource, Settings, SwitchConfig, TagMap } from "../../shared/types";
-import { makeButtonLike } from "../../shared/utils/Accessibility";
-import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { openLink, generateHermidataHash, getFreeKey } from "../../shared/utils/StringOutput";
-import { PageDetailBuilder, LibraryBuilder } from "../build";
-import { Tags } from "./tags";
+import type { CommitChange, CommitOptions, ContentRating, CoverSource, Hermidata, SaveState, Settings } from "../../shared/types";
+import { ErrorMessage } from "../../shared/utils/ErrorMessage";
+import type { HermidataModel } from "../../shared/utils/HermidataSelector";
+import { generateHermidataHash, getFreeKey, openLink } from "../../shared/utils/StringOutput";
+import { LibraryBuilder } from "../build";
+import { AltTitleLookupPanel } from "./altLookup";
+import { ChipList } from "./chips";
+import { CoverCropper } from "./cropper";
+import { TagPicker } from "./tags";
 
-/** Accessible names of the fields that are swapped for an input while editing, keyed by the id of the displayed element */
-const EDIT_FIELD_LABELS: Record<string, string> = {
-    'hermidata-title': 'Title',
-    'hermidata-alternative-titles-list': 'Alternative titles',
-    'hermidata-novelType': 'Novel type',
-    'hermidata-contentRating': 'Content rating',
-    'hermidata-releaseDate': 'Release date',
-    'hermidata-novelStatus': 'Novel status',
-    'hermidata-starRating': 'Star rating',
-    'hermidata-sources': 'Sources',
-    'hermidata-author': 'Author',
-};
+const TOAST_DURATION = 6000;
+const NOTES_SAVE_DELAY = 800;
+const MAX_SCORE = 10;
 
-type ImageUrlImport = { kind: 'url'; url: string; blob: Blob };
-type ImageFileImport = { kind: 'file'; file: Blob | File };
-type ImageImport = ImageUrlImport | ImageFileImport;
-
+/**
+ * Every field of the detail page is always editable in place: a change is saved as soon as the field is left
+ * ( or picked, for selects and chips ), shown in the header as "Saved", and can be undone from the toast.
+ */
 export class EditDetail extends LibraryBuilder {
 
-    private readonly hermidata: HermidataModel = this.getCurrentHermidata();
+    private readonly title = document.querySelector<HTMLTextAreaElement>('#hermidata-title');
+    private readonly altToggle = document.querySelector<HTMLButtonElement>('#hermidata-alternative-title-button');
+    private readonly altPanel = document.querySelector<HTMLElement>('#hermidata-alternative-titles-panel');
+    private readonly altCount = document.querySelector<HTMLElement>('#hermidata-alternative-title-count');
+    private readonly novelType = document.querySelector<HTMLSelectElement>('#hermidata-novelType');
+    private readonly novelStatus = document.querySelector<HTMLSelectElement>('#hermidata-novelStatus');
+    private readonly contentRating = document.querySelector<HTMLSelectElement>('#hermidata-contentRating');
+    private readonly releaseDate = document.querySelector<HTMLInputElement>('#hermidata-releaseDate');
+    private readonly score = document.querySelector<HTMLElement>('#hermidata-starRating');
+    private readonly author = document.querySelector<HTMLInputElement>('#hermidata-author');
+    private readonly notes = document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content');
 
-    private readonly cancelBtn = document.querySelector<HTMLDivElement>('#cancel-edit-btn');
-    private readonly saveBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
+    private readonly cover = document.querySelector<HTMLImageElement>('#hermidata-img');
+    private readonly coverButton = document.querySelector<HTMLButtonElement>('#hermidata-cover-btn');
+    private readonly coverDialog = document.querySelector<HTMLDialogElement>('#imageChanger-dialog');
+    private readonly coverUrl = document.querySelector<HTMLInputElement>('#imageChanger-url');
+    private readonly coverUrlConfirm = document.querySelector<HTMLButtonElement>('#imageChanger-url-confirm');
+    private readonly coverFile = document.querySelector<HTMLInputElement>('#imageChanger-file');
+    private readonly coverError = document.querySelector<HTMLElement>('#imageChanger-error');
+    private readonly coverTitle = document.querySelector<HTMLElement>('#imageChanger-title');
+    private readonly coverSourceStep = document.querySelector<HTMLElement>('#imageChanger-source');
+    private readonly coverCropStep = document.querySelector<HTMLElement>('#imageChanger-crop');
+    private readonly cropCurrentButton = document.querySelector<HTMLButtonElement>('#imageChanger-crop-current');
+    private readonly cropFrame = document.querySelector<HTMLElement>('#imageChanger-crop-frame');
+    private readonly cropBack = document.querySelector<HTMLButtonElement>('#imageChanger-crop-back');
+    private readonly cropWhole = document.querySelector<HTMLButtonElement>('#imageChanger-crop-whole');
+    private readonly cropSave = document.querySelector<HTMLButtonElement>('#imageChanger-crop-save');
+    private readonly cropper = this.createCropper();
 
-    private readonly deleteOpenPanelBtn = document.querySelector<HTMLDivElement>('#delete-info-btn');
-    private readonly deleteConfirmationBtn = document.querySelector<HTMLDivElement>('#customPrompt-button-delete');
-    private readonly deleteCancelBtn = document.querySelector<HTMLDivElement>('#customPrompt-button-cancel');
+    /** The image being cropped, while the crop step is open */
+    private coverSource: CoverSource | null = null;
 
-    private get imgElement(): (HTMLImageElement | HTMLButtonElement) | null { return document.querySelector<HTMLImageElement | HTMLButtonElement>('#hermidata-img'); }
-    private readonly popover = document.querySelector<HTMLDivElement>('#imageChanger-dialog');
-    private readonly urlInput = document.querySelector<HTMLInputElement>('#imageChanger-url');
-    private readonly fileInput = document.querySelector<HTMLInputElement>('#imageChanger-file');
-    private readonly urlConfirmBtn = document.querySelector<HTMLButtonElement>('#imageChanger-url-confirm');
+    private readonly entryMenu = document.querySelector<HTMLDetailsElement>('#ov-entry-menu');
+    private readonly deleteButton = document.querySelector<HTMLButtonElement>('#delete-info-btn');
+    private readonly deleteDialog = document.querySelector<HTMLDialogElement>('#delete-dialog');
+    private readonly deleteLabel = document.querySelector<HTMLElement>('#delete-label');
+    private readonly deleteCancel = document.querySelector<HTMLButtonElement>('#customPrompt-button-cancel');
 
-    private genreTags: Tags | null = null;
-    private demographicTags: Tags | null = null;
+    private readonly saveState = document.querySelector<HTMLElement>('#ov-save-state');
+    private readonly toast = document.querySelector<HTMLElement>('#ov-toast');
+    private readonly toastText = document.querySelector<HTMLElement>('#ov-toast-text');
+    private readonly toastUndo = document.querySelector<HTMLButtonElement>('#ov-toast-undo');
 
-    private currentImageUrl: string | null = null;
+    private readonly altTitles: ChipList | null;
+    private readonly sources: ChipList | null;
+    private readonly genres: TagPicker | null;
+    private readonly demographics: TagPicker | null;
 
-    private pendingImage: ImageImport | null = null;
+    /** The id the entry is stored under; it moves when the title or type change */
+    private storedId: string;
 
-    private newAltTitles: string[] | null = null;
+    /** Changes are saved one after another so a quick second edit never overtakes the first */
+    private queue: Promise<void> = Promise.resolve();
 
-    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
-            super(AllHermidata, settings);
-    
-            PageDetailBuilder.hermidata = this.hermidata;
-        }
+    private undoSnapshot: Hermidata | null = null;
+    private toastTimer: number | undefined;
+    private saveStateTimer: number | undefined;
+    private notesTimer: number | undefined;
 
+    /** Called after an undo replaced the item, so other parts of the page ( markers ) can redraw */
+    public onRestore: () => void = () => {};
 
-    private getAllDivToInputs(): SwitchConfig[] {
-        return [
+    private readonly hermidata: HermidataModel;
 
-            { element: document.querySelector<HTMLHeadingElement>('#hermidata-title'), switchTo: 'input', inputType: 'text' }, // main title
-            // alternative titles container | special case handled separately
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings, hermidata: HermidataModel) {
+        super(AllHermidata, settings);
+        this.hermidata = hermidata;
+        this.storedId = hermidata.id;
 
-            { element: document.querySelector<HTMLDivElement>('#hermidata-contentRating'), switchTo: 'input', inputType: 'text' }, // content rating
-            { element: document.querySelector<HTMLDivElement>('#hermidata-releaseDate'), switchTo: 'input', inputType: 'date' }, // release Date
+        const altList = document.querySelector<HTMLElement>('#hermidata-alternative-titles-list');
+        const sourceList = document.querySelector<HTMLElement>('#hermidata-sources');
+        const genreField = document.querySelector<HTMLElement>('#hermidata-genres');
+        const demographicField = document.querySelector<HTMLElement>('#hermidata-demographics');
 
-            { element: document.querySelector<HTMLDivElement>('#hermidata-starRating'), switchTo: 'input', inputType: 'number' }, // star Rating
-
-            // genres | special case handled separately
-            // demographics | special case handled separately
-            { element: document.querySelector<HTMLDivElement>('#hermidata-sources'), switchTo: 'input', inputType: 'text' }, // hermidata Sources
-            { element: document.querySelector<HTMLDivElement>('#hermidata-author'), switchTo: 'input', inputType: 'text' }, // hermidata author
-            // { element: document.querySelector<HTMLDivElement>('#hermidata-latestRelease'), switchTo: 'input', inputType: 'text' }, // latest Release
-        ];
+        this.altTitles = altList && new ChipList(altList, {
+            itemName: 'alternative title',
+            onChange: titles => void this.commit('Alternative titles updated', () => { this.hermidata.meta.altTitles = titles; }),
+        });
+        this.sources = sourceList && new ChipList(sourceList, {
+            itemName: 'source',
+            isLocked: source => source === this.hermidata.source,
+            onChange: sources => void this.commit('Sources updated', () => {
+                this.hermidata.meta.altSources = [...new Set([this.hermidata.source, ...sources])];
+            }),
+        });
+        this.genres = genreField && new TagPicker(genreField, {
+            itemName: 'genre',
+            available: () => this.libraryTags().filter(tag => !DEMOGRAPHIC_TAGS.includes(tag)),
+            onChange: tags => void this.commit('Genres updated', () => this.setTags(tags, false)),
+        });
+        this.demographics = demographicField && new TagPicker(demographicField, {
+            itemName: 'demographic',
+            available: () => [...new Set([...DEMOGRAPHIC_TAGS, ...this.libraryTags().filter(tag => DEMOGRAPHIC_TAGS.includes(tag))])],
+            onChange: tags => void this.commit('Demographic updated', () => this.setTags(tags, true)),
+        });
     }
-    private getAllInputsBackToDiv(): SwitchConfig[] {
-        return [
-            { element: document.querySelector<HTMLButtonElement>('#hermidata-img'), switchTo: 'img'}, // image
-
-            { element: document.querySelector<HTMLInputElement>('#hermidata-title'), switchTo: 'h2'}, // main title
-            // alternative titles container | special case handled separately
-
-            { element: document.querySelector<HTMLInputElement>('#hermidata-contentRating'), switchTo: 'div'}, // // content rating
-            { element: document.querySelector<HTMLInputElement>('#hermidata-releaseDate'), switchTo: 'div'}, // release Date
-
-            { element: document.querySelector<HTMLInputElement>('#hermidata-starRating'), switchTo: 'div'}, // star Rating
-
-            // genres | special case handled separately
-            // demographics | special case handled separately
-            { element: document.querySelector<HTMLInputElement>('#hermidata-sources'), switchTo: 'div'}, // hermidata Sources
-            { element: document.querySelector<HTMLInputElement>('#hermidata-author'), switchTo: 'div'}, // hermidata author
-            // { element: document.querySelector<HTMLInputElement>('#hermidata-latestRelease'), switchTo: 'div'}, // latest Release
-        ];
-    }
-
-    private saveButtonCurrentMode: 'Edit' | 'Save' = 'Edit';
 
     public build(): void {
+        this.fillSelect(this.novelType, this.settings.ContentTypesAndStatuses.TYPE_OPTIONS);
+        this.fillSelect(this.novelStatus, this.settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS);
+        this.fillSelect(this.contentRating, CONTENT_RATING);
+        this.buildScore();
 
-        this.eventListener();
+        this.render();
+        this.bindFields();
+        this.bindCover();
+        this.bindDelete();
+        this.bindToast();
 
+        new AltTitleLookupPanel(this.hermidata, this.settings, item => this.saveHermidata(item.id, item), () => this.renderAltTitles()).init();
     }
+
     public reload(): void {
-        // force page reload
         window.location.reload();
     }
 
-    private getIdFromUrl(): string | null {
-        const hash = window.location.hash; // "#/id/someID"
-        const match = hash.match(/^#\/id\/(.+)$/);
-        return match ? match[1] : null;
-    }
-
-    /** Get the current hermidata from the id parameter inside the url */
-    private getCurrentHermidata(): HermidataModel {
-        const id = this.getIdFromUrl();
-        if (!id) throw new Error("No id found in url");
-
-        const hermidata = this.AllHermidata[id];
-        if (!hermidata) throw new Error(`No hermidata found for id ${id}`);
-
-        return new HermidataModel(hermidata);
-    }
-    public activate(): void {
-
-        // 1. set cancel & delete button
-        if (!this.cancelBtn || !this.deleteOpenPanelBtn) return;
-        this.cancelBtn.style.opacity = '1';
-        this.deleteOpenPanelBtn.style.opacity = '1';
-        // 2. set all inputs to editable
-        this.changeAllInputsToEditable();
-
-        this.hideButtons();
-    }
-
-
-    public async deactivate(mode: 'cancel' | 'save'): Promise<void> {
-        // 1. set cancel & delete button
-        if (!this.cancelBtn || !this.deleteOpenPanelBtn) return;
-        this.cancelBtn.style.opacity = '0';
-        this.deleteOpenPanelBtn.style.opacity = '0';
-        
-        // 2. set all inputs to editable
-        this.changeAllInputsBack(mode);
-
-        // 3. reset or save information
-        await this.updateInformation(mode);
-        
-        this.showButtons();
-
-    }
-    private eventListener(): void {
-
-        // cancel button
-        this.cancelBtn?.addEventListener('click', () => {
-            this.changeEditButton('Edit');
-            this.deactivate('cancel');
-        })
-
-        // save/edit button
-        this.saveBtn?.addEventListener('click', () => {
-            if (this.saveButtonCurrentMode === 'Edit') {
-                this.changeEditButton('Save');
-                this.changeDeleteButton('hidden');
-                this.activate();
-            } else {
-                this.changeEditButton('Edit');
-                this.changeDeleteButton('visible');
-                this.deactivate('save');
+    /** Apply a change, save it and offer an undo. Exposed so the markers card saves the same way */
+    public commit: CommitChange = (message, change, options) => {
+        const settings: CommitOptions = { undoable: true, ...options };
+        const run = async () => {
+            const before = structuredClone(this.hermidata.toJSON());
+            try {
+                change();
+                this.setSaveState('saving');
+                await this.persist();
+                this.setSaveState('saved');
+                if (settings.undoable) this.showToast(message, before);
+            } catch (error) {
+                this.restore(before);
+                this.setSaveState('failed');
+                new ErrorMessage(`Could not save: ${message.toLowerCase()}. The previous value is back.`, undefined, { details: [error] }).sendMessage();
             }
-        });
-
-        // delete button
-        // set label on click of delete panel button
-        this.setLabelOfDeletePanel();
-        // delete hermidata on click of delete button
-        this.deleteConfirmationBtn?.addEventListener('click', async () => await this.deleteHermidata());
-        // close delete panel on click of cancel button
-        this.deleteCancelBtn?.addEventListener('click', this.closeDeletePanel)
-    }
-    private changeDeleteButton(mode: 'visible' | 'hidden'): void {
-        if (!this.deleteOpenPanelBtn) return;
-
-        if (mode === 'visible') {
-            this.deleteOpenPanelBtn.style.opacity = '1';
-        } else {
-            this.deleteOpenPanelBtn.style.opacity = '0';
-        }
-    }
-    private closeDeletePanel = () => {
-        const mergePanel = document.querySelector<HTMLDivElement>('#delete-dialog');
-        if (!mergePanel) return;
-        
-        if (mergePanel.matches(':popover-open')) {
-            mergePanel.hidePopover();
-        }
-    }
-    private setLabelOfDeletePanel() {
-        // label
-        const label = document.querySelector<HTMLDivElement>('#delete-label');
-        if (!label) return;
-        label.textContent = `Delete ${this.hermidata.title}?`;
-    }
-    private async deleteHermidata(): Promise<void> {
-        // delete hermidata
-        
-        const id = this.hermidata.id;
-        const exist = this.AllHermidata[id];
-        
-        if (!exist) throw new Error(`No hermidata found for id ${id}`);
-
-        console.log(`[Hermidata] %cRemoved Hermidata%c \nDeleted at ${this.isoToLocal(new Date().toISOString())} | id: ${id} | title: ${exist.title} `,
-            'color: red; font-weight: bold;', 'color: inherit; font-weight: normal;'
-        );
-        
-        // 1 remove from all hermidata
-        delete this.AllHermidata[id];
-
-        // 2 remove from indexDB
-        await this.removeHermidata(id);
-
-        // 3. go back to library
-        openLink('./Library.html', 'sameTab');
-    }
-    private changeEditButton(changeTo: 'Save' | 'Edit'): void {
-        const button = this.saveBtn!;
-        button.classList.toggle('edit', changeTo === 'Edit');
-        button.textContent = changeTo;
-
-        this.saveButtonCurrentMode = changeTo;
-    }
-    private showButtons() {
-        // show edit star rating button
-        const starRatingEditButton = document.querySelector<HTMLDivElement>('#hermidata-starRating-edit');
-        if (!starRatingEditButton) throw new Error('Star rating edit button not found');
-        starRatingEditButton.style.display = 'block';
-    }
-    private hideButtons() {
-        // hide edit star rating button
-        const starRatingEditButton = document.querySelector<HTMLDivElement>('#hermidata-starRating-edit');
-        if (!starRatingEditButton) throw new Error('Star rating edit button not found');
-        starRatingEditButton.style.display = 'none';
-    }
-    private changeAllInputsBack(mode: 'cancel' | 'save'): void {
-
-        for (const {element, switchTo} of this.getAllInputsBackToDiv()) {
-            if (!element) continue;
-            
-            if (switchTo !== 'input') this.switchElement(element, switchTo, true, 'reset');
-            else throw new Error("Element not found.");
-            
-        }
-
-        // set author text
-        const author = document.querySelector<HTMLDivElement>('#hermidata-author');
-        this.setEmptyText(author);
-
-        // set sources text
-        const sources = document.querySelector<HTMLDivElement>('#hermidata-sources');
-        this.setEmptyText(sources);
-
-        // notes Content | set read only
-        document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.setAttribute('readonly', '');
-
-        // alt titles
-        this.changeAltTitleBackToDiv(mode);
-
-        // data group 1 | set select back to div
-        this.changeGroup1BackToDiv();
-
-        // data group 2 | set input back to div
-        this.changeGroup2BackToDiv(mode === 'save');
-
-        // markers
-        this.changeMarkersBackToDiv(mode === 'cancel');
-    }
-    private setEmptyText(element: HTMLElement | null) {
-        if (!element) return;
-
-        const noContent = element.textContent === '';
-        if (noContent) {
-            // add --None--
-            element.classList.add('empty-text');
-            element.dataset.empty = 'true';
-            element.textContent = `--None--`;
-        } else {
-            // remove --None--
-            element.dataset.empty = 'false';
-            element.classList.remove('empty-text');
-        }
-    }
-    private changeGroup1BackToDiv() {
-        const group1 = [
-            { element: document.querySelector<HTMLSelectElement>('#hermidata-novelType'), switchTo: 'div'}, // novel type
-            { element: document.querySelector<HTMLSelectElement>('#hermidata-contentRating'), switchTo: 'div'}, // content Rating
-            { element: document.querySelector<HTMLSelectElement>('#hermidata-novelStatus'), switchTo: 'div'}, // novel Status
-        ];
-
-        for (const {element, switchTo} of group1) {
-            if (!element) continue;
-            
-            // 1. create new element
-            const newElement = document.createElement(switchTo);
-
-            // 2. copy attributes
-            this.copyAttributes(element, newElement);
-            newElement.dataset.editing = 'false';
-
-            // 3. transfer content
-            const value = this.getElementContent(element);
-            this.setElementContent(newElement, value);
-            
-            // 4. replace element
-            element.replaceWith(newElement);
-        }
-    }
-    private setImageValue(element: HTMLImageElement | HTMLButtonElement, content: string) { 
-        if (element instanceof HTMLImageElement) element.src = content;
-        else element.value = content;
-    }
-    private async updateInformation(mode: 'cancel' | 'save') {
-        const title = document.querySelector<HTMLDivElement>('#hermidata-title');
-        const novelType = document.querySelector<HTMLDivElement>('#hermidata-novelType');
-        const contentRating = document.querySelector<HTMLDivElement>('#hermidata-contentRating');
-        const releaseDate = document.querySelector<HTMLDivElement>('#hermidata-releaseDate');
-        const novelStatus = document.querySelector<HTMLDivElement>('#hermidata-novelStatus');
-        const starRating = document.querySelector<HTMLDivElement>('#hermidata-starRating');
-        // genres + Demographics already handled in changeGroup2BackToDiv()
-        const sources = document.querySelector<HTMLDivElement>('#hermidata-sources');
-        const author = document.querySelector<HTMLDivElement>('#hermidata-author');
-        const notes = document.querySelector<HTMLDivElement>('#hermidata-notes-content');
-
-        // image
-        await this.updateImage(mode);
-
-        // Title
-        this.updateTitle(mode, title);
-
-        // Alt. Titles
-        this.updateAltTitles(mode);
-
-        // Novel Type
-        this.updateNovelType(mode, novelType);
-
-        await this.forceKeyUpdate();
-
-        // Content Rating
-        this.updateContentRating(mode, contentRating);
-
-        // Release Date
-        this.updateReleaseDate(mode, releaseDate);
-
-        // Novel Status
-        this.updateNovelStatus(mode, novelStatus);
-
-        // Star Rating
-        const canSaveStarRating = this.updateStarRating(mode, starRating);
-
-        // Author
-        const canSaveAuthor = this.updateAuthor(mode, author);
-
-        // Alt. Sources
-        const canSaveSources = this.updateAltSources(mode, sources);
-
-        // markers
-        if (mode === 'save') this.saveMarkers();
-
-        // Notes
-        this.updateNotes(mode, notes);
-
-        // update hermidata
-        await this.updateHermidata(this.hermidata.toJSON());
-    }
-    private async updateImage(mode: 'cancel' | 'save'): Promise<void> {
-        if (!this.imgElement) return;
-
-        if (mode === "save" && this.pendingImage) {
-            // set new Image to db
-            if (this.pendingImage.kind === 'url') await this.hermidata.SetImage(this.pendingImage.url, this.pendingImage.blob);
-            else await this.hermidata.SetImage(this.pendingImage.file);
-
-            const newImage = await this.hermidata.getDisplayImageUrl();
-            this.setImageValue(this.imgElement, newImage);
-            if (this.imgElement instanceof HTMLImageElement) this.calculateImageRatio(this.imgElement);
-            this.clearTemporaryImageUrl();
-            this.pendingImage = null;
-        }
-        else if (mode === "cancel") {
-            const image = await this.hermidata.getDisplayImageUrl();
-            this.setImageValue(this.imgElement, image);
-            this.clearTemporaryImageUrl();
-            this.pendingImage = null;
-        }
-    }
-    private updateTitle(mode: 'cancel' | 'save', title: HTMLElement | null | undefined): void {
-        if (!title) return;
-
-        if (mode === 'save') this.hermidata.title = title?.textContent ?? this.hermidata.title 
-        else this.resetContent(title, this.hermidata.title);
-    }
-    private updateAltTitles(mode: 'cancel' | 'save'): void {
-        if (mode === 'save' && this.newAltTitles) {
-            this.hermidata.SetMultipleAltTitles(this.newAltTitles); // add new alt titles to hermidata
-            this.removeAltTitlesNotInInput(this.newAltTitles); // remove alt titles that are not in the input
-        }
-        // cancel content already handled in changeAltTitleBackToDiv()
-    }
-    private updateNovelType(mode: 'cancel' | 'save', novelType: HTMLElement | null | undefined): void {
-        if (!novelType) return;
-
-        if (mode === 'save') this.hermidata.novelType = novelType?.textContent ?? this.hermidata.novelType;
-        else this.resetContent(novelType, this.hermidata.novelType);
-    }
-    private updateContentRating(mode: 'cancel' | 'save', contentRating: HTMLElement | null | undefined): void {
-        if (!contentRating) return;
-
-        const contentRatingValue = contentRating?.textContent as ContentRating ?? this.hermidata.meta.contentRating;
-
-        if (mode === 'save') this.hermidata.meta.contentRating = contentRatingValue;
-        else this.resetContent(contentRating, this.hermidata.meta.contentRating);
-    }
-    private updateReleaseDate(mode: 'cancel' | 'save', releaseDate: HTMLElement | null | undefined): void {
-        if (!releaseDate) return;
-
-        const releaseDateValue = this.hermidata.meta.originalRelease ?? this.hermidata.meta.added; // both ISO
-        const releaseDateLocale = this.localToISO(releaseDate?.textContent) ?? releaseDateValue; // element content is locale but not the latter
-
-        if (mode === 'save') this.hermidata.meta.originalRelease = releaseDateLocale;
-        else this.resetContent(releaseDate, this.isoToLocal(releaseDateValue));
-    }
-    private updateNovelStatus(mode: 'cancel' | 'save', novelStatus: HTMLElement | null | undefined): void {
-        if (!novelStatus) return;
-
-        if (mode === 'save') this.hermidata.meta.novelStatus = novelStatus?.textContent ?? this.hermidata.meta.novelStatus;
-        else this.resetContent(novelStatus, this.hermidata.meta.novelStatus);
-    }
-    private updateStarRating(mode: 'cancel' | 'save', starRating: HTMLElement | null | undefined): boolean {
-        if (!starRating) return false;
-
-        if (mode === 'save') this.hermidata.meta.starRating = Number(starRating?.textContent) ?? this.hermidata.meta.starRating;
-        else this.resetContent(starRating, String(this.hermidata.meta.starRating));
-
-        return this.saveInput(starRating, String(this.hermidata.meta.starRating), '0');
-    }
-    private updateAuthor(mode: 'cancel' | 'save', author: HTMLElement | null | undefined): boolean {
-        if (!author) return false;
-
-        if (mode === 'save') this.hermidata.meta.author = author.dataset.empty === 'false' ? author.textContent : undefined; // author can be undefined
-        else this.resetContent(author, this.hermidata.meta.author ?? '--None--');
-
-        return this.saveInput(author, this.hermidata.meta.author, '--None--');
-    }
-    private updateAltSources(mode: 'cancel' | 'save', sources: HTMLElement | null | undefined): boolean {
-        if (!sources) return false;
-
-        const altSourcesSingleString = this.hermidata.GetAltSources().join(', ');
-        if (mode === 'save') {
-            this.hermidata.SetAltSources(sources?.textContent ?? altSourcesSingleString) // add new alt sources to hermidata
-            this.removeAltSourcesNotInInput(sources?.textContent); // remove alt sources that are not in the input
-        } else this.resetContent(sources, altSourcesSingleString);
-
-        return this.saveInput(sources, altSourcesSingleString, this.hermidata.source);
-    }
-    private updateNotes(mode: 'cancel' | 'save', notes: HTMLElement | null | undefined): void {
-        if (!notes) return;
-
-        if ( mode === 'save') this.hermidata.meta.notes = notes?.textContent ?? this.hermidata.meta.notes;
-        else this.resetContent(notes, this.hermidata.meta.notes);
-    }
-
-    private removeAltTitlesNotInInput(inputTextContent: string[]) {
-        const currentAltTitles = this.hermidata.meta.altTitles ?? [];
-
-        const titlesToRemove = currentAltTitles.filter(title => !inputTextContent.includes(title));
-
-        this.hermidata.removeAltTitles(titlesToRemove);
-
-    }
-    private removeAltSourcesNotInInput(inputTextContent: string | null | undefined) {
-        if (!inputTextContent) return;
-
-        const inputSources = inputTextContent?.split(',').map(s => s.trim()) ?? [];
-        const currentSources = this.hermidata.GetAltSources();
-        const sourcesToRemove = currentSources.filter(s => !inputSources.includes(s));
-
-        this.hermidata.removeAltSources(sourcesToRemove);
-    }
-    private saveInput(element: HTMLElement, content: string | undefined, backup?: string): boolean {
-        // if input is empty, set it to a backup value OR reject submission
-        if (content !== '' || content !== undefined) return true;
-        
-        if (!backup) return false;
-
-        element.textContent = backup;
-        return true;
-    }
-    private resetContent(element: HTMLElement, content: string) {
-        element.textContent = content;
-    }
-    /** update key if changes have been made */
-    private async forceKeyUpdate() {
-        const oldKey = this.hermidata.id;
-        // never move onto a key another item holds ( a separate same-titled item keeps its own id )
-        const newKey = getFreeKey(oldKey, generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl()), this.AllHermidata);
-        if (newKey === oldKey) return;
-        const imageSource = this.hermidata.meta.image;
-        if (imageSource.kind === 'stored' && imageSource.id === oldKey) this.hermidata.meta.image = { ...imageSource, id: newKey };
-        this.hermidata.id = newKey;
-
-        await this.changeHermidata(oldKey, newKey, this.hermidata.toJSON());
-    }
-    private saveMarkers() {
-        const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
-        const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
-        if (!markers || !markersContainer) return;
-        for (const marker of markersContainer) {
-            const markerId = marker.dataset.id;
-            if (!markerId) continue;
-
-            const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
-            const chapter = marker.querySelector<HTMLInputElement>('.hermidata-marker-chapter');
-            const label = marker.querySelector<HTMLInputElement>('.hermidata-marker-label');
-            const readStatus = marker.querySelector<HTMLInputElement>('.hermidata-marker-readStatus');
-            const note = marker.querySelector<HTMLInputElement>('.hermidata-marker-note');
-
-            if (!colour || !chapter || !label || !readStatus || !note) continue;
-
-            if (!this.hermidata.chapter.bookmarks[markerId]) throw new Error('Bookmark not found');
-
-            this.hermidata.chapter.bookmarks[markerId].color = colour.style.backgroundColor;
-            this.hermidata.chapter.bookmarks[markerId].current = Number(chapter.value);
-            this.hermidata.chapter.bookmarks[markerId].label = label.value;
-            this.hermidata.chapter.bookmarks[markerId].readStatus = readStatus.value;
-            if (note.value !== '') this.hermidata.chapter.bookmarks[markerId].note = note.value;
-        }
-    }
-    private removePillRemoveButton(pill: HTMLDivElement) {
-        // remove x button
-        const removeX = pill.querySelectorAll('.tag-pill-removeX')
-        for (const x of removeX) x.remove();
-    }
-    private setChildEmptyTextIfOnlyOneChild(element: HTMLDivElement) {
-        if (element.childElementCount === 1 && (element.children[0] as HTMLDivElement).dataset.empty === "true") {
-            element.children[0].remove();
-            this.setChildEmptyText(element);
-        }
-    }
-    private changeGroup2BackToDiv(saveInfo: boolean) {
-        const allTags = document.querySelectorAll<HTMLDivElement>('.filter-allTags-container');
-        const filterInput = document.querySelectorAll<HTMLInputElement>('.filterInput');
-        const tagsContainer = document.querySelectorAll<HTMLDivElement>('.selected-tag-container');
-        const filterTags = document.querySelectorAll<HTMLDivElement>('.hermidata-genre, .hermidata-demographic');
-
-        for (const element of allTags) element.dataset.editing = 'false';
-        for (const element of filterInput) element.dataset.editing = 'false';
-
-        for (const element of tagsContainer) {
-            if (!element) continue;
-            element.dataset.editing = 'false';
-            // remove x button
-            this.removePillRemoveButton(element);
-
-            this.setChildEmptyTextIfOnlyOneChild(element);
-        }
-
-        // keep info
-        if (saveInfo) {
-            const allGenresAndDemographics = Array.from(filterTags.values()).map(el => el.textContent.trim());
-            this.hermidata.SetTags(allGenresAndDemographics);
-        } else this.cancelDataAndSetToDefaultContent(filterTags);
-        // discard info
-    }
-    private cancelDataAndSetToDefaultContent(filterTags: NodeListOf<HTMLDivElement>) {
-        // to remove all info except the existing one
-        const tags = new Set<string>();
-
-        const allTagsValues = this.hermidata.meta.tags;
-        const allGenreTags = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
-        const allDemographicTags = allTagsValues.filter(tag => DEMOGRAPHIC_TAGS.includes(tag));
-
-        for (const element of filterTags) {
-            if (!element) continue;
-            const isGenre = element.classList.contains('hermidata-genre');
-            const isDemographic = element.classList.contains('hermidata-demographic');
-
-            const name = element.textContent;
-
-            // remove if not in list
-            if (isGenre && !allGenreTags.includes(name)) {
-                // if container is empty, add empty text
-                if (element.parentElement!.childElementCount === 1) this.setChildEmptyText(element.parentElement!);
-                element.remove();
-            }
-            else if (isDemographic && !allDemographicTags.includes(name)) {
-                // if container is empty, add empty text
-                if (element.parentElement!.childElementCount === 1) this.setChildEmptyText(element.parentElement!);
-                element.remove();
-            }
-
-            tags.add(name);
-        }
-
-        // add if not in the list
-        if (tags.size !== this.hermidata.meta.tags.length) {
-            for (const name of this.hermidata.meta.tags) {
-                if (tags.has(name)) continue;
-                const isGenre = !DEMOGRAPHIC_TAGS.includes(name);
-                const isDemographic = DEMOGRAPHIC_TAGS.includes(name);
-
-                if (isGenre && allGenreTags.includes(name)) this.genreTags?.createPill(name, 'WithoutRemoveButton');
-                else if (isDemographic && allDemographicTags.includes(name)) this.demographicTags?.createPill(name, 'WithoutRemoveButton');
-            }
-        }
-    }
-    private setChildEmptyText(element: HTMLElement) {
-        const emptyText = document.createElement('div');
-        emptyText.classList.add('empty-text');
-        emptyText.textContent = `--None--`;
-        element.appendChild(emptyText);
-    }
-    private changeAltTitleBackToDiv(mode: 'cancel' | 'save') {
-        const altTitlesContainer = document.querySelector<HTMLTextAreaElement>('#hermidata-alternative-titles-list');
-
-        if (!altTitlesContainer) throw new Error('Alt titles container not found');
-        // get the content
-        const altTitlesContent = this.hermidata.meta.altTitles;
-
-        this.newAltTitles = mode === 'save' ? altTitlesContainer.value.split('\n') : altTitlesContent;
-
-        const altTitles = this.switchElement(altTitlesContainer, 'div', false, 'reset');
-
-        for (const title of altTitlesContent) {
-
-            // 1. create new element
-            const newElement = document.createElement('div');
-            newElement.classList.add('hermidata-alternative-title');
-            // 3. transfer content
-            this.setElementContent(newElement, title);
-            
-            // 4. append element
-            altTitles.appendChild(newElement);
-        }
-
-        // re-Attach event listener of alt titles
-        const altTitleButton = document.querySelector<HTMLDivElement>('#hermidata-alternative-title-button-text');
-        if (!altTitleButton) throw new Error("Alternative title button does not exist");
-        altTitleButton?.addEventListener('click', () => {
-            altTitles!.dataset.closed = altTitles!.dataset.closed === 'true' ? 'false' : 'true';
-            document.querySelector<SVGElement>('.hermidata-alternative-title-button-arrow')!.dataset.closed = altTitles!.dataset.closed;
-            document.querySelector('#hermidata-alternative-title-button')?.setAttribute('aria-expanded', String(altTitles!.dataset.closed === 'false'));
-        });
-        
-    }
-    private changeAltTitleToInput() {
-        const altTitlesContainer = document.querySelector<HTMLDivElement>('#hermidata-alternative-titles-list');
-        const altTitles = document.querySelectorAll<HTMLDivElement>('.hermidata-alternative-title');
-        if (!altTitlesContainer || !altTitles) throw new Error('Alt titles container not found');
-        // get the content
-        const altTitlesContent = Array.from(altTitles).map(title => title.textContent).join('\n');
-        // 1. create new element
-        const newElement = document.createElement('textarea');
-
-        // 2. copy attributes
-        this.copyAttributes(altTitlesContainer, newElement);
-        newElement.dataset.editing = 'true';
-
-        // 3. transfer content
-        this.setElementContent(newElement, altTitlesContent);
-        
-        // 4. replace element
-        altTitlesContainer.replaceWith(newElement);
-    }
-    private setImageChangerToEditable() {
-
-        const image: { element: HTMLImageElement | null, switchTo: 'button', inputType: 'button' }[] = [
-            { element: document.querySelector<HTMLImageElement>('#hermidata-img'), switchTo: 'button', inputType: 'button' } // image
-        ]
-
-        for (const {element, switchTo, inputType: content} of image) {
-            if (!element) continue;
-            
-            // 1. create new element
-            const newElement = document.createElement(switchTo);
-
-            // 2. copy attributes
-            this.copyAttributes(element, newElement);
-            newElement.setAttribute('aria-label', 'Change cover image');
-            newElement.dataset.editing = 'true';
-
-            // 3. transfer content
-            const value = this.getElementContent(element);
-
-            // 4. add content
-            newElement.value = value;
-
-            // 4.5 add background image
-            newElement.style.backgroundImage = `url(${element.src})`;
-            // get size
-
-            newElement.style.backgroundSize = this.calculateImageRatioForEdit(element); // or auto
-            newElement.style.backgroundRepeat = 'no-repeat';
-            newElement.style.backgroundClip = 'border-box';
-
-            newElement.style.backgroundPosition = 'center';
-            
-            
-            // 5. replace element
-            element.replaceWith(newElement);
-        }
-    }
-    private calculateImageRatioForEdit(imgElement: HTMLImageElement) {
-        const ratio = imgElement.naturalWidth / imgElement.naturalHeight;
-        const usedRation = 250 / 350;
-        const tolerance = 0.3;
-        const isWithinMargin = Math.abs(ratio - usedRation) < tolerance;
-
-        // if the ratio is NaN
-        if (isNaN(ratio)) {
-            console.warn('ratio is NaN');
-            return 'auto';
-        }
-
-        // if ration is 1:1 or default image
-        if (ratio === 1 || imgElement.src.endsWith('icon48.png')) return 'auto';
-
-        // is fill mode when image is within margin or just outside
-        return isWithinMargin ? 'contain' : 'cover';
-    }
-
-    private changeAllInputsToEditable() {
-
-        for (const config of this.getAllDivToInputs()) {
-            if (!config.element) continue;
-
-            if (config.switchTo === 'input') this.switchElement(config.element, config.switchTo, config.inputType, true, 'set');
-            else this.switchElement(config.element, config.switchTo, true, 'set');
-        }
-        this.setImageChangerToEditable();
-
-        this.initImageChanger();
-
-        // author | remove --empty content
-        this.removeAuthorEmptyText();
-
-        // notes Content | remove read only
-        document.querySelector<HTMLTextAreaElement>('#hermidata-notes-content')?.removeAttribute('readonly');
-
-        // alt titles 
-        this.changeAltTitleToInput();
-
-        // data group 1 | set div to select
-        this.setGroup1ToSelect();
-
-        // star rating
-        this.setStarRatingEditLimits()
-        
-        // data group 2 | set div to input
-        this.setGroup2ToCustomPill();
-
-        // markers
-        this.setMarkersToInput();
-    }
-    private removeAuthorEmptyText() {
-        const author = document.querySelector<HTMLInputElement>('#hermidata-author');
-        if (!author) throw new Error('Author does not exist');
-        // if empty text
-        if (author.value === '--None--' || this.hermidata.meta.author === undefined ) {
-            author.value = '';
-        }
-    }
-    protected setMarkerColourHandler = (event: MouseEvent) => {
-        const colour = event.target as HTMLDivElement;
-        const defaultColor = colour.style.backgroundColor;
-        const rect = document.body.getBoundingClientRect();
-
-        this.setMarkerColour(colour, defaultColor, rect);
-    };
-    private setMarkersToInput() {
-        const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
-        const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
-        if (!markers || !markersContainer) return;
-        for (const marker of markersContainer) {
-            
-            const row = marker.querySelector<HTMLDivElement>('.hermidata-marker-row');
-            if (!row) continue;
-            row.dataset.editing = 'true';
-            
-            const markerElement = marker.querySelector<HTMLDivElement>('.hermidata-marker');
-            markerElement!.dataset.editing = 'true';
-
-            const markerName = marker.querySelector<HTMLDivElement>('.hermidata-marker-label')?.textContent ?? '';
-
-            // disable event listeners ( and the button role: the row holds inputs while editing )
-            markerElement?.removeEventListener('click', PageDetailBuilder.handleMarkerClick);
-            for (const attribute of ['role', 'tabindex', 'aria-label']) markerElement?.removeAttribute(attribute);
-
-            // colour
-            const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
-            if (!colour) continue;
-            
-            colour.dataset.editing = 'true';
-            
-            colour.addEventListener('click', this.setMarkerColourHandler );
-            colour.removeAttribute('aria-hidden');
-            makeButtonLike(colour, `Change colour of marker ${markerName}`);
-            // chapter
-            const chapter = marker.querySelector<HTMLDivElement>('.hermidata-marker-chapter');
-            if (!chapter) continue;
-            // trim chapter
-            chapter.textContent = chapter.textContent.replace('Ch. ', '');
-            this.switchElement(chapter, 'input', 'number', true, 'set').setAttribute('aria-label', `Chapter of marker ${markerName}`);
-            // label
-            const label = marker.querySelector<HTMLDivElement>('.hermidata-marker-label');
-            if (!label) continue;
-            this.switchElement(label, 'input', 'text', true, 'set').setAttribute('aria-label', `Label of marker ${markerName}`);
-            // read status
-            const readStatus = marker.querySelector<HTMLDivElement>('.hermidata-marker-readStatus');
-            if (!readStatus) continue;
-            const select = this.switchElement(readStatus, 'select', true, 'set');
-            select.setAttribute('aria-label', `Read status of marker ${markerName}`);
-            // set read status options
-            this.setReadStatusOptions(select, readStatus.textContent);
-
-            // set notes
-            const notesContainer = marker.querySelector<HTMLDivElement>('.hermidata-marker-notes');
-            const notes = marker.querySelector<HTMLDivElement>('.hermidata-marker-notes-inner');
-            if (!notes || !notesContainer) continue;
-            notesContainer.dataset.editing = 'true';
-            this.switchElement(notes, 'input', 'text', true, 'set').setAttribute('aria-label', `Notes of marker ${markerName}`);
-        }
-    }
-    private setMarkerColour = (colour: HTMLDivElement, defaultColor: string, rect: DOMRect) => {
-        ColorPicker.show( ColorPicker.getHexColor() ?? defaultColor,
-            async () => {
-                colour!.style.backgroundColor = ColorPicker.getHexColor() ?? defaultColor;
-            },
-            { x: rect.left + ColorPicker.dimensions.width, y: (rect.bottom / 2) + 50 + ColorPicker.dimensions.height }
-        );
-    }
-    private changeMarkersBackToDiv(resetInfo = true) {
-        const markersContainer = document.querySelectorAll<HTMLDivElement>('.hermidata-marker-container');
-        const markers = document.querySelectorAll<HTMLDivElement>('.hermidata-marker');
-        if (!markers || !markersContainer) return;
-        for (const marker of markersContainer) {
-            
-            const markerId = marker.dataset.id;
-            if (!markerId) continue;
-
-            const row = marker.querySelector<HTMLDivElement>('.hermidata-marker-row');
-            if (!row) continue;
-            row.dataset.editing = 'false';
-
-            const markerElement = marker.querySelector<HTMLDivElement>('.hermidata-marker');
-            markerElement!.dataset.editing = 'false';
-
-            // enable event listeners
-            markerElement?.addEventListener('click', PageDetailBuilder.handleMarkerClick);
-            if (markerElement) {
-                const bookmark = this.hermidata.getBookmark(markerId);
-                makeButtonLike(markerElement, `Open marker ${bookmark.label}, chapter ${bookmark.current}`);
-            }
-
-            // colour
-            const colour = marker.querySelector<HTMLDivElement>('.hermidata-marker-color');
-            if (!colour) continue;
-            const defaultColor = this.hermidata.getBookmark(markerId).color;
-            colour.removeEventListener('click', this.setMarkerColourHandler);
-            for (const attribute of ['role', 'tabindex', 'aria-label']) colour.removeAttribute(attribute);
-            colour.setAttribute('aria-hidden', 'true');
-            colour.dataset.editing = 'false';
-            colour.style.backgroundColor =  resetInfo ? defaultColor : colour.style.backgroundColor;
-            // chapter
-            const chapter = marker.querySelector<HTMLInputElement>('.hermidata-marker-chapter');
-            if (!chapter) continue;
-            const chapterDiv = this.switchElement(chapter, 'div', false, 'reset');
-            chapterDiv.textContent = 'Ch. ' + resetInfo ? String(this.hermidata.getBookmark(markerId).current): chapter.value;
-            // label
-            const label = marker.querySelector<HTMLInputElement>('.hermidata-marker-label');
-            if (!label) continue;
-            const labelDiv = this.switchElement(label, 'div', false, 'reset');
-            labelDiv.textContent = resetInfo ? this.hermidata.getBookmark(markerId).label : label.value;
-            // read status
-            const readStatus = marker.querySelector<HTMLSelectElement>('.hermidata-marker-readStatus');
-            if (!readStatus) continue;
-            const readStatusDiv = this.switchElement(readStatus, 'div', false, 'reset');
-            readStatusDiv.textContent = resetInfo ? this.hermidata.getBookmark(markerId).readStatus: readStatus.value;
-            // notes ( optional )
-            const notesContainer = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes');
-            const notes = marker.querySelector<HTMLInputElement>('.hermidata-marker-notes-inner');
-            
-            if (notes && notesContainer) {
-                notesContainer.dataset.editing = 'false';
-                const notesDiv = this.switchElement(notes, 'div', false, 'reset');
-                const originalText = this.hermidata.getBookmark(markerId).note;
-                notesDiv.textContent = resetInfo ? originalText ?? '': notes.value;
-            }
-        }
-    }
-    private setReadStatusOptions(select: HTMLSelectElement | null, selectedReadStatus: AnyReadStatus) {
-        const readStatuses = this.settings.ContentTypesAndStatuses.STATUS_OPTIONS;
-        if (!select) return;
-        for (const status of readStatuses) {
-            const option = document.createElement('option');
-            option.value = status;
-            if (status === selectedReadStatus) option.selected = true;
-            option.textContent = status;
-            select.appendChild(option);
-        }
-        select.value = selectedReadStatus;
-    }
-    private setGenreTag(): Tags | null {
-        const allTagsValues = Array.from(getAllTags(this.AllHermidata).keys());
-        const genresThemes = allTagsValues.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
-
-        const selectedRow = document.querySelector<HTMLDivElement>('#hermidata-genres');
-        const allTags = document.querySelector<HTMLDivElement>('#allTags-genres');
-        const filterInput = document.querySelector<HTMLInputElement>('#filterInput-genres');
-
-        if (!selectedRow || !allTags || !filterInput) return null;
-
-        this.setElementToEditing(selectedRow);
-        this.setElementToEditing(allTags);
-        this.setElementToEditing(filterInput);
-
-        const tagClass = new Tags(genresThemes, true, new HermidataModel(this.hermidata), { selectedRow, allTags, filterInput});
-        return tagClass;
-    }
-    private setDemographicTag(): Tags | null {
-        const allTagsValues = Array.from(getAllTags(this.AllHermidata).keys());
-        const genresDemographics = allTagsValues.filter(tag => DEMOGRAPHIC_TAGS.includes(tag));
-
-        const selectedRow = document.querySelector<HTMLDivElement>('#hermidata-demographics');
-        const allTags = document.querySelector<HTMLDivElement>('#allTags-demographics');
-        const filterInput = document.querySelector<HTMLInputElement>('#filterInput-demographics');
-
-        if (!selectedRow || !allTags || !filterInput) return null;
-
-        this.setElementToEditing(selectedRow);
-        this.setElementToEditing(allTags);
-        this.setElementToEditing(filterInput);
-
-        const tagClass = new Tags(genresDemographics, false, new HermidataModel(this.hermidata), { selectedRow, allTags, filterInput});
-        return tagClass;
-    }
-    private setGroup2ToCustomPill() {
-        // genres
-        this.genreTags = this.setGenreTag();
-        // demographics
-        this.demographicTags = this.setDemographicTag();
-    }
-    private setElementToEditing(element: HTMLElement) { 
-        element.dataset.editing = 'true';
-    }
-    private addNewInput(className: string, container: HTMLDivElement, type: 'genre' | 'demographic'): void {
-        const newInput = document.createElement('input');
-        newInput.classList.add(className, 'emptyInput', type);
-        newInput.setAttribute('is_empty', '');
-        newInput.setAttribute('data-editing', 'true');
-
-        const handleInput = () => {
-            newInput.removeAttribute('is_empty');
-            newInput.removeEventListener('input', handleInput);
-            this.addNewInput(className, container, type);
         };
+        this.queue = this.queue.then(run);
+        return this.queue;
+    };
 
-        newInput.addEventListener('input', handleInput);
+    // -- render --
 
-        container.appendChild(newInput);
-    }
-    private setGroup1ToSelect() {
-        const group1: { element: HTMLDivElement | null, switchTo: 'select', content: AnyNovelType[] | AnyNovelStatus[] | ContentRating[] }[] = [
-            { 
-                element: document.querySelector<HTMLDivElement>('#hermidata-novelType'), 
-                switchTo: 'select', 
-                content: this.settings.ContentTypesAndStatuses.TYPE_OPTIONS
-            }, // novel type
-            { 
-                element: document.querySelector<HTMLDivElement>('#hermidata-contentRating'), 
-                switchTo: 'select', 
-                content: CONTENT_RATING
-            }, // content Rating
-            { 
-                element: document.querySelector<HTMLDivElement>('#hermidata-novelStatus'), 
-                switchTo: 'select', 
-                content: this.settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS
-            }, // novel Status
-        ]
-
-        for (const {element, switchTo, content} of group1) {
-            if (!element) continue;
-            
-            // 1. create new element
-            const newElement = document.createElement(switchTo);
-
-            // 2. copy attributes
-            this.copyAttributes(element, newElement);
-            newElement.dataset.editing = 'true';
-
-            // 3. transfer content
-            const value = this.getElementContent(element);
-            
-            // 3.1 get first option from content
-            const option = this.getOptionFromValue(value, switchTo);
-            // 3.2 get all options from const
-            const options = this.getAllOptions(content);
-
-            // 3.3 add option to select
-            if (option) newElement.append(option, ...options);
-
-            // 3.4 set original value as selected
-            newElement.selectedIndex = Array.from(newElement.options).findIndex(opt => opt.value === value);
-            
-            // 4. replace element
-            element.replaceWith(newElement);
+    /** Show the model in every field. Used on load and after an undo */
+    private render(): void {
+        const meta = this.hermidata.meta;
+        if (this.title) {
+            this.title.value = this.hermidata.title;
+            this.autosize(this.title);
         }
-    }
-    private setStarRatingEditLimits() {
-        const starRating = document.querySelector<HTMLInputElement>('#hermidata-starRating');
-        if (!starRating) return;
-        
-        starRating.min = '0';
-        starRating.max = '10';
-        starRating.step = '1';
+        document.title = `Hermidata — ${this.hermidata.title}`;
+        this.renderAltTitles();
+        this.setSelect(this.novelType, this.hermidata.novelType);
+        this.setSelect(this.novelStatus, meta.novelStatus);
+        this.setSelect(this.contentRating, meta.contentRating ?? this.guessContentRating());
+        if (this.releaseDate) this.releaseDate.value = this.toDateInput(meta.originalRelease ?? meta.added);
+        this.renderScore();
+        if (this.author) this.author.value = meta.author ?? '';
+        this.sources?.render(meta.altSources.length ? meta.altSources : [this.hermidata.source]);
+        this.genres?.render(meta.tags.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag)));
+        this.demographics?.render(meta.tags.filter(tag => DEMOGRAPHIC_TAGS.includes(tag)));
+        if (this.notes && document.activeElement !== this.notes) this.notes.value = meta.notes ?? '';
+        if (this.deleteLabel) this.deleteLabel.textContent = `Delete "${this.hermidata.title}"?`;
     }
 
-    // overload: switching to 'input' — inputType required
-    private switchElement<K extends 'input'>( element: HTMLElement, switchTo: K, inputType: 'text' | 'number' | 'image' | 'date' | 'file', transferContent?: boolean, set?: 'reset' | 'set' ): TagMap[K];
+    private renderAltTitles(): void {
+        const titles = this.hermidata.meta.altTitles;
+        this.altTitles?.render(titles);
+        if (this.altCount) this.altCount.textContent = titles.length ? String(titles.length) : '';
+    }
 
-    // overload: switching to anything else — no inputType
-    private switchElement<K extends Exclude<keyof TagMap, 'input'>>( element: HTMLElement, switchTo: K, transferContent?: boolean, set?: 'reset' | 'set' ): TagMap[K];
+    private fillSelect(select: HTMLSelectElement | null, options: readonly string[]): void {
+        select?.replaceChildren(...options.map(option => new Option(option, option)));
+    }
 
-    // implementation signature — must be compatible with BOTH overloads above
-    private switchElement( element: HTMLElement, switchTo: keyof TagMap, arg3?: 'text' | 'number' | 'image' | 'date' | 'file' | boolean, arg4?: boolean | 'reset' | 'set', arg5?: 'reset' | 'set'): HTMLElement {
+    /** Select the value, adding it first when the settings no longer list it ( so it is never silently changed ) */
+    private setSelect(select: HTMLSelectElement | null, value: string): void {
+        if (!select) return;
+        if (![...select.options].some(option => option.value === value)) select.prepend(new Option(value, value));
+        select.value = value;
+    }
 
-        // disambiguate which overload was actually called
-        let inputType: 'text' | 'number' | 'date' | 'image' | 'file' = 'text';
-        let transferContent = false;
-        let set: 'reset' | 'set' = 'set';
-
-        if (switchTo === 'input') {
-            inputType = (arg3 as typeof inputType) ?? 'text';
-            transferContent = (arg4 as boolean) ?? false;
-            set = (arg5 as 'reset' | 'set') ?? 'set';
-        } else {
-            transferContent = (arg3 as boolean) ?? false;
-            set = (arg4 as 'reset' | 'set') ?? 'set';
-        }
-
-        // 1. create new element
-        const newElement = document.createElement(switchTo);
-        if (switchTo === 'input') {
-            (newElement as HTMLInputElement).type = inputType;
-        }
-
-        // 2. copy attributes
-        this.copyAttributes(element, newElement, (attr) => {
-            if (attr.name !== 'style' || !(element instanceof HTMLTextAreaElement) || switchTo !== 'div') return false;
-            const strippedStyle = this.removeStyleProperty(attr.value, 'height');
-            if (strippedStyle) newElement.setAttribute('style', strippedStyle);
-            return true;
+    private buildScore(): void {
+        if (!this.score) return;
+        const stars = Array.from({ length: MAX_SCORE }, (_, index) => {
+            const value = index + 1;
+            const star = document.createElement('button');
+            star.type = 'button';
+            star.className = 'ov-star';
+            star.setAttribute('role', 'radio');
+            star.setAttribute('aria-label', `${value} out of ${MAX_SCORE}`);
+            star.dataset.value = String(value);
+            star.textContent = '★';
+            star.addEventListener('click', () => {
+                // picking the current score again clears it
+                const next = this.hermidata.meta.starRating === value ? 0 : value;
+                void this.commit(next ? `Score set to ${next}` : 'Score cleared', () => { this.hermidata.meta.starRating = next; })
+                    .then(() => this.renderScore());
+            });
+            return star;
         });
-        newElement.dataset.editing = set === 'reset' ? 'false' : 'true';
+        const readout = document.createElement('span');
+        readout.className = 'ov-score-value';
+        readout.setAttribute('aria-hidden', 'true');
+        this.score.append(...stars, readout);
 
-        // 3. transfer content
-        if (transferContent) {
-            const value = this.getElementContent(element);
-            if (value === '') this.setElementContent(newElement, '--None--');
-            this.setElementContent(newElement, value);
+        this.score.addEventListener('keydown', (event) => {
+            const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key];
+            if (!step) return;
+            event.preventDefault();
+            const next = Math.min(MAX_SCORE, Math.max(1, (this.hermidata.meta.starRating || 0) + step));
+            this.score?.querySelector<HTMLButtonElement>(`[data-value="${next}"]`)?.click();
+            this.score?.querySelector<HTMLButtonElement>(`[data-value="${next}"]`)?.focus();
+        });
+    }
+
+    private renderScore(): void {
+        if (!this.score) return;
+        const current = Math.round(this.hermidata.meta.starRating || 0);
+        for (const star of this.score.querySelectorAll<HTMLButtonElement>('.ov-star')) {
+            const value = Number(star.dataset.value);
+            star.dataset.filled = String(value <= current);
+            star.setAttribute('aria-checked', String(value === current));
+            // one tab stop for the whole group: the picked star, or the first one when there is no score
+            star.tabIndex = value === (current || 1) ? 0 : -1;
+        }
+        const readout = this.score.querySelector('.ov-score-value');
+        if (readout) readout.textContent = current ? `${current}/${MAX_SCORE}` : 'No score';
+    }
+
+    // -- field events --
+
+    private bindFields(): void {
+        this.altToggle?.addEventListener('click', () => {
+            const open = this.altToggle!.getAttribute('aria-expanded') !== 'true';
+            this.altToggle!.setAttribute('aria-expanded', String(open));
+            if (this.altPanel) this.altPanel.hidden = !open;
+        });
+
+        if (this.title) {
+            const title = this.title;
+            title.addEventListener('input', () => this.autosize(title));
+            title.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') { event.preventDefault(); title.blur(); }
+                if (event.key === 'Escape') { title.value = this.hermidata.title; title.blur(); }
+            });
+            title.addEventListener('change', () => {
+                const value = title.value.replace(/\s+/g, ' ').trim();
+                if (!value) { title.value = this.hermidata.title; this.autosize(title); return; }
+                void this.commit('Title updated', () => { this.hermidata.title = value; }).then(() => this.render());
+            });
         }
 
-        // 4. replace element
-        element.replaceWith(newElement);
+        this.novelType?.addEventListener('change', () => {
+            const value = this.novelType!.value;
+            void this.commit(`Type set to ${value}`, () => { this.hermidata.novelType = value; });
+        });
+        this.novelStatus?.addEventListener('change', () => {
+            const value = this.novelStatus!.value;
+            void this.commit(`Status set to ${value}`, () => { this.hermidata.meta.novelStatus = value; });
+        });
+        this.contentRating?.addEventListener('change', () => {
+            const value = this.contentRating!.value as ContentRating;
+            void this.commit(`Content rating set to ${value}`, () => { this.hermidata.meta.contentRating = value; });
+        });
+        this.releaseDate?.addEventListener('change', () => {
+            const value = this.releaseDate!.value;
+            void this.commit(value ? 'Release date updated' : 'Release date cleared', () => {
+                this.hermidata.meta.originalRelease = value ? new Date(`${value}T00:00:00`).toISOString() : null;
+            }).then(() => this.render());
+        });
 
-        // 5. return new element
-        return newElement;
+        if (this.author) {
+            const author = this.author;
+            author.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') { event.preventDefault(); author.blur(); }
+                if (event.key === 'Escape') { author.value = this.hermidata.meta.author ?? ''; author.blur(); }
+            });
+            author.addEventListener('change', () => {
+                const value = author.value.trim();
+                void this.commit(value ? 'Author updated' : 'Author cleared', () => { this.hermidata.meta.author = value || undefined; });
+            });
+        }
+
+        // notes save while typing ( after a short pause ) and when left; the textarea keeps its own undo
+        if (this.notes) {
+            const notes = this.notes;
+            const saveNotes = () => {
+                window.clearTimeout(this.notesTimer);
+                if (notes.value === (this.hermidata.meta.notes ?? '')) return;
+                void this.commit('Notes saved', () => { this.hermidata.meta.notes = notes.value; }, { undoable: false });
+            };
+            notes.addEventListener('input', () => {
+                window.clearTimeout(this.notesTimer);
+                this.notesTimer = window.setTimeout(saveNotes, NOTES_SAVE_DELAY);
+            });
+            notes.addEventListener('blur', saveNotes);
+        }
     }
+
+    // -- cover --
+
+    private bindCover(): void {
+        if (!this.coverDialog) return;
+        const dialog = this.coverDialog;
+
+        this.coverButton?.addEventListener('click', () => {
+            const image = this.hermidata.meta.image;
+            // prefill a real link only, not the app icon that stands in for a missing cover
+            const link = image.kind === 'url' && image.url !== this.hermidata.GetImageDefaultPath() ? image.url : '';
+            if (this.coverUrl) this.coverUrl.value = link;
+            if (this.cropCurrentButton) this.cropCurrentButton.hidden = this.cover?.dataset.placeholder === 'true';
+            this.showCoverStep('source');
+            dialog.showModal();
+            this.coverUrl?.select();
+        });
+        dialog.addEventListener('close', () => {
+            this.cropper?.dispose();
+            this.coverSource = null;
+            this.showCoverStep('source');
+        });
+
+        const useLink = () => {
+            const url = this.coverUrl?.value.trim();
+            if (url) void this.openCrop(async () => ({ blob: await this.fetchImage(url), url }));
+        };
+        this.coverUrlConfirm?.addEventListener('click', useLink);
+        this.coverUrl?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') { event.preventDefault(); useLink(); }
+        });
+
+        this.coverFile?.addEventListener('change', () => {
+            const file = this.coverFile?.files?.[0];
+            if (file) void this.openCrop(async () => ({ blob: file, url: null }));
+            this.coverFile!.value = '';
+        });
+
+        this.cropCurrentButton?.addEventListener('click', () => void this.openCrop(() => this.currentCoverSource()));
+
+        this.cropBack?.addEventListener('click', () => {
+            this.showCoverStep('source');
+            this.coverUrl?.focus();
+        });
+        this.cropWhole?.addEventListener('click', () => {
+            const source = this.coverSource;
+            if (source) void this.withCoverBusy(() => this.changeCover(source, source.blob));
+        });
+        this.cropSave?.addEventListener('click', () => {
+            const source = this.coverSource;
+            const cropper = this.cropper;
+            if (source && cropper) void this.withCoverBusy(async () => this.changeCover(source, await cropper.export()));
+        });
+    }
+
+    /** Load the picked image into the crop step */
+    private async openCrop(getSource: () => Promise<CoverSource>): Promise<void> {
+        await this.withCoverBusy(async () => {
+            const source = await getSource();
+            if (!source.blob.type.startsWith('image/')) throw new Error('The file is not an image');
+            this.coverSource = source;
+            this.showCoverStep('crop'); // shown before loading: the cropper measures its frame
+            await this.cropper?.load(source.blob);
+            this.cropFrame?.focus();
+        }, () => this.showCoverStep('source'));
+    }
+
     /**
-     * Copies the attributes of the element being replaced. The role is not copied ( a "group" must not turn an input
-     * into a group ); a control is named after the field it edits and a plain div gets its group role back.
-     * `handled` can take over single attributes, returning true when it did.
+     * The cover that is shown now. A linked cover is fetched from its link again, so re-cropping starts from
+     * the full original rather than from the previous crop; when the link no longer works the shown image is used.
      */
-    private copyAttributes(from: HTMLElement, to: HTMLElement, handled?: (attr: Attr) => boolean): void {
-        for (const attr of from.attributes) {
-            if (attr.name === 'role' || handled?.(attr)) continue;
-            to.setAttribute(attr.name, attr.value);
-        }
-        const isControl = to instanceof HTMLInputElement || to instanceof HTMLSelectElement || to instanceof HTMLTextAreaElement;
-        const fieldLabel = EDIT_FIELD_LABELS[from.id];
-        if (isControl && fieldLabel) to.setAttribute('aria-label', fieldLabel);
-        if (to instanceof HTMLDivElement && fieldLabel) {
-            to.setAttribute('aria-label', fieldLabel);
-            to.setAttribute('role', 'group');
-        } else if (!isControl) to.removeAttribute('aria-label'); // a heading, image or unnamed div keeps its own content as name
-    }
-    private isValueElement(element: HTMLElement): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
-        return element instanceof HTMLInputElement
-            || element instanceof HTMLTextAreaElement
-            || element instanceof HTMLSelectElement;
-    }
-    private removeStyleProperty(styleValue: string, property: string): string {
-        return styleValue
-            .split(';')
-            .map(rule => rule.trim())
-            .filter(rule => rule && !rule.toLowerCase().startsWith(`${property.toLowerCase()}:`))
-            .join('; ');
-    }
-
-    private getElementContent(element: HTMLElement): string {
-        if (element instanceof HTMLInputElement && element.type === 'date') return this.isoToLocal(element.value, this.locale);
-        if (element instanceof HTMLImageElement) return element.src;
-        return this.isValueElement(element)
-            ? element.value
-            : (element.textContent ?? '');
-    }
-
-    private setElementContent(element: HTMLElement, value: string): void {
-        if (!this.isValueElement(element)) element.textContent = value;
-        else { 
-            if (element instanceof HTMLInputElement && element.type === 'date') element.value = this.localToISO(value, this.locale, false);
-            else element.value = value;
-        }
-    }
-    private getOptionFromValue(value: string, element: 'option' | 'select' ): HTMLOptionElement | HTMLSelectElement {
-        const opt = document.createElement(element);
-        opt.classList.add('select-option');
-        opt.value = value;
-        opt.textContent = value;
-        if (element === 'select') (opt as HTMLSelectElement ).name = value;
-        return opt;
-    }
-    private getAllOptions(content: string[]): HTMLOptionElement[] {
-        return content.map(value => this.getOptionFromValue(value, 'option') as HTMLOptionElement);
-    }
-    private initImageChanger() {
-        if (!this.popover || !this.imgElement) return;
-
-        // prefill URL with current image src, if one exists
-        this.popover.addEventListener('toggle', (e: Event) => {
-            const toggleEvent = e as ToggleEvent; // 'toggle' event on popovers is a ToggleEvent
-            const imageSource: HermidataImageSource = this.hermidata.meta.image;
-            if (toggleEvent.newState === 'open' && this.urlInput) {
-                this.urlInput.value = imageSource.kind === 'url' ? imageSource.url : '';
+    private async currentCoverSource(): Promise<CoverSource> {
+        const image = this.hermidata.meta.image;
+        const url = image.kind === 'url' && image.url !== this.hermidata.GetImageDefaultPath() ? image.url : null;
+        if (url) {
+            try {
+                return { blob: await this.fetchImage(url), url };
+            } catch (error) {
+                console.warn('[Hermidata] Cover link failed, cropping the shown image instead.', error);
             }
-        });
-
-        // tab switching
-        const tabButtons = this.popover.querySelectorAll<HTMLButtonElement>('.tab-btn');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                tabButtons.forEach(b => {
-                    b.classList.remove('active');
-                    b.setAttribute('aria-selected', 'false');
-                    b.tabIndex = -1;
-                });
-                btn.classList.add('active');
-                btn.setAttribute('aria-selected', 'true');
-                btn.tabIndex = 0;
-
-                const mode = btn.dataset.mode;
-                this.popover?.querySelectorAll<HTMLDivElement>('.image-changer-panel').forEach(panel => {
-                    panel.hidden = panel.dataset.panel !== mode;
-                });
-            });
-            // arrow keys move between the tabs
-            btn.addEventListener('keydown', (e) => {
-                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-                const tabs = Array.from(tabButtons);
-                const step = e.key === 'ArrowRight' ? 1 : -1;
-                const next = tabs[(tabs.indexOf(btn) + step + tabs.length) % tabs.length];
-                next.focus();
-                next.click();
-            });
-        });
-
-        // URL confirm
-        this.urlConfirmBtn?.addEventListener('click', async () => {
-            if (this.urlInput?.value && this.imgElement) {
-                const url = this.urlInput.value.trim();
-                if (!url) return;
-
-                // Fetch follows redirects and gives us the actual image bytes; don't replace this
-                // with setting the input URL directly, since it may not be the final image URL.
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Could not fetch image (${response.status} ${response.statusText})`);
-
-                const imageBlob = await response.blob();
-                this.pendingImage = { kind: 'url', url, blob: imageBlob };
-                this.setImage(imageBlob);
-                this.popover?.hidePopover();
-            }
-        });
-
-        // file selected
-        this.fileInput?.addEventListener('change', async () => {
-            const file = this.fileInput?.files?.[0];
-            if (!file || !this.imgElement) return;
-            
-            this.pendingImage = { kind: 'file', file };
-            this.setImage(file);
-            this.popover?.hidePopover();
-            
-        });
-    }
-    private setImage(image: string | Blob) {
-        if (this.currentImageUrl) URL.revokeObjectURL(this.currentImageUrl);
-        this.currentImageUrl = typeof image === 'string' ? null : URL.createObjectURL(image);
-        const imageUrl = typeof image === 'string' ? image : this.currentImageUrl;
-        if (!imageUrl) return;
-
-        this.imgElement instanceof HTMLImageElement ? this.imgElement.src = imageUrl : this.imgElement!.value = imageUrl;
-
-        // set as background image
-        this.imgElement!.style.backgroundImage = `url(${imageUrl})`;
-        
-    }
-    private clearTemporaryImageUrl(): void {
-        if (this.currentImageUrl) URL.revokeObjectURL(this.currentImageUrl);
-        this.currentImageUrl = null;
+        }
+        const shown = await this.hermidata.getDisplayImageUrl();
+        const blob = await (await fetch(shown)).blob();
+        if (shown.startsWith('blob:')) URL.revokeObjectURL(shown);
+        return { blob, url };
     }
 
+    private async fetchImage(url: string): Promise<Blob> {
+        // fetch follows redirects and gives the real image bytes; don't store the typed url's response unchecked
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`The link answered ${response.status} ${response.statusText}`);
+        const blob = await response.blob();
+        if (!blob.type.startsWith('image/')) throw new Error('The link is not an image');
+        return blob;
+    }
+
+    /** Store the new cover. A linked cover keeps its link, with the ( cropped ) image cached on this device */
+    private async changeCover(source: CoverSource, image: Blob): Promise<void> {
+        if (source.url) await this.hermidata.SetImage(source.url, image);
+        else await this.hermidata.SetImage(image);
+        await this.commit('Cover updated', () => {}, { undoable: false });
+        if (this.cover) {
+            if (this.cover.src.startsWith('blob:')) URL.revokeObjectURL(this.cover.src);
+            this.cover.src = await this.hermidata.getDisplayImageUrl();
+        }
+        this.coverDialog?.close();
+    }
+
+    /** Run a cover step with the dialog's buttons disabled, showing any error in the dialog */
+    private async withCoverBusy(task: () => Promise<void>, onError?: () => void): Promise<void> {
+        const buttons = this.coverDialog?.querySelectorAll<HTMLButtonElement>('button') ?? [];
+        for (const button of buttons) button.disabled = true;
+        this.showCoverError('');
+        try {
+            await task();
+        } catch (error) {
+            onError?.();
+            this.showCoverError(error instanceof Error ? error.message : String(error));
+        } finally {
+            for (const button of buttons) button.disabled = false;
+        }
+    }
+
+    private showCoverStep(step: 'source' | 'crop'): void {
+        if (this.coverSourceStep) this.coverSourceStep.hidden = step !== 'source';
+        if (this.coverCropStep) this.coverCropStep.hidden = step !== 'crop';
+        if (this.coverTitle) this.coverTitle.textContent = step === 'crop' ? 'Crop cover' : 'Change cover';
+    }
+
+    private createCropper(): CoverCropper | null {
+        const image = document.querySelector<HTMLImageElement>('#imageChanger-crop-img');
+        const zoom = document.querySelector<HTMLInputElement>('#imageChanger-zoom');
+        return this.cropFrame && image && zoom ? new CoverCropper(this.cropFrame, image, zoom) : null;
+    }
+
+    private showCoverError(message: string): void {
+        if (!this.coverError) return;
+        this.coverError.textContent = message ? `Could not use this image: ${message}` : '';
+        this.coverError.hidden = !message;
+    }
+
+    // -- delete --
+
+    private bindDelete(): void {
+        this.deleteButton?.addEventListener('click', () => {
+            if (this.entryMenu) this.entryMenu.open = false;
+            if (!this.deleteDialog) return;
+            this.deleteDialog.returnValue = ''; // only the Delete button may confirm, never a value left from last time
+            this.deleteDialog.showModal();
+            this.deleteCancel?.focus(); // the safe choice has focus
+        });
+        this.deleteDialog?.addEventListener('close', () => {
+            if (this.deleteDialog?.returnValue === 'delete') void this.deleteEntry();
+        });
+        document.addEventListener('click', (event) => {
+            if (this.entryMenu?.open && !this.entryMenu.contains(event.target as Node)) this.entryMenu.open = false;
+        });
+    }
+
+    private async deleteEntry(): Promise<void> {
+        const id = this.storedId;
+        await this.queue; // let a pending save finish first, so it can't write the entry back
+        try {
+            await this.removeHermidata(id);
+            await this.removeFromSync(id);
+            delete this.AllHermidata[id];
+            console.log(`[Hermidata] %cRemoved Hermidata%c \nDeleted at ${new Date().toLocaleString()} | id: ${id} | title: ${this.hermidata.title} `,
+                'color: red; font-weight: bold;', 'color: inherit; font-weight: normal;'
+            );
+            openLink('./Library.html', 'sameTab');
+        } catch (error) {
+            new ErrorMessage('Could not delete this entry.', undefined, { details: [error] }).sendMessage();
+        }
+    }
+
+    // -- saving --
+
+    /** Write the model. A changed title or type gives the entry a new id, which the url follows */
+    private async persist(): Promise<void> {
+        const oldId = this.storedId;
+        const hash = generateHermidataHash(this.hermidata.title, this.hermidata.novelType, this.hermidata.GetUrl());
+        const newId = getFreeKey(oldId, hash, this.AllHermidata);
+
+        if (newId === oldId) {
+            const entry = this.hermidata.toJSON();
+            await this.updateHermidata(entry);
+            this.AllHermidata[oldId] = entry;
+            void this.pushToSync(entry).catch(error => console.warn('[Hermidata] Sync push failed; the local copy is saved.', error));
+            return;
+        }
+
+        const image = this.hermidata.meta.image;
+        if (image.kind === 'stored' && image.id === oldId) this.hermidata.meta.image = { ...image, id: newId };
+        this.hermidata.id = newId;
+        const entry = this.hermidata.toJSON();
+        await this.changeHermidata(oldId, newId, entry);
+
+        delete this.AllHermidata[oldId];
+        this.AllHermidata[newId] = entry;
+        this.storedId = newId;
+        history.replaceState(null, '', `#/id/${newId}`);
+    }
+
+    /** Put a saved copy back into the model, keeping the id the entry is stored under */
+    private restore(snapshot: Hermidata): void {
+        const copy = structuredClone(snapshot);
+        Object.assign(this.hermidata, copy, { id: this.storedId });
+        this.render();
+        this.onRestore();
+    }
+
+    private undo = async (): Promise<void> => {
+        const snapshot = this.undoSnapshot;
+        if (!snapshot) return;
+        this.hideToast();
+        await this.commit('Change undone', () => this.restore(snapshot), { undoable: false });
+    };
+
+    // -- feedback --
+
+    private bindToast(): void {
+        this.toastUndo?.addEventListener('click', () => void this.undo());
+        document.addEventListener('keydown', (event) => {
+            const isUndo = (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z';
+            const inTextField = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+            if (!isUndo || inTextField || !this.undoSnapshot) return;
+            event.preventDefault();
+            void this.undo();
+        });
+    }
+
+    private showToast(message: string, snapshot: Hermidata): void {
+        if (!this.toast || !this.toastText) return;
+        this.undoSnapshot = snapshot;
+        this.toastText.textContent = message;
+        this.toast.hidden = false;
+        window.clearTimeout(this.toastTimer);
+        this.toastTimer = window.setTimeout(() => this.hideToast(), TOAST_DURATION);
+    }
+
+    private hideToast(): void {
+        window.clearTimeout(this.toastTimer);
+        this.undoSnapshot = null;
+        if (this.toast) this.toast.hidden = true;
+    }
+
+    private setSaveState(state: SaveState): void {
+        if (!this.saveState) return;
+        window.clearTimeout(this.saveStateTimer);
+        this.saveState.dataset.state = state;
+        this.saveState.textContent = { saving: 'Saving…', saved: 'Saved', failed: 'Not saved' }[state];
+        if (state === 'saved') this.saveStateTimer = window.setTimeout(() => { this.saveState!.textContent = ''; }, 2000);
+    }
+
+    // -- helpers --
+
+    private setTags(tags: string[], demographic: boolean): void {
+        const others = this.hermidata.meta.tags.filter(tag => DEMOGRAPHIC_TAGS.includes(tag) !== demographic);
+        this.hermidata.meta.tags = [...new Set([...others, ...tags].filter(tag => tag.trim() !== ''))];
+    }
+
+    private libraryTags(): string[] {
+        return Array.from(getAllTags(this.AllHermidata).keys());
+    }
+
+    /** The content rating older entries never had, guessed from their tags */
+    private guessContentRating(): string {
+        const tags = this.hermidata.meta.tags;
+        if (tags.includes('Hentai')) return 'Pornographic';
+        if (tags.includes('Ecchi')) return 'Suggestive';
+        return 'Safe';
+    }
+
+    /** yyyy-mm-dd in local time, as `<input type="date">` wants it */
+    private toDateInput(iso: string | null | undefined): string {
+        if (!iso) return '';
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return '';
+        const pad = (value: number) => String(value).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    private autosize(textarea: HTMLTextAreaElement): void {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    }
 }
