@@ -32,4 +32,7 @@ export {
     MAX_TOMBSTONE_TTL_DAYS,
     resolveTombstoneTtlDays,
     DEFAULT_BOOKMARK_TITLE_FORMAT,
+    RSS_CHECK_INTERVALS,
+    DEFAULT_RSS_CHECK_INTERVAL,
+    resolveRssCheckInterval,
 } from './settings';

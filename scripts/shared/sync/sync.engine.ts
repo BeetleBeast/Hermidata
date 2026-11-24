@@ -2,6 +2,7 @@ import { HermidataMigration } from "../migration/Hermidata";
 import type { Feed, Hermidata } from "../types";
 import { ext } from "../utils/BrowserCompat";
 import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
+import { isNewerItem } from "../utils/Unread";
 
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion, getSettings } from '../db/db';
 import { resolveTombstoneTtlDays } from '../constants';
@@ -115,7 +116,10 @@ const stripRss = (h: Hermidata): Hermidata => ({
     rss: h.rss.map(({ lastFetched, latestItem, ...config }: any) => config as Feed),
 });
 
-/** When a remote entry wins, keep this device's RSS cache for feeds it already has. */
+/**
+ * When a remote entry wins, keep this device's RSS cache for feeds it already has.
+ * `seen` ( what the user cleared ) keeps whichever side is further along, so a remote copy without it doesn't bring cleared notifications back.
+ */
 function withLocalRssCache(remote: Hermidata, local?: Hermidata): Hermidata {
     if (!local) return remote;
     const cache = new Map(local.rss.map(f => [f.id, f]));
@@ -123,7 +127,9 @@ function withLocalRssCache(remote: Hermidata, local?: Hermidata): Hermidata {
         ...remote,
         rss: remote.rss.map(f => {
             const l = cache.get(f.id);
-            return l ? { ...f, lastFetched: l.lastFetched, latestItem: l.latestItem } : f;
+            if (!l) return f;
+            const seen = !f.seen ? l.seen : !l.seen ? f.seen : isNewerItem(l.seen, f.seen) ? l.seen : f.seen;
+            return { ...f, lastFetched: l.lastFetched, latestItem: l.latestItem, ...(seen && { seen }) };
         }),
     };
 }

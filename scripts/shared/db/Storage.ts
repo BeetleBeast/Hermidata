@@ -432,41 +432,6 @@ export async function setSpreadsheetUrl(url: string): Promise<void> {
 }
 
 // ============================================================
-// Notifications — kept in storage.local (device-specific, no sync needed)
-// ============================================================
-
-export async function getLocalNotificationItem(key: string): Promise<boolean> {
-    try {
-        return await new Promise<boolean>((resolve, reject) => {
-            ext.storage.local.get('clearedNotification', (result: { clearedNotification: Record<string, boolean> }) => {
-                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-                resolve(result?.clearedNotification?.[key] ?? false);
-            });
-        });
-    } catch (err) {
-        logConsoleError('[Storage] getLocalNotificationItem:', key, err);
-        return false;
-    }
-}
-
-export async function setNotificationList(key: string, value = true): Promise<Record<string, boolean>> {
-    try {
-        return await new Promise<Record<string, boolean>>((resolve, reject) => {
-            ext.storage.local.get('clearedNotification', (result: { clearedNotification: Record<string, boolean> }) => {
-                const combined = { ...result?.clearedNotification, [key]: value };
-                ext.storage.local.set({ clearedNotification: combined }, () => {
-                    if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-                    resolve(combined);
-                });
-            });
-        });
-    } catch (err) {
-        logConsoleError('[Storage] setNotificationList:', err);
-        return {};
-    }
-}
-
-// ============================================================
 // Filters — kept in storage.local (device-specific UI state)
 // ============================================================
 

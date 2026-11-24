@@ -90,6 +90,8 @@ export interface Settings {
         TombstoneTtlDays?: number;
         /** Optional: settings saved before this existed lack it, and it counts as the default. Uses {title} and {chapter}. */
         BookmarkTitleFormat?: string;
+        /** Optional: settings saved before this existed lack it, and it counts as the default. Minutes between RSS checks. */
+        RssCheckIntervalMinutes?: number;
     }
     DefaultBookmarkSettings: {
         DefaultChoice: DefaultChoice,

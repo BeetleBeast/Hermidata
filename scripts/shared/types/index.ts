@@ -52,6 +52,7 @@ export type {
     AllFeeds,
 
     Feed,
+    SeenMarker,
     RawFeed,
     FeedItem,
     FeedExtras,

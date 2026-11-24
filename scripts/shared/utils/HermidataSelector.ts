@@ -6,6 +6,7 @@ import { getImage, removeImage, saveImage, getSettings } from "../db/Storage";
 import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule, type RelatedWorkType, type ReadingQueue } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { openLink, generateBookmarkId, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
+import { applyLatestItem } from "./Unread";
 
 export class HermidataModel implements Hermidata {
     // ...all Hermidata fields, assigned via constructor as before...
@@ -619,37 +620,23 @@ export class HermidataModel implements Hermidata {
         const feedIndex = this.rss.findIndex(feed => feed.url === rawFeed.url);
         if (feedIndex === -1) return;
         const currentFeed = this.rss[feedIndex];
-        // no cached latestItem (fresh device with synced data): the fetched one is by definition the newest we know
-        const latestFetchedIsNewer = !currentFeed.latestItem
-            || new Date(rawFeed.latestItem.pubDate).getTime() > new Date(currentFeed.latestItem.pubDate).getTime();
+        if (!rawFeed.latestItem) return;
 
-        const isNew = !!currentFeed.latestItem && (rawFeed.latestItem?.link !== currentFeed.latestItem?.link) && latestFetchedIsNewer;
+        // only take the fetched item when it is newer, otherwise we might overwrite with stale data
+        // ( whether it counts as unread is decided by getUnread, not here )
+        const feed: Feed = { ...currentFeed };
+        const fetchedIsNewer = applyLatestItem(feed, rawFeed.latestItem);
 
-        const latestChapter = latestFetchedIsNewer ? rawFeed.latestItem.chapter : currentFeed.latestItem.chapter;
-    
-        if (isNew) console.log(`
-            New Release\n
-            title: ${rawFeed.latestItem.title}\n
-            New Chapter: ${rawFeed.latestItem.chapter}\n
-            Old Chapter: ${currentFeed.latestItem?.chapter}\n
-            new Date: ${new Date(rawFeed.latestItem.pubDate)}\n
-            old Date: ${currentFeed.latestItem ? new Date(currentFeed.latestItem.pubDate) : 'none'}\n
-        `);
-        
-        
-        // only update feed if we have a newer chapter, otherwise we might overwrite with stale data
         this.rss[feedIndex] = {
+            ...feed,
             id: generateRssFeedId(this.title, currentFeed.url),
-            title: latestFetchedIsNewer ? rawFeed.latestItem.title : currentFeed.title,
-            url: currentFeed.url,
-            image: latestFetchedIsNewer ? rawFeed.image : currentFeed.image,
-            domain: latestFetchedIsNewer ? rawFeed.domain : currentFeed.domain,
+            title: fetchedIsNewer ? rawFeed.latestItem.title : currentFeed.title,
+            image: fetchedIsNewer ? rawFeed.image : currentFeed.image,
+            domain: fetchedIsNewer ? rawFeed.domain : currentFeed.domain,
             lastFetched: new Date().toISOString(),
-            latestItem: latestFetchedIsNewer ? rawFeed.latestItem : currentFeed.latestItem,
-            lastBuildDate: currentFeed.lastBuildDate,
-            Notified: true
         };
-        this.chapter.latest = latestChapter;
+        const latestChapter = this.rss[feedIndex].latestItem.chapter;
+        if (Number.isFinite(latestChapter)) this.chapter.latest = latestChapter;
     }
     Copy(): HermidataModel {
         return new HermidataModel(this.toJSON());

@@ -919,3 +919,21 @@
     border: 1px solid var(--border);
     border-radius: 8px;
 }
+
+/* Notification section: count in the header and the empty state */
+.containerHeader-feed .notification-count {
+    margin-left: 0.25em;
+    color: var(--accent, #01af76);
+    font-variant-numeric: tabular-nums;
+}
+.rss-notification-empty {
+    margin: 0 auto 10px;
+    text-align: center;
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+#RSS-Notification:has(
+    > .containerHeader-feed > .titleHeader > .feed-header-symbol[data-feed-state="up"]
+    ) > .rss-notification-empty {
+    display: none;
+}

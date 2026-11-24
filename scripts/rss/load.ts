@@ -9,6 +9,7 @@ import { getAllRawFeeds, getHermidataViaKey, saveHermidata } from "../shared/db/
 import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { ConsoleMessage } from "../shared/utils/ErrorMessage";
+import { getAllUnread, markSeen, seenFromItem } from "../shared/utils/Unread";
 
 /*
 
@@ -157,12 +158,26 @@ export async function getHermidataWithRssFromBackground(): Promise<Record<string
         });
     });
 }
-/** get hermidata with RSS that have the notification set to true */
+/**
+ * Clears notifications: marks every feed of these items seen up to its newest item, saves ( and syncs ) them,
+ * then rebuilds the background cache, which also updates the badge.
+ * Pass the items as the RSS view has them ( from GET_RSS ), so the newest fetched item is the one marked seen.
+ */
+export async function clearNotifications(items: Hermidata[]): Promise<void> {
+    for (const item of items) {
+        if (!item?.rss?.length) continue;
+        await saveHermidata(item.id, markSeen(item));
+    }
+    await ext.runtime.sendMessage({ type: 'INVALIDATE_RSS' }).catch(() => {});
+    // the popup keeps a prebuilt RSS view: it has to be rebuilt next time
+    if (typeof document !== 'undefined') document.dispatchEvent(new CustomEvent(RSS_CHANGED_EVENT));
+}
+export const RSS_CHANGED_EVENT = 'hermidata:rss-changed';
+
+/** The items with a chapter the user hasn't read or cleared, newest release first */
 export async function getHermidataNotification(): Promise<Record<string, Hermidata>> {
     const hermidata = await getHermidataWithRssFromBackground();
-    const newNotification = Object.values(hermidata).filter(h => h.rss.some(feed => feed.Notified))
-
-    return Object.fromEntries(newNotification.map(h => [h.id, h]));
+    return Object.fromEntries(getAllUnread(hermidata).map(info => [info.item.id, info.item]));
 }
 
 
@@ -200,7 +215,9 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
         image: rssData.image,
         domain: rssData.domain,
         lastFetched: new Date().toISOString(),
-        latestItem: rssData.latestItem ?? null
+        latestItem: rssData.latestItem ?? null,
+        // linking a feed is not a new release: what it has now counts as seen
+        ...(rssData.latestItem && { seen: seenFromItem(rssData.latestItem) }),
     };
     const existingFeedIndex = entry.rss.findIndex(feed => feed.url === newFeed.url);
     if (existingFeedIndex === -1) entry.rss.push(newFeed);

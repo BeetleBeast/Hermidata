@@ -1,4 +1,4 @@
-import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings, resolveTombstoneTtlDays } from "../../shared/constants";
+import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings, resolveRssCheckInterval, resolveTombstoneTtlDays } from "../../shared/constants";
 import { type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import {
@@ -48,6 +48,7 @@ export class ExtensionBehavior extends Build {
 
     private readonly bookmarkTitleFormat = new BookmarkTitleFormat();
     private readonly tombstoneTtlDays = getElement<HTMLInputElement>("#tombstoneTtlDays");
+    private readonly rssCheckInterval = getElement<HTMLSelectElement>("#rssCheckInterval");
 
     private readonly enableAutoSubscribe = getElement<HTMLInputElement>("#enableAutoSubscribe");
     private readonly enableAutoSubscribeThreshold = getElement<HTMLInputElement>("#enableAutoSubscribeThreshold"); // radio button ( boolean )
@@ -83,6 +84,8 @@ export class ExtensionBehavior extends Build {
         await this.bookmarkTitleFormat.init();
         // Tombstone TTL
         this.setValueOptionTombstoneTtl(settings);
+        // RSS check interval
+        this.setValueOptionRssCheckInterval(settings);
         // Auto Subscribe
         this.setValueOptionAutoSubscribe(settings);
         // Auto Subscribe - Threshold
@@ -122,6 +125,7 @@ export class ExtensionBehavior extends Build {
         this.enableAltTitleLookup?.addEventListener("change", (e) => this.EnableAltTitleLookup(e));
 
         this.tombstoneTtlDays?.addEventListener("change", (e) => this.TombstoneTtlDays(e));
+        this.rssCheckInterval?.addEventListener("change", (e) => this.RssCheckInterval(e));
 
         this.enableAutoSubscribe?.addEventListener("change", (e) => this.EnableAutoSubscribe(e));
         this.enableAutoSubscribeThreshold?.addEventListener("change", (e) => this.AllowSimilarityScanning(e));
@@ -148,6 +152,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionAltTitleLookup(updatedSettings);
         await this.bookmarkTitleFormat.resetValues();
         this.setValueOptionTombstoneTtl(updatedSettings);
+        this.setValueOptionRssCheckInterval(updatedSettings);
         this.updateSpreadsheetReminder(updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, updatedSettings.AccountAndConnections.spreadsheetUrl);
         document.dispatchEvent(new CustomEvent("hermidata:spreadsheet-target-changed", { detail: updatedSettings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet }));
     }
@@ -335,6 +340,10 @@ export class ExtensionBehavior extends Build {
         const enabled = settings.ExtensionBehaviour.AltTitleLookup?.Enable ?? false;
         setElement<HTMLInputElement>("#enableAltTitleLookup", el => el.checked = enabled);
     }
+    private setValueOptionRssCheckInterval(settings: Settings) {
+        const minutes = resolveRssCheckInterval(settings.ExtensionBehaviour.RssCheckIntervalMinutes);
+        setElement<HTMLSelectElement>("#rssCheckInterval", el => el.value = String(minutes));
+    }
     private setValueOptionTombstoneTtl(settings: Settings) {
         const days = settings.ExtensionBehaviour.TombstoneTtlDays ?? DEFAULT_TOMBSTONE_TTL_DAYS;
         setElement<HTMLInputElement>("#tombstoneTtlDays", el => el.value = String(days));
@@ -438,6 +447,14 @@ export class ExtensionBehavior extends Build {
         } catch (error) {
             console.warn('[Settings] alt title backfill:', error);
         }
+    }
+    // RSS check interval ( the background recreates its alarm when the synced settings change )
+    private async RssCheckInterval(e: Event) {
+        const select = e.target as HTMLSelectElement;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.RssCheckIntervalMinutes = resolveRssCheckInterval(Number(select.value));
+        select.value = String(updatedSettings.ExtensionBehaviour.RssCheckIntervalMinutes);
+        await this.setSettings(updatedSettings);
     }
     // Tombstone TTL
     private async TombstoneTtlDays(e: Event) {
