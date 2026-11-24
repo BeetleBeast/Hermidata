@@ -127,15 +127,31 @@ describe('applyLatestItem', () => {
 });
 
 describe('migrateFeedsToSeen ( 0.28.0 )', () => {
-    it('drops Notified and marks what each feed has as seen', () => {
-        const legacy = saved(10, [{ ...feed(release(47, 10)), Notified: true } as Feed]);
+    it('drops Notified and marks a caught-up feed as seen', () => {
+        const legacy = saved(47, [{ ...feed(release(47, 10)), Notified: true } as Feed]);
         const [migrated] = migrateFeedsToSeen([legacy]);
         expect('Notified' in migrated.rss[0]).toBe(false);
         expect(migrated.rss[0].seen?.chapter).toBe(47);
-        expect(getUnread(migrated)).toBeNull(); // no wall of "new" right after updating
+        expect(getUnread(migrated)).toBeNull();
+    });
+    it('shows an item as unread when the latest chapter is past the read one', () => {
+        const legacy = saved(45, [{ ...feed(release(47, 10)), Notified: true } as Feed]);
+        const [migrated] = migrateFeedsToSeen([legacy]);
+        expect(migrated.rss[0].seen?.chapter).toBe(45);
+        expect(getUnread(migrated)?.newCount).toBe(2);
+    });
+    it('keeps it unread after the next fetch and clears it on dismiss', () => {
+        const [migrated] = migrateFeedsToSeen([saved(45, [feed(release(47, 10))])]);
+        applyLatestItem(migrated.rss[0], release(47, 10));
+        expect(getUnread(migrated)).not.toBeNull();
+        expect(getUnread(markSeen(migrated))).toBeNull();
+    });
+    it('stays quiet when a chapter number is unknown', () => {
+        const [migrated] = migrateFeedsToSeen([saved(45, [feed(release(Number.NaN, 10))])]);
+        expect(getUnread(migrated)).toBeNull();
     });
     it('uses the raw feed copy when it is newer than the stored item', () => {
-        const legacy = saved(10, [{ ...feed(release(47, 10)), Notified: true } as Feed]);
+        const legacy = saved(49, [{ ...feed(release(47, 10)), Notified: true } as Feed]);
         const raw = { 'https://site.com/feed': { latestItem: release(49, 12) } } as unknown as Parameters<typeof migrateFeedsToSeen>[1];
         const [migrated] = migrateFeedsToSeen([legacy], raw);
         expect(migrated.rss[0].seen?.chapter).toBe(49);

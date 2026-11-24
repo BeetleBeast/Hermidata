@@ -1,14 +1,26 @@
-import type { Feed, FeedItem, Hermidata, RawFeed, Settings } from "../types";
-import { isNewerItem, seenFromItem } from "../utils/Unread";
+import type { Feed, FeedItem, Hermidata, RawFeed, SeenMarker, Settings } from "../types";
+import { feedChapter, isNewerItem, readChapterOf, seenFromItem } from "../utils/Unread";
 
 export const FEEDS_SEEN_MIGRATION_FLAG = 'migrated_Feeds_V3_seen';
 
 type LegacyFeed = Feed & { Notified?: true };
 
 /**
+ * The marker a migrated feed starts with.
+ * - latest chapter past the read one: seen up to the read chapter, so the item shows as unread
+ * - otherwise ( caught up, or a chapter is unknown ): seen up to the latest item, so it stays quiet
+ */
+function migratedSeen(latest: FeedItem, readChapter: number | null): SeenMarker {
+    const latestChapter = feedChapter(latest.chapter);
+    const behind = latestChapter !== null && readChapter !== null && latestChapter > readChapter;
+    return behind ? { chapter: readChapter, link: '', pubDate: new Date(0).toISOString() } : seenFromItem(latest);
+}
+
+/**
  * 0.28.0: the `Notified` flag is replaced by the `seen` marker.
  * - `Notified` is dropped, not carried over: nearly every old flag was a false positive
- * - every feed with a cached latest item gets `seen` from it, so nothing shows as new right after updating.
+ * - every feed with a cached latest item gets `seen` ( see migratedSeen ): only items whose latest chapter
+ *   is past the read chapter show as new after updating.
  *   The raw feed copy is used when it is newer: the RSS view merges it in, so it would otherwise count as new.
  * Returns only the items that changed.
  */
@@ -21,12 +33,13 @@ export function migrateFeedsToSeen(items: Hermidata[], rawFeeds: Record<string, 
     const changed: Hermidata[] = [];
     for (const item of items) {
         let itemChanged = false;
+        const readChapter = readChapterOf(item);
         const rss = (item.rss ?? []).map((feed: LegacyFeed) => {
             const latest = newest(feed);
             if (!('Notified' in feed) && (feed.seen || !latest)) return feed;
             const { Notified: _dropped, ...rest } = feed;
             itemChanged = true;
-            return rest.seen || !latest ? rest : { ...rest, seen: seenFromItem(latest) };
+            return rest.seen || !latest ? rest : { ...rest, seen: migratedSeen(latest, readChapter) };
         });
         if (itemChanged) changed.push({ ...item, rss });
     }

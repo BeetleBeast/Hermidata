@@ -23,10 +23,10 @@ export type UnreadInfo = {
 type Comparable = { chapter: number | null; link: string; pubDate: Date | string };
 
 /** A feed chapter counts only when the title had a number in it ( unknown is NaN ) */
-function feedChapter(chapter: number | null | undefined): number | null {
+export function feedChapter(chapter: number | null | undefined): number | null {
     return typeof chapter === 'number' && Number.isFinite(chapter) && chapter > 0 ? chapter : null;
 }
-function readChapterOf(item: Hermidata): number | null {
+export function readChapterOf(item: Hermidata): number | null {
     const current = item.chapter?.bookmarks?.[item.chapter.bookmarkInUse]?.current;
     return typeof current === 'number' && Number.isFinite(current) && current >= 0 ? current : null;
 }

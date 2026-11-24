@@ -26,7 +26,7 @@ export class EventListener extends RssBuild {
             feed.addEventListener('contextmenu', (e) => this.rightMouseClickOnItem(e, true, true));
             const hashItem = this.GetHashItem(feed);
             makeButtonLike(feed, this.describeItem(feedListLocalReload[hashItem]), 'link');
-            feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], true);
+            feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], true, feed);
         }
         for (let items of allItems) {
             const item = this.getEntriesItem(items) || this.getNotificationItem(items);
@@ -48,11 +48,12 @@ export class EventListener extends RssBuild {
         const linked = hermidata.hasRSS() ? 'linked to an RSS feed' : 'not linked to an RSS feed';
         return `${hermidata.title}, ${linked}. Open the latest chapter, or press the context menu key for more actions`;
     }
-    private async clickOnItem(value: Hermidata, isNotificationItem: boolean) {
+    private async clickOnItem(value: Hermidata, isNotificationItem: boolean, element: HTMLDivElement | null = null) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
 
         const hermidata = new HermidataModel(value);
 
+        await this.clearIfNotification(element);
         await openLink(hermidata.GetLatestRssFeed()?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
     }
     private async rightMouseClickOnItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
@@ -394,6 +395,7 @@ export class EventListener extends RssBuild {
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
         if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
+        await this.clearIfNotification(target);
         await openLink(currentUrl, 'sameTab', currentScrollPosition);
     }
 
@@ -411,6 +413,7 @@ export class EventListener extends RssBuild {
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
         if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
+        await this.clearIfNotification(target);
         await openLink(currentUrl, 'newTab', currentScrollPosition);
     }
     
@@ -428,12 +431,17 @@ export class EventListener extends RssBuild {
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
         if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
+        await this.clearIfNotification(target);
         await openLink(currentUrl, 'newWindow', currentScrollPosition);
     }
     private isNumber(number: number) {
         return !isNaN(number) && number !== undefined;
     }
     
+    /** Opening a notification item clears it; cleared before opening, since a new tab or window closes the popup */
+    private async clearIfNotification(target: HTMLDivElement | null) {
+        if (target && this.getNotificationItem(target)) await this.clearNotification(target);
+    }
     private async clearNotification(target: HTMLDivElement | null) {
         if (!target) return;
         // find id of list item
