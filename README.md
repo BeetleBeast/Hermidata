@@ -36,7 +36,9 @@ You can create multiple markers per entry, making it easy to track separate read
 ### RSS Feed Tracking
 
 - Subscribe to RSS feeds and link them to tracked entries
-- Background feed checks every 60 minutes for new chapters
+- Background feed checks for new chapters every 30 minutes to 6 hours (hourly by default), on browser startup, and from **Manual sync**
+- Unread chapter count on the toolbar icon, plus optional browser notifications (short or detailed)
+- An item counts as unread when its newest feed chapter is past the chapter you have read; opening it or clearing it from the notifications list dismisses it
 - Feed viewer with search, sorting, and filters across titles, including titles without a linked feed
 - Filters for type, reading status, series status, source, tags, date range, and more
 - Smart title matching using fuzzy search and alternate title support
@@ -95,7 +97,7 @@ See **[docs/sync.md](docs/sync.md)** for server setup (including a one-line loca
 
 To track a new read-through of an existing entry, open the entry and add a new marker with a distinct label. Each marker maintains its own chapter history independently.
 
-For RSS, open a title's page in the RSS viewer and use **Subscribe** to link a feed to a tracked entry. Feed checks run approximately hourly. New chapters can trigger a browser notification, depending on your notification settings.
+For RSS, open a title's page in the RSS viewer and use **Subscribe** to link a feed to a tracked entry. Feed checks run every hour by default; change the interval in the extension behavior settings. Depending on your notification setting, new chapters show a count on the toolbar icon (badge only), or also a browser notification (short or detailed). Opening an item from the notifications list clears it.
 
 ---
 
@@ -244,7 +246,7 @@ dist/        Generated build output (created by `npm run build`)
 | `contextMenus` | Right-click save option |
 | `notifications` | New chapter alerts |
 | `scripting` | Content script injection |
-| `alarms` | Check your WebDAV server for library changes every 5 minutes (WebDAV sync only) |
+| `alarms` | Check RSS feeds for new chapters on your chosen interval, and your WebDAV server for library changes every 5 minutes (WebDAV sync only) |
 | `host_permissions` | Broad access to websites for page detection and RSS feeds, plus Google APIs for Sheets sync |
 | `optional_host_permissions` | Requested at runtime for the WebDAV server you enter, when you test or save it (WebDAV sync only) |
 
