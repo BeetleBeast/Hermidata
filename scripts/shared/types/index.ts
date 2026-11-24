@@ -174,7 +174,10 @@ export type {
     KeyboardShortcutSettings,
     BookmarkTitleValues,
     BookmarkTitlePlaceholder,
-    BookmarkTitleFormatPart
+    BookmarkTitleFormatPart,
+    AutoSetStatusMode,
+    AutoSetStatusSettings,
+    LegacyAutoSetStatusSettings
 
 } from "./settings";
 

@@ -5,7 +5,7 @@ import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 import { isNewerItem } from "../utils/Unread";
 
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion, getSettings } from '../db/db';
-import { resolveTombstoneTtlDays } from '../constants';
+import { resolveTombstoneTtlDays } from '../utils/SettingsValues';
 import { BrowserSyncBackend } from './BrowserSyncBackend';
 import type { EnvelopeHeader, KeyStore, RemoteBlob, SyncBackend, SyncBackendConfig, SyncStatus, SyncSwitchMode, WriteResult } from '../types';
 import { ConflictError } from '../utils/dedicatedErrors';

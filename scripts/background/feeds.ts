@@ -2,7 +2,7 @@ import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ext } from "../shared/utils/BrowserCompat";
 import type { FeedItem, FeedExtras, RawFeed, Hermidata } from "../shared/types/index";
 import { getAllHermidata, getAllRawFeeds, getSettings, setAllHermidata, setAllRawFeeds } from "../shared/db/Storage";
-import { resolveRssCheckInterval } from "../shared/constants";
+import { resolveRssCheckInterval } from "../shared/utils/SettingsValues";
 import { backgroundAlarms } from "../shared/sync/syncAlarms";
 import { generateRssFeedId, normalizeTag, TrimTitle } from "../shared/utils/StringOutput";
 import { applyLatestItem, getAllUnread } from "../shared/utils/Unread";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractTitleFromFormattedBookmark, formatBookmarkTitle, missingBookmarkTitlePlaceholders, parseBookmarkTitleFormat } from "../scripts/shared/utils/BookmarkTitle";
-import { resolveTombstoneTtlDays } from "../scripts/shared/constants";
+import { resolveTombstoneTtlDays } from "../scripts/shared/utils/SettingsValues";
 
 const values = { title: "Solo", chapter: 5, type: "Manga", domain: "example.com" };
 

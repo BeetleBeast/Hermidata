@@ -142,6 +142,20 @@ export async function getAllHermidata(): Promise<Record<string, OnlyPlainHermida
         return {};
     }
 }
+/**
+ * Saves edited entries in one transaction, the batch version of saveHermidata: each one is stamped as updated
+ * so sync ( newest meta.updated wins ) carries the change to other devices. Use setAllHermidata to write without that.
+ */
+export async function saveAllHermidata(entries: OnlyPlainHermidata[]): Promise<void> {
+    if (entries.length === 0) return;
+    const now = new Date().toISOString();
+    for (const entry of entries) entry.meta.updated = now;
+
+    await putAllHermidata(entries);
+    pushToSync();
+    PastHermidata.invalidateCache();
+    console.log(`[Storage] saved ${entries.length} edited entries`);
+}
 export async function setAllHermidata(hermidata: OnlyPlainHermidata[]): Promise<void> {
     try {
         await putAllHermidata(hermidata);

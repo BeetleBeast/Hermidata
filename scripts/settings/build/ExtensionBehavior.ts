@@ -1,5 +1,6 @@
-import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings, resolveRssCheckInterval, resolveTombstoneTtlDays } from "../../shared/constants";
-import { type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
+import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings } from "../../shared/constants";
+import { resolveAutoSetStatusMode, resolveRssCheckInterval, resolveTombstoneTtlDays } from "../../shared/utils/SettingsValues";
+import { type AutoSetStatusMode, type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import {
     BROWSER_COMMAND_SHORTCUTS,
@@ -589,32 +590,23 @@ export class ExtensionBehavior extends Build {
     // Auto Update Novel Status
     private setValueOptionAutoUpdateNovelStatus(settings: Settings) {
         if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
-        const autoUpdateNovelStatus = settings.ExtensionBehaviour.AutoSetStatusScore;
-        const RSSOnly = autoUpdateNovelStatus.onlyRSS;
-        const allowAll = autoUpdateNovelStatus.allowAllDateFields;
+        const mode = resolveAutoSetStatusMode(settings.ExtensionBehaviour.AutoSetStatusScore);
 
-        this.autoUpdateNovelStatusAllValue.checked = allowAll;
-        this.autoUpdateNovelStatusOnlyRSS.checked = RSSOnly;
+        this.autoUpdateNovelStatusAllValue.checked = mode === 'all';
+        this.autoUpdateNovelStatusOnlyRSS.checked = mode === 'rss';
     }
+    /** The two switches pick one mode: turning one on turns the other off, turning it off means off */
     private async AutoUpdateNovelStatus(e: Event, type: "onlyRSS" | "allowAll") {
         if (!this.autoUpdateNovelStatusAllValue || !this.autoUpdateNovelStatusOnlyRSS) return;
-        const event = e.target as HTMLInputElement;
-        const isChecked = event.checked;
+        const isChecked = (e.target as HTMLInputElement).checked;
         const updatedSettings = await this.ensureSettingsUpToDate();
 
-        const settingsTarget = type == 'allowAll' ? 'allowAllDateFields' : 'onlyRSS';
-        if (!settingsTarget) return;
+        const mode: AutoSetStatusMode = !isChecked ? 'off' : type === 'allowAll' ? 'all' : 'rss';
 
-        // make sure only one can be checked at a time
-        if (settingsTarget == 'onlyRSS') {
-            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.allowAllDateFields = false;
-            this.autoUpdateNovelStatusAllValue.checked = false;
-        } else if (settingsTarget == 'allowAllDateFields') {
-            updatedSettings.ExtensionBehaviour.AutoSetStatusScore.onlyRSS = false;
-            this.autoUpdateNovelStatusOnlyRSS.checked = false;
-        }
+        this.autoUpdateNovelStatusAllValue.checked = mode === 'all';
+        this.autoUpdateNovelStatusOnlyRSS.checked = mode === 'rss';
 
-        updatedSettings.ExtensionBehaviour.AutoSetStatusScore[settingsTarget] = isChecked;
+        updatedSettings.ExtensionBehaviour.AutoSetStatusScore = { mode };
         this.setSettings(updatedSettings);
     }
 
