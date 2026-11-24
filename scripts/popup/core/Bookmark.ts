@@ -575,7 +575,7 @@ export class BookmarkController {
         this.hermidata.chapter.bookmarks[key].lastUsedAt = new Date().toISOString();
         this.bookmarkInUseID = key;
         // update popup UI
-        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].history.at(-1) || 0));
+        setElement<HTMLInputElement>('#previousChapter', el => el.textContent = String(this.hermidata.GetLatestReadChapter()));
         setElement<HTMLInputElement>('#chapter', el => el.value = String(this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].current));
         setElement<HTMLInputElement>('#notes', el => el.value = this.hermidata.meta.notes);
         setElement<HTMLSelectElement>('#status', el => el.value = this.hermidata.chapter.bookmarks[this.hermidata.chapter.bookmarkInUse].readStatus);
