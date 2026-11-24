@@ -3,6 +3,7 @@ export type {
     CommitChange,
     SaveState,
     ChipListOptions,
+    CoverSource,
     TagPickerOptions,
     MarkerSortKey,
     SortDirection,

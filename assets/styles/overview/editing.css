@@ -145,6 +145,59 @@ input[type="date"].ov-field { color-scheme: dark; }
 .ov-file-btn:focus-within { outline: 2px solid var(--accent-soft); outline-offset: 2px; }
 .ov-dialog .ov-dialog-error { color: var(--danger); font-size: 12px; }
 
+.ov-dialog-step { display: flex; flex-direction: column; gap: 10px; }
+.ov-crop-current { align-self: center; min-height: 30px; font-size: 12px; color: var(--text-muted); }
+.ov-crop-current:hover:not(:disabled) { color: var(--text-highlight); }
+
+/* -- cover cropping: a 5:7 window ( the cover shape ) the image is moved and zoomed behind -- */
+
+.ov-crop { align-items: center; }
+
+.ov-crop-frame {
+    position: relative;
+    width: min(240px, 100%);
+    aspect-ratio: 5 / 7;
+    overflow: hidden;
+    border-radius: var(--ov-radius-lg);
+    background: repeating-conic-gradient(var(--surface-input) 0 25%, var(--surface) 0 50%) 0 0 / 16px 16px;
+    box-shadow: 0 0 0 1px var(--ov-hairline), var(--ov-elevated);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+.ov-crop-frame[data-dragging="true"] { cursor: grabbing; }
+.ov-crop-frame:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 3px; }
+
+/* thirds guide, only while moving the image */
+.ov-crop-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.5) 0 calc(33.33% + 0.5px), transparent 0 calc(66.66% - 0.5px), rgba(255, 255, 255, 0.5) 0 calc(66.66% + 0.5px), transparent 0),
+        linear-gradient(transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.5) 0 calc(33.33% + 0.5px), transparent 0 calc(66.66% - 0.5px), rgba(255, 255, 255, 0.5) 0 calc(66.66% + 0.5px), transparent 0);
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+    pointer-events: none;
+}
+.ov-crop-frame[data-dragging="true"]::after { opacity: 1; }
+
+.ov-crop-frame img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    max-width: none;
+    transform-origin: 0 0;
+    pointer-events: none;
+}
+
+.ov-crop-zoom { display: flex; align-items: center; gap: 12px; width: min(280px, 100%); }
+.ov-crop-zoom input { flex: 1; accent-color: var(--accent-soft); }
+.ov-dialog .ov-crop-hint { font-size: 12px; text-align: center; }
+
+.ov-crop-foot { width: 100%; }
+.ov-crop-foot > :first-child { margin-right: auto; }
+
 /* -- toast -- */
 
 .ov-toast {

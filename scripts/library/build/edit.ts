@@ -1,12 +1,13 @@
 import { CONTENT_RATING, DEMOGRAPHIC_TAGS } from "../../shared/constants";
 import { getAllTags } from "../../shared/db/Storage";
-import type { CommitChange, CommitOptions, ContentRating, Hermidata, SaveState, Settings } from "../../shared/types";
+import type { CommitChange, CommitOptions, ContentRating, CoverSource, Hermidata, SaveState, Settings } from "../../shared/types";
 import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { generateHermidataHash, getFreeKey, openLink } from "../../shared/utils/StringOutput";
 import { LibraryBuilder } from "../build";
 import { AltTitleLookupPanel } from "./altLookup";
 import { ChipList } from "./chips";
+import { CoverCropper } from "./cropper";
 import { TagPicker } from "./tags";
 
 const TOAST_DURATION = 6000;
@@ -38,6 +39,18 @@ export class EditDetail extends LibraryBuilder {
     private readonly coverUrlConfirm = document.querySelector<HTMLButtonElement>('#imageChanger-url-confirm');
     private readonly coverFile = document.querySelector<HTMLInputElement>('#imageChanger-file');
     private readonly coverError = document.querySelector<HTMLElement>('#imageChanger-error');
+    private readonly coverTitle = document.querySelector<HTMLElement>('#imageChanger-title');
+    private readonly coverSourceStep = document.querySelector<HTMLElement>('#imageChanger-source');
+    private readonly coverCropStep = document.querySelector<HTMLElement>('#imageChanger-crop');
+    private readonly cropCurrentButton = document.querySelector<HTMLButtonElement>('#imageChanger-crop-current');
+    private readonly cropFrame = document.querySelector<HTMLElement>('#imageChanger-crop-frame');
+    private readonly cropBack = document.querySelector<HTMLButtonElement>('#imageChanger-crop-back');
+    private readonly cropWhole = document.querySelector<HTMLButtonElement>('#imageChanger-crop-whole');
+    private readonly cropSave = document.querySelector<HTMLButtonElement>('#imageChanger-crop-save');
+    private readonly cropper = this.createCropper();
+
+    /** The image being cropped, while the crop step is open */
+    private coverSource: CoverSource | null = null;
 
     private readonly entryMenu = document.querySelector<HTMLDetailsElement>('#ov-entry-menu');
     private readonly deleteButton = document.querySelector<HTMLButtonElement>('#delete-info-btn');
@@ -314,51 +327,127 @@ export class EditDetail extends LibraryBuilder {
             // prefill a real link only, not the app icon that stands in for a missing cover
             const link = image.kind === 'url' && image.url !== this.hermidata.GetImageDefaultPath() ? image.url : '';
             if (this.coverUrl) this.coverUrl.value = link;
-            this.showCoverError('');
+            if (this.cropCurrentButton) this.cropCurrentButton.hidden = this.cover?.dataset.placeholder === 'true';
+            this.showCoverStep('source');
             dialog.showModal();
             this.coverUrl?.select();
         });
+        dialog.addEventListener('close', () => {
+            this.cropper?.dispose();
+            this.coverSource = null;
+            this.showCoverStep('source');
+        });
 
-        const useLink = async () => {
+        const useLink = () => {
             const url = this.coverUrl?.value.trim();
-            if (!url) return;
-            await this.changeCover(async () => {
-                // fetch follows redirects and gives the real image bytes; don't store the typed url's response unchecked
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`The link answered ${response.status} ${response.statusText}`);
-                const blob = await response.blob();
-                if (!blob.type.startsWith('image/')) throw new Error('The link is not an image');
-                await this.hermidata.SetImage(url, blob);
-            });
+            if (url) void this.openCrop(async () => ({ blob: await this.fetchImage(url), url }));
         };
-        this.coverUrlConfirm?.addEventListener('click', () => void useLink());
+        this.coverUrlConfirm?.addEventListener('click', useLink);
         this.coverUrl?.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') { event.preventDefault(); void useLink(); }
+            if (event.key === 'Enter') { event.preventDefault(); useLink(); }
         });
 
         this.coverFile?.addEventListener('change', () => {
             const file = this.coverFile?.files?.[0];
-            if (!file) return;
-            void this.changeCover(() => this.hermidata.SetImage(file));
+            if (file) void this.openCrop(async () => ({ blob: file, url: null }));
             this.coverFile!.value = '';
+        });
+
+        this.cropCurrentButton?.addEventListener('click', () => void this.openCrop(() => this.currentCoverSource()));
+
+        this.cropBack?.addEventListener('click', () => {
+            this.showCoverStep('source');
+            this.coverUrl?.focus();
+        });
+        this.cropWhole?.addEventListener('click', () => {
+            const source = this.coverSource;
+            if (source) void this.withCoverBusy(() => this.changeCover(source, source.blob));
+        });
+        this.cropSave?.addEventListener('click', () => {
+            const source = this.coverSource;
+            const cropper = this.cropper;
+            if (source && cropper) void this.withCoverBusy(async () => this.changeCover(source, await cropper.export()));
         });
     }
 
-    private async changeCover(store: () => Promise<void>): Promise<void> {
-        if (this.coverUrlConfirm) this.coverUrlConfirm.disabled = true;
-        try {
-            await store();
-            await this.commit('Cover updated', () => {}, { undoable: false });
-            if (this.cover) {
-                if (this.cover.src.startsWith('blob:')) URL.revokeObjectURL(this.cover.src);
-                this.cover.src = await this.hermidata.getDisplayImageUrl();
+    /** Load the picked image into the crop step */
+    private async openCrop(getSource: () => Promise<CoverSource>): Promise<void> {
+        await this.withCoverBusy(async () => {
+            const source = await getSource();
+            if (!source.blob.type.startsWith('image/')) throw new Error('The file is not an image');
+            this.coverSource = source;
+            this.showCoverStep('crop'); // shown before loading: the cropper measures its frame
+            await this.cropper?.load(source.blob);
+            this.cropFrame?.focus();
+        }, () => this.showCoverStep('source'));
+    }
+
+    /**
+     * The cover that is shown now. A linked cover is fetched from its link again, so re-cropping starts from
+     * the full original rather than from the previous crop; when the link no longer works the shown image is used.
+     */
+    private async currentCoverSource(): Promise<CoverSource> {
+        const image = this.hermidata.meta.image;
+        const url = image.kind === 'url' && image.url !== this.hermidata.GetImageDefaultPath() ? image.url : null;
+        if (url) {
+            try {
+                return { blob: await this.fetchImage(url), url };
+            } catch (error) {
+                console.warn('[Hermidata] Cover link failed, cropping the shown image instead.', error);
             }
-            this.coverDialog?.close();
+        }
+        const shown = await this.hermidata.getDisplayImageUrl();
+        const blob = await (await fetch(shown)).blob();
+        if (shown.startsWith('blob:')) URL.revokeObjectURL(shown);
+        return { blob, url };
+    }
+
+    private async fetchImage(url: string): Promise<Blob> {
+        // fetch follows redirects and gives the real image bytes; don't store the typed url's response unchecked
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`The link answered ${response.status} ${response.statusText}`);
+        const blob = await response.blob();
+        if (!blob.type.startsWith('image/')) throw new Error('The link is not an image');
+        return blob;
+    }
+
+    /** Store the new cover. A linked cover keeps its link, with the ( cropped ) image cached on this device */
+    private async changeCover(source: CoverSource, image: Blob): Promise<void> {
+        if (source.url) await this.hermidata.SetImage(source.url, image);
+        else await this.hermidata.SetImage(image);
+        await this.commit('Cover updated', () => {}, { undoable: false });
+        if (this.cover) {
+            if (this.cover.src.startsWith('blob:')) URL.revokeObjectURL(this.cover.src);
+            this.cover.src = await this.hermidata.getDisplayImageUrl();
+        }
+        this.coverDialog?.close();
+    }
+
+    /** Run a cover step with the dialog's buttons disabled, showing any error in the dialog */
+    private async withCoverBusy(task: () => Promise<void>, onError?: () => void): Promise<void> {
+        const buttons = this.coverDialog?.querySelectorAll<HTMLButtonElement>('button') ?? [];
+        for (const button of buttons) button.disabled = true;
+        this.showCoverError('');
+        try {
+            await task();
         } catch (error) {
+            onError?.();
             this.showCoverError(error instanceof Error ? error.message : String(error));
         } finally {
-            if (this.coverUrlConfirm) this.coverUrlConfirm.disabled = false;
+            for (const button of buttons) button.disabled = false;
         }
+    }
+
+    private showCoverStep(step: 'source' | 'crop'): void {
+        if (this.coverSourceStep) this.coverSourceStep.hidden = step !== 'source';
+        if (this.coverCropStep) this.coverCropStep.hidden = step !== 'crop';
+        if (this.coverTitle) this.coverTitle.textContent = step === 'crop' ? 'Crop cover' : 'Change cover';
+    }
+
+    private createCropper(): CoverCropper | null {
+        const image = document.querySelector<HTMLImageElement>('#imageChanger-crop-img');
+        const zoom = document.querySelector<HTMLInputElement>('#imageChanger-zoom');
+        return this.cropFrame && image && zoom ? new CoverCropper(this.cropFrame, image, zoom) : null;
     }
 
     private showCoverError(message: string): void {

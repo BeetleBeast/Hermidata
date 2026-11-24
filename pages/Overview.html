@@ -27,6 +27,7 @@
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 5v14M4 15l4 4 4-4M16 19V5M12 9l4-4 4 4"/></symbol>
   </svg>
@@ -179,17 +180,40 @@
         <h2 id="imageChanger-title">Change cover</h2>
         <button type="submit" class="ov-icon-btn" aria-label="Close"><svg class="ov-icon" aria-hidden="true"><use href="#i-close"/></svg></button>
       </div>
-      <label for="imageChanger-url">Image link</label>
-      <div class="ov-inline-form">
-        <input type="url" id="imageChanger-url" placeholder="https://example.com/cover.jpg" />
-        <button type="button" id="imageChanger-url-confirm" class="ov-btn ov-btn-primary">Use link</button>
+      <div id="imageChanger-source" class="ov-dialog-step">
+        <label for="imageChanger-url">Image link</label>
+        <div class="ov-inline-form">
+          <input type="url" id="imageChanger-url" placeholder="https://example.com/cover.jpg" />
+          <button type="button" id="imageChanger-url-confirm" class="ov-btn ov-btn-primary">Use link</button>
+        </div>
+        <p class="ov-dialog-or">or</p>
+        <label class="ov-btn ov-file-btn">
+          <svg class="ov-icon" aria-hidden="true"><use href="#i-image"/></svg>
+          Upload an image…
+          <input type="file" id="imageChanger-file" accept="image/*" class="sr-only" />
+        </label>
+        <button type="button" id="imageChanger-crop-current" class="ov-btn ov-btn-ghost ov-crop-current">
+          <svg class="ov-icon" aria-hidden="true"><use href="#i-crop"/></svg>
+          Crop the current cover
+        </button>
       </div>
-      <p class="ov-dialog-or">or</p>
-      <label class="ov-btn ov-file-btn">
-        <svg class="ov-icon" aria-hidden="true"><use href="#i-image"/></svg>
-        Upload an image…
-        <input type="file" id="imageChanger-file" accept="image/*" class="sr-only" />
-      </label>
+
+      <div id="imageChanger-crop" class="ov-dialog-step ov-crop" hidden>
+        <div id="imageChanger-crop-frame" class="ov-crop-frame" tabindex="0" role="group" aria-label="Crop area" aria-describedby="imageChanger-crop-hint">
+          <img id="imageChanger-crop-img" alt="" draggable="false" />
+        </div>
+        <div class="ov-crop-zoom">
+          <label for="imageChanger-zoom">Zoom</label>
+          <input type="range" id="imageChanger-zoom" value="1" />
+        </div>
+        <p id="imageChanger-crop-hint" class="ov-crop-hint">Drag or use the arrow keys to move. Scroll, the slider or + and − to zoom.</p>
+        <div class="ov-dialog-foot ov-crop-foot">
+          <button type="button" id="imageChanger-crop-back" class="ov-btn ov-btn-ghost">Back</button>
+          <button type="button" id="imageChanger-crop-whole" class="ov-btn">Use whole image</button>
+          <button type="button" id="imageChanger-crop-save" class="ov-btn ov-btn-primary">Save cover</button>
+        </div>
+      </div>
+
       <p id="imageChanger-error" class="ov-dialog-error" role="alert" hidden></p>
     </form>
   </dialog>

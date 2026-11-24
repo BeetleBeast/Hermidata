@@ -26,5 +26,12 @@ export interface TagPickerOptions {
     onChange: (tags: string[]) => void;
 }
 
+/** An image picked as the new cover, before it is cropped */
+export interface CoverSource {
+    blob: Blob;
+    /** The link it came from; kept so the cover still points at its source after cropping. Null for uploads */
+    url: string | null;
+}
+
 export type MarkerSortKey = 'chapter' | 'date';
 export type SortDirection = 'asc' | 'desc';
