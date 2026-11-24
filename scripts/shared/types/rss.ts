@@ -144,42 +144,6 @@ export interface ScalarConflict<K extends string = string> {
     valueB: unknown;
 }
 
-export interface TagMap {
-    input: HTMLInputElement;
-    div: HTMLDivElement;
-    textarea: HTMLTextAreaElement;
-    img: HTMLImageElement;
-    date: HTMLInputElement;
-    option: HTMLOptionElement;
-    select: HTMLSelectElement;
-    h2: HTMLHeadingElement;
-    button: HTMLButtonElement;
-}
-
-export type SwitchConfig = MainConfig | InputConfig | divConfig | ButtonConfig;
-
-interface MainConfig {
-    element: HTMLTextAreaElement | HTMLImageElement | HTMLHeadingElement | HTMLButtonElement | null;
-    switchTo: Exclude<keyof TagMap, 'input'>
-}
-interface InputConfig {
-    element: HTMLDivElement | HTMLInputElement | HTMLTextAreaElement | HTMLImageElement | HTMLButtonElement | null;
-    switchTo: 'input';
-    inputType: 'text' | 'number' | 'image' | 'date' | 'file';
-}
-interface ButtonConfig {
-    element: HTMLButtonElement | null;
-    switchTo: 'button';
-    inputType: 'button';
-}
-interface divConfig {
-    element: HTMLDivElement | null;
-    switchTo: 'div';
-    rules: {
-        allUpperCase: boolean;
-    }
-}
-
 export type DbStore = 'hermidata' | 'feeds' | 'settings' | 'images';
 export type SyncCall = PushToSync | RemoveFromSync;
 export type DbCall = NoPayload | IdPayloadOnly | PutAll | Update | Put | UpdateImageKey;

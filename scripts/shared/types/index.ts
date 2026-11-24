@@ -1,4 +1,14 @@
 export type {
+    CommitOptions,
+    CommitChange,
+    SaveState,
+    ChipListOptions,
+    TagPickerOptions,
+    MarkerSortKey,
+    SortDirection,
+} from "./overview";
+
+export type {
     QueueFilters,
     QueuePosition,
     RowOptions,
@@ -133,8 +143,6 @@ export type {
     RssDOM,
     RSSData,
 
-    TagMap,
-    SwitchConfig,
 
     FuzzyHermidataMatches,
     FuzzyBookmarkMatches,

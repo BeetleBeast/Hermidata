@@ -73,16 +73,21 @@ describe('ID rekey flows outside the database layer', () => {
         const oldId = hermidata.id;
         const editDetail: EditDetail = Object.create(EditDetail.prototype);
         const changeHermidata = vi.fn().mockResolvedValue(undefined);
+        const replaceState = vi.fn();
+        vi.stubGlobal('history', { replaceState });
         setPrivate(editDetail, 'hermidata', hermidata);
+        setPrivate(editDetail, 'storedId', oldId);
         setPrivate(editDetail, 'changeHermidata', changeHermidata);
         setPrivate(editDetail, 'AllHermidata', { [oldId]: hermidata.toJSON() });
 
         hermidata.title = 'Renamed Series';
-        await callPrivate<Promise<void>>(editDetail, 'forceKeyUpdate');
+        await callPrivate<Promise<void>>(editDetail, 'persist');
 
         const expectedId = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl());
         expect(hermidata.id).toBe(expectedId);
         expect(changeHermidata).toHaveBeenCalledWith(oldId, expectedId, hermidata.toJSON());
+        // the open page follows the entry to its new id
+        expect(replaceState).toHaveBeenCalledWith(null, '', `#/id/${expectedId}`);
     });
 
     it('keeps the id of a separate item whose title hash belongs to another item', async () => {
@@ -91,14 +96,19 @@ describe('ID rekey flows outside the database layer', () => {
         separate.id = '6f1c2a3e-0000-4000-8000-000000000001';
         const editDetail: EditDetail = Object.create(EditDetail.prototype);
         const changeHermidata = vi.fn().mockResolvedValue(undefined);
+        const update = vi.fn().mockResolvedValue(undefined);
         setPrivate(editDetail, 'hermidata', separate);
+        setPrivate(editDetail, 'storedId', separate.id);
         setPrivate(editDetail, 'changeHermidata', changeHermidata);
+        setPrivate(editDetail, 'updateHermidata', update);
+        setPrivate(editDetail, 'pushToSync', vi.fn().mockResolvedValue(undefined));
         setPrivate(editDetail, 'AllHermidata', { [original.id]: original.toJSON(), [separate.id]: separate.toJSON() });
 
-        await callPrivate<Promise<void>>(editDetail, 'forceKeyUpdate');
+        await callPrivate<Promise<void>>(editDetail, 'persist');
 
         expect(separate.id).toBe('6f1c2a3e-0000-4000-8000-000000000001');
         expect(changeHermidata).not.toHaveBeenCalled();
+        expect(update).toHaveBeenCalledWith(separate.toJSON());
     });
 
     it('renames an RSS entry in place when the new title hash belongs to another item', async () => {

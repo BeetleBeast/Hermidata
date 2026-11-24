@@ -1,374 +1,192 @@
-/* new wrapper takes over the old row-layout responsibilities */
-.hermidata-marker-row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    width: 100%;
-    position: relative; /* so .hermidata-marker-color's absolute positioning still anchors here */
-    border: 1px solid;
-    border-radius: 10px;
-    border-color: var(--accent-dark);
+/* -- in-place fields: look like plain text, show they are editable on hover, become an input on focus -- */
+
+.ov-field {
+    display: block;
+    min-height: 32px;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--ov-radius);
+    color: var(--text);
+    transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+input.ov-field, select.ov-field { width: fit-content; max-width: 100%; margin-left: -9px; background-color: transparent; border-color: transparent; }
+input.ov-field[type="text"] { width: 100%; }
+.ov-field:hover { background-color: var(--surface-input); }
+.ov-field:focus {
+    background-color: var(--surface-raised);
+    border-color: var(--accent-soft);
+    box-shadow: var(--ov-ring);
+}
+.ov-field::placeholder { color: var(--text-muted); font-style: italic; }
+
+/* selects show their chevron only on hover / focus, so a property reads like text */
+select.ov-select {
+    appearance: none;
+    padding-right: 26px;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 13px) 55%, calc(100% - 9px) 55%;
+    background-size: 4px 4px;
+    background-repeat: no-repeat;
+    color: var(--text);
     cursor: pointer;
 }
+select.ov-select:not(:hover):not(:focus) { background-image: none; }
+select.ov-select option { background: var(--surface-raised); color: var(--text); }
 
-.hermidata-marker-row:hover {
-	text-emphasis-color: var(--surface-input);
-	accent-color: var(--text);
-	outline: 1px solid var(--accent-dark);
-	transform: scale(1.005);
-	transition: transform 0.2s ease-in-out;
-}
+input[type="date"].ov-field { color-scheme: dark; }
+:root[data-theme="light"] input[type="date"].ov-field { color-scheme: light; }
 
-.hermidata-marker-notes {
-	display: grid;
-	grid-template-rows: 0fr;
-	transition: grid-template-rows 0.2s ease-in-out, align-items 0.2s ease-in-out;
-    width: 98%;
-    align-self: end;
-}
-
-.hermidata-marker-notes-inner {
-    overflow: hidden;
-    min-height: 0;
-    padding-left: 10px;
-}
-
-.hermidata-marker-container:hover > .hermidata-marker-notes {
-	grid-template-rows: 1fr;
-	background-color: var(--surface-input);
-	border-radius: 5px;
-    align-items: center;
-    padding-top: 5px;
-    padding-bottom: 5px;
-}
-
-.hermidata-alternative-title-button-arrow {
-    transition: transform 0.2s ease-in-out;
-    color: var(--text); /* or whatever fits */
-
-    display: flex;
-	align-content: center;
-	justify-content: center;
-	width: 20px;
-	height: 20px;
-}
-
-.hermidata-alternative-title-button-arrow[data-closed="true"] {
-    transform: rotate(-90deg);
-}
-
-.hermidata-alternative-title-button-arrow[data-closed="false"] {
-    transform: rotate(90deg);
-}
-
-/* tags in edit mode */
-
-.hermidata-tag-pill {
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:13px;
-    cursor:pointer;
-}
-.hermidata-tag-pill[data-is-selected="false"] {
-    border:0.5px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-}
-
-.hermidata-tag-pill[data-is-selected="true"] {
-    border:0.5px solid var(--accent-dark);
-    background: var(--accent-dark);
-    color: var(--bg);
-}
-
-.selected-tag-container[data-editing="true"] {
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 6px; 
-    min-height: 28px; 
-    padding: 8px; 
-    border: 0.5px solid var(--border); 
-    margin-bottom: 10px;
-}
-
-.filterInput[data-editing="false"] {
-    display: none;
-}
-
-.tag-pill-removeX {
-	border: medium;
-	background: none;
-	cursor: pointer;
-	color: var(--text);
-	padding: 0px;
-	line-height: 1;
-	font-size: 14px;
-
-    display: block;
-	margin-bottom: 8px;
-	cursor: pointer;
-	transition: transform 0.15s ease;
-	transition: color 0.15s ease;
-	padding: 0;
-	width: fit-content;
-	height: fit-content;
-	border-radius: 5px;
-}
-.tag-pill-removeX:hover {
-    background-color: var(--accent-dark);
-    transform: scale(1.2);
-	color: var(--danger);
-}
-
-.filterInput[data-editing="true"] {
-    border:0.5px solid var(--border);
+.ov-notes.ov-field {
     background: var(--surface-raised);
-    outline:none; width:100%;
-    font-size:13px;
-    height:32px;
-    padding: 0 10px;
-    border-radius: var(--radius);
-    color: var(--text);
-    margin-bottom: 10px;
+    border-color: var(--ov-hairline);
 }
 
-.filter-allTags-container[data-editing="false"] {
-    display: none;
+/* -- tag picker -- */
+
+.ov-tag-field { position: relative; }
+
+.ov-picker {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(420px, 100%);
+    padding: 8px;
+    background: var(--surface-raised);
+    border: 1px solid var(--ov-hairline);
+    border-radius: var(--ov-radius);
+    box-shadow: var(--ov-elevated);
 }
 
-.filter-allTags-container[data-editing="true"] {
+.ov-picker-list {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 2px;
 }
 
-
-/* marker editing */
-
-
-.hermidata-marker > [data-editing="true"] {
-    background-color: var(--surface-input);
-    height: 40px;
-}
-
-.hermidata-marker-chapter[data-editing="true"] {
-	height: 30px;
-	padding: 0;
-	margin: 0;
-	background-color: transparent;
-	border: none;
-	outline: none;
-    -webkit-appearance: textfield;
-    -moz-appearance: textfield;
-    appearance: textfield;
-}
-
-.hermidata-marker-label[data-editing="true"] {
-	padding: 0;
-	margin: 0;
-	background-color: transparent;
-	border: none;
-}
-
-.hermidata-marker-row[data-editing="true"] {
-    cursor: default;
-}
-
-.hermidata-marker-color[data-editing="true"] {
+.ov-picker-option {
+    min-height: 28px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid var(--ov-hairline);
+    border-radius: 999px;
+    font-size: 12px;
     cursor: pointer;
 }
-
-.hermidata-marker-color[data-editing="true"],
-.hermidata-marker[data-editing="true"] {
-    height: 45px;
-}
-
-.hermidata-marker-readStatus[data-editing="true"] {
-	height: 35px;
-    width: auto;
-}
-
-.hermidata-marker-notes[data-editing="true"] {
-    grid-template-rows: 1fr;
-    background-color: var(--surface-input);
-    border-radius: 5px;
-    align-items: center;
-    padding-top: 5px;
-    padding-bottom: 5px;
-}
-
-.hermidata-marker-notes-inner[data-editing="true"] {
-	display: initial;
-	width: auto;
-	height: auto;
-	background-color: transparent;
-	border: none;
-	padding: 0;
-	padding-left: 20px;
-	font-size: initial;
-}
-
-
-
-
-/* image changer */
-
-.image-changer-popover {
-    border: 1px solid var(--accent-dark);
-    border-radius: 8px;
-    padding: 12px;
-    background: var(--surface-raised);
-    width: 280px;
-}
-
-#imageChanger-dialog[popover] {
-    position-area: center;
-}
-
-/* popovers are display:none by default until [popover] shown; this is just inner layout */
-.image-changer-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 4px 8px;
-    border: 1px solid var(--accent-dark);
-    border-radius: 6px;
-    background: none;
-    cursor: pointer;
-}
-
-.tab-btn.active {
-    background: var(--surface-input);
-}
-
-.image-changer-panel {
-    display: flex;
-    gap: 6px;
-}
-
-#imageChanger-url {
-    flex: 1;
-}
-
-[hidden] {
-    display: none;
-}
-
-button#hermidata-img {
-	width: -webkit-fill-available;
-	height: -webkit-fill-available;
-}
-
-
-/* delete section */
-
-
-/* delete dialog */
-
-[popover] {
-    position-area: initial;
-    
-    background-color: var(--surface-raised);
-    color: var(--text);
-    outline-color: var(--surface-input);
-    text-emphasis-color: var(--surface-input);
-    accent-color: var(--text);
-    border: 1px solid var(--surface-input);
-    border-radius: 0;
-}
-
-:popover-open {
-    background-color: var(--surface-raised);
-    color: var(--text);
-    outline-color: var(--surface-input);
-    text-emphasis-color: var(--surface-input);
-    accent-color: var(--text);
-    border: 1px solid var(--surface-input);
-    border-radius: 0;
-    position: relative;
-    inset: 0;
-    
-}
-
-
-.delete-dialog {
-    /* hidden state */
-    opacity: 0;
-    transform: scale(0.95) translateY(-8px);
-    transition: 
-        opacity 0.2s ease,
-        transform 0.2s ease;
-}
-
-#delete-label {
-    align-items: center;
-    justify-content: center;
-    width: 80%;
-    color: var(--text);
-    text-align: center;
-    word-wrap: unset;
-    gap: 10px;
-    font-size: large;
-    font-weight: 600;
-}
-#delete-info-btn[data-editing="true"] {
-    opacity: 1;
-}
-#delete-info-btn[data-editing="false"] {
-    opacity: 0;
-}
-
-#delete-info-btn {
-    display: flex;
-    background: var(--danger);
+.ov-picker-option:hover { border-color: var(--border); background: var(--surface-input); }
+.ov-picker-option[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: transparent;
     color: var(--text-dark);
-    border: 1px solid transparent;
-    transition: background-color 0.15s ease-in-out;
-}
-#delete-info-btn:hover {
-    background: var(--danger-hover);
-}
-#delete-info-btn:active {
-    background: var(--danger-active);
 }
 
-#customPrompt-button-delete {
-    background-color: var(--bg);
+.ov-picker-empty { margin: 0; padding: 4px; color: var(--text-muted); font-size: 12px; }
+.ov-picker-done { align-self: flex-end; }
+
+/* -- marker editor -- */
+
+.ov-marker-editor {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) 150px auto;
+    grid-template-areas:
+        "chapter label status colour"
+        "note note note done";
+    align-items: end;
+    gap: 10px 12px;
+    padding: 12px 16px 14px;
+    background: var(--surface-raised);
+    border-top: 1px dashed var(--ov-hairline);
+}
+
+.ov-marker-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ov-marker-field-label { color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.ov-field-chapter { grid-area: chapter; }
+.ov-field-label { grid-area: label; }
+.ov-field-status { grid-area: status; }
+.ov-field-colour { grid-area: colour; }
+.ov-field-note { grid-area: note; }
+.ov-marker-editor > .ov-btn { grid-area: done; min-height: 34px; }
+
+/* -- dialogs -- */
+
+.ov-dialog {
+    width: min(440px, calc(100vw - 32px));
+    padding: 0;
+    background: var(--surface-raised);
     color: var(--text);
+    border: 1px solid var(--ov-hairline);
+    border-radius: var(--ov-radius-lg);
+    box-shadow: var(--ov-elevated);
 }
-#customPrompt-button-cancel {
-    background-color: var(--bg);
-    color: var(--text);
+.ov-dialog::backdrop { background: var(--overlay); backdrop-filter: blur(2px); }
+.ov-dialog[open] { animation: ov-dialog-in 160ms ease-out; }
+
+@keyframes ov-dialog-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
 }
 
+.ov-dialog-body { display: flex; flex-direction: column; gap: 10px; padding: 20px; margin: 0; }
+.ov-dialog-head { display: flex; align-items: center; justify-content: space-between; }
+.ov-dialog h2 { margin: 0; color: var(--text-highlight); font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+.ov-dialog p { margin: 0; color: var(--text-muted); }
+.ov-dialog label { color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.ov-dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
 
+.ov-inline-form { display: flex; gap: 8px; }
+.ov-dialog-or { text-align: center; font-size: 12px; }
+.ov-dialog label.ov-file-btn { color: var(--text-highlight); font-size: 13px; cursor: pointer; }
+.ov-file-btn:focus-within { outline: 2px solid var(--accent-soft); outline-offset: 2px; }
+.ov-dialog .ov-dialog-error { color: var(--danger); font-size: 12px; }
 
-.delete-dialog:popover-open {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	justify-content: center;
-	align-items: center;
-    padding: 10px;
-    padding-left: 10px;
-    
-    width: 20%;
-    height: 10%;
+/* -- toast -- */
 
-    border-radius: 5px;
-    box-shadow: var(--overlay) 0px 18px 40px -12px, var(--shadow) 0px 2px 6px;
-    opacity: 1;
-    transform: scale(1) translateY(0);
+.ov-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 10px 10px 16px;
+    background: var(--text-highlight);
+    color: var(--bg);
+    border-radius: var(--ov-radius);
+    box-shadow: var(--ov-elevated);
+    font-size: 13px;
+    transform: translateX(-50%);
+    animation: ov-toast-in 180ms ease-out;
 }
-/* starting point for the "open" transition (before it animates in) */
-@starting-style {
-    .delete-dialog:popover-open {
-        opacity: 0;
-        transform: scale(0.95) translateY(-8px);
+
+@keyframes ov-toast-in {
+    from { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+.ov-toast-undo {
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent);
+    border-radius: 6px;
+    color: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+.ov-toast-undo:hover { background: color-mix(in srgb, var(--bg) 12%, transparent); }
+
+@media (max-width: 760px) {
+    .ov-marker-editor {
+        grid-template-columns: 96px minmax(0, 1fr);
+        grid-template-areas: "chapter colour" "label label" "status status" "note note" "done done";
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
 }
