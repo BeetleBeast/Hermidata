@@ -302,6 +302,10 @@ export class HermidataModel implements Hermidata {
         if (bookmarkInUseId) this.chapter.bookmarks[bookmarkInUseId].updatedAt = new Date(date).toISOString();
         else this.chapter.bookmarks[this.chapter.bookmarkInUse].updatedAt = new Date(date).toISOString();
     }
+    /** Mark a marker as used right now ( default: the marker in use ) */
+    SetLastUsedAt(bookmarkInUseId: string = this.chapter.bookmarkInUse): void {
+        this.chapter.bookmarks[bookmarkInUseId].lastUsedAt = new Date().toISOString();
+    }
     /** Normalize tags and force into list */
     normalizeTags(tags: string[] | string): void {
         const value = (Array.isArray(tags)) ? tags : tags.split(',').map(tag => tag.trim()).filter(Boolean);
@@ -379,6 +383,8 @@ export class HermidataModel implements Hermidata {
         this.SetScrollPosition(hermidata.GetScrollPosition(), hermidata.chapter.bookmarkInUse);
         this.SetReadStatus(hermidata.GetReadStatus(), hermidata.chapter.bookmarkInUse);
         this.SetUpdatedAt(new Date().toISOString(), hermidata.chapter.bookmarkInUse);
+        // saving progress on a marker is using it, and this also carries over a marker switched to in the popup
+        this.SetLastUsedAt(hermidata.chapter.bookmarkInUse);
 
         this.chapter.bookmarkInUse = hermidata.chapter.bookmarkInUse;
         this.chapter.lastChecked = new Date().toISOString();
