@@ -1,9 +1,9 @@
-import { setAllHermidata } from "../../shared/db/Storage";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { openLink } from "../../shared/utils/StringOutput";
 import { RssBuild } from "../build";
-import { getHermidataNotification } from "../load";
+import { clearNotifications, getHermidataNotification } from "../load";
+import { refreshNotificationSection } from "./feed";
 
     
     
@@ -24,12 +24,14 @@ export class Footer extends RssBuild {
         const clearNotification = getElement("#clear-notifications");
         if (!clearNotification) throw new Error('Element not found');
 
-        clearNotification.addEventListener('click', () => {
+        clearNotification.addEventListener('click', async () => {
             const rssNotificationContainer = getElement<HTMLDivElement>("#RSS-Notification");
             if (!rssNotificationContainer) throw new Error('Element not found');
 
-            this.removeAllChildNodes(rssNotificationContainer) // clear front-end
-            this.removeNotificationFromBackEnd() // clear back-end
+            // front-end: drop the rows, keep the header
+            rssNotificationContainer.querySelectorAll('.hermidata-item[data-is-notification-item="true"]').forEach(row => row.remove());
+            refreshNotificationSection();
+            await this.removeNotificationFromBackEnd(); // back-end
         });
     }
     private openRSSPage(): void {
@@ -42,16 +44,8 @@ export class Footer extends RssBuild {
     }
 
     private async removeNotificationFromBackEnd() {
-        const allNotificationList = await getHermidataNotification();
-
-        const newHermidataWithNoNotification = [];
-
-        for (const notification of Object.values(allNotificationList)) {
-            if (!notification.rss.length) continue;
-            for (const feed of notification.rss) feed.Notified = undefined;
-            newHermidataWithNoNotification.push(notification);
-        }
-        await setAllHermidata(newHermidataWithNoNotification);
+        const unread = await getHermidataNotification();
+        await clearNotifications(Object.values(unread));
     }
     private SyncTextAndButtonOfRSS(): void {
         const latestRSSSync = getElement("#RSS-latest-sync-div");

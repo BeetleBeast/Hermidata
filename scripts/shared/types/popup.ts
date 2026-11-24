@@ -245,7 +245,16 @@ export type Feed = {
     lastFetched: null | string, // Date when last fetched
     latestItem: FeedItem
     lastBuildDate?: null | Date,
-    Notified?: true;
+    /** what the user dismissed; synced, unlike latestItem. See shared/utils/Unread.ts */
+    seen?: SeenMarker;
+}
+/** The newest release the user dismissed ( cleared ) for one feed */
+export type SeenMarker = {
+    /** null when the item title had no chapter number */
+    chapter: number | null;
+    link: string;
+    /** ISO date */
+    pubDate: string;
 }
 // raw feed has multiple items
 export type RawFeed = {
@@ -257,7 +266,10 @@ export type RawFeed = {
     lastBuildDate: Date,
     image: string,
     latestItem: FeedItem,
-    lastToken: string | null
+    lastToken: string | null,
+    /** HTTP validators from the last fetch, sent back as If-None-Match / If-Modified-Since */
+    etag?: string | null,
+    lastModified?: string | null,
 }
 
 export type FeedItem = {

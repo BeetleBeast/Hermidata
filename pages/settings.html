@@ -263,7 +263,7 @@
                 <div class="setting">
                     <div class="setting-text">
                         <label for="enableNotification">Notifications</label>
-                        <p>Get alerted when something changes.</p>
+                        <p>Get alerted when a linked RSS feed has a chapter you haven't read.</p>
                     </div>
                     <input id="enableNotification" class="switch" type="checkbox" role="switch" title="Enable Notification">
                 </div>
@@ -271,19 +271,32 @@
                 <div class="sub choices">
                     <label class="choice" for="notificationBadge">
                         <input type="radio" id="notificationBadge" name="notificationType" title="Notification Badge" value="Badge">
-                        <strong>Badge</strong>
-                        <span>Icon badge only</span>
+                        <strong>Badge only</strong>
+                        <span>Unread count on the toolbar icon</span>
                     </label>
                     <label class="choice" for="notificationMessageMinimum">
                         <input type="radio" id="notificationMessageMinimum" name="notificationType" title="Notification With minimum description" value="MessageMinimum">
-                        <strong>Minimal</strong>
-                        <span>Short message</span>
+                        <strong>Badge + short message</strong>
+                        <span>"Solo Leveling: Chapter 47"</span>
                     </label>
                     <label class="choice" for="notificationMessageFull">
                         <input type="radio" id="notificationMessageFull" name="notificationType" title="Notification With Full description" value="MessageFull">
-                        <strong>Full</strong>
-                        <span>Complete details</span>
+                        <strong>Badge + detailed message</strong>
+                        <span>Chapters behind, chapter title and site</span>
                     </label>
+                </div>
+
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="rssCheckInterval">Check RSS feeds every</label>
+                        <p>How often linked feeds are checked for new chapters in the background.</p>
+                    </div>
+                    <select id="rssCheckInterval" class="setting-input" title="RSS check interval">
+                        <option value="30">30 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="180">3 hours</option>
+                        <option value="360">6 hours</option>
+                    </select>
                 </div>
             </div>
 

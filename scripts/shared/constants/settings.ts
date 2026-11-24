@@ -23,6 +23,13 @@ export const MAX_TOMBSTONE_TTL_DAYS = 3_650;
 export function resolveTombstoneTtlDays(days: number | undefined): number {
     return Number.isFinite(days) && days! >= 1 ? Math.min(Math.floor(days!), MAX_TOMBSTONE_TTL_DAYS) : DEFAULT_TOMBSTONE_TTL_DAYS;
 }
+/** Minutes between background RSS checks the user can pick */
+export const RSS_CHECK_INTERVALS = [30, 60, 180, 360] as const;
+export const DEFAULT_RSS_CHECK_INTERVAL = 60;
+/** One of RSS_CHECK_INTERVALS; anything else falls back to the default */
+export function resolveRssCheckInterval(minutes: number | undefined): number {
+    return (RSS_CHECK_INTERVALS as readonly number[]).includes(minutes as number) ? minutes! : DEFAULT_RSS_CHECK_INTERVAL;
+}
 /** Placeholders: {title} and {chapter} */
 export const DEFAULT_BOOKMARK_TITLE_FORMAT = '{title} - Chapter {chapter}';
 
@@ -58,6 +65,7 @@ export const defaultSettings: Settings = {
         },
         TombstoneTtlDays: DEFAULT_TOMBSTONE_TTL_DAYS,
         BookmarkTitleFormat: DEFAULT_BOOKMARK_TITLE_FORMAT,
+        RssCheckIntervalMinutes: DEFAULT_RSS_CHECK_INTERVAL,
     },
     ContentTypesAndStatuses: {
         TYPE_OPTIONS : [...DEFAULT_NOVEL_TYPES],

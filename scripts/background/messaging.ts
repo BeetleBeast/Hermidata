@@ -1,8 +1,8 @@
 import { ext } from "../shared/utils/BrowserCompat"
 import { getSettings } from "../shared/db/Storage"
 import { countBookmarkRenames, renameBookmarks, updateCurrentBookmarkAndIcon } from "./bookmarks"
-import { checkFeedsForUpdates } from "./feeds"
-import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetLastSync, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleReloadRss, handleSaveNovel, handleSyncOperation } from "./rssCache"
+import { checkFeedsForUpdates, handleGetLastSync, handleReloadRss } from "./feeds"
+import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleRefreshRssBadge, handleSaveNovel, handleSyncOperation } from "./rssCache"
 import { handleStartPickingFlow } from "./picking"
 import { ready, whenReady } from "./ready"
 import { showNotice } from "./notify"
@@ -23,6 +23,7 @@ const routes: Record<string, Route> = {
     GET_LAST_SYNC: { run: (_, r) => handleGetLastSync(r), respondsAsync: true },
     GET_RSS: { run: (_, r) => handleGetRSS(r), respondsAsync: true },
     INVALIDATE_RSS: { run: (_, r) => handleInvalidateRSS(r), respondsAsync: true },
+    REFRESH_RSS_BADGE: { run: () => handleRefreshRssBadge(), respondsAsync: false },
     BUILD_AND_SAVE_FEEDS: { run: (m, r) => handleBuildAndSaveRawFeeds(m.data, r), respondsAsync: true },
     GET_ALL_POSSIBLE_PATHS: { run: (m, r) => handleGetAllPossiblePaths(r, m.data), respondsAsync: true },
     DB_OPERATION: { run: (m, r) => handleDbOperation(m.store, m.call, r), respondsAsync: true },

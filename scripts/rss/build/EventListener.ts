@@ -6,7 +6,8 @@ import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
-import { getHermidataWithRssFromBackground } from "../load";
+import { clearNotifications, getHermidataWithRssFromBackground } from "../load";
+import { refreshNotificationSection } from "./feed";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import type { PickedElementData } from "../../shared/types/rss";
 
@@ -433,20 +434,22 @@ export class EventListener extends RssBuild {
         return !isNaN(number) && number !== undefined;
     }
     
-    private clearNotification(target: HTMLDivElement | null) {
+    private async clearNotification(target: HTMLDivElement | null) {
         if (!target) return;
-        console.log("Cleared notification for", target);
         // find id of list item
         const item = this.getNotificationItem(target);
         if (!item) {
             console.log('isn\'t a notification item');
             return;
         }
-        item.remove()
+        item.remove();
+        refreshNotificationSection();
         const hashItem = this.GetHashItem(item);
 
-        for (const feed of this.AllHermidata[hashItem].rss) feed.Notified = undefined;
-        saveHermidata(hashItem, this.AllHermidata[hashItem]);
+        // the RSS view's copy has the newest fetched item; the stored one may not
+        const rssItems = await getHermidataWithRssFromBackground();
+        const entry = rssItems[hashItem] ?? this.AllHermidata[hashItem];
+        if (entry) await clearNotifications([entry]);
     }
     private async pickElement(target: HTMLDivElement | null) {
         if (!target) return;
