@@ -33,5 +33,5 @@ export interface CoverSource {
     url: string | null;
 }
 
-export type MarkerSortKey = 'chapter' | 'date';
+export type MarkerSortKey = 'chapter' | 'date' | 'lastUsed';
 export type SortDirection = 'asc' | 'desc';

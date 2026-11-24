@@ -17,6 +17,7 @@ export class MarkerList extends LibraryBuilder {
     private readonly sortButtons: Record<MarkerSortKey, HTMLButtonElement | null> = {
         chapter: document.querySelector<HTMLButtonElement>('#hermidata-markers-utility-sort-chapter'),
         date: document.querySelector<HTMLButtonElement>('#hermidata-markers-utility-sort-date'),
+        lastUsed: document.querySelector<HTMLButtonElement>('#hermidata-markers-utility-sort-used'),
     };
 
     private sortKey: MarkerSortKey = 'chapter';
@@ -36,7 +37,7 @@ export class MarkerList extends LibraryBuilder {
 
     public build(): void {
         this.search?.addEventListener('input', () => this.render());
-        for (const key of ['chapter', 'date'] as const) {
+        for (const key of Object.keys(this.sortButtons) as MarkerSortKey[]) {
             this.sortButtons[key]?.addEventListener('click', () => this.setSort(key));
         }
         this.render();
@@ -85,10 +86,14 @@ export class MarkerList extends LibraryBuilder {
     }
 
     private compare(a: Bookmark, b: Bookmark): number {
-        const difference = this.sortKey === 'chapter'
-            ? a.current - b.current
-            : new Date(a.updatedAt ?? a.createdAt).getTime() - new Date(b.updatedAt ?? b.createdAt).getTime();
+        const difference = this.sortKey === 'chapter' ? a.current - b.current : this.sortTime(a) - this.sortTime(b);
         return this.sortDirection === 'asc' ? difference : -difference;
+    }
+
+    /** The time a marker is sorted on for the date sorts; a marker saved before lastUsedAt existed falls back to its edit time */
+    private sortTime(marker: Bookmark): number {
+        const time = this.sortKey === 'lastUsed' ? marker.lastUsedAt ?? marker.updatedAt : marker.updatedAt;
+        return new Date(time ?? marker.createdAt).getTime();
     }
 
     private buildMarker(marker: Bookmark): HTMLLIElement {
