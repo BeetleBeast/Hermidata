@@ -2,6 +2,9 @@ import type { Bookmark, CommitChange, Hermidata, MarkerSortKey, Settings, SortDi
 import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { LibraryBuilder } from "../build";
 
+/** The colour a new marker gets ( see makeDefaultBookmark ) */
+const DEFAULT_MARKER_COLOUR = '#5979d6';
+
 /**
  * The markers card: each marker is a row that opens its chapter. The pencil on a row opens an editor right under it,
  * whose fields save as soon as they change. Search and sort only change what is shown.
@@ -239,12 +242,29 @@ export class MarkerList extends LibraryBuilder {
         return span;
     }
 
-    /** `<input type="color">` only takes #rrggbb, while older markers can hold any css colour */
-    private toHex(colour: string): string {
-        if (/^#[0-9a-f]{6}$/i.test(colour)) return colour;
-        const probe = document.createElement('canvas').getContext('2d');
-        if (!probe) return '#000000';
-        probe.fillStyle = colour;
-        return /^#[0-9a-f]{6}$/i.test(probe.fillStyle) ? probe.fillStyle : '#000000';
+    /**
+     * `<input type="color">` only takes #rrggbb, while a marker can hold any css colour ( rgb(), hsl(), a name,
+     * a colour with transparency, oklch() ... ). The browser paints the colour onto one pixel and that pixel is read back,
+     * so every colour it understands converts; one it does not understand gives the default marker colour, never black.
+     */
+    private toHex(colour: string | undefined): string {
+        const value = colour?.trim() ?? '';
+        if (/^#[0-9a-f]{6}$/i.test(value)) return value.toLowerCase();
+
+        const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+        if (!context) return DEFAULT_MARKER_COLOUR;
+        // an unknown colour leaves fillStyle as it was, so two different starting colours show whether it was taken
+        const parsed = [DEFAULT_MARKER_COLOUR, '#ffffff'].map(start => {
+            context.fillStyle = start;
+            context.fillStyle = value;
+            return String(context.fillStyle);
+        });
+        if (parsed[0] !== parsed[1]) return DEFAULT_MARKER_COLOUR;
+
+        context.clearRect(0, 0, 1, 1);
+        context.fillRect(0, 0, 1, 1);
+        const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+        if (alpha === 0) return DEFAULT_MARKER_COLOUR;
+        return '#' + [red, green, blue].map(channel => channel.toString(16).padStart(2, '0')).join('');
     }
 }
