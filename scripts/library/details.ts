@@ -4,6 +4,8 @@ import { getElement } from "../shared/utils/Selection";
 import { openLink } from "../shared/utils/StringOutput";
 import { Detail } from "./build/detail";
 import { EditDetail } from "./build/edit";
+import { MarkerList } from "./build/markers";
+import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { initTheme } from "../shared/utils/Theme";
 
 void initTheme();
@@ -57,55 +59,40 @@ export class Controller {
 
     private readonly detail: Detail;
 
-    protected readonly editDetail: EditDetail;
+    private readonly editDetail: EditDetail;
 
-    private readonly editInfoBtn = document.querySelector<HTMLDivElement>('#edit-info-btn');
+    private readonly markers: MarkerList;
 
     private readonly reloadData = getElement<HTMLButtonElement>("#reload-info-btn");
 
     private readonly backToLibrary = getElement<HTMLButtonElement>("#back-btn");
 
-    private readonly chapterViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-grid");
-    private readonly dateViewMode = getElement<HTMLButtonElement>("#library-entries-ViewMode-list");
-
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
-        this.detail = new Detail(allHermidata, settings);
-        this.editDetail = new EditDetail(allHermidata, settings);
+        // one model for the whole page, so a change made in one part is seen by the others
+        const hermidata = new HermidataModel(allHermidata[getIdFromUrl()]);
+        this.detail = new Detail(allHermidata, settings, hermidata);
+        this.editDetail = new EditDetail(allHermidata, settings, hermidata);
+        this.markers = new MarkerList(allHermidata, settings, hermidata, this.editDetail.commit);
+        this.editDetail.onRestore = () => this.markers.render();
     }
 
     public async init() {
-    
-        // build
-        this.detail.build();
-
+        // the fields first: a slow or failing cover must not keep them from working
         this.editDetail.build();
+        this.markers.build();
+        await this.detail.build();
 
-        this.setEventListener();
+        this.reloadData?.addEventListener('click', () => this.reloadDetails());
+        this.backToLibrary?.addEventListener('click', () => openLink('./Library.html', 'sameTab'));
     }
 
     public reloadDetails() {
         this.detail.reload();
     }
+}
 
-    private async reload() {
-        this.detail.reload();
-    }
-
-    private setEventListener() {
-        this.removeEventListener();
-        this.reloadData!.addEventListener('click', () => this.reload());
-
-        // on clicked Edit button
-        this.editInfoBtn?.addEventListener('click', this.editDetail.activate);
-
-        // on clicked Back button
-        this.backToLibrary?.addEventListener('click', () => openLink('./Library.html', 'sameTab'));
-
-        // viewMode toggle
-        // this.chapterViewMode?.addEventListener('click', () => this.detail.setGridViewMode('chapter'));
-        // this.dateViewMode?.addEventListener('click', () => this.detail.setGridViewMode('date'));
-    }
-    private removeEventListener() {
-        this.reloadData!.removeEventListener('click', () => this.reload());
-    }
+function getIdFromUrl(): string {
+    const id = window.location.hash.match(/^#\/id\/(.+)$/)?.[1];
+    if (!id) throw new Error('No id found in url');
+    return id;
 }
