@@ -1,6 +1,7 @@
 import { defaultSettings } from "../constants";
+import { resolveAutoSetStatusMode } from "../utils/SettingsValues";
 import { setSettings } from "../db/Storage";
-import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping, type FolderRule, type NotificationTypes, type SaveTargets, type DefaultChoice } from "../types";
+import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Settings, type FolderMapping, type FolderRule, type NotificationTypes, type SaveTargets, type DefaultChoice, type LegacyAutoSetStatusSettings } from "../types";
 import { DEFAULT_KEYBOARD_SHORTCUTS } from "../utils/KeyboardShortcuts";
 import { DEFAULT_SHEET_NAME } from "../sheets/sheetConfig";
 
@@ -84,16 +85,24 @@ interface oldSettingsV6 {
     FolderMapping: FolderMapping,
 }
 
-/** Settings as they were at version 8: the current shape without the sheet tab name. */
-type oldSettingsV8 = Omit<Settings, "version" | "AccountAndConnections"> & {
+/** Settings as they were at version 9: the current shape with the two auto status flags instead of one mode. */
+type oldSettingsV9 = Omit<Settings, "version" | "ExtensionBehaviour"> & {
+    version: 9;
+    ExtensionBehaviour: Omit<Settings["ExtensionBehaviour"], "AutoSetStatusScore"> & {
+        AutoSetStatusScore: LegacyAutoSetStatusSettings;
+    };
+};
+
+/** Settings as they were at version 8: the version 9 shape without the sheet tab name. */
+type oldSettingsV8 = Omit<oldSettingsV9, "version" | "AccountAndConnections"> & {
     version: 8;
     AccountAndConnections: { spreadsheetUrl: string };
 };
 
 type oldSettingsV7 = Omit<oldSettingsV8, "version" | "ExtensionBehaviour"> & {
     version: 7;
-    ExtensionBehaviour: Omit<Settings["ExtensionBehaviour"], "KeyboardShortcuts"> & {
-        KeyboardShortcuts?: Settings["ExtensionBehaviour"]["KeyboardShortcuts"];
+    ExtensionBehaviour: Omit<oldSettingsV9["ExtensionBehaviour"], "KeyboardShortcuts"> & {
+        KeyboardShortcuts?: oldSettingsV9["ExtensionBehaviour"]["KeyboardShortcuts"];
     };
 };
 
@@ -120,6 +129,7 @@ export class SettingsMigration {
         if (version <= 6) current = this.migrateV6toV7(current as oldSettingsV6);
         if (version <= 7) current = this.migrateV7toV8(current as oldSettingsV7);
         if (version <= 8) current = this.migrateV8toV9(current as oldSettingsV8);
+        if (version <= 9) current = this.migrateV9toV10(current as oldSettingsV9);
 
         await setSettings(current as Settings);
     }
@@ -215,11 +225,22 @@ export class SettingsMigration {
             },
         };
     }
-    private static migrateV8toV9(data: oldSettingsV8): Settings {
+    private static migrateV8toV9(data: oldSettingsV8): oldSettingsV9 {
         return {
             ...data,
             version: 9,
             AccountAndConnections: { ...data.AccountAndConnections, sheetName: DEFAULT_SHEET_NAME },
+        };
+    }
+    /** The two auto status flags become one mode, so "both on" can no longer be stored */
+    private static migrateV9toV10(data: oldSettingsV9): Settings {
+        return {
+            ...data,
+            version: 10,
+            ExtensionBehaviour: {
+                ...data.ExtensionBehaviour,
+                AutoSetStatusScore: { mode: resolveAutoSetStatusMode(data.ExtensionBehaviour?.AutoSetStatusScore) },
+            },
         };
     }
     public static migrateFolderMapping( old: oldFolderMapping, root: string ): FolderMapping {
