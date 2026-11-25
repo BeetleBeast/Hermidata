@@ -283,7 +283,7 @@ class HermidataController {
     private async saveSheet(): Promise<void> {
         if (this.isSaving) return;
         this.isSaving = true;
-        this.setSaveInProgress(true);
+        this.setSaveInProgress(true, '#save');
         let closeAfterSave = false;
 
         try {
@@ -318,19 +318,20 @@ class HermidataController {
         } finally {
             if (!closeAfterSave) {
                 this.isSaving = false;
-                this.setSaveInProgress(false);
+                this.setSaveInProgress(false, '#save');
             }
         }
     }
-    private setSaveInProgress(isSaving: boolean): void {
-        setElement<HTMLButtonElement>('#saveSeparate', el => el.disabled = isSaving);
-
-        const button = getElement<HTMLButtonElement>('#save');
-        if (!button) return;
-
-        button.disabled = isSaving;
-        button.setAttribute('aria-busy', String(isSaving));
-        button.dataset.saving = String(isSaving);
+    /** Both save buttons lock while saving, but only the one that was clicked shows it is working */
+    private setSaveInProgress(isSaving: boolean, clicked: '#save' | '#saveSeparate'): void {
+        for (const selector of ['#save', '#saveSeparate'] as const) {
+            setElement<HTMLButtonElement>(selector, button => {
+                const isBusy = isSaving && selector === clicked;
+                button.disabled = isSaving;
+                button.setAttribute('aria-busy', String(isBusy));
+                button.dataset.saving = String(isBusy);
+            });
+        }
     }
     /** Shows "Save as separate item" as prominently as the match calls for ( styled by .saveActions[data-separate] ) */
     private updateSeparateProminence(): void {
@@ -348,7 +349,7 @@ class HermidataController {
     private async saveAsSeparateItem(): Promise<void> {
         if (this.isSaving || !this.service) return;
         this.isSaving = true;
-        this.setSaveInProgress(true);
+        this.setSaveInProgress(true, '#saveSeparate');
         let closeAfterSave = false;
 
         try {
@@ -389,7 +390,7 @@ class HermidataController {
         } finally {
             if (!closeAfterSave) {
                 this.isSaving = false;
-                this.setSaveInProgress(false);
+                this.setSaveInProgress(false, '#saveSeparate');
             }
         }
     }

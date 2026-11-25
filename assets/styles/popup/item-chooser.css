@@ -41,6 +41,25 @@
     flex-shrink: 0;
 }
 
+/* while this button is the one saving, a spinner takes the icon's place ( the keyframes live in classic.css ) */
+.saveSeparate-spinner {
+    display: none;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: save-spinner-rotation 0.7s linear infinite;
+}
+.saveSeparate[data-saving="true"] .saveSeparate-icon {
+    display: none;
+}
+.saveSeparate[data-saving="true"] .saveSeparate-spinner {
+    display: block;
+}
+
 /* hidden: no saved item has this title */
 .saveActions[data-separate="hidden"] .saveSeparate {
     display: none;
