@@ -15,6 +15,7 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     dbSaveAllImages,
     dbUpdateImageKey} from './db';
 import { pushToSync, removeFromSync } from '../sync/sync.engine';
+import { loadSyncConfig } from '../sync/syncConfig';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { generateHermidataHash } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
@@ -306,7 +307,8 @@ export async function updateImageKey(oldId: string, newId: string): Promise<bool
 
 
 // ============================================================
-// Settings — still in storage.sync (small, needs cross-device sync)
+// Settings — IndexedDB, mirrored to storage.sync (small, needs cross-device sync).
+// A device set to "local only" mirrors to storage.local instead, so nothing leaves it.
 // ============================================================
 
 export async function getSettings(): Promise<Settings> {
@@ -333,7 +335,9 @@ export async function getSettings(): Promise<Settings> {
 export async function setSettings(settings: Settings): Promise<void> {
     try {
         await putSettings(settings);                            // IndexedDB
-        await ext.storage.sync.set({ Settings: settings });    // sync for cross-device
+        const { kind } = await loadSyncConfig(ext.storage.local);
+        if (kind === 'local') await ext.storage.local.set({ Settings: settings });   // same change event, but never synced
+        else await ext.storage.sync.set({ Settings: settings });                      // sync for cross-device
         console.log('[Storage] Settings saved');
     } catch (err) {
         logConsoleError('[Storage] setSettings:', err);

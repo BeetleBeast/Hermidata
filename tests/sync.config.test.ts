@@ -15,6 +15,7 @@ import {
     sameConfig, sameTarget, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_CONFIG_KEY, validateWebDavUrl,
 } from '../scripts/shared/sync/syncConfig';
 import { BrowserSyncBackend } from '../scripts/shared/sync/BrowserSyncBackend';
+import { LocalBackend } from '../scripts/shared/sync/LocalBackend';
 import { POLL_ALARM, WebDavBackend } from '../scripts/shared/sync/WebDavBackend';
 import { backgroundAlarms, initSyncAlarmListener } from '../scripts/shared/sync/syncAlarms';
 
@@ -128,7 +129,24 @@ describe('sync config storage', () => {
         expect(sameConfig({ kind: 'browser' }, { kind: 'browser' })).toBe(true);
     });
 
+    it('round-trips local only', async () => {
+        const local = new FakeLocalArea();
+        await saveSyncConfig(local, { kind: 'local' });
+        expect(await loadSyncConfig(local)).toEqual({ kind: 'local' });
+    });
+
+    it('local only is its own target, never the same as another one', () => {
+        const dav = { kind: 'webdav' as const, url: 'https://x.test/h.sync' };
+        expect(sameTarget({ kind: 'local' }, { kind: 'local' })).toBe(true);
+        expect(sameTarget({ kind: 'local' }, { kind: 'browser' })).toBe(false);
+        expect(sameTarget(dav, { kind: 'local' })).toBe(false);
+        expect(sameConfig({ kind: 'local' }, { kind: 'local' })).toBe(true);
+        expect(sameConfig({ kind: 'local' }, dav)).toBe(false);
+        expect(sameConfig(dav, { kind: 'local' })).toBe(false);
+    });
+
     it('describes the target for the UI', () => {
+        expect(describeTarget({ kind: 'local' })).toBe('Local only (no sync)');
         expect(describeTarget({ kind: 'browser' })).toBe('Browser sync');
         expect(describeTarget({ kind: 'webdav', url: 'https://cloud.example.com:8443/h.sync' })).toBe('WebDAV (cloud.example.com:8443)');
     });
@@ -142,6 +160,7 @@ describe('createBackend', () => {
     it('builds the matching backend', () => {
         expect(createBackend({ kind: 'browser' }, env)).toBeInstanceOf(BrowserSyncBackend);
         expect(createBackend({ kind: 'webdav', url: 'https://x.test/h.sync' }, env)).toBeInstanceOf(WebDavBackend);
+        expect(createBackend({ kind: 'local' }, env)).toBeInstanceOf(LocalBackend);
     });
 
     it('an empty username sends no Authorization header', async () => {

@@ -73,7 +73,7 @@
             <div class="card account-connection-card library-sync-card">
                 <div>
                     <h3>Library sync</h3>
-                    <p>Choose where this device keeps its synced library. Devices only sync with devices that use the same place.</p>
+                    <p>Choose where this device keeps its synced library, or keep everything on this device only. Devices only sync with devices that use the same place.</p>
                 </div>
                 <p id="syncCurrentTarget" class="account-auth-status" data-state="connected"></p>
                 <p id="syncHealth" class="account-auth-status" role="status" aria-live="polite" hidden></p>
@@ -89,6 +89,11 @@
                         <input type="radio" id="syncBackendWebdav" name="syncBackend" value="webdav">
                         <strong>Your own server (WebDAV)</strong>
                         <span>Nextcloud, ownCloud, rclone, a NAS, or any WebDAV server.</span>
+                    </label>
+                    <label class="choice" for="syncBackendLocal">
+                        <input type="radio" id="syncBackendLocal" name="syncBackend" value="local">
+                        <strong>This device only</strong>
+                        <span>No sync. Your library and settings never leave this device.</span>
                     </label>
                 </fieldset>
 

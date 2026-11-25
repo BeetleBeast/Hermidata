@@ -1,6 +1,7 @@
 import type { AlarmsLike, SyncBackend, SyncBackendConfig, SyncSwitchMode } from "../types";
 import type { ext } from "../utils/BrowserCompat";
 import { BrowserSyncBackend } from "./BrowserSyncBackend";
+import { LocalBackend } from "./LocalBackend";
 import { WebDavBackend } from "./WebDavBackend";
 
 // ---------------------------------------------------------------- constants
@@ -31,6 +32,7 @@ type LocalArea = {
 export async function loadSyncConfig(local: LocalArea): Promise<SyncBackendConfig> {
     const got = await local.get(SYNC_CONFIG_KEY);
     const saved = got[SYNC_CONFIG_KEY] as Partial<SyncBackendConfig> | undefined;
+    if (saved?.kind === 'local') return { kind: 'local' };
     if (saved?.kind === 'webdav' && typeof saved.url === 'string') return saved as SyncBackendConfig;
     return DEFAULT_SYNC_CONFIG;
 }
@@ -43,18 +45,20 @@ export async function saveSyncConfig(local: LocalArea, config: SyncBackendConfig
 /** Same backend and same place, so switching to it again needs no first-run choice. Credentials may differ. */
 export function sameTarget(a: SyncBackendConfig, b: SyncBackendConfig): boolean {
     if (a.kind !== b.kind) return false;
-    return a.kind === 'browser' || a.url === (b as { url: string }).url;
+    if (a.kind === 'browser' || a.kind === 'local') return true;
+    return a.url === (b as { url: string }).url;
 }
 
 /** Same place and same credentials: saving this again would change nothing. (The poll interval is not edited in the form.) */
 export function sameConfig(a: SyncBackendConfig, b: SyncBackendConfig): boolean {
     if (!sameTarget(a, b)) return false;
-    if (a.kind === 'browser' || b.kind === 'browser') return true;
+    if (a.kind !== 'webdav' || b.kind !== 'webdav') return true;
     return (a.username ?? '') === (b.username ?? '') && (a.password ?? '') === (b.password ?? '');
 }
 
 export function describeTarget(config: SyncBackendConfig): string {
     if (config.kind === 'browser') return 'Browser sync';
+    if (config.kind === 'local') return 'Local only (no sync)';
     try { return `WebDAV (${new URL(config.url).host})`; } catch { return 'WebDAV'; }
 }
 
@@ -129,6 +133,7 @@ export type BackendEnv = {
 
 export function createBackend(config: SyncBackendConfig, env: BackendEnv): SyncBackend {
     if (config.kind === 'browser') return new BrowserSyncBackend(env.api, env.getDeviceId);
+    if (config.kind === 'local') return new LocalBackend();
     return createWebDavBackend(config, env);
 }
 

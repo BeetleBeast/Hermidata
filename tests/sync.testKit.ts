@@ -70,6 +70,7 @@ export class FakeLocalArea {
         return clone(Object.fromEntries(list.filter(k => k in this.data).map(k => [k, this.data[k]])));
     }
     async set(items: Record<string, unknown>) { Object.assign(this.data, clone(items)); }
+    async remove(keys: string | string[]) { for (const k of typeof keys === 'string' ? [keys] : keys) delete this.data[k]; }
 }
 
 export class FakeCloud {
