@@ -353,7 +353,7 @@ html::-webkit-scrollbar-thumb {
 /* search bar */
 
 #search-filter-container {
-    width: 99vw;
+    width: 100%;
     display: flex;
     
     height: 20%;
@@ -479,4 +479,59 @@ html::-webkit-scrollbar-thumb {
 #search-container,
 #search:focus-within {
     outline: none;
+}
+
+
+/* responsive */
+
+@media (max-width: 900px) {
+    #search-container {
+        width: 90%;
+    }
+
+    #search-suggestions {
+        left: 5%;
+        width: 90%;
+    }
+}
+
+@media (max-width: 600px) {
+    .topBar {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .toolbar {
+        flex-wrap: wrap;
+    }
+
+    #search-filter-container {
+        padding: 10px;
+    }
+
+    #search-input-container {
+        margin: 10px 0;
+        margin-top: 20px;
+    }
+
+    #search-controls-container {
+        flex-wrap: wrap;
+    }
+
+    #search-container {
+        width: 100%;
+    }
+
+    #search-suggestions {
+        left: 0;
+        width: 100%;
+    }
+}
+
+/* short viewports (landscape phones): keep the search area from eating the screen */
+@media (max-height: 500px) {
+    #search-input-container {
+        margin-top: 20px;
+    }
 }

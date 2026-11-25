@@ -14,12 +14,14 @@
 }
 
 .filter-row-1 {
+    flex-wrap: wrap;
     display: flex;
     gap: 25px;
     align-items: center;
     justify-content: center;
 }
 .filter-row-2 {
+    flex-wrap: wrap;
     display: flex;
     gap: 25px;
     align-items: center;
@@ -155,7 +157,7 @@ body[data-list-mode="true"]
 	scroll-behavior: auto;
 	align-items: center;
 	height: -moz-available;
-	grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
 	justify-content: space-evenly;
 	grid-row-gap: clamp(2.5rem, 4vw, 200px);
 	grid-column-gap: clamp(1rem, 4vw, 100px);
@@ -169,7 +171,7 @@ body[data-list-mode="false"]
     scroll-behavior: auto;
     align-items: center;
     height: -moz-available;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
     justify-content: space-evenly;
     grid-row-gap: clamp(5rem, 4vw, 200px);
     grid-column-gap: clamp(1rem, 4vw, 100px);
@@ -553,4 +555,58 @@ a.hermidata-item-title {
 .hermidata-item:focus-within {
 	outline: 2px solid var(--accent-soft);
 	outline-offset: 2px;
+}
+
+/* responsive */
+
+@media (max-width: 1100px) {
+    #filter-container {
+        grid-template-rows: auto auto;
+    }
+
+    .filter-row-1,
+    .filter-row-2 {
+        gap: 15px;
+    }
+}
+
+@media (max-width: 900px) {
+    body[data-list-mode="true"] #library-entries-container,
+    body[data-list-mode="false"] #library-entries-container {
+        width: 90%;
+    }
+}
+
+@media (max-width: 600px) {
+    #library-entries-info {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    body[data-list-mode="true"] #library-entries-container,
+    body[data-list-mode="false"] #library-entries-container {
+        width: 94%;
+        margin-top: 50px;
+    }
+
+    body[data-list-mode="true"] .hermidata-item {
+        grid-template-columns: 110px repeat(3, minmax(0, 1fr));
+    }
+
+    body[data-list-mode="true"] .hermidata-item-image {
+        max-width: 100px;
+        margin-left: 5px;
+    }
+
+    body[data-list-mode="true"] .hermidata-item-title {
+        min-width: 0;
+    }
+}
+
+/* short viewports (landscape phones) */
+@media (max-height: 500px) {
+    body[data-list-mode="true"] #library-entries-container,
+    body[data-list-mode="false"] #library-entries-container {
+        margin-top: 40px;
+    }
 }

@@ -161,10 +161,10 @@
     "themes-label"
     "themes";
 	grid-template-rows: 50px 40px 20px auto 20px auto;
-    width: 660px;
+    width: min(660px, 96vw);
     height: fit-content;
     min-height: 110px;
-    max-height: 630px;
+    max-height: min(630px, 90vh);
     grid-template-columns: 100%;
 }
 .search-mode-container {
@@ -400,7 +400,7 @@
     ".           .           button      .           .";
     grid-template-rows: 50px 30px 40px 10px 500px 50px;
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-    width: 1000px;
+    width: min(1000px, 96vw);
     transform: scale(1);
     grid-row-gap: 20px;
 }
@@ -414,7 +414,7 @@
     "backButton   mergeButton  ";
     grid-template-rows: 50px 30px auto 1fr 50px;
     grid-template-columns: 1fr 1fr ;
-    width: 1000px;
+    width: min(1000px, 96vw);
     transform: scale(1);
 }
 
@@ -551,7 +551,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 400px;
+    width: min(400px, 96vw);
 	background-color: var(--surface);
 	border-radius: 25px;
     min-height: 400px;
@@ -741,7 +741,7 @@
 /* star rating custom slider thumb */
 
 #StarRating-dialog:popover-open {
-    width: 400px;
+    width: min(400px, 96vw);
     height: 250px;
     display: flex;
     flex-direction: column;
@@ -762,4 +762,39 @@
     margin: 0 0 20px;
     font-size: 13px;
     color: var(--text-muted);
+}
+
+/* responsive */
+
+@media (max-width: 900px) {
+    #merger-dialog[data-step="firstStep"]:popover-open {
+        grid-template-areas:
+        "progression"
+        "step"
+        "text"
+        "subtext"
+        "record_A"
+        "record_B"
+        "button";
+        grid-template-rows: auto;
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    #merger-dialog[data-step="secondStep"]:popover-open {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .merger-dialog-record {
+        width: min(400px, 100%);
+    }
+}
+
+@media (max-width: 600px) {
+    #StarRating-dialog:popover-open {
+        padding: 20px 16px;
+    }
 }
