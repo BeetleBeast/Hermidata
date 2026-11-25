@@ -918,3 +918,14 @@ dialog::backdrop { background: var(--overlay); backdrop-filter: blur(3px); }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* -- wide and short viewports -- */
+
+@media (min-width: 1800px) {
+    .rl-header-inner, .rl-page { max-width: 1520px; }
+}
+
+/* a sticky Up next column taller than the window would clip its lower part until the end of the page */
+@media (max-height: 640px) {
+    .rl-next { position: static; }
+}

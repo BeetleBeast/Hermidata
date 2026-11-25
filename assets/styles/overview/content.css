@@ -458,3 +458,15 @@ input.ov-chip-input { width: 220px; min-height: 28px; border-radius: 999px; }
     .ov-marker-edit { opacity: 1; }
     .ov-marker-note { padding-left: 16px; }
 }
+
+/* -- wide and short viewports -- */
+
+@media (min-width: 1800px) {
+    .ov-page,
+    .hermidata-not-found { max-width: 1320px; }
+}
+
+/* a sticky cover column taller than the window would clip its lower part until the end of the page */
+@media (max-height: 640px) {
+    .ov-cover-col { position: static; }
+}
