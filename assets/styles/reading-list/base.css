@@ -456,6 +456,19 @@ option { background: var(--surface-raised); color: var(--text); }
 .rl-row:last-child { border-radius: 0 0 var(--rl-radius-lg) var(--rl-radius-lg); }
 .rl-row:only-child { border-radius: var(--rl-radius-lg); }
 .rl-row:hover, .rl-row:focus-within { background: var(--rl-hover); }
+
+/* heading between the groups of the automatic list */
+.rl-group {
+    padding: 8px 12px 6px 16px;
+    border-top: 1px solid var(--rl-hairline);
+    background: var(--surface-input);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.rl-group:first-child { border-top: 0; border-radius: var(--rl-radius-lg) var(--rl-radius-lg) 0 0; }
 .rl-row:has(.rl-menu[open]) { z-index: 10; }
 .rl-row:has(.rl-handle[aria-pressed="true"]) { background: var(--rl-hover); box-shadow: inset 2px 0 0 var(--accent-soft); }
 
@@ -514,6 +527,40 @@ option { background: var(--surface-raised); color: var(--text); }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* -- automatic list: why a title is here, and which rows are pinned -- */
+
+.rl-auto-badge {
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-soft) 22%, transparent);
+    color: var(--accent-soft);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+}
+
+.rl-reason {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--surface-input);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+}
+.rl-reason[data-group="new-today"] { background: color-mix(in srgb, var(--accent-soft) 22%, transparent); color: var(--accent-soft); }
+.rl-reason[data-group="pinned"] { background: var(--accent-soft); color: var(--text-dark); }
+
+.rl-row[data-pinned] {
+    background: color-mix(in srgb, var(--accent-soft) 8%, transparent);
+    box-shadow: inset 3px 0 0 var(--accent-soft);
+}
+.rl-hero[data-pinned] { outline: 2px solid color-mix(in srgb, var(--accent-soft) 55%, transparent); outline-offset: -2px; }
 
 /* -- progress -- */
 

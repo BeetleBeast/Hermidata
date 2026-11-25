@@ -84,10 +84,28 @@ export interface Bookmark { // new
     url: string;
 }
 
+/**
+ * A title pinned to a position of the automatic reading list.
+ * Nothing about the position is stored as a number: it is the count of `ahead` titles still in the list,
+ * so the pin moves up by itself as those titles are read.
+ * It is spent once the title is read past `from`.
+ */
+export interface ReadingPin {
+    /** Ids of the automatic titles that were above the pin when it was set */
+    /** readonly keeps it out of StringListFieldPath, which is only for lists the model merges */
+    ahead: readonly string[];
+    /** Chapter of the marker in use when pinned; -1 when nothing was read yet */
+    from: number;
+}
+
 export interface ReadingQueue {
     readNext: boolean; // true if it is the first in the queue
     priority: number; // 1-10
     queueIndex: number;
+    /** Present when the title is pinned in the automatic reading list */
+    pin?: ReadingPin;
+    /** True when this only holds a priority or pin for the automatic list; the title is not in the manual queue */
+    autoOnly?: boolean;
 }
 
 export type ReadingQueuePriorityBand = 'High' | 'Medium' | 'Low';

@@ -19,6 +19,9 @@ export type {
     GrabbedRow,
     WaitingCover,
     QueueIconName,
+    ReadingGroup,
+    RankedRow,
+    AutoRowOptions,
 } from "./readingList";
 
 export type {
@@ -38,6 +41,7 @@ export type {
     Hermidata,
     Bookmark,
     ReadingQueue,
+    ReadingPin,
     ReadingQueuePriorityBand,
 
     OnlyPlainHermidata,
@@ -186,6 +190,7 @@ export type {
     BookmarkTitleFormatPart,
     AutoSetStatusMode,
     AutoSetStatusSettings,
+    AutoReadingListSettings,
     LegacyAutoSetStatusSettings
 
 } from "./settings";

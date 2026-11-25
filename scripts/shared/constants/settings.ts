@@ -51,6 +51,9 @@ export const defaultSettings: Settings = {
         AutoSetStatusScore: {
             mode: 'off',
         },
+        AutoReadingList: {
+            enabled: false,
+        },
         AltTitleLookup: {
             Enable: false,
         },

@@ -1,5 +1,5 @@
 import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings } from "../../shared/constants";
-import { resolveAutoSetStatusMode, resolveRssCheckInterval, resolveTombstoneTtlDays } from "../../shared/utils/SettingsValues";
+import { resolveAutoReadingList, resolveAutoSetStatusMode, resolveRssCheckInterval, resolveTombstoneTtlDays } from "../../shared/utils/SettingsValues";
 import { type AutoSetStatusMode, type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import {
@@ -42,6 +42,7 @@ export class ExtensionBehavior extends Build {
         void this.CaptureKeyboardShortcut(event);
     };
 
+    private readonly enableAutoReadingList = getElement<HTMLInputElement>("#enableAutoReadingList");
     private readonly enableAltTitleLookup = getElement<HTMLInputElement>("#enableAltTitleLookup");
     private readonly altTitleBackfill = getElement<HTMLDivElement>("#altTitleBackfill");
     private readonly altTitleBackfillProgress = getElement<HTMLProgressElement>("#altTitleBackfillProgress");
@@ -79,6 +80,7 @@ export class ExtensionBehavior extends Build {
         this.setValueKeyboardShortcuts(settings.ExtensionBehaviour.KeyboardShortcuts);
         await this.setBrowserShortcutLabels();
         // Alt title lookup
+        this.setValueOptionAutoReadingList(settings);
         this.setValueOptionAltTitleLookup(settings);
         void this.watchAltTitleBackfill();
         // Bookmark title format
@@ -123,6 +125,7 @@ export class ExtensionBehavior extends Build {
             button.addEventListener("click", () => this.ResetKeyboardShortcut(button));
         });
         
+        this.enableAutoReadingList?.addEventListener("change", (e) => this.EnableAutoReadingList(e));
         this.enableAltTitleLookup?.addEventListener("change", (e) => this.EnableAltTitleLookup(e));
 
         this.tombstoneTtlDays?.addEventListener("change", (e) => this.TombstoneTtlDays(e));
@@ -150,6 +153,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionKeyboardShortcuts(updatedSettings);
         this.setValueKeyboardShortcuts(updatedSettings.ExtensionBehaviour.KeyboardShortcuts);
         this.setValueOptionSaveTarget(updatedSettings);
+        this.setValueOptionAutoReadingList(updatedSettings);
         this.setValueOptionAltTitleLookup(updatedSettings);
         await this.bookmarkTitleFormat.resetValues();
         this.setValueOptionTombstoneTtl(updatedSettings);
@@ -336,6 +340,9 @@ export class ExtensionBehavior extends Build {
         this.keyboardShortcutStatus.textContent = message;
         this.keyboardShortcutStatus.style.color = isError ? "var(--danger)" : "var(--success)";
     }
+    private setValueOptionAutoReadingList(settings: Settings) {
+        setElement<HTMLInputElement>("#enableAutoReadingList", el => el.checked = resolveAutoReadingList(settings.ExtensionBehaviour.AutoReadingList));
+    }
     private setValueOptionAltTitleLookup(settings: Settings) {
         // settings saved before this option existed count as off
         const enabled = settings.ExtensionBehaviour.AltTitleLookup?.Enable ?? false;
@@ -433,6 +440,13 @@ export class ExtensionBehavior extends Build {
         await this.setSettings(updatedSettings);
         if (this.keyboardShortcutsList) this.keyboardShortcutsList.hidden = !isChecked;
         this.setShortcutStatus(isChecked ? "Keyboard shortcuts enabled." : "Keyboard shortcuts disabled.");
+    }
+    // Auto reading list
+    private async EnableAutoReadingList(e: Event) {
+        const isChecked = (e.target as HTMLInputElement).checked;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.AutoReadingList = { enabled: isChecked };
+        await this.setSettings(updatedSettings);
     }
     // Alt title lookup
     private async EnableAltTitleLookup(e: Event) {
