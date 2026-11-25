@@ -12,9 +12,10 @@ extSlot.alarms = fakeAlarms;
 
 import {
     createBackend, DEFAULT_SYNC_CONFIG, describeTarget, isLocalOrPrivateHost, loadSyncConfig, originPattern,
-    sameConfig, sameTarget, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_CONFIG_KEY, validateWebDavUrl,
+    resolveSyncConfig, sameConfig, sameTarget, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_CONFIG_KEY, validateWebDavUrl,
 } from '../scripts/shared/sync/syncConfig';
 import { BrowserSyncBackend } from '../scripts/shared/sync/BrowserSyncBackend';
+import { LocalBackend } from '../scripts/shared/sync/LocalBackend';
 import { POLL_ALARM, WebDavBackend } from '../scripts/shared/sync/WebDavBackend';
 import { backgroundAlarms, initSyncAlarmListener } from '../scripts/shared/sync/syncAlarms';
 
@@ -84,8 +85,35 @@ describe('originPattern', () => {
 // --------------------------------------------------------------- storage
 
 describe('sync config storage', () => {
-    it('defaults to browser sync', async () => {
-        expect(await loadSyncConfig(new FakeLocalArea())).toEqual(DEFAULT_SYNC_CONFIG);
+    it('defaults to local only', async () => {
+        expect(DEFAULT_SYNC_CONFIG).toEqual({ kind: 'local' });
+        expect(await loadSyncConfig(new FakeLocalArea())).toEqual({ kind: 'local' });
+    });
+
+    it('still loads a saved browser sync choice as browser sync', async () => {
+        const local = new FakeLocalArea();
+        await saveSyncConfig(local, { kind: 'browser' });
+        expect(await loadSyncConfig(local)).toEqual({ kind: 'browser' });
+    });
+
+    it('a fresh device resolves to local only and saves it', async () => {
+        const local = new FakeLocalArea();
+        expect(await resolveSyncConfig(local, async () => false)).toEqual({ kind: 'local' });
+        expect(local.data[SYNC_CONFIG_KEY]).toEqual({ kind: 'local' });
+    });
+
+    it('a device that already holds a library keeps browser sync, saved explicitly', async () => {
+        const local = new FakeLocalArea();
+        expect(await resolveSyncConfig(local, async () => true)).toEqual({ kind: 'browser' });
+        expect(local.data[SYNC_CONFIG_KEY]).toEqual({ kind: 'browser' });
+    });
+
+    it('resolving never overrides a saved choice or even looks at the library', async () => {
+        const local = new FakeLocalArea();
+        await saveSyncConfig(local, { kind: 'local' });
+        const hasLibrary = vi.fn(async () => true);
+        expect(await resolveSyncConfig(local, hasLibrary)).toEqual({ kind: 'local' });
+        expect(hasLibrary).not.toHaveBeenCalled();
     });
 
     it('ignores a malformed saved value', async () => {
@@ -128,7 +156,24 @@ describe('sync config storage', () => {
         expect(sameConfig({ kind: 'browser' }, { kind: 'browser' })).toBe(true);
     });
 
+    it('round-trips local only', async () => {
+        const local = new FakeLocalArea();
+        await saveSyncConfig(local, { kind: 'local' });
+        expect(await loadSyncConfig(local)).toEqual({ kind: 'local' });
+    });
+
+    it('local only is its own target, never the same as another one', () => {
+        const dav = { kind: 'webdav' as const, url: 'https://x.test/h.sync' };
+        expect(sameTarget({ kind: 'local' }, { kind: 'local' })).toBe(true);
+        expect(sameTarget({ kind: 'local' }, { kind: 'browser' })).toBe(false);
+        expect(sameTarget(dav, { kind: 'local' })).toBe(false);
+        expect(sameConfig({ kind: 'local' }, { kind: 'local' })).toBe(true);
+        expect(sameConfig({ kind: 'local' }, dav)).toBe(false);
+        expect(sameConfig(dav, { kind: 'local' })).toBe(false);
+    });
+
     it('describes the target for the UI', () => {
+        expect(describeTarget({ kind: 'local' })).toBe('Local only (no sync)');
         expect(describeTarget({ kind: 'browser' })).toBe('Browser sync');
         expect(describeTarget({ kind: 'webdav', url: 'https://cloud.example.com:8443/h.sync' })).toBe('WebDAV (cloud.example.com:8443)');
     });
@@ -142,6 +187,7 @@ describe('createBackend', () => {
     it('builds the matching backend', () => {
         expect(createBackend({ kind: 'browser' }, env)).toBeInstanceOf(BrowserSyncBackend);
         expect(createBackend({ kind: 'webdav', url: 'https://x.test/h.sync' }, env)).toBeInstanceOf(WebDavBackend);
+        expect(createBackend({ kind: 'local' }, env)).toBeInstanceOf(LocalBackend);
     });
 
     it('an empty username sends no Authorization header', async () => {

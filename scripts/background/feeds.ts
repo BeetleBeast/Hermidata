@@ -49,7 +49,7 @@ export function initFeedListeners(): void {
     };
     onSettingsSaved(settingsChanged);
     ext.storage?.onChanged.addListener((changes, area) => {
-        if (area === 'sync' && changes.Settings) settingsChanged();
+        if ((area === 'sync' || area === 'local') && changes.Settings) settingsChanged();   // "local": a device that does not sync
     });
 }
 
