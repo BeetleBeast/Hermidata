@@ -104,12 +104,6 @@
     background-color: var(--accent-hover-soft);
     color: var(--text-dark);
 }
-:root[data-theme="light"] .merger-dialog-record-letter[data-suggested="true"] { color: var(--success); }
-:root[data-theme="light"] .merger-dialog-record-continue-button[data-suggested="true"],
-:root[data-theme="light"] .merger-dialog-button-merge {
-    background-color: var(--success);
-    color: #fff;
-}
 :root[data-theme="light"] .Extension_Behavior .badge.good {
     color: var(--success);
     border-color: color-mix(in srgb, var(--success) 40%, transparent);

@@ -29,7 +29,7 @@ export class Controller {
         this.feed = new feed(allHermidata, settings);
         this.filter = new filter(allHermidata, settings, this);
         this.filterLogic = new FilterLogic(allHermidata, settings, this);
-        this.merger = new HermidataMerge(allHermidata, settings);
+        this.merger = new HermidataMerge(allHermidata, settings, () => this.reload());
     }
 
     public range: DualRangeSlider | null = null;

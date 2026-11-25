@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="../assets/styles/library/base.css">
 <link rel="stylesheet" href="../assets/styles/library/feed.css">
 <link rel="stylesheet" href="../assets/styles/library/merger.css">
+<link rel="stylesheet" href="../assets/styles/library/merge.css">
 </head>
 <body data-list-mode="true">
 
@@ -22,7 +23,7 @@
     <h1>Hermidata Library</h1>
     <div class="toolbar">
       
-      <button type="button" popovertargetaction="toggle" popovertarget="merger-dialog" id="mergeTwoHermidatas" class="Btn" aria-haspopup="dialog">merge two hermidata's</button>
+      <button type="button" id="mergeTwoHermidatas" class="Btn" aria-haspopup="dialog">Merge duplicates</button>
       <!-- Planned top bar options, not built yet ( TODO ):
       <button type="button" id="bulkOpen" class="Btn">Open in new tabs</button>
       <button type="button" id="openNotifications" class="Btn">Notifications</button>
@@ -30,22 +31,6 @@
       -->
       <button type="button" id="openReadingList" class="Btn">Reading list</button>
       <button type="button" id="reloadData" class="Btn">Reload</button>
-      <div id="merger-dialog" class="filter-dialog" popover role="dialog" aria-label="Merge two hermidata's">
-        <div class="merger-dialog-progression-container">
-          <div class="merger-dialog-progression merger-dialog-progression-1" data-progression="2">
-            <p class="merger-dialog-progression-1-text">✓</p>
-          </div>
-          <p class="merger-dialog-progression-1-main-text" data-progression="2">Keep record A</p>
-          <svg class="merger-dialog-progression-line">
-            <line x1="0" y1="25" x2="100%" y2="25" stroke="var(--border)" stroke-width="1"></line>
-          </svg>
-          <div class="merger-dialog-progression merger-dialog-progression-2" data-progression="2">
-            <p class="merger-dialog-progression-2-text" data-progression="2">2</p>
-          </div>
-          <p class="merger-dialog-progression-2-main-text" data-progression="2">Resolve conflict</p>
-        </div>
-        
-      </div>
     </div>
   </section>
 
@@ -56,11 +41,11 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
           <input id="search" placeholder="Search titles..." type="search" aria-label="Search titles" autocomplete="off" />
         </div>
-        <button id="toggle-filters" type="button" aria-controls="filter-container" aria-expanded="true">Hide filters</button>
+        <button id="toggle-filters" type="button" aria-controls="filter-container" aria-expanded="false">Show filters</button>
       </div>
       <div id="search-suggestions" aria-label="Title suggestions"></div>
     </div>
-    <div id="filter-container">
+    <div id="filter-container" hidden>
       <div class="filter-row-1">
         <div id="StarRating-filter-container" class="filter-container">
           <h4 id="StarRating-filter-label">Star Rating</h4>
@@ -167,8 +152,29 @@
     <p id="library-empty-message" class="empty-list-message" role="status" aria-live="polite" hidden>No items</p>
   </section>
 
+  <!-- merge: compare dialog and result toast. Built by scripts/library/build/merge.ts -->
+  <dialog id="merge-dialog" class="merge-dialog" aria-labelledby="merge-dialog-title" aria-describedby="merge-dialog-subtitle">
+    <header class="merge-dialog-header">
+      <div>
+        <h2 id="merge-dialog-title">Merge two entries</h2>
+        <p id="merge-dialog-subtitle">Pick the entry that stays and settle any differences. Everything else is combined.</p>
+      </div>
+      <button type="button" id="merge-dialog-close" class="merge-icon-btn" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div id="merge-dialog-body" class="merge-dialog-body"></div>
+    <footer class="merge-dialog-footer">
+      <p id="merge-dialog-error" class="merge-dialog-error" role="alert" hidden></p>
+      <p id="merge-dialog-summary" class="merge-dialog-summary"></p>
+      <div class="merge-dialog-actions">
+        <button type="button" id="merge-dialog-cancel" class="merge-btn merge-btn--ghost">Cancel</button>
+        <button type="button" id="merge-dialog-confirm" class="merge-btn merge-btn--primary">Merge</button>
+      </div>
+    </footer>
+  </dialog>
 
-
+  <div id="library-toast" class="library-toast" role="status" aria-live="polite" hidden></div>
 
 <script src="../scripts/library/main.ts" type="module"></script>
 </body>

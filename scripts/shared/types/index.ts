@@ -155,7 +155,9 @@ export type {
 
     HermidataMigrationConfiguration,
     ScalarConflict,
-    MergeAnalysis,
+    MergeLetter,
+    MergeSuggestion,
+    MergeConflictChoice,
 
     DbStore,
     DbCall,

@@ -321,6 +321,8 @@ a.hermidata-item-title {
     transform: scale(0.9);
     transition: opacity 0.15s ease, transform 0.15s ease;
 }
+/* while anything is ticked every checkbox shows, so the selection can be extended without hunting for it */
+#library-entries-container:has(.hermidata-item-checkbox:checked) .hermidata-item-checkbox-invisible-container,
 .hermidata-item:hover .hermidata-item-checkbox-invisible-container,
 .hermidata-item:focus-within .hermidata-item-checkbox-invisible-container,
 .hermidata-item-checkbox-invisible-container:has(.hermidata-item-checkbox:checked),

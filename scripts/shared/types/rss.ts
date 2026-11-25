@@ -130,12 +130,20 @@ export interface HermidataMigrationConfiguration {
     removeId: string;
     resolutions: Record<string, "A" | "B">; // only for fields that need a manual pick
 }
-export interface MergeAnalysis {
-    automaticallyMergedFields: string[];
-    automaticallyMergedFieldsAmount: number;
-    manuallyMergedFieldsAmount: number;
-    manuallyMergedFields: Record<string, { A: unknown; B: unknown }>;
-    configuration: HermidataMigrationConfiguration;
+/** The two entries in the Library merge dialog, in the order they were selected */
+export type MergeLetter = "A" | "B";
+export interface MergeSuggestion {
+    keep: MergeLetter;
+    reason: string;
+}
+/** A field both entries fill in differently; the user picks which value survives */
+export interface MergeConflictChoice {
+    path: string;
+    label: string;
+    values: Record<MergeLetter, unknown>;
+    chosen: MergeLetter;
+    /** false while the choice still follows the kept entry */
+    touched: boolean;
 }
 export interface ScalarConflict<K extends string = string> {
     field: K;
