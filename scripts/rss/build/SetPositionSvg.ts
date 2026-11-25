@@ -11,7 +11,7 @@ const ITEM_LAYOUT = {
         paddingRight: 2,
     },
     diamond: {
-        centerY: 22,
+        rightBoundaryRatio: 0.125, // 12.5% of the item width, keep in sync with .diamond-group-line in rss-feed.css
         maxSize: 12,
         minSize: 4,
         sizeRatioDivisor: 2 + (1 / 3), // divisor for scaling diamond to available space
@@ -25,13 +25,13 @@ const ITEM_LAYOUT = {
 } as const;
 
 interface Measurement {
-    li: HTMLElement;
     svg: SVGElement;
-    liWidth: number;
-    lineStartXps: number;
-    halfLineBoundary: number;
+    diamondSize: number;
 }
 
+// The diamond sits at 27px + 6.25% of the item width ( see .diamond-group-line in rss-feed.css ), that is the middle
+// between the image column and the line bend at 12.5% of the item width.
+// Only its size can not be done in CSS: polygon points are not a CSS property and scale() takes no length ratio.
 export function positionDiamondBatch(items: HTMLElement[]): void {
     const LEFT_BOUNDARY = ITEM_LAYOUT.image.paddingLeft + ITEM_LAYOUT.image.width + ITEM_LAYOUT.image.paddingRight;
 
@@ -39,48 +39,30 @@ export function positionDiamondBatch(items: HTMLElement[]): void {
 
     // read phase
     for (const li of items) {
-        const measurement = getMeasurement(li);
+        const measurement = getMeasurement(li, LEFT_BOUNDARY);
         if (!measurement) continue;
         measurements.push(measurement);
     }
 
     // write phase
-    // the right side shape sits at 100% through CSS ( .diamond-group-r ), so it follows the item when the popup resizes
-    for (const { svg, lineStartXps, halfLineBoundary } of measurements) {
-        const rightBoundaryDiamond = lineStartXps + halfLineBoundary;
-
-        // setRSSLink, inlined as a pure write
-        setRSSLinkWriteOnly(svg, { left: LEFT_BOUNDARY, right: rightBoundaryDiamond });
+    for (const { svg, diamondSize } of measurements) {
+        svg.querySelector<SVGPolygonElement>('.line-diamond')?.setAttribute('points', diamondCoord(diamondSize).positionLeft);
     }
 }
 
-function setRSSLinkWriteOnly(svg: SVGElement, boundaries: { left: number; right: number }): void {
-    const availableWidth = boundaries.right - boundaries.left;
-    const centerX = boundaries.left + availableWidth / 2;
-    const size = Math.max(
+function getMeasurement(li: HTMLElement, leftBoundary: number): Measurement | false {
+    const svg = li.querySelector<SVGElement>('.hermidata-item-svg');
+    const liWidth = li.clientWidth;
+    if (!svg || liWidth === 0) return false;
+
+    // line-top-left-bend runs from 10% to 15% of the width, its half way point is the right boundary
+    const availableWidth = liWidth * ITEM_LAYOUT.diamond.rightBoundaryRatio - leftBoundary;
+    const diamondSize = Math.max(
         ITEM_LAYOUT.diamond.minSize,
         Math.min(ITEM_LAYOUT.diamond.maxSize, availableWidth / ITEM_LAYOUT.diamond.sizeRatioDivisor)
     );
 
-    svg.querySelector<SVGGElement>('.diamond-group-line')?.setAttribute('transform', `translate(${centerX}, ${ITEM_LAYOUT.diamond.centerY})`);
-    svg.querySelector<SVGPolygonElement>('.line-diamond')?.setAttribute('points', diamondCoord(size).positionLeft);
-}
-function getMeasurement(li: HTMLElement): Measurement | false {
-    const svg = li.querySelector<SVGElement>('.hermidata-item-svg');
-    const liWidth = li.offsetWidth;
-    if (!svg || liWidth === 0) return false;
-
-    const lineBend = svg.querySelector<SVGLineElement>('.line-top-left-bend');
-    const lineStartX = lineBend?.getAttribute('x1');
-    if (!lineStartX) return false;
-
-    const lineStartXps = li.clientWidth / parseFloat(lineStartX.replace('%', ''));
-    const lineBendRect = lineBend?.getBoundingClientRect();
-    if (!lineBendRect?.width || !lineBendRect.height) return false;
-
-    const halfLineBoundary = lineBendRect.width / 2 || Math.sqrt(lineBendRect.height ** 2 + lineBendRect.width ** 2);
-
-    return { li, svg, liWidth, lineStartXps, halfLineBoundary };
+    return { svg, diamondSize };
 }
 // needs to be set after sort
 export function updatePolygons(): void {
