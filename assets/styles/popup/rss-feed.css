@@ -204,6 +204,12 @@
 	cursor: help;
 }
 
+/* right side shape: 100% of the svg width, so it stays on the item's right edge whatever the popup width */
+.diamond-group-r {
+    transform: translateX(100%);
+    transform-box: view-box;
+}
+
 .diamond-l,
 .diamond-r {
     stroke: var(--border);

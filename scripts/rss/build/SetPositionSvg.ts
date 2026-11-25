@@ -30,7 +30,6 @@ interface Measurement {
     liWidth: number;
     lineStartXps: number;
     halfLineBoundary: number;
-    liRectWidth: number;
 }
 
 export function positionDiamondBatch(items: HTMLElement[]): void {
@@ -46,12 +45,9 @@ export function positionDiamondBatch(items: HTMLElement[]): void {
     }
 
     // write phase
-    for (const { svg, lineStartXps, halfLineBoundary, liRectWidth } of measurements) {
+    // the right side shape sits at 100% through CSS ( .diamond-group-r ), so it follows the item when the popup resizes
+    for (const { svg, lineStartXps, halfLineBoundary } of measurements) {
         const rightBoundaryDiamond = lineStartXps + halfLineBoundary;
-
-        // setRightDiamond, inlined as a pure write
-        svg.querySelector<SVGGElement>('.diamond-group-r')
-        ?.setAttribute('transform', `translate(${liRectWidth}, 0)`);
 
         // setRSSLink, inlined as a pure write
         setRSSLinkWriteOnly(svg, { left: LEFT_BOUNDARY, right: rightBoundaryDiamond });
@@ -83,10 +79,8 @@ function getMeasurement(li: HTMLElement): Measurement | false {
     if (!lineBendRect?.width || !lineBendRect.height) return false;
 
     const halfLineBoundary = lineBendRect.width / 2 || Math.sqrt(lineBendRect.height ** 2 + lineBendRect.width ** 2);
-    const liRect = li.getBoundingClientRect();
-    const liRectWidth = liRect.right - liRect.left;
 
-    return { li, svg, liWidth, lineStartXps, halfLineBoundary, liRectWidth };
+    return { li, svg, liWidth, lineStartXps, halfLineBoundary };
 }
 // needs to be set after sort
 export function updatePolygons(): void {
