@@ -1,6 +1,6 @@
 # Hermidata
 
-> Track your reading and watching progress across novels, manga, anime, and other serialized content. Your library is stored in your browser, syncs between your devices, and can optionally be written to Google Sheets.
+> Track your reading and watching progress across novels, manga, anime, and other serialized content. Your library is stored in your browser, can optionally sync between your devices, and can optionally be written to Google Sheets.
 
 Hermidata is a browser extension for Chromium-based browsers and Firefox. It can detect a title and chapter from the current page, then save the entry to a local IndexedDB library. Entries can have multiple markers: named progress snapshots that let you track separate reading progress of the same title. Google Sheets sync is optional.
 
@@ -59,9 +59,9 @@ You can create multiple markers per entry, making it easy to track separate read
 ## Library Sync
 
 - Keep your library the same on several devices: entries, markers, tags, notes, and deletions
-- **Browser sync** (default): no setup, uses your browser account's sync storage (about 100 KB)
+- **Browser sync**: no setup, uses your browser account's sync storage (about 100 KB)
 - **Your own server (WebDAV)**: Nextcloud, ownCloud, a NAS, rclone, or any WebDAV server, with no size limit beyond your server's; works across different browsers
-- **This device only**: no sync at all. Your library and your settings stay on this device
+- **This device only** (default for new installs): no sync at all. Your library and your settings stay on this device
 - Edits to different entries on two devices are both kept; for the same entry, the most recent edit wins
 - Chosen per device in **Settings → Account & Connection → Library sync**, with a connection test and a choice to merge or take over the server's library when both already have one
 - Optional end-to-end encryption (AES-256-GCM) with a passphrase and 5 one-time recovery keys, so the server or browser vendor stores only data it cannot read
@@ -280,7 +280,7 @@ npm run sync:server  # local WebDAV server for trying sync (needs rclone), see d
 - Your library and settings are stored in your browser, including the library in IndexedDB.
 - The extension declares access to all website hosts so its content script can detect page information; RSS feed checks also make requests to the feed's server.
 - Google Sheets sync is optional. When enabled, Hermidata sends saved entry data to the spreadsheet you configure, using Google OAuth and the Sheets API.
-- Library sync uses your browser account's sync storage by default. If you choose "This device only", nothing is synced: your library and settings are never written to browser sync. If you configure a WebDAV server instead, your library is sent only to that server, and its URL, username, and password are stored on that device only (in the extension's local storage, unencrypted) and are never synced. The synced library file is compressed and readable unless you turn on the optional end-to-end encryption (passphrase plus 5 one-time recovery keys; the passphrase and keys never leave your devices). See [docs/sync.md](docs/sync.md#security-and-privacy).
+- New installs do not sync. Library sync through your browser account's sync storage is something you turn on (installs that were already syncing keep it). If you choose "This device only", nothing is synced: your library and settings are never written to browser sync. If you configure a WebDAV server instead, your library is sent only to that server, and its URL, username, and password are stored on that device only (in the extension's local storage, unencrypted) and are never synced. The synced library file is compressed and readable unless you turn on the optional end-to-end encryption (passphrase plus 5 one-time recovery keys; the passphrase and keys never leave your devices). See [docs/sync.md](docs/sync.md#security-and-privacy).
 - RSS feed URLs are fetched to check for updates. The feed server receives the normal network request information required to respond (such as your IP address).
 - Authentication uses the browser's Google OAuth flow; Hermidata does not receive your Google password.
 

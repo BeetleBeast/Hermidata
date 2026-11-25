@@ -13,7 +13,7 @@ import { ConflictError } from '../utils/dedicatedErrors';
 import { headerRev, isEnvelope, openSnapshot, readEnvelopeHeader, sealSnapshot } from './libraryCrypto';
 import { IdbKeyStore } from './keyStore';
 import {
-    createBackend, loadSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_SEAL_HEADER_KEY, SYNC_SEAL_PENDING_KEY, SYNC_STATUS_KEY, validateWebDavUrl,
+    createBackend, resolveSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_SEAL_HEADER_KEY, SYNC_SEAL_PENDING_KEY, SYNC_STATUS_KEY, validateWebDavUrl,
 } from './syncConfig';
 import { backgroundAlarms } from './syncAlarms';
 import { POLL_ALARM } from './WebDavBackend';
@@ -812,7 +812,7 @@ const backendEnv = () => ({ api: ext, getDeviceId, alarms: backgroundAlarms() })
 export const initSync = () => { void startConfiguredSync(); };
 
 async function startConfiguredSync(): Promise<void> {
-    const config = await loadSyncConfig(ext.storage.local);
+    const config = await resolveSyncConfig(ext.storage.local, async () => Object.keys(await getAllHermidata()).length > 0);
     if (config.kind === 'browser') {
         void backgroundAlarms()?.clear(POLL_ALARM);                 // a poll alarm left over from WebDAV
         sync.start();

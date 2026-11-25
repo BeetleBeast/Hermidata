@@ -13,8 +13,10 @@ lives, or **not to sync at all**:
 | Settings | Sync through your browser account | Sync through your browser account | Stay on this device |
 | Encryption | Optional | Recommended | Not available (nothing is published) |
 
-Browser sync is the default. Devices only sync with devices that use the **same place**: a laptop on browser sync
-and a phone on your WebDAV server do not see each other's changes.
+**This device only is the default for new installs:** nothing leaves the device until you pick a place to sync
+through. A device that already held a library when it was updated keeps browser sync, because that is what it was
+doing, and can switch at any time. Devices only sync with devices that use the **same place**: a laptop on browser
+sync and a phone on your WebDAV server do not see each other's changes.
 
 - [What gets synced](#what-gets-synced)
 - [Setting up a WebDAV server](#setting-up-a-webdav-server)
@@ -333,7 +335,7 @@ header revision, not the stored string.
 
 | Key | Content |
 | --- | --- |
-| `syncBackend` | `{ kind: 'browser' }`, `{ kind: 'local' }` or `{ kind: 'webdav', url, username?, password?, pollMinutes? }` |
+| `syncBackend` | Written the first time the background starts (`resolveSyncConfig`): `{ kind: 'local' }` on a device with an empty library, `{ kind: 'browser' }` on one that already has entries. `{ kind: 'browser' }`, `{ kind: 'local' }` or `{ kind: 'webdav', url, username?, password?, pollMinutes? }` |
 | `syncAdoptPending` | `true` while a "use the server copy" switch waits for its first successful pull |
 | `syncTombstones` | Deletions not yet expired |
 | `syncBlocked`, `syncWarnAt` | Quota state for the "too big" / "nearly full" warnings |

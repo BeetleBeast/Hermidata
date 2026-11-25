@@ -12,7 +12,7 @@ extSlot.alarms = fakeAlarms;
 
 import {
     createBackend, DEFAULT_SYNC_CONFIG, describeTarget, isLocalOrPrivateHost, loadSyncConfig, originPattern,
-    sameConfig, sameTarget, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_CONFIG_KEY, validateWebDavUrl,
+    resolveSyncConfig, sameConfig, sameTarget, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_CONFIG_KEY, validateWebDavUrl,
 } from '../scripts/shared/sync/syncConfig';
 import { BrowserSyncBackend } from '../scripts/shared/sync/BrowserSyncBackend';
 import { LocalBackend } from '../scripts/shared/sync/LocalBackend';
@@ -85,8 +85,35 @@ describe('originPattern', () => {
 // --------------------------------------------------------------- storage
 
 describe('sync config storage', () => {
-    it('defaults to browser sync', async () => {
-        expect(await loadSyncConfig(new FakeLocalArea())).toEqual(DEFAULT_SYNC_CONFIG);
+    it('defaults to local only', async () => {
+        expect(DEFAULT_SYNC_CONFIG).toEqual({ kind: 'local' });
+        expect(await loadSyncConfig(new FakeLocalArea())).toEqual({ kind: 'local' });
+    });
+
+    it('still loads a saved browser sync choice as browser sync', async () => {
+        const local = new FakeLocalArea();
+        await saveSyncConfig(local, { kind: 'browser' });
+        expect(await loadSyncConfig(local)).toEqual({ kind: 'browser' });
+    });
+
+    it('a fresh device resolves to local only and saves it', async () => {
+        const local = new FakeLocalArea();
+        expect(await resolveSyncConfig(local, async () => false)).toEqual({ kind: 'local' });
+        expect(local.data[SYNC_CONFIG_KEY]).toEqual({ kind: 'local' });
+    });
+
+    it('a device that already holds a library keeps browser sync, saved explicitly', async () => {
+        const local = new FakeLocalArea();
+        expect(await resolveSyncConfig(local, async () => true)).toEqual({ kind: 'browser' });
+        expect(local.data[SYNC_CONFIG_KEY]).toEqual({ kind: 'browser' });
+    });
+
+    it('resolving never overrides a saved choice or even looks at the library', async () => {
+        const local = new FakeLocalArea();
+        await saveSyncConfig(local, { kind: 'local' });
+        const hasLibrary = vi.fn(async () => true);
+        expect(await resolveSyncConfig(local, hasLibrary)).toEqual({ kind: 'local' });
+        expect(hasLibrary).not.toHaveBeenCalled();
     });
 
     it('ignores a malformed saved value', async () => {

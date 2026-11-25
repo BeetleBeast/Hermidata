@@ -18,7 +18,10 @@ export const SYNC_SEAL_PENDING_KEY = 'syncSealPending';
 /** storage.local: a SyncStatus, rewritten by the engine after every sync attempt. */
 export const SYNC_STATUS_KEY = 'syncStatus';
 
-export const DEFAULT_SYNC_CONFIG: SyncBackendConfig = { kind: 'browser' };
+/** New installs keep everything on the device until the user picks a place to sync through. */
+export const DEFAULT_SYNC_CONFIG: SyncBackendConfig = { kind: 'local' };
+/** What a device that was already syncing before a choice existed keeps using. */
+const LEGACY_SYNC_CONFIG: SyncBackendConfig = { kind: 'browser' };
 
 // ------------------------------------------------------------------ storage
 
@@ -28,13 +31,27 @@ type LocalArea = {
     set(items: Record<string, unknown>): Promise<void>;
 };
 
-/** The saved config, or browser sync when nothing (or nothing valid) is saved. */
+/** The saved config, or local only when nothing (or nothing valid) is saved. */
 export async function loadSyncConfig(local: LocalArea): Promise<SyncBackendConfig> {
     const got = await local.get(SYNC_CONFIG_KEY);
     const saved = got[SYNC_CONFIG_KEY] as Partial<SyncBackendConfig> | undefined;
-    if (saved?.kind === 'local') return { kind: 'local' };
+    if (saved?.kind === 'local' || saved?.kind === 'browser') return { kind: saved.kind };
     if (saved?.kind === 'webdav' && typeof saved.url === 'string') return saved as SyncBackendConfig;
     return DEFAULT_SYNC_CONFIG;
+}
+
+/**
+ * The config this device runs with, deciding and saving it the first time it is asked: a device that already holds a
+ * library was syncing through the browser before there was a choice, so it keeps doing that; a fresh one stays local.
+ * Without this, updating would silently switch off sync for everyone who never opened the sync settings.
+ */
+export async function resolveSyncConfig(local: LocalArea, deviceHasLibrary: () => Promise<boolean>): Promise<SyncBackendConfig> {
+    const got = await local.get(SYNC_CONFIG_KEY);
+    if (got[SYNC_CONFIG_KEY] !== undefined) return loadSyncConfig(local);
+
+    const config = await deviceHasLibrary() ? LEGACY_SYNC_CONFIG : DEFAULT_SYNC_CONFIG;
+    await saveSyncConfig(local, config);
+    return config;
 }
 
 /** Saves the config and the adopt flag in one set() call, so a restart never sees one without the other. */
