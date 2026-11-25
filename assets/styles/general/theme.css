@@ -121,13 +121,6 @@
 :root[data-theme="light"] .tag-pill-removeX:hover { color: #fff; }
 :root[data-theme="light"] td,
 :root[data-theme="light"] th { border-color: var(--border); }
-:root[data-theme="light"] #resetFilters,
-:root[data-theme="light"] #resetFilters:hover {
-    background-color: var(--accent-dark);
-    border-color: var(--accent-dark);
-    color: var(--text-dark);
-}
-:root[data-theme="light"] #resetFilters:hover { background-color: var(--accent-hover-soft); }
 
 :root[data-theme="light"] .imgBookmark { fill: var(--text-muted); }
 :root[data-theme="light"] .marker-menu-trigger:hover .imgBookmark { fill: var(--accent-hover-soft); }
@@ -147,6 +140,8 @@
     box-shadow: none;
 }
 :root[data-theme="light"] button#hermidata-img[style*="assets/icon/icon48.png"] { background-color: transparent; }
+/* the filter turns any fill black, so a faint fill becomes a soft grey placeholder box behind the darkened icon */
+:root[data-theme="light"] .hermidata-item-image[src*="assets/icon/icon48.png"] { background-color: rgba(0, 0, 0, 0.12); }
 :root[data-theme="light"] #hermidata-img-container:has(> button#hermidata-img[style*="assets/icon/icon48.png"]) {
     outline: 1px dashed var(--border);
 }

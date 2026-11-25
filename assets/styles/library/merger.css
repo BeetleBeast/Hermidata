@@ -45,7 +45,7 @@
     padding: 10px;
     padding-left: 10px;
     padding-right: 30px;
-    border-radius: 5px;
+    border-radius: var(--lib-radius);
     box-shadow: var(--overlay) 0px 18px 40px -12px, var(--shadow) 0px 2px 6px;
     opacity: 1;
     transform: scale(1) translateY(0);
