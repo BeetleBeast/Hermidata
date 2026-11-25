@@ -227,7 +227,7 @@ scripts/
   settings/  Settings page behavior
   shared/    Shared constants, types, storage, migrations, and utilities
 assets/      Icons and stylesheets
-tests/       Vitest tests
+tests/       Vitest tests, grouped by area (background, popup, rss, library, reading-list, sync, shared)
 docs/        User and developer documentation (library sync)
 dist/        Generated build output (created by `npm run build`)
 ```

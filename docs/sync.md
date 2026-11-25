@@ -364,15 +364,15 @@ npx vitest run tests/sync          # every sync suite, against in-memory fakes
 | `sync.crypto.test.ts` | Envelope, passphrase and recovery keys, rewrapping, tampering, hostile headers |
 | `sync.encryption.test.ts` | The engine encrypted: turning it on and off, locked devices, rewraps, the plaintext dedupe, browser sync |
 
-`tests/sync.fakeDav.ts` has `FakeDavServer` (an in-memory WebDAV server behind a real `fetch` signature) and
+`tests/sync/sync.fakeDav.ts` has `FakeDavServer` (an in-memory WebDAV server behind a real `fetch` signature) and
 `FakeAlarms`.
 
-**Against a real server.** `tests/sync.live.test.ts` runs the backend against a real WebDAV server and is skipped
+**Against a real server.** `tests/sync/sync.live.test.ts` runs the backend against a real WebDAV server and is skipped
 unless you point it at a **folder** it may write to (it creates and deletes its own files there):
 
 ```bash
 npm run sync:server                # in a second terminal (needs rclone)
-HERMIDATA_DAV_URL=http://127.0.0.1:8080/ HERMIDATA_DAV_USER=hermidata HERMIDATA_DAV_PASS=hermidata npx vitest run tests/sync.live.test.ts --reporter=verbose
+HERMIDATA_DAV_URL=http://127.0.0.1:8080/ HERMIDATA_DAV_USER=hermidata HERMIDATA_DAV_PASS=hermidata npx vitest run tests/sync/sync.live.test.ts --reporter=verbose
 ```
 
 In PowerShell, set the variables first with `$env:HERMIDATA_DAV_URL = '…'`. With `--reporter=verbose` the test

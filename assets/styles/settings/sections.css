@@ -27,6 +27,7 @@
 .Extension_Behavior .format-editor { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; }
 
 .Extension_Behavior .format-input {
+    box-sizing: border-box; /* .input is width: 100% plus padding, which pushed the editor out of its card */
     min-height: 2.4em;
     line-height: 1.8;
     white-space: pre-wrap;
@@ -123,6 +124,16 @@
     max-width: 45%;
 }
 .Extension_Behavior .setting-input[type="number"] { width: 6rem; }
+/* settings.ts wraps every select in .select-wrap, which draws the arrow: size the wrapper, so the arrow stays inside the box */
+.Extension_Behavior .setting > .select-wrap {
+    flex: 0 0 auto;
+    width: 14rem;
+    max-width: 45%;
+}
+.Extension_Behavior .select-wrap > .setting-input {
+    width: 100%;
+    max-width: none;
+}
 
 /* Cards */
 .Extension_Behavior .card {
