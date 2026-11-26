@@ -143,8 +143,8 @@ export class EditDetail extends LibraryBuilder {
         const run = async (): Promise<boolean> => {
             const before = structuredClone(this.hermidata.toJSON());
             try {
-                change();
                 this.setSaveState('saving');
+                await change();
                 await this.persist();
                 this.setSaveState('saved');
                 if (settings.undoable) this.showToast(message, before);
@@ -535,9 +535,13 @@ export class EditDetail extends LibraryBuilder {
         history.replaceState(null, '', `#/id/${newId}`);
     }
 
-    /** Put a saved copy back into the model, keeping the id the entry is stored under */
+    /**
+     * Put a saved copy back into the model, keeping the id the entry is stored under and its links:
+     * a link is stored on the linked item too ( see RelatedWorks ), so putting back only this side would break it.
+     */
     private restore(snapshot: Hermidata): void {
         const copy = structuredClone(snapshot);
+        copy.meta.relations = this.hermidata.meta.relations;
         Object.assign(this.hermidata, copy, { id: this.storedId });
         this.render();
         this.onRestore();

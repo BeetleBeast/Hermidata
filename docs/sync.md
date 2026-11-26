@@ -32,6 +32,9 @@ sync and a phone on your WebDAV server do not see each other's changes.
 
 - **Your whole library** (entries, markers, tags, notes, metadata), as one compressed file.
 - **Deletions.** A deleted entry stays deleted on other devices, as long as they sync within 30 days.
+- **Related titles** (main story, sequel, side story, adaptation, …). Every title of a group lists the others, so
+  the group travels with its titles. Deleting, renaming or merging an entry also updates the entries related to it,
+  and those updates sync like any other edit.
 - **Not part of library sync:** your settings, which sync through your browser account whether you pick browser
   sync or your own server (on a device set to **This device only** they stay on the device); the RSS cache (each device fetches its own feeds); and the sync choice and password themselves, which
   stay on the device.
@@ -359,6 +362,7 @@ npx vitest run tests/sync          # every sync suite, against in-memory fakes
 | `sync.backend.test.ts` | The contract, run against every backend |
 | `sync.webdav.test.ts` | WebDAV requests, preconditions, folders, servers without ETags, `testConnection`, polling; the engine on WebDAV |
 | `sync.switch.test.ts` | Switching backends, merge and adopt |
+| `sync.relations.test.ts` | Related titles: round trip, a new group and a deletion's cleanup arriving, a group that lost one title's links to a concurrent edit still shown whole |
 | `sync.local.test.ts` | A local-only device: no pulls, pushes or tombstones, no encryption, syncing again afterwards |
 | `sync.config.test.ts` | URL validation, config storage, the alarm hub |
 | `sync.crypto.test.ts` | Envelope, passphrase and recovery keys, rewrapping, tampering, hostile headers |

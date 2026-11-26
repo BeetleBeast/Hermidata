@@ -221,7 +221,8 @@ input[type="color"] {
 }
 #search:focus { box-shadow: none; }
 
-#search-suggestions {
+#search-suggestions,
+.ov-suggestions {
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
@@ -235,7 +236,8 @@ input[type="color"] {
     border-radius: var(--ov-radius);
     box-shadow: var(--ov-elevated);
 }
-#search-suggestions:empty { display: none; }
+#search-suggestions:empty,
+.ov-suggestions:empty { display: none; }
 
 .autocomplete-item {
     padding: 8px 10px;

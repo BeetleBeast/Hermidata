@@ -8,6 +8,7 @@ import { getChapterFromTitle, normalizeDateToIso, generateBookmarkId, generateHe
 import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, BookmarkV4, BookmarkV5, Feed, FeedItem, FeedV1, Hermidata, HermidataImageSource, HermidataV1, HermidataV10, HermidataV11, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
 import { AutoSetAllHermidata } from "../utils/AutoSetAllHermidata";
+import { getRelatedWorks, mergeRelations } from "../utils/Relations";
 import { HERMIDATA_VERSION } from "../constants";
 
 
@@ -463,7 +464,7 @@ export class HermidataMigration {
                 starRating: newer.meta.starRating ?? older.meta.starRating,
                 image: newer.meta.image ?? older.meta.image,
                 readingQueue: newer.meta.readingQueue ?? older.meta.readingQueue,
-                relations: newer.meta.relations ?? older.meta.relations,
+                relations: mergeRelations(newer.meta.relations, older.meta.relations, [newer.id, older.id]),
             }
         }
         // step 3. save & remove key ( awaited, so a save right after the merge finds the merged item )
@@ -562,7 +563,7 @@ export class HermidataMigration {
                 starRating: keep.meta.starRating ?? discard.meta.starRating,
                 image: keep.meta.image ?? discard.meta.image,
                 readingQueue: keep.meta.readingQueue ?? discard.meta.readingQueue,
-                relations: keep.meta.relations ?? discard.meta.relations,
+                relations: mergeRelations(keep.meta.relations, discard.meta.relations, [keep.id, discard.id]),
                 // optional fields
                 author: keep.meta.author ?? discard.meta.author ?? undefined,
                 language: keep.meta.language ?? discard.meta.language ?? undefined,
@@ -575,6 +576,7 @@ export class HermidataMigration {
             "meta.tags", "meta.altSources", "meta.altTitles",
             "chapter.latest", "chapter.lastChecked", "meta.updated", "meta.added"
         );
+        if (getRelatedWorks(keep.meta.relations).length || getRelatedWorks(discard.meta.relations).length) autoResolved.push("meta.relations");
         
         return { merged, conflicts, autoResolved };
     }
@@ -651,7 +653,7 @@ export class HermidataMigration {
                 // identity shifted — neither original key is valid for the merged record, unless it came out as the id of one of them
                 removedIds.push(...[recordToKeep.id, recordToRemove.id].filter(id => id !== merged.id));
                 await moveHermidata(recordToRemove.id, merged.id, merged);
-                await removeHermidata(recordToKeep.id);
+                await removeHermidata(recordToKeep.id, merged.id); // links to the kept record follow it to the merged one
             } else {
                 await moveHermidata(recordToRemove.id, merged.id, merged);
                 removedIds.push(recordToRemove.id);

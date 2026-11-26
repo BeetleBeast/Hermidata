@@ -103,6 +103,10 @@ export type {
 
     ReleaseSchedule,
     RelatedWorkType,
+    RelatedWork,
+    Relation,
+    RelatedEntry,
+    RelatedRoles,
 
 } from "./popup";
 

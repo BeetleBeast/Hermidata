@@ -18,9 +18,10 @@ import { pushToSync, removeFromSync } from '../sync/sync.engine';
 import { loadSyncConfig } from '../sync/syncConfig';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { generateHermidataHash } from '../utils/StringOutput';
+import { applyGroupRoles, groupRoles, hasRelatedWork, retargetRelations } from '../utils/Relations';
 import { getElement, setElement } from '../utils/Selection';
 import { isValidGoogleSheetUrl } from '../sheets/sheetConfig';
-import { type RawFeed, type Settings, type AllSortsType, type Filters } from '../types';
+import { type RawFeed, type Settings, type AllSortsType, type Filters, type RelatedWorkType } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
 import type { AllSortsType as LibraryAllSortsType } from '../../library/build/filter';
@@ -124,6 +125,7 @@ export async function moveHermidata(oldKey: string, newKey: string, entry: OnlyP
             await deleteHermidata(oldKey, false) // remove old key from IndexedDB
             await updateImageKey(oldKey, newKey); // move associated images to new key
             removeFromSync(oldKey)        // remove old key from sync
+            await retargetLinks(oldKey, newKey); // linked items follow it to its new id
             console.log(`Migrated from ${oldKey} → ${newKey}`);
         }
 
@@ -136,15 +138,68 @@ export async function moveHermidata(oldKey: string, newKey: string, entry: OnlyP
     }
 }
 
-export async function removeHermidata(id: string): Promise<void> {
+/**
+ * Deletes an entry and the links other entries hold to it. When the entry was merged into another one, pass that
+ * one as `replacedBy`: the links then point at it instead, and pages still holding the old id can follow it.
+ */
+export async function removeHermidata(id: string, replacedBy?: string): Promise<void> {
     try {
         await deleteHermidata(id, false)  // remove from IndexedDB
         removeFromSync(id)          // remove from sync
+        if (replacedBy) void recordIdRedirect(id, replacedBy);
+        await retargetLinks(id, replacedBy ?? null);
 
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Removed ${id}`);
     } catch (err) {
         logConsoleError('[Storage] removeHermidata:', err);
+    }
+}
+
+/**
+ * Puts `targetId` in the related titles of `id` as `type`, or gives it that type when it is in them already.
+ * Related titles are one group in which every entry lists all the others with their type, so this writes every
+ * entry of the group. A `targetId` with related titles of its own brings them along: the two groups become one.
+ * With `targetId` equal to `id`, it sets the type of `id` itself. Returns the entries that changed, as stored.
+ */
+export async function linkHermidata(id: string, targetId: string, type: RelatedWorkType): Promise<OnlyPlainHermidata[]> {
+    const all = await dbGetAllHermidata();
+    if (!all[id] || !all[targetId]) throw new Error('Could not find both entries to link.');
+
+    const roles = { ...groupRoles(id, all), ...groupRoles(targetId, all), [targetId]: type };
+    if (Object.keys(roles).length < 2) throw new Error('Link another title first.');
+    const changed = applyGroupRoles(all, roles, []);
+    await saveAllHermidata(changed);
+    return changed;
+}
+
+/**
+ * Takes `targetId` out of the related titles of `id`: no entry of the group lists it any more, and it lists none of them.
+ * Returns the entries that changed, as stored.
+ */
+export async function unlinkHermidata(id: string, targetId: string): Promise<OnlyPlainHermidata[]> {
+    const all = await dbGetAllHermidata();
+    if (!all[id]) throw new Error('Could not find the entry to unlink.');
+
+    const roles = groupRoles(id, all);
+    delete roles[targetId];
+    const changed = applyGroupRoles(all, roles, [targetId]);
+    await saveAllHermidata(changed);
+    return changed;
+}
+
+/**
+ * Points every link to `fromId` at `toId` ( an entry that moved or was merged ), or drops those links when `toId`
+ * is null ( a deleted entry ). The changed entries are saved like an edit, so sync carries the change.
+ * The entry itself is already stored or deleted, so a failure here is logged instead of undoing that.
+ */
+async function retargetLinks(fromId: string, toId: string | null): Promise<void> {
+    try {
+        const linked = Object.values(await dbGetAllHermidata()).filter(entry => hasRelatedWork(entry.meta.relations, fromId));
+        for (const entry of linked) entry.meta.relations = retargetRelations(entry.meta.relations, entry.id, fromId, toId);
+        await saveAllHermidata(linked);
+    } catch (err) {
+        logConsoleError('[Storage] retargetLinks:', err);
     }
 }
 
@@ -588,6 +643,8 @@ export const storageCalls = {
     saveHermidata,
     moveHermidata,
     removeHermidata,
+    linkHermidata,
+    unlinkHermidata,
     saveAllHermidata,
     setAllHermidata,
     getAllRawFeeds,
@@ -639,6 +696,14 @@ export class dbAccess {
     }
     public removeHermidata(id: string): Promise<void> {
         return this.call('removeHermidata', id);
+    }
+    /** Put `targetId` in the related titles of `id` as `type`. Returns the entries that changed, as stored */
+    public linkHermidata(id: string, targetId: string, type: RelatedWorkType): Promise<OnlyPlainHermidata[]> {
+        return this.call('linkHermidata', id, targetId, type);
+    }
+    /** Take `targetId` out of the related titles of `id`. Returns the entries that changed, as stored */
+    public unlinkHermidata(id: string, targetId: string): Promise<OnlyPlainHermidata[]> {
+        return this.call('unlinkHermidata', id, targetId);
     }
     public saveAllHermidata(entries: OnlyPlainHermidata[]): Promise<void> {
         return this.call('saveAllHermidata', entries);

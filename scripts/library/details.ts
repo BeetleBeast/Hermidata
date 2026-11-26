@@ -5,6 +5,7 @@ import { openLink } from "../shared/utils/StringOutput";
 import { Detail } from "./build/detail";
 import { EditDetail } from "./build/edit";
 import { MarkerList } from "./build/markers";
+import { RelatedWorks } from "./build/relations";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { initTheme } from "../shared/utils/Theme";
 
@@ -63,6 +64,8 @@ export class Controller {
 
     private readonly markers: MarkerList;
 
+    private readonly relatedWorks: RelatedWorks;
+
     private readonly reloadData = getElement<HTMLButtonElement>("#reload-info-btn");
 
     private readonly backToLibrary = getElement<HTMLButtonElement>("#back-btn");
@@ -73,6 +76,7 @@ export class Controller {
         this.detail = new Detail(allHermidata, settings, hermidata);
         this.editDetail = new EditDetail(allHermidata, settings, hermidata);
         this.markers = new MarkerList(allHermidata, settings, hermidata, this.editDetail.commit);
+        this.relatedWorks = new RelatedWorks(allHermidata, settings, hermidata, this.editDetail.commit);
         this.editDetail.onRestore = () => this.markers.render();
     }
 
@@ -80,6 +84,7 @@ export class Controller {
         // the fields first: a slow or failing cover must not keep them from working
         this.editDetail.build();
         this.markers.build();
+        this.relatedWorks.build();
         await this.detail.build();
 
         this.reloadData?.addEventListener('click', () => this.reloadDetails());

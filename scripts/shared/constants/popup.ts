@@ -1,5 +1,5 @@
 import { generateBookmarkId } from "../utils/StringOutput";
-import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NormalSortsType, NovelStatus, NovelType, ReadStatus } from "../types";
+import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NormalSortsType, NovelStatus, NovelType, ReadStatus, RelatedWorkType } from "../types";
 
 export const HERMIDATA_VERSION = 12;
 
@@ -28,6 +28,17 @@ export const CONTENT_RATING_MAP: Array<[string, string, boolean]> = new Array(
 );
 
 export const CONTENT_RATING = ['Safe', 'Suggestive', 'Erotica', 'Pornographic'];
+
+/** What a related title is called on the detail page, in the order the type picker and the list show them */
+export const RELATED_WORK_LABELS: Record<RelatedWorkType, string> = {
+    mainStory: 'Main story',
+    prequel: 'Prequel',
+    sequel: 'Sequel',
+    sideStory: 'Side story',
+    spinOff: 'Spin-off',
+    summary: 'Summary',
+    adaptation: 'Adaptation',
+};
 
 export const DEMOGRAPHIC_TAGS: string[] = [
     'Seinen', 'Josei', 'Shoujo', 'Yaoi', 'Shounen', 'Shoujoai', 'Shounenai'
