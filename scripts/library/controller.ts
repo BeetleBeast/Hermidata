@@ -6,6 +6,7 @@ import { feed } from "./build/feed";
 import { filter } from "./build/setFilter";
 import { FilterLogic } from "./build/filterLogic";
 import { HermidataMerge } from "./build/merge";
+import { HermidataBulkOpen } from "./build/bulkOpen";
 import type { DualRangeSlider } from "../shared/utils/DualRangeSlider";
 
 export class Controller {
@@ -19,6 +20,8 @@ export class Controller {
 
     private readonly merger: HermidataMerge;
 
+    private readonly bulkOpen: HermidataBulkOpen;
+
     private readonly reloadData = getElement<HTMLButtonElement>("#reloadData");
     private readonly openReadingList = getElement<HTMLButtonElement>("#openReadingList");
 
@@ -30,6 +33,7 @@ export class Controller {
         this.filter = new filter(allHermidata, settings, this);
         this.filterLogic = new FilterLogic(allHermidata, settings, this);
         this.merger = new HermidataMerge(allHermidata, settings, () => this.reload());
+        this.bulkOpen = new HermidataBulkOpen(allHermidata, settings);
     }
 
     public range: DualRangeSlider | null = null;
@@ -46,6 +50,8 @@ export class Controller {
         
         this.merger.build();
 
+        this.bulkOpen.build();
+
 
         this.setEventListener();
     }
@@ -53,7 +59,7 @@ export class Controller {
     private async reload() {
         const allHermidata = await new dbAccess().getAllHermidata();
 
-        for (const builder of [this.feed, this.filter, this.filterLogic, this.merger]) builder.setData(allHermidata);
+        for (const builder of [this.feed, this.filter, this.filterLogic, this.merger, this.bulkOpen]) builder.setData(allHermidata);
 
         await this.feed.reload();
         this.merger.reload();

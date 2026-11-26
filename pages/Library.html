@@ -24,8 +24,8 @@
     <div class="toolbar">
       
       <button type="button" id="mergeTwoHermidatas" class="Btn" aria-haspopup="dialog">Merge duplicates</button>
-      <!-- Planned top bar options, not built yet ( TODO ):
       <button type="button" id="bulkOpen" class="Btn">Open in new tabs</button>
+      <!-- Planned top bar options, not built yet ( TODO ):
       <button type="button" id="openNotifications" class="Btn">Notifications</button>
       <button type="button" id="openStats" class="Btn">Stats &amp; insights</button>
       -->
@@ -175,6 +175,15 @@
   </dialog>
 
   <div id="library-toast" class="library-toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- confirm prompt ( customConfirm ), used by bulk open -->
+  <section class="promptSection">
+    <label class="genericLabel"></label>
+    <div class="genericPromptBtns">
+      <button type="button" class="genericButton1 Btn">Open</button>
+      <button type="button" class="genericButton2 Btn">Cancel</button>
+    </div>
+  </section>
 
 <script src="../scripts/library/main.ts" type="module"></script>
 </body>
