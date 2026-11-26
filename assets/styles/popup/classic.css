@@ -52,7 +52,20 @@ body::after {
 
 #HDRssBtn {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     width: 100%;
+}
+/* a dot beside the label: this page has a feed to subscribe to ( the button itself opens RSS mode ) */
+.subscribableHint {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--success);
+}
+.subscribableHint[hidden] {
+    display: none;
 }
 #HDClassicBtn {
     display: flex;
@@ -188,6 +201,26 @@ input[type=number]::-webkit-inner-spin-button {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: textfield;
+}
+/* fields whose value is still being fetched ( data-loading is set by setClassicLoading ) */
+.main[aria-busy="true"] {
+    cursor: progress;
+}
+input.autoInput[data-loading="true"],
+select.autoInput[data-loading="true"] {
+    color: transparent;
+    background-image: var(--loading-shimmer);
+    background-size: 200% 100%;
+    animation: loading-shimmer 1.2s linear infinite;
+}
+input.autoInput[data-loading="true"]::placeholder {
+    color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+    input.autoInput[data-loading="true"],
+    select.autoInput[data-loading="true"] {
+        animation: none;
+    }
 }
 #Type {
     cursor: pointer;

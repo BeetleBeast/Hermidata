@@ -24,8 +24,13 @@ export class Subscribe extends RssBuild {
 
     private matchedFeed: RawFeed | null = null;
 
-    public async makeSubscribeBtn(): Promise<void> {
+    /** The feed found on a site ( by the content script ) that belongs to this page's item and is not linked to it yet */
+    public async findSubscribableFeed(currentTitle: string = this.hermidata.title): Promise<RawFeed | null> {
         const [feedListGlobal, allHermidata] = await Promise.all([ this.db.getAllRawFeeds(), PastHermidata.getAllHermidata() ]);
+        return this.findMatchingFeed( feedListGlobal, allHermidata, currentTitle );
+    }
+
+    public async makeSubscribeBtn(): Promise<void> {
         const subscribeBtn = getElement<HTMLButtonElement>("#subscribeBtn");
         const notificationSection = getElement<HTMLDivElement>("#RSS-Notification");
         const allItemSection = getElement<HTMLDivElement>("#All-RSS-entries");
@@ -51,7 +56,7 @@ export class Subscribe extends RssBuild {
 
         const currentTitle = getElement<HTMLInputElement>("#title_HDRss")?.value || this.hermidata.title;
 
-        this.matchedFeed = await this.findMatchingFeed( feedListGlobal, allHermidata, currentTitle );
+        this.matchedFeed = await this.findSubscribableFeed(currentTitle);
 
         if (this.autoSubscriberHasFoundFeed) return; // re-check after every async call
 

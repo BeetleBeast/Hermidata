@@ -65,3 +65,12 @@ span.loading-bar-label {
 
 
 
+/* shimmer for a field whose value is still loading: background-image: var(--loading-shimmer), background-size: 200% 100%, animation: loading-shimmer */
+:root {
+	--loading-shimmer: linear-gradient(90deg, var(--surface-input) 25%, var(--surface) 50%, var(--surface-input) 75%);
+}
+
+@keyframes loading-shimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
