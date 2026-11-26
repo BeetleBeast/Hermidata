@@ -247,6 +247,7 @@ dist/        Generated build output (created by `npm run build`)
 | `contextMenus` | Right-click save option |
 | `notifications` | New chapter alerts |
 | `scripting` | Content script injection |
+| `declarativeNetRequestWithHostAccess` | Remove the extension `Origin` header from Hermidata's own requests to the MangaUpdates API, which refuses requests that carry one (alt-title lookup and MangaUpdates release feeds only) |
 | `alarms` | Check RSS feeds for new chapters on your chosen interval, and your WebDAV server for library changes every 5 minutes (WebDAV sync only) |
 | `host_permissions` | Broad access to websites for page detection and RSS feeds, plus Google APIs for Sheets sync |
 | `optional_host_permissions` | Requested at runtime for the WebDAV server you enter, when you test or save it (WebDAV sync only) |
@@ -281,6 +282,7 @@ npm run sync:server  # local WebDAV server for trying sync (needs rclone), see d
 - The extension declares access to all website hosts so its content script can detect page information; RSS feed checks also make requests to the feed's server.
 - Google Sheets sync is optional. When enabled, Hermidata sends saved entry data to the spreadsheet you configure, using Google OAuth and the Sheets API.
 - New installs do not sync. Library sync through your browser account's sync storage is something you turn on (installs that were already syncing keep it). If you choose "This device only", nothing is synced: your library and settings are never written to browser sync. If you configure a WebDAV server instead, your library is sent only to that server, and its URL, username, and password are stored on that device only (in the extension's local storage, unencrypted) and are never synced. The synced library file is compressed and readable unless you turn on the optional end-to-end encryption (passphrase plus 5 one-time recovery keys; the passphrase and keys never leave your devices). See [docs/sync.md](docs/sync.md#security-and-privacy).
+- With "Release feeds from MangaUpdates" on, a title that has no cover image gets its cover from MangaUpdates: Hermidata stores the image address, so the library loads that image from `cdn.mangaupdates.com`, which receives your IP address like any server you load an image from.
 - RSS feed URLs are fetched to check for updates. The feed server receives the normal network request information required to respond (such as your IP address).
 - Authentication uses the browser's Google OAuth flow; Hermidata does not receive your Google password.
 

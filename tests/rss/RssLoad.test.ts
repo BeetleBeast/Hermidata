@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getHermidataWithRss, linkRSSFeed } from '../../scripts/rss/load';
+import { getHermidataWithRss, isChapterLinkedFeed, linkRSSFeed, removeChapterLinkedRawFeeds, setCoverIfMissing } from '../../scripts/rss/load';
+import { removeRawFeeds } from '../../scripts/shared/db/db';
 import { PastHermidata } from '../../scripts/popup/core/Past';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash } from '../../scripts/shared/utils/StringOutput';
@@ -139,5 +140,102 @@ describe('linkRSSFeed', () => {
         await linkRSSFeed('Solo Leveling', 'Novel', 'https://a.com/solo-leveling/chapter-3', rawFeed('a.com', item(10, 'a.com', '2026-11-01')));
 
         expect(store.items[hashId].rss.map(feed => feed.url)).toEqual(['https://a.com/feed']);
+    });
+});
+
+/** What feed discovery stored before the fix: the feed under its newest chapter's link */
+function chapterLinkedFeed(site: string, latest: FeedItem): Feed {
+    return { ...linkedFeed(site, latest), url: latest.link };
+}
+
+describe('setCoverIfMissing', () => {
+    const COVER = 'https://cdn.mangaupdates.com/image/i515366.jpg';
+
+    it('gives an item without an image the cover, and saves it', async () => {
+        const a = createSaved(hashId, 'a.com', []);
+        store.items = { [a.id]: a };
+
+        expect(await setCoverIfMissing(hashId, COVER)).toBe(true);
+
+        expect(store.items[hashId].meta.image).toEqual({ kind: 'url', url: COVER });
+    });
+
+    it('keeps an image the item has, and saves nothing', async () => {
+        const a = createSaved(hashId, 'a.com', []);
+        a.meta.image = { kind: 'stored', id: 'image-1' };
+        store.items = { [a.id]: a };
+        const before = structuredClone(store.items);
+
+        expect(await setCoverIfMissing(hashId, COVER)).toBe(false);
+
+        expect(store.items).toEqual(before);
+    });
+
+    it('does nothing for an item that is gone', async () => {
+        expect(await setCoverIfMissing('missing', COVER)).toBe(false);
+    });
+});
+
+describe('linkRSSFeed with a cover', () => {
+    const COVER = 'https://cdn.mangaupdates.com/image/i515366.jpg';
+
+    it('gives an item without an image the cover', async () => {
+        const a = createSaved(hashId, 'a.com', []);
+        store.items = { [a.id]: a };
+
+        await linkRSSFeed('Solo Leveling', 'Novel', 'https://a.com/solo-leveling/chapter-3', rawFeed('a.com', item(10, 'a.com', '2026-11-01')), hashId, COVER);
+
+        expect(store.items[hashId].meta.image).toEqual({ kind: 'url', url: COVER });
+    });
+
+    it.each<[string, Hermidata['meta']['image']]>([
+        ['a link', { kind: 'url', url: 'https://example.com/mine.jpg' }],
+        ['a stored image', { kind: 'stored', id: 'image-1' }],
+    ])('keeps the image the item has: %s', async (_name, image) => {
+        const a = createSaved(hashId, 'a.com', []);
+        a.meta.image = image;
+        store.items = { [a.id]: a };
+
+        await linkRSSFeed('Solo Leveling', 'Novel', 'https://a.com/solo-leveling/chapter-3', rawFeed('a.com', item(10, 'a.com', '2026-11-01')), hashId, COVER);
+
+        expect(store.items[hashId].meta.image).toEqual(image);
+    });
+
+    it('changes no image without a cover', async () => {
+        const a = createSaved(hashId, 'a.com', []);
+        const before = structuredClone(a.meta.image);
+        store.items = { [a.id]: a };
+
+        await linkRSSFeed('Solo Leveling', 'Novel', 'https://a.com/solo-leveling/chapter-3', rawFeed('a.com', item(10, 'a.com', '2026-11-01')), hashId);
+
+        expect(store.items[hashId].meta.image).toEqual(before);
+    });
+});
+
+describe('chapter-linked feeds ( stored by the old feed discovery )', () => {
+    it('are told apart from working feeds', () => {
+        const latest = item(10, 'a.com', '2026-11-01');
+        expect(isChapterLinkedFeed(chapterLinkedFeed('a.com', latest))).toBe(true);
+        expect(isChapterLinkedFeed(linkedFeed('a.com', latest))).toBe(false);
+    });
+
+    it('are removed from the stored feeds, working ones are kept', async () => {
+        const latest = item(10, 'a.com', '2026-11-01');
+        const broken = { ...rawFeed('a.com', latest), url: latest.link };
+        store.rawFeeds = { [broken.url]: broken, 'https://b.com/feed': rawFeed('b.com', item(5, 'b.com', '2026-11-01')) };
+
+        await removeChapterLinkedRawFeeds();
+
+        expect(removeRawFeeds).toHaveBeenCalledWith([latest.link]);
+    });
+
+    it('are replaced when a working feed from the same site is linked', async () => {
+        const otherSite = chapterLinkedFeed('b.com', item(4, 'b.com', '2026-10-01'));
+        const a = createSaved(hashId, 'a.com', [chapterLinkedFeed('a.com', item(9, 'a.com', '2026-10-01')), otherSite]);
+        store.items = { [a.id]: a };
+
+        await linkRSSFeed('Solo Leveling', 'Novel', 'https://a.com/solo-leveling/chapter-3', rawFeed('a.com', item(10, 'a.com', '2026-11-01')), hashId);
+
+        expect(store.items[hashId].rss.map(feed => feed.url)).toEqual([otherSite.url, 'https://a.com/feed']);
     });
 });

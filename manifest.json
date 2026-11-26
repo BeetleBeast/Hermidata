@@ -14,7 +14,8 @@
         "scripting",
         "notifications",
         "cookies",
-        "alarms"
+        "alarms",
+        "declarativeNetRequestWithHostAccess"
     ],
     "host_permissions": [ "https://*.googleapis.com/*", "*://*/*" ],
     "optional_host_permissions": [ "*://*/*" ],

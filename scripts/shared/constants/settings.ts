@@ -57,6 +57,9 @@ export const defaultSettings: Settings = {
         AltTitleLookup: {
             Enable: false,
         },
+        MangaUpdatesFeeds: {
+            Enable: false,
+        },
         TombstoneTtlDays: DEFAULT_TOMBSTONE_TTL_DAYS,
         BookmarkTitleFormat: DEFAULT_BOOKMARK_TITLE_FORMAT,
         RssCheckIntervalMinutes: DEFAULT_RSS_CHECK_INTERVAL,

@@ -108,6 +108,13 @@ describe('detectChapter: value and source', () => {
         ['Series Volume 3 Chapter 12', plain, 12, 'titleKeyword'],       // volume ignored
         ['Re:Zero 2nd Season Chapter 5', plain, 5, 'titleKeyword'],      // other numbers ignored
         ['Series Ｃｈａｐｔｅｒ １２', plain, 12, 'titleKeyword'],        // full-width via NFKC
+        // release notation ( MangaUpdates feed items )
+        ['Naruto c.700', plain, 700, 'titleRelease'],
+        ['Solo Leveling v.2 c.45', plain, 45, 'titleRelease'],          // volume ignored
+        ['Overlord 2 c.45.5', plain, 45.5, 'titleRelease'],             // beats the other number
+        ['Series c.10-12', plain, 12, 'titleRelease'],                  // range: last chapter
+        ['Series (c.7)', plain, 7, 'titleRelease'],
+        ['Magic.5', plain, 5, 'titleSingleNumber'],                     // "c." inside a word is not notation
         // title segment that is only a number
         ['Series - 45', plain, 45, 'titleSegment'],
         ['Series | 45', plain, 45, 'titleSegment'],

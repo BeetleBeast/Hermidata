@@ -2,7 +2,8 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, openLink, generateHermidataHash, getFreeKey, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
-import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
+import { saveHermidata, updateHermidata, removeHermidata, getSettings, setSettings } from "../../shared/db/Storage";
+import { isMangaUpdatesFeedUrl } from "../../shared/lookup/mangaUpdatesFeeds";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -605,9 +606,18 @@ export class EventListener extends RssBuild {
     private async unLinkRSSFeed(entry: HermidataModel) {
         if (!entry) return;
 
+        const mangaUpdatesFeed = entry.rss.find(feed => isMangaUpdatesFeedUrl(feed.url));
         entry.rss = [];
 
         await saveHermidata(entry.id, entry.toJSON());
+        if (mangaUpdatesFeed) await this.keepUnlinked(entry.id, mangaUpdatesFeed.id);
+    }
+    /** Without this the next feed check would link the MangaUpdates feed again */
+    private async keepUnlinked(itemId: string, feedId: string) {
+        const settings = await getSettings();
+        const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe;
+        autoSubscribe.HermidataNotLinkedToRSS = { ...autoSubscribe.HermidataNotLinkedToRSS, [itemId]: feedId };
+        await setSettings(settings);
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined

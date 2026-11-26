@@ -1,8 +1,8 @@
 import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/utils/BrowserCompat"
-import { dbUpdateImageKey, getAllRawFeeds, getDb, putRawFeed } from "../shared/db/db"
-import type { DbCall, DbStore, Filters, Hermidata, RawFeed, RawScrapedItem, RawScrappedFeed, SyncCall } from "../shared/types"
+import { dbUpdateImageKey, getDb, putAllRawFeeds } from "../shared/db/db"
+import type { DbCall, DbStore, DetectedFeed, Filters, Hermidata, RawFeed, SyncCall } from "../shared/types"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { writeToSheet } from "./sheets"
@@ -10,7 +10,9 @@ import { HermidataModel } from "../shared/utils/HermidataSelector"
 import { getAllUnread } from "../shared/utils/Unread"
 import { PastHermidata } from "../popup/core/Past"
 import { updateUnreadBadge } from "./rssNotify"
-import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput"
+import { generateRssFeedId } from "../shared/utils/StringOutput"
+import { fetchFeedText, looksLikeHtml } from "./feedFetch"
+import { getLatestToken, parseChannelInfo, parseFeedXml, parseItems } from "./parseXML"
 import { pushToSync, removeFromSync } from "../shared/sync/sync.engine"
 import { scheduleAltTitleLookup, storedKeyOf } from "./altTitles"
 
@@ -119,128 +121,49 @@ async function saveNovel(data: Hermidata, args: { allowedSendSHeet: boolean, all
     return errors.length === 0 ? true : { success: false, errors };
 }
 
-async function handleSaveRawFeeds(incomingFeeds: RawScrappedFeed[]): Promise<true> {
-    const existing = await getAllRawFeeds()
-    
-    for (const feed of incomingFeeds) {
-        const existingFeed = existing[feed.url]
-        // Only update if newer or not yet stored
-        if (!existingFeed || feed.lastFetched > existingFeed.lastFetched) {
-            const enriched = buildFeedItem(feed)
-            await putRawFeed(enriched)
-        }
-    }
-    return true
-}
-
-export async function handleBuildAndSaveRawFeeds(partials: Partial<RawScrappedFeed>[], sendResponse: (r: unknown) => void): Promise<true> {
-    const results = await Promise.allSettled( partials.map(f => buildFullFeed(f)) );
-
-    const feeds: RawScrappedFeed[] = results
-        .filter((r): r is PromiseFulfilledResult<RawScrappedFeed> => 
-            r.status === 'fulfilled' && r.value !== null
-        )
-        .map(r => r.value);
+/** Feeds the content script found on a page: each is fetched once and stored under its own address */
+export async function handleBuildAndSaveRawFeeds(detected: DetectedFeed[], sendResponse: (r: unknown) => void): Promise<true> {
+    const results = await Promise.allSettled((detected ?? []).map(buildRawFeed));
+    const feeds = results.flatMap(r => r.status === 'fulfilled' && r.value ? [r.value] : []);
 
     if (feeds.length) {
         console.log(`[Hermidata] Successfully built ${feeds.length} feed(s)`);
-        // Save to IndexedDB here
-        handleSaveRawFeeds(feeds);
-        sendResponse({ status: 'ok' })
-    } else sendResponse({ status: 'failed' })
+        await putAllRawFeeds(feeds);
+        sendResponse({ status: 'ok' });
+    } else sendResponse({ status: 'failed' });
     return true
 }
 
-async function buildFullFeed(partial: Partial<RawScrappedFeed>): Promise<RawScrappedFeed | null> {
-    if (!partial.url) return null;
+async function buildRawFeed(detected: DetectedFeed): Promise<RawFeed | null> {
+    if (!detected?.url) return null;
     try {
-        const [items, lastBuildDate, image] = await fetchAndParseRSS(partial.url);
-
-        if (items.length === 0) {
-            console.warn(`[Hermidata] Feed ${partial.url} has no items`);
-            return null; // or return a default object
+        const result = await fetchFeedText(detected.url);
+        if (result.status !== 'ok' || looksLikeHtml(result.text)) return null;
+        const doc = parseFeedXml(result.text);
+        const latestItem = doc ? parseItems(doc, detected.title) : null;
+        if (!doc || !latestItem) {
+            console.warn(`[Hermidata] ${detected.url} is not a feed, or has no items`);
+            return null;
         }
-
+        const channel = parseChannelInfo(doc);
         return {
-            title: partial.title ?? "",
-            url: partial.url,
-            domain: partial.domain ?? new URL(partial.url).hostname.replace(/^www\./, ''),
-            latestItem: items[0],
-            lastBuildDateStr: lastBuildDate ?? new Date().toISOString(),
-            image: image ?? '',
+            id: generateRssFeedId(latestItem.title, detected.url),
+            title: latestItem.title,
+            url: detected.url, // the feed's own address: the feed check fetches this, so never a chapter link
+            domain: detected.domain || new URL(detected.url).hostname.replace(/^www\./, ''),
             lastFetched: new Date().toISOString(),
-            lastToken: null,
+            lastBuildDate: channel.lastBuildDate ?? new Date(),
+            image: channel.image,
+            latestItem,
+            lastToken: getLatestToken(doc, result.text),
+            // no validators: the next feed check fetches it in full and moves the linked items along
+            etag: null,
+            lastModified: null,
         };
     } catch (err) {
-        console.warn(`[Hermidata] Failed to fetch feed ${partial.url}:`, err);
+        console.warn(`[Hermidata] Failed to fetch feed ${detected.url}:`, err);
         return null;
     }
-}
-
-async function fetchAndParseRSS(feedUrl: string): Promise<[RawScrapedItem[], string | null, string | null]> {
-    const response = await fetch(feedUrl);
-    if (!response.ok) throw new Error(`Feed fetch failed: ${feedUrl} (${response.status})`);
-
-    const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
-    if (contentType.includes('html')) throw new Error(`Not a feed (HTML content-type): ${feedUrl}`);
-
-    const text = await response.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, 'text/xml');
-
-    if (xml.querySelector('parsererror')) {
-        throw new Error(`XML parse error for feed: ${feedUrl}`);
-    }
-
-    // Must be a real feed document (RSS / Atom / RDF), not an XHTML page
-    const root = xml.documentElement?.localName?.toLowerCase();
-    if (!root || !['rss', 'feed', 'rdf'].includes(root)) throw new Error(`Not a feed (root <${root}>): ${feedUrl}`);
-
-    const items: RawScrapedItem[] = [...xml.querySelectorAll('item, entry')].slice(0, 10).map(item => ({
-        title: item.querySelector('title')?.textContent?.trim() ?? '',
-        link: (
-            item.querySelector('link')?.getAttribute('href') ??
-            item.querySelector('link')?.textContent ??
-            ''
-        ).trim(),
-        pubDate: new Date(item.querySelector('pubDate, updated, published')?.textContent ?? Date.now()),
-        guid: (
-            item.querySelector('guid')?.textContent ??
-            item.querySelector('id')?.textContent ??
-            item.querySelector('link')?.textContent ??
-            ''
-        )
-    }));
-
-    const lastBuildDate = xml.querySelector('lastBuildDate, updated')?.textContent ?? null;
-    const image = xml.querySelector('image > url')?.textContent ?? null;
-
-    return [items, lastBuildDate, image];
-}
-
-function buildFeedItem(raw: RawScrappedFeed): RawFeed {
-    const url = raw.latestItem.link;
-    const rawTitle = raw.latestItem.title;
-    const trimmedTitle = TrimTitle.trimTitle(rawTitle, url).title;
-    return {
-        id: generateRssFeedId(trimmedTitle, raw.url),
-        title: trimmedTitle,
-        url,
-        domain: raw.domain ?? new URL(url).hostname.replace(/^www\./, ''),
-        latestItem: {
-            id: generateRssFeedId(trimmedTitle, url),
-            title: trimmedTitle,
-            rawTitle: rawTitle,
-            link: raw.latestItem.link,
-            chapter: getChapterFromTitle(rawTitle, url),
-            pubDate: new Date(raw.latestItem.pubDate ?? new Date().toISOString()),
-            guid: raw.latestItem.guid,
-        },
-        image: raw.image ?? null,
-        lastFetched: raw.lastFetched,
-        lastBuildDate: new Date(raw.lastBuildDateStr),
-        lastToken: raw.lastToken,
-    };
 }
 
 const settingsListeners = new Set<() => void>();
