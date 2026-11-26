@@ -6,7 +6,7 @@ import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Curren
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
 import { RSS } from '../../rss/main';
-import { getAllHermidata, getSettings } from '../../shared/db/Storage';
+import { dbAccess } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/sync/sync.engine';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 document.addEventListener('keydown', async (e) => shortcutEventListener(e));
 
+const db = new dbAccess();
+
 class HermidataController {
     private hermidata: HermidataModel;
 
@@ -99,7 +101,7 @@ class HermidataController {
 
     public async init(): Promise<void> {
         console.time('[POPUP] init: get-settings');
-        const settings = await getSettings();
+        const settings = await db.getSettings();
         console.timeEnd('[POPUP] init: get-settings');
 
         this.populateUI(settings);
@@ -107,7 +109,7 @@ class HermidataController {
         this.bindEvents();
 
         // initialize RSS mode
-        this.RSS = new RSS(this.hermidata, await getAllHermidata());
+        this.RSS = new RSS(this.hermidata, await PastHermidata.getAllHermidata());
         // open RSS mode if shortcut was used
         await this.openRSSIfSetInsideSession();
 
@@ -299,7 +301,7 @@ class HermidataController {
             const hasMigrated = await this.migrateIfDuplicate();
             if (hasMigrated) console.info('migration plan activated');
 
-            const settings = await getSettings();
+            const settings = await db.getSettings();
             
             // update settings ( add new tags if new added in UI )
             await this.updateSettings(settings);
@@ -370,7 +372,7 @@ class HermidataController {
                 { accept: "Link", reject: "Don't link" }
             );
 
-            await this.updateSettings(await getSettings());
+            await this.updateSettings(await db.getSettings());
             const saved = await this.service.saveAsSeparateItem(page);
 
             if (saved && link && original) await linkAsAdaptation(original.id, page.id).catch(error => new ErrorMessage("Saved the new item, but could not link it to the existing one.", undefined, {
@@ -533,7 +535,7 @@ const startupPromise = (async () => startup())();
 export async function startup(): Promise<{Hermidata: HermidataModel, past: PastHermidata}> {
     const [ CurrentTabInfo, settings ]: [CurrentTab, Settings] = await Promise.all([
         HermidataController.getCurrentTabInfo(),
-        getSettings(),
+        db.getSettings(),
     ]);
 
     const defaultNovelType = settings.ContentTypesAndStatuses.TYPE_OPTIONS[0];

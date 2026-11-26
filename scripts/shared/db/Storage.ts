@@ -20,7 +20,7 @@ import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { generateHermidataHash } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
 import { isValidGoogleSheetUrl } from '../sheets/sheetConfig';
-import { type RawFeed, type Settings, type AllSortsType, type Filters, type DbStore, type DbCall, type SyncCall, type Feed } from '../types';
+import { type RawFeed, type Settings, type AllSortsType, type Filters } from '../types';
 import { SettingsMigration } from '../migration/Settings';
 import { DEFAULT_TAGS, defaultSettings } from '../constants';
 import type { AllSortsType as LibraryAllSortsType } from '../../library/build/filter';
@@ -33,7 +33,12 @@ import type { HermidataImageSource, OnlyPlainHermidata } from '../types/popup';
 // ============================================================
 export function getHermidataViaKey(key: string): Promise<OnlyPlainHermidata | null> { return getHermidataByKey(key); }
 
-export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Promise<void> {
+/**
+ * Writes an entry under its own id ( `key`, else the entry's id, else one made from the entry ):
+ * stamps `meta.updated`, pushes it to sync and drops the cached copy. Returns the entry as stored.
+ * To give an entry a different id use `moveHermidata`.
+ */
+export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Promise<OnlyPlainHermidata> {
     try {
         const Key = key || entry.id || generateHermidataHash(entry.title, entry.novelType, entry.chapter.bookmarks[entry.chapter.bookmarkInUse].url);
         entry.id = Key;
@@ -44,6 +49,7 @@ export async function saveHermidata(key: string, entry: OnlyPlainHermidata ): Pr
 
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Saved ${entry.title}`);
+        return entry;
     } catch (err) {
         logConsoleError('[Storage] saveHermidata:', err);
         throw err;
@@ -96,26 +102,37 @@ export async function resolveIdRedirect(id: string): Promise<string | null> {
     }
 }
 
-export async function updateHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
+/**
+ * Gives an entry a different id: writes it under `newKey`, then removes `oldKey` ( and its sync record ), and moves the images.
+ * With equal keys there is nothing to remove, so it only saves the entry: the old key IS the new key, deleting it would delete the entry.
+ * Returns the entry as stored.
+ */
+export async function moveHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<OnlyPlainHermidata> {
     try {
+        const moved = oldKey !== newKey;
         entry.id = newKey;
         entry.meta.updated = new Date().toISOString();
-        entry.meta.image = updateImageReference(entry, oldKey, newKey); // update image key
-        void recordIdRedirect(oldKey, newKey); // open pages can still find this entry through its old id
+        if (moved) {
+            entry.meta.image = updateImageReference(entry, oldKey, newKey); // update image key
+            void recordIdRedirect(oldKey, newKey); // open pages can still find this entry through its old id
+        }
 
         await putHermidata(entry, false)    // write new key to IndexedDB
-        await deleteHermidata(oldKey, false) // remove old key from IndexedDB
+        pushToSync(entry)                   // push new entry to sync
 
-        await updateImageKey(oldKey, newKey); // move associated images to new key
-
-        pushToSync(entry)             // push new entry to sync
-        removeFromSync(oldKey)        // remove old key from sync
+        if (moved) {
+            await deleteHermidata(oldKey, false) // remove old key from IndexedDB
+            await updateImageKey(oldKey, newKey); // move associated images to new key
+            removeFromSync(oldKey)        // remove old key from sync
+            console.log(`Migrated from ${oldKey} → ${newKey}`);
+        }
 
         PastHermidata.invalidateCache();
-        console.log(`Migrated from ${oldKey} → ${newKey}`);
         console.log(`[HermidataV3] Updated ${entry.title}`);
+        return entry;
     } catch (err) {
-        logConsoleError('[Storage] updateHermidata:', err);
+        logConsoleError('[Storage] moveHermidata:', err);
+        throw err;
     }
 }
 
@@ -560,98 +577,104 @@ export async function setLastLibrarySortOption(lastSortOption: LibraryAllSortsTy
 // db Access
 // ============================================================
 
-/** Access to IndexedDB and storage.sync data from different sources */
+/**
+ * The functions above that a page may run in the background, by name.
+ * The background runs the very same function, so a save does the same whoever asks for it.
+ */
+export const storageCalls = {
+    getSettings,
+    setSettings,
+    getAllHermidata,
+    saveHermidata,
+    moveHermidata,
+    removeHermidata,
+    saveAllHermidata,
+    setAllHermidata,
+    getAllRawFeeds,
+    setAllRawFeeds,
+    removeRawFeedByUrl,
+};
+export type StorageCallName = keyof typeof storageCalls;
+type StorageCalls = typeof storageCalls;
+export type StorageCallMessage = { type: 'STORAGE_CALL'; fn: StorageCallName; args: unknown[] };
+export type StorageCallResponse = { success: boolean; error?: string; result?: unknown };
+
+export function isStorageCall(fn: unknown): fn is StorageCallName {
+    return typeof fn === 'string' && Object.hasOwn(storageCalls, fn);
+}
+
+/** Runs one of the `storageCalls` and answers in the shape `dbAccess` expects */
+export async function runStorageCall(fn: unknown, args: unknown): Promise<StorageCallResponse> {
+    if (!isStorageCall(fn)) return { success: false, error: `Unknown storage call: ${String(fn)}` };
+    try {
+        const run = storageCalls[fn] as (...callArgs: unknown[]) => Promise<unknown>;
+        return { success: true, result: await run(...(Array.isArray(args) ? args : [])) };
+    } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+}
+
+/**
+ * How pages ( library, settings, reading list, RSS, popup ) reach IndexedDB and sync.
+ * Every method has the name of the function it runs in the background ( see `storageCalls` ) and does nothing else itself.
+ */
 export class dbAccess {
 
     public getSettings(): Promise<Settings> {
-        return this.dbRequest<Settings>('settings', { operation: 'get', payload: { id: 'Settings' } });
+        return this.call('getSettings');
     }
-    public setSettings(data: Settings): Promise<void> {
-        return this.dbRequest<void>('settings', { operation: 'put', payload: { id: 'Settings', data } });
+    public setSettings(settings: Settings): Promise<void> {
+        return this.call('setSettings', settings);
     }
-    public updateHermidata(data: OnlyPlainHermidata): Promise<void> {
-        return this.dbRequest<void>('hermidata', { operation: 'update', payload: { data } });
+    public getAllHermidata(): Promise<Record<string, OnlyPlainHermidata>> {
+        return this.call('getAllHermidata');
     }
-    public setHermidata(id: string, data: OnlyPlainHermidata): Promise<void> {
-        return this.dbRequest<void>('hermidata', { operation: 'put', payload: { id, data } });
+    /** Write an entry under its own id. The entry you pass gets the id and `meta.updated` that were stored */
+    public async saveHermidata(key: string, entry: OnlyPlainHermidata): Promise<void> {
+        adoptStored(entry, await this.call('saveHermidata', key, entry));
     }
-    public async getAllHermidata(): Promise<Record<string, OnlyPlainHermidata>> {
-        const existingDataList = await this.dbRequest<OnlyPlainHermidata[]>('hermidata', { operation: 'getAll' });
-        return Object.fromEntries(existingDataList.map(h => [h.id, h]));
+    /** Write an entry under `newKey` and remove `oldKey`. The entry you pass gets the id, image and `meta.updated` that were stored */
+    public async moveHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
+        adoptStored(entry, await this.call('moveHermidata', oldKey, newKey, entry));
     }
-    public async getAllFeeds(): Promise<RawFeed[]> {
-        return this.dbRequest<RawFeed[]>('feeds', { operation: 'getAll' });
+    public removeHermidata(id: string): Promise<void> {
+        return this.call('removeHermidata', id);
     }
-    public async putAllHermidata(hermidata: Record<string, OnlyPlainHermidata>): Promise<void> {
-        return this.dbRequest<void>('hermidata', { operation: 'putAll', payload: { data: hermidata } });
+    public saveAllHermidata(entries: OnlyPlainHermidata[]): Promise<void> {
+        return this.call('saveAllHermidata', entries);
     }
-    public async putAllFeeds(feeds: RawFeed[]): Promise<void> {
-        return this.dbRequest<void>('feeds', { operation: 'putAll', payload: { data: feeds } });
+    public setAllHermidata(entries: OnlyPlainHermidata[]): Promise<void> {
+        return this.call('setAllHermidata', entries);
     }
-    public async deleteHermidata(key: string): Promise<void> {
-        return this.dbRequest<void>('hermidata', { operation: 'delete', payload: {id: key} });
+    public getAllRawFeeds(): Promise<Record<string, RawFeed>> {
+        return this.call('getAllRawFeeds');
     }
-    public async updateImageKey(oldId: string, newId: string): Promise<void> {
-        return this.dbRequest<void>('images', { operation: 'updateImageKey', payload: { oldId, newId } });
+    public setAllRawFeeds(feeds: RawFeed[]): Promise<void> {
+        return this.call('setAllRawFeeds', feeds);
     }
-    public async pushToSync(data: OnlyPlainHermidata): Promise<void> {
-        return this.syncRequest<void>({ operation: 'pushToSync', payload: { data } });
-    }
-    public async removeFromSync(id: string): Promise<void> {
-        return this.syncRequest<void>({ operation: 'removeFromSync', payload: { id } });
-    }
-    public async changeHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
-        try {
-            entry.id = newKey;
-            entry.meta.updated = new Date().toISOString();
-            entry.meta.image = updateImageReference(entry, oldKey, newKey);
-    
-            await this.setHermidata(entry.id, entry)    // write new key to IndexedDB
-            await this.deleteHermidata(oldKey) // remove old key from IndexedDB
-    
-            await this.updateImageKey(oldKey, newKey); // move associated images to new key
-    
-            await this.pushToSync(entry); // push new entry to sync
-            await this.removeFromSync(oldKey); // remove old key from sync
-    
-            PastHermidata.invalidateCache();
-            console.log(`Migrated from ${oldKey} → ${newKey}`);
-            console.log(`[Hermidata] Updated ${entry.title}`);
-        } catch (err) {
-            logConsoleError('[Storage -|- db Access] updateHermidata:', err);
-        }
+    public removeRawFeedByUrl(url: string): Promise<boolean> {
+        return this.call('removeRawFeedByUrl', url);
     }
 
-    private dbRequest<T>(store: DbStore, call: DbCall): Promise<T> {
-        try {
-            return new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({ type: 'DB_OPERATION', store, call }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (response === undefined) reject(new Error('No response from background script'));
-                    if (!response) reject(new Error('No response from background script'));
-                    if (response.error?.includes('DataError')) reject(new Error(response.error + `\n Store: ${store} Call: ${ JSON.stringify(call)}`));
-                    if (!response?.success) reject(new Error(response.error));
-                    resolve(await response.result as T);
-                });
+    private call<Name extends StorageCallName>(fn: Name, ...args: Parameters<StorageCalls[Name]>): Promise<Awaited<ReturnType<StorageCalls[Name]>>> {
+        return new Promise((resolve, reject) => {
+            const message: StorageCallMessage = { type: 'STORAGE_CALL', fn, args };
+            chrome.runtime.sendMessage(message, (response?: StorageCallResponse) => {
+                const lastError = chrome.runtime?.lastError;
+                if (lastError) return reject(new Error(`${fn}: ${lastError.message}`));
+                if (!response) return reject(new Error(`${fn}: no response from the background script`));
+                // only what failed, never what was sent: the item itself does not belong in an error message
+                if (!response.success) return reject(new Error(`${fn}: ${response.error ?? 'failed'}`));
+                resolve(response.result as Awaited<ReturnType<StorageCalls[Name]>>);
             });
-        } catch (error) {
-            logConsoleError(error);
-            throw error;
-        }
+        });
     }
-    private syncRequest<T>(call: SyncCall): Promise<T> {
-        try {
-            return new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({ type: 'SYNC_OPERATION', call }, async (response: { success: boolean, error?: string, result?: any }) => {
-                    if (response === undefined) reject(new Error('No response from background script'));
-                    if (!response) reject(new Error('No response from background script'));
-                    if (response.error?.includes('DataError')) reject(new Error(response.error + `\n Call: ${ JSON.stringify(call)}`));
-                    if (!response?.success) reject(new Error(response.error));
-                    resolve(await response.result as T);
-                });
-            });
-        } catch (error) {
-            logConsoleError(error);
-            throw error;
-        }
-    }
+}
+
+/** Copy what the background stored ( id, image, `meta.updated` ) onto the caller's entry, as the direct function does */
+function adoptStored(entry: OnlyPlainHermidata, stored: OnlyPlainHermidata | undefined): void {
+    if (!stored) return;
+    entry.id = stored.id;
+    entry.meta.updated = stored.meta.updated;
+    entry.meta.image = stored.meta.image;
 }

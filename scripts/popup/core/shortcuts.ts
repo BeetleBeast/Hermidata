@@ -1,13 +1,15 @@
 // Start in the requested mode
 
 import { RSS } from "../../rss/main";
-import { getAllHermidata, getSettings } from "../../shared/db/Storage";
+import { dbAccess } from "../../shared/db/Storage";
 import type { CurrentTab, KeyboardShortcutSettings, Settings } from "../../shared/types";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { getChapterFromTitle } from "../../shared/utils/StringOutput";
 import { PastHermidata } from "./Past";
 import { matchesKeyboardShortcut, matchesShortcutKey } from "../../shared/utils/KeyboardShortcuts";
+
+const db = new dbAccess();
 
 let modeSwitcher: ModeSwitcher | undefined;
 let modeSwitcherPromise: Promise<ModeSwitcher> | undefined;
@@ -60,7 +62,7 @@ export async function shortcutEventListener(e: KeyboardEvent) {
 // ---------- Settings ----------
 
 function loadShortcutSettings(): Promise<ShortcutSettings> {
-    keyboardShortcutSettings ??= getSettings().then(settings => ({
+    keyboardShortcutSettings ??= db.getSettings().then(settings => ({
         enabled: settings.ExtensionBehaviour.EnableKeyboardShortcuts,
         shortcuts: settings.ExtensionBehaviour.KeyboardShortcuts,
     }));
@@ -198,7 +200,7 @@ export class ModeSwitcher {
 
         this.Hermidata = await this.createHermidataFromDOM();
 
-        this.RSS = new RSS(this.Hermidata!, await getAllHermidata());
+        this.RSS = new RSS(this.Hermidata!, await PastHermidata.getAllHermidata());
     }
 
     public async setMode(mode: "classic" | "rss"): Promise<void> {
@@ -235,7 +237,7 @@ export class ModeSwitcher {
     private async createHermidataFromDOM(): Promise<HermidataModel | null> {
         const [ CurrentTabInfo, settings ]: [CurrentTab, Settings] = await Promise.all([
             ModeSwitcher.getCurrentTabInfo(),
-            getSettings(),
+            db.getSettings(),
         ]);
     
         const defaultNovelType = settings.DefaultBookmarkSettings.DefaultChoice.novelType;

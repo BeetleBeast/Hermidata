@@ -1,5 +1,4 @@
 import { type Hermidata, type Settings } from "../../shared/types/index";
-import { getSettings } from "../../shared/db/Storage";
 import { markAsCombobox, markAsOption, setActiveOption } from "../../shared/utils/Accessibility";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import { Sort } from "./Sort";
@@ -13,7 +12,7 @@ export class SortOption extends Sort {
     public async makeSortOptions(parent_section: HTMLElement): Promise<void> {
         if (getElement('.mainContainerHeader')) return;
 
-        const settings = await getSettings();
+        const settings = await this.db.getSettings();
         
         const mainContainer = this.CreateMainContainer(settings);
         parent_section.appendChild(mainContainer);

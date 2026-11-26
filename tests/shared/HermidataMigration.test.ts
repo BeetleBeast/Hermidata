@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HermidataMigration } from '../../scripts/shared/migration/Hermidata';
-import { removeHermidata, updateHermidata } from '../../scripts/shared/db/Storage';
+import { removeHermidata, moveHermidata } from '../../scripts/shared/db/Storage';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash } from '../../scripts/shared/utils/StringOutput';
 
@@ -10,7 +10,7 @@ vi.mock('../../scripts/shared/db/Storage', () => ({
     removeHermidata: vi.fn().mockResolvedValue(undefined),
     setAllHermidata: vi.fn(),
     setAllRawFeeds: vi.fn(),
-    updateHermidata: vi.fn().mockResolvedValue(undefined),
+    moveHermidata: vi.fn().mockResolvedValue(undefined),
 }));
 
 function createHermidata(novelType: string, title = 'Series'): HermidataModel {
@@ -60,7 +60,7 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
         const animeId = generateHermidataHash(animeResult.title, animeResult.novelType);
         expect(animeResult.novelType).toBe('Anime');
         expect(animeResult.id).toBe(animeId);
-        expect(updateHermidata).toHaveBeenCalledWith(original.id, animeId, animeResult);
+        expect(moveHermidata).toHaveBeenCalledWith(original.id, animeId, animeResult);
 
         const changedBackToManga = createHermidata('Manga');
         const mangaResult = await HermidataMigration.mergeTwoHermidata(
@@ -74,7 +74,7 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
         const mangaId = generateHermidataHash(mangaResult.title, mangaResult.novelType);
         expect(mangaResult.novelType).toBe('Manga');
         expect(mangaResult.id).toBe(mangaId);
-        expect(updateHermidata).toHaveBeenNthCalledWith(2, animeId, mangaId, mangaResult);
+        expect(moveHermidata).toHaveBeenNthCalledWith(2, animeId, mangaId, mangaResult);
     });
 
     it('recomputes the ID and removes both original keys when configured merge changes identity', async () => {
@@ -100,12 +100,34 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
             removedIds: [keep.id, discard.id],
             addedId: expectedId,
         });
-        expect(updateHermidata).toHaveBeenCalledWith(discard.id, expectedId, expect.objectContaining({
+        expect(moveHermidata).toHaveBeenCalledWith(discard.id, expectedId, expect.objectContaining({
             id: expectedId,
             title: keep.title,
             novelType: 'Anime',
         }));
         expect(removeHermidata).toHaveBeenCalledWith(keep.id);
+    });
+
+    it('does not report the merged item as removed when its new ID is the ID of the discarded one', async () => {
+        const keep = createHermidata('Manga');
+        const discard = createHermidata('Anime', 'Series Alt');
+        const expectedId = generateHermidataHash(keep.title, 'Anime', keep.GetUrl());
+        discard.id = expectedId; // the merge lands on the discarded item's own key
+
+        const result = await HermidataMigration.mergeTwoHermidataWithConfiguration(
+            keep,
+            discard,
+            {
+                keepId: keep.id,
+                removeId: discard.id,
+                resolutions: { title: 'A', novelType: 'B' },
+            },
+        );
+
+        expect(result).toEqual({ merged: true, removedIds: [keep.id], addedId: expectedId });
+        expect(moveHermidata).toHaveBeenCalledWith(expectedId, expectedId, expect.objectContaining({ id: expectedId }));
+        expect(removeHermidata).toHaveBeenCalledWith(keep.id);
+        expect(removeHermidata).not.toHaveBeenCalledWith(expectedId);
     });
 
     it('keeps the existing ID and removes only the discarded key when identity is unchanged', async () => {
@@ -129,7 +151,7 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
             removedIds: [discard.id],
             addedId: keep.id,
         });
-        expect(updateHermidata).toHaveBeenCalledWith(discard.id, keep.id, expect.objectContaining({
+        expect(moveHermidata).toHaveBeenCalledWith(discard.id, keep.id, expect.objectContaining({
             id: keep.id,
             title: keep.title,
             novelType: keep.novelType,

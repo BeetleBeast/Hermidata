@@ -50,9 +50,9 @@ export class TagManagement extends Build {
     }
     public async resetValues() {
         // reset settings in IndexedDB
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         settings.TagManagement = defaultSettings.TagManagement;
-        await this.setSettings(settings);
+        await this.db.setSettings(settings);
         await this.ReloadForms();
     }
 
@@ -165,11 +165,11 @@ export class TagManagement extends Build {
         this.tagMergeSelect2?.addEventListener('change', () => this.syncBoth(this.tagMergeSelect1, this.tagMergeSelect2));
     }
     private async addNewTag() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         const newTag = this.addTag?.value;
         if (newTag) {
             settings.TagManagement.tagColoring[newTag] = this.setNewColor();
-            await this.setSettings(settings);
+            await this.db.setSettings(settings);
         }
     }
     private setNewColor() {
@@ -198,7 +198,7 @@ export class TagManagement extends Build {
     }
 
     private async getAllTagsUsed(): Promise<Map<number, string>> {
-        const allHermidataRecord = await this.getAllHermidata();
+        const allHermidataRecord = await this.db.getAllHermidata();
         const allHermidata = Object.values(allHermidataRecord);
         const allTagsUsed = allHermidata.flatMap(item => item.meta?.tags || []);
         const tagsSet = new Set(allTagsUsed);
@@ -226,8 +226,8 @@ export class TagManagement extends Build {
         console.log("Tag colors saved.");
     }
     private async saveTagColoring(tagColoringInput: { [tag: string]: string }) {
-        const settings = await this.getSettings();
-        await this.setSettings({ ...settings, TagManagement: { ...settings.TagManagement, tagColoring: tagColoringInput } });
+        const settings = await this.db.getSettings();
+        await this.db.setSettings({ ...settings, TagManagement: { ...settings.TagManagement, tagColoring: tagColoringInput } });
         console.log("Tag colors saved.");
     }
 
@@ -248,21 +248,15 @@ export class TagManagement extends Build {
         this.allTagsUsed.forEach(f => { if (!alreadyExist[f]) this.tagColoring[f] = 'white' })
     }
     private async updateTag(oldTag: string, newTag: string) {
-        const Settings = await this.getSettings();
+        const Settings = await this.db.getSettings();
 
         // update color of new tag
         this.tagColoring[newTag] = this.tagColoring[oldTag];
         delete this.tagColoring[oldTag];
-        await this.setSettings({ ...Settings, TagManagement: { ...Settings.TagManagement, tagColoring: this.tagColoring } });
+        await this.db.setSettings({ ...Settings, TagManagement: { ...Settings.TagManagement, tagColoring: this.tagColoring } });
 
         // update all hermidata
-        const allHermidata = await this.getAllHermidata();
-        for (const hermidata of Object.values(allHermidata)) {
-            if (hermidata.meta?.tags && hermidata.meta.tags.includes(oldTag)) {
-                hermidata.meta.tags = hermidata.meta.tags.map(t => t === oldTag ? newTag : t);
-                await this.updateHermidata(hermidata);
-            }
-        }
+        await this.changeTagOnItems(oldTag, tags => tags.map(t => t === oldTag ? newTag : t));
         await this.ResetLocalFilters();
     }
     private async deleteTag(tag: string) {
@@ -271,23 +265,21 @@ export class TagManagement extends Build {
         await this.saveAllTagColoring();
 
         // remove all instance of tag
-        const allHermidata = await this.getAllHermidata();
-        for (const hermidata of Object.values(allHermidata)) {
-            if (hermidata.meta?.tags && hermidata.meta.tags.includes(tag)) {
-                hermidata.meta.tags = hermidata.meta.tags.filter(t => t !== tag);
-                await this.updateHermidata(hermidata);
-            }
-        }
+        await this.changeTagOnItems(tag, tags => tags.filter(t => t !== tag));
         await this.ResetLocalFilters();
     }
     private async mergeTags(toBeRemovedTag: string, trueTag: string) {
-        const allHermidata = await this.getAllHermidata();
-        for (const hermidata of Object.values(allHermidata)) {
-            if (hermidata.meta?.tags && hermidata.meta.tags.includes(toBeRemovedTag)) {
-                hermidata.meta.tags = hermidata.meta.tags.map(t => t === toBeRemovedTag ? trueTag : t);
-                await this.updateHermidata(hermidata);
-            }
-        }
+        await this.changeTagOnItems(toBeRemovedTag, tags => tags.map(t => t === toBeRemovedTag ? trueTag : t));
         await this.ResetLocalFilters();
+    }
+    /** Rewrites the tags of every item that has `tag`, and saves those items in one go ( stamped, so sync carries it ) */
+    private async changeTagOnItems(tag: string, change: (tags: string[]) => string[]): Promise<void> {
+        const changed: Hermidata[] = [];
+        for (const hermidata of Object.values(await this.db.getAllHermidata())) {
+            if (!hermidata.meta?.tags?.includes(tag)) continue;
+            hermidata.meta.tags = change(hermidata.meta.tags);
+            changed.push(hermidata);
+        }
+        await this.db.saveAllHermidata(changed);
     }
 }

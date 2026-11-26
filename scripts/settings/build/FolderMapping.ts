@@ -154,16 +154,16 @@ export class FolderMapping extends Build {
         });
     }
     private async refresh(): Promise<void> {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         this.loadExistingAliases(settings);
         this.loadExistingRules(settings);
         this.populateAddAliases(settings);
     }
     public async resetValues() {
         // reset settings in IndexedDB
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         settings.FolderMapping = defaultSettings.FolderMapping;
-        await this.setSettings(settings);
+        await this.db.setSettings(settings);
         await this.refresh();
     }
     private cutSuggestion(suggestion: string, rule: string): string {
@@ -291,7 +291,7 @@ export class FolderMapping extends Build {
         return trimmed;
     }
     private async addNewAliasToFolderMapping(originalName: AnyNovelType | AnyReadStatus, newAlias: string, isANovelType: boolean): Promise<void> {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
 
         // check if already exists
         const existAlready = isANovelType ? settings.FolderMapping.typeAliases?.[originalName] : settings.FolderMapping.statusFolders?.[originalName]
@@ -304,7 +304,7 @@ export class FolderMapping extends Build {
         if (!isANovelType) settings.FolderMapping.statusFolders[originalName] = newAlias;
 
 
-        await this.setSettings(settings);
+        await this.db.setSettings(settings);
         await this.refresh();
     }
 
@@ -534,7 +534,7 @@ export class FolderMapping extends Build {
             if (!path.trim()) throw new Error('Path cannot be empty')
             if (!type && !status) throw new Error('At least one of type or status must be set')
 
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const mapping = settings.FolderMapping
 
             // Check if an identical rule already exists
@@ -549,7 +549,7 @@ export class FolderMapping extends Build {
 
             const updatedMapping: FolderMappingType = { ...mapping, overrides: [...(mapping.overrides ?? []), newRule] }
 
-            await this.setSettings({ ...settings, FolderMapping: updatedMapping });
+            await this.db.setSettings({ ...settings, FolderMapping: updatedMapping });
             await this.refresh();
 
             this.temporaryStatus( `Rule added: ${type ?? 'any'} + ${status ?? 'any'} → ${path}`, this.saveStatusFolderMapping_newOverrides)
@@ -562,7 +562,7 @@ export class FolderMapping extends Build {
     }
     private async removeAliasFromFolderMapping( OriginalName: string, isNovelType: boolean ): Promise<void> {
         try {
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const mappingAlias = isNovelType ? settings.FolderMapping.typeAliases : settings.FolderMapping.statusFolders
 
             // Early checks to prevent unnecessary operations
@@ -579,7 +579,7 @@ export class FolderMapping extends Build {
             else delete settings.FolderMapping.statusFolders[OriginalName]
             
 
-            await this.setSettings(settings);
+            await this.db.setSettings(settings);
             await this.refresh();
 
             this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overrides)
@@ -592,7 +592,7 @@ export class FolderMapping extends Build {
     }
     private async removeFolderMappingRule( type: AnyNovelType | undefined, status: AnyReadStatus | undefined ): Promise<void> {
         try {
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const mapping = settings.FolderMapping;
 
             const before = mapping.overrides?.length ?? 0
@@ -602,7 +602,7 @@ export class FolderMapping extends Build {
 
             if (filtered.length === before) throw new Error(`No rule found for ${type ?? 'any'} + ${status ?? 'any'}`)
 
-            await this.setSettings({ ...settings, FolderMapping: { ...mapping, overrides: filtered } });
+            await this.db.setSettings({ ...settings, FolderMapping: { ...mapping, overrides: filtered } });
             await this.refresh();
 
             this.temporaryStatus(`Rule removed`, this.saveStatusFolderMapping_overrides)
@@ -621,9 +621,9 @@ export class FolderMapping extends Build {
             if (folderName === Alias) throw new Error('Folder name and Alias cannot be the same')
 
 
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, typeAliases: { ...settings.FolderMapping.typeAliases, [folderName]: Alias.trim() }}};
-            await this.setSettings(mergedData);
+            await this.db.setSettings(mergedData);
             await this.refresh();
 
             this.temporaryStatus(`Saved: ${folderName} → ${Alias}`, this.saveStatusFolderMapping_newAliases)
@@ -639,9 +639,9 @@ export class FolderMapping extends Build {
             if (folderName === Alias) throw new Error('Folder name and Alias cannot be the same')
 
 
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, statusFolders: { ...settings.FolderMapping.statusFolders, [folderName]: Alias.trim() }}};
-            await this.setSettings(mergedData);
+            await this.db.setSettings(mergedData);
             await this.refresh();
 
             this.temporaryStatus(`Saved: ${folderName} → ${Alias}`, this.saveStatusFolderMapping_newAliases)
@@ -656,9 +656,9 @@ export class FolderMapping extends Build {
             const path = this.unsortedPath?.value.trim()
             if (!path) throw new Error('Path cannot be empty')
 
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, defaultPath: path.trim() } };
-            await this.setSettings(mergedData);
+            await this.db.setSettings(mergedData);
             await this.refresh();
 
             this.temporaryStatus(`Saved: ${path}`, this.unsortedPathStatus)
@@ -674,9 +674,9 @@ export class FolderMapping extends Build {
             const path = this.rootPath?.value.trim()
             if (!path) throw new Error('Path cannot be empty')
 
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const mergedData = { ...settings, FolderMapping: { ...settings.FolderMapping, root: path.trim() } };
-            await this.setSettings(mergedData);
+            await this.db.setSettings(mergedData);
             await this.refresh();
 
             this.temporaryStatus(`Saved: ${path}`, this.rootPathStatus)
@@ -698,7 +698,7 @@ export class FolderMapping extends Build {
     private async getAllPossiblePaths(): Promise<string[] | null> {
         // Implementation for getting all possible paths
         // get root path from settings
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         const rootPath = settings.FolderMapping.root ?? null;
         // send request to background
         return await this.getAllPossiblePathsFromBackground(rootPath);

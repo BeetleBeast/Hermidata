@@ -156,10 +156,10 @@ export class ExtensionBehavior extends Build {
     public async resetValues() {
         this.CancelShortcutCapture();
         // reset all values from inputs to default
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         const updatedSettings: Settings = { ...settings, ExtensionBehaviour: { ...defaultSettings.ExtensionBehaviour } };
         // reset settings in IndexedDB
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
 
         this.setValueOptionKeyboardShortcuts(updatedSettings);
         this.setValueKeyboardShortcuts(updatedSettings.ExtensionBehaviour.KeyboardShortcuts);
@@ -332,7 +332,7 @@ export class ExtensionBehavior extends Build {
 
             const updatedShortcuts = { ...shortcuts, [action]: shortcut };
             settings.ExtensionBehaviour.KeyboardShortcuts = updatedShortcuts;
-            await this.setSettings(settings);
+            await this.db.setSettings(settings);
             this.setShortcutButtonValue(button, shortcut);
             this.setShortcutStatus("Shortcut saved.");
         } catch (error) {
@@ -395,7 +395,7 @@ export class ExtensionBehavior extends Build {
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.EnableLightMode = isChecked;
 
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
     }
 
     // Enable Context Menu
@@ -405,7 +405,7 @@ export class ExtensionBehavior extends Build {
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.AllowContextMenu = isChecked;
 
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
     }
 
     // Enable Notification
@@ -415,7 +415,7 @@ export class ExtensionBehavior extends Build {
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.EnableNotification = isChecked ? "Badge" : "None";
 
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
 
         this.updateNotificationSubMenu(event);
     }
@@ -440,13 +440,13 @@ export class ExtensionBehavior extends Build {
         if (!notificationParentIsChecked && updatedSettings.ExtensionBehaviour.EnableNotification === "None") return;
         else if (!notificationParentIsChecked) {
             updatedSettings.ExtensionBehaviour.EnableNotification = "None";
-            this.setSettings(updatedSettings);
+            this.db.setSettings(updatedSettings);
             return;
         }
         
         updatedSettings.ExtensionBehaviour.EnableNotification = isChecked ? event.value as NotificationTypes : "None";
 
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
     }
 
     // Keyboard Shortcuts
@@ -456,7 +456,7 @@ export class ExtensionBehavior extends Build {
         if (!isChecked) this.CancelShortcutCapture();
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.EnableKeyboardShortcuts = isChecked;
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
         if (this.keyboardShortcutsList) this.keyboardShortcutsList.hidden = !isChecked;
         this.setShortcutStatus(isChecked ? "Keyboard shortcuts enabled." : "Keyboard shortcuts disabled.");
     }
@@ -465,14 +465,14 @@ export class ExtensionBehavior extends Build {
         const isChecked = (e.target as HTMLInputElement).checked;
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.AutoReadingList = { enabled: isChecked };
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
     }
     // MangaUpdates release feeds ( linked on the next feed check )
     private async EnableMangaUpdatesFeeds(e: Event) {
         const isChecked = (e.target as HTMLInputElement).checked;
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.MangaUpdatesFeeds = { Enable: isChecked };
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
     }
     // Alt title lookup
     private async EnableAltTitleLookup(e: Event) {
@@ -482,7 +482,7 @@ export class ExtensionBehavior extends Build {
         // the MangaUpdates feeds are its sub-option: switching the lookup off switches them off too
         if (!isChecked) updatedSettings.ExtensionBehaviour.MangaUpdatesFeeds = { Enable: false };
 
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
         this.setValueOptionMangaUpdatesFeeds(updatedSettings);
 
         try {
@@ -498,7 +498,7 @@ export class ExtensionBehavior extends Build {
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.RssCheckIntervalMinutes = resolveRssCheckInterval(Number(select.value));
         select.value = String(updatedSettings.ExtensionBehaviour.RssCheckIntervalMinutes);
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
     }
     // Tombstone TTL
     private async TombstoneTtlDays(e: Event) {
@@ -506,7 +506,7 @@ export class ExtensionBehavior extends Build {
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.TombstoneTtlDays = resolveTombstoneTtlDays(Number(input.value));
         input.value = String(updatedSettings.ExtensionBehaviour.TombstoneTtlDays);
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
     }
     /** Asks once whether to look up the items already saved; "Later" keeps the setting on, so items are looked up as they are saved */
     private async offerAltTitleBackfill() {
@@ -583,7 +583,7 @@ export class ExtensionBehavior extends Build {
 
         this.enableAutoSubscribeThreshold!.disabled = !isChecked;
 
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
     }
     // Auto Subscribe - Allow Similarity Scanning
     private async AllowSimilarityScanning(e: Event) {
@@ -594,7 +594,7 @@ export class ExtensionBehavior extends Build {
 
         this.autoSubscribeThreshold!.disabled = !isChecked;
 
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
     }
     // Auto Subscribe - Threshold
     private async AutoSubscribeThreshold(e: Event) {
@@ -605,7 +605,7 @@ export class ExtensionBehavior extends Build {
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.AutoSubscribe.Threshold = Number(event.value);
 
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
     }
     private ensurePointNine(value: string) {
         const parsedValue = Number(value);
@@ -648,7 +648,7 @@ export class ExtensionBehavior extends Build {
 
         if (target === "Spreadsheet") this.updateSpreadsheetReminder(isChecked, updatedSettings.AccountAndConnections.spreadsheetUrl);
         if (target === "Bookmark") this.bookmarkTitleFormat.setEnabled(isChecked);
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
         if (target === "Spreadsheet") document.dispatchEvent(new CustomEvent("hermidata:spreadsheet-target-changed", { detail: isChecked }));
     }
 
@@ -657,7 +657,7 @@ export class ExtensionBehavior extends Build {
         if (this.spreadsheetTargetReminder) this.spreadsheetTargetReminder.hidden = !enabled || Boolean(url.trim());
     }
     private async refreshSpreadsheetReminder() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         this.updateSpreadsheetReminder(settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet, settings.AccountAndConnections.spreadsheetUrl);
     }
 
@@ -681,7 +681,7 @@ export class ExtensionBehavior extends Build {
         this.autoUpdateNovelStatusOnlyRSS.checked = mode === 'rss';
 
         updatedSettings.ExtensionBehaviour.AutoSetStatusScore = { mode };
-        this.setSettings(updatedSettings);
+        this.db.setSettings(updatedSettings);
     }
 
 }

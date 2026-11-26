@@ -317,7 +317,7 @@ export class LibrarySync extends Build {
     }
 
     private async deviceHasLibrary(): Promise<boolean> {
-        return Object.keys(await this.getAllHermidata()).length > 0;
+        return Object.keys(await this.db.getAllHermidata()).length > 0;
     }
 
     private askChoice(config: SyncBackendConfig): Promise<Choice> {

@@ -3,7 +3,7 @@ import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
-import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, updateHermidata } from "../db/Storage";
+import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, moveHermidata } from "../db/Storage";
 import { getChapterFromTitle, normalizeDateToIso, generateBookmarkId, generateHermidataHash, generateRawFeedId, TrimTitle } from "..//utils/StringOutput";
 import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, BookmarkV4, BookmarkV5, Feed, FeedItem, FeedV1, Hermidata, HermidataImageSource, HermidataV1, HermidataV10, HermidataV11, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
@@ -153,7 +153,7 @@ export class HermidataMigration {
     
         // Save and remove the old entry key
         if (!(merged instanceof Error)) {
-            await updateHermidata(older.id, merged.id, merged);
+            await moveHermidata(older.id, merged.id, merged);
             console.log(`Merged "${older.title}" into "${newer.title}"`);
         } else {
             logConsoleError(`Merge failed for:`, older.title, newer.title);
@@ -467,7 +467,7 @@ export class HermidataMigration {
             }
         }
         // step 3. save & remove key ( awaited, so a save right after the merge finds the merged item )
-        await updateHermidata(oldKey, newKey, merged);
+        await moveHermidata(oldKey, newKey, merged);
 
         return merged;
     
@@ -648,13 +648,12 @@ export class HermidataMigration {
             merged.id = this.recomputeHermidataId(merged);
             
             if (merged.id !== recordToKeep.id) {
-                removedIds.push(recordToKeep.id);
-                removedIds.push(recordToRemove.id);
-                // identity shifted — neither original key is valid for the merged record
-                await updateHermidata(recordToRemove.id, merged.id, merged);
+                // identity shifted — neither original key is valid for the merged record, unless it came out as the id of one of them
+                removedIds.push(...[recordToKeep.id, recordToRemove.id].filter(id => id !== merged.id));
+                await moveHermidata(recordToRemove.id, merged.id, merged);
                 await removeHermidata(recordToKeep.id);
             } else {
-                await updateHermidata(recordToRemove.id, merged.id, merged);
+                await moveHermidata(recordToRemove.id, merged.id, merged);
                 removedIds.push(recordToRemove.id);
             }
 

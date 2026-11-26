@@ -19,7 +19,7 @@ export class Account_Connection extends Build {
 
 
     public async init() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         if (this.spreadsheetInput) this.spreadsheetInput.value = settings.AccountAndConnections.spreadsheetUrl;
         if (this.tabInput) this.tabInput.value = resolveSheetName(settings.AccountAndConnections.sheetName);
         this.showSheetCard(settings.ExtensionBehaviour.SaveTarget.GoogleSpreadsheet);
@@ -32,10 +32,10 @@ export class Account_Connection extends Build {
         if (this.sheetCard) this.sheetCard.hidden = !enabled;
     }
     public async resetValues() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         settings.AccountAndConnections.spreadsheetUrl = "";
         settings.AccountAndConnections.sheetName = DEFAULT_SHEET_NAME;
-        await this.setSettings(settings);
+        await this.db.setSettings(settings);
         if (this.spreadsheetInput) this.spreadsheetInput.value = "";
         if (this.tabInput) this.tabInput.value = DEFAULT_SHEET_NAME;
         this.notifyUrlChanged();
@@ -88,10 +88,10 @@ export class Account_Connection extends Build {
         if (!result) return;
         if (!result.check.ok) { this.showCheck(result.check, result.sheetName, ""); return; }
 
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         settings.AccountAndConnections.spreadsheetUrl = result.url;
         settings.AccountAndConnections.sheetName = result.sheetName;
-        await this.setSettings(settings);
+        await this.db.setSettings(settings);
         if (this.tabInput) this.tabInput.value = result.sheetName;
         this.notifyUrlChanged();
         this.showCheck(result.check, result.sheetName, "Saved. Connected to");

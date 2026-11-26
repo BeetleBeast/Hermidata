@@ -38,16 +38,16 @@ export class ContentTypesAndStatuses extends Build {
         if (this.newReadStatus) this.newReadStatus.value = "";
 
         // reset settings in IndexedDB
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         settings.ContentTypesAndStatuses.TYPE_OPTIONS = defaultSettings.ContentTypesAndStatuses.TYPE_OPTIONS;
         settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS = defaultSettings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS;
         settings.ContentTypesAndStatuses.STATUS_OPTIONS = defaultSettings.ContentTypesAndStatuses.STATUS_OPTIONS;
-        await this.setSettings(settings);
+        await this.db.setSettings(settings);
         await this.populateSelects();
     }
 
     private async populateSelects() {
-        this.settings = await this.getSettings();
+        this.settings = await this.db.getSettings();
 
         const AllNovelTypes = this.settings.ContentTypesAndStatuses.TYPE_OPTIONS;
         const AllNovelStatuses = this.settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS;
@@ -91,7 +91,7 @@ export class ContentTypesAndStatuses extends Build {
             settings.ContentTypesAndStatuses.TYPE_OPTIONS = settings.ContentTypesAndStatuses.TYPE_OPTIONS.filter((novelType) => novelType !== input);
             settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS = settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS.filter((novelStatus) => novelStatus !== input);
             settings.ContentTypesAndStatuses.STATUS_OPTIONS = settings.ContentTypesAndStatuses.STATUS_OPTIONS.filter((readStatus) => readStatus !== input);
-            this.setSettings(settings);
+            this.db.setSettings(settings);
             this.ResetLocalFilters();
         });
 
@@ -103,34 +103,34 @@ export class ContentTypesAndStatuses extends Build {
 
 
     private async saveNewNovelType() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         const newNovelType = this.newNovelType?.value as AnyNovelType | undefined;
 
         if (!newNovelType) return;
 
         settings.ContentTypesAndStatuses.TYPE_OPTIONS.push(newNovelType);
         this.ResetLocalFilters();
-        this.setSettings(settings);
+        this.db.setSettings(settings);
     }
     private async saveNewNovelStatus() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         const newNovelStatus = this.newNovelStatus?.value as AnyNovelType | undefined;
 
         if (!newNovelStatus) return;
         
         settings.ContentTypesAndStatuses.NOVEL_STATUS_OPTIONS.push(newNovelStatus);
         this.ResetLocalFilters();
-        this.setSettings(settings);
+        this.db.setSettings(settings);
     }
     private async saveNewReadStatus() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         const newReadStatus = this.newReadStatus?.value as AnyNovelType | undefined;
 
         if (!newReadStatus) return;
         
         settings.ContentTypesAndStatuses.STATUS_OPTIONS.push(newReadStatus);
         this.ResetLocalFilters();
-        this.setSettings(settings);
+        this.db.setSettings(settings);
     }
 
 }
