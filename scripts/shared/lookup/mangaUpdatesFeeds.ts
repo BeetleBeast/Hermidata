@@ -1,5 +1,6 @@
 import type { Hermidata, MangaUpdatesFeedProgress, MangaUpdatesFeedScan, Settings } from "../types/index";
 import { isLookupEnabled } from "./altTitleLookup";
+import { hasRealImage } from "../utils/ImageSource";
 import { formatDuration, MAX_ETA_MS } from "./mangaUpdatesPace";
 import { kindOfType, pickCandidate } from "./matching";
 import { searchMangaUpdates, type Fetcher } from "./sources";
@@ -18,6 +19,8 @@ export const MANGAUPDATES_BATCH_SIZE = 8;
 export const MANGAUPDATES_RETRY_KEY = 'mangaUpdatesRetryAfter';
 /** A title MangaUpdates had no clear match for is searched again after this long */
 export const MANGAUPDATES_NO_MATCH_WAIT_MS = 30 * 24 * 60 * 60 * 1000;
+/** A linked title whose series has no cover ( or none could be read ) is not asked again for this long */
+export const MANGAUPDATES_NO_COVER_WAIT_MS = 30 * 24 * 60 * 60 * 1000;
 /** A title whose search timed out waits this long, so one that always times out doesn't hold up the rest */
 export const MANGAUPDATES_TIMEOUT_WAIT_MS = 60 * 60 * 1000;
 /** An item whose feed could not be linked ( no such feed, an empty one ) is tried again after this long, so it can't hold up the others */
@@ -25,7 +28,7 @@ export const MANGAUPDATES_FAILED_WAIT_MS = 24 * 60 * 60 * 1000;
 /** Titles tried per item: the title, then alt titles */
 const MAX_SEARCHES_PER_ITEM = 3;
 
-const FEED_URL_PATTERN = /^https:\/\/api\.mangaupdates\.com\/v1\/series\/[^/]+\/rss$/;
+const FEED_URL_PATTERN = /^https:\/\/api\.mangaupdates\.com\/v1\/series\/([^/]+)\/rss$/;
 
 export function mangaUpdatesFeedUrl(seriesId: string): string {
     return `https://api.mangaupdates.com/v1/series/${encodeURIComponent(seriesId)}/rss`;
@@ -33,6 +36,12 @@ export function mangaUpdatesFeedUrl(seriesId: string): string {
 
 export function isMangaUpdatesFeedUrl(url: string): boolean {
     return FEED_URL_PATTERN.test(url);
+}
+
+/** The series id in a MangaUpdates release feed address; null for any other address */
+export function seriesIdOfFeedUrl(url: string): string | null {
+    const id = FEED_URL_PATTERN.exec(url)?.[1];
+    return id ? decodeURIComponent(id) : null;
 }
 
 /** Where the background keeps the linking progress ( storage.local: every device runs its own ) */
@@ -49,11 +58,13 @@ export function isMangaUpdatesFeedsEnabled(settings: Settings | null | undefined
 /** Text for the progress line under the setting; `now` lets the countdown tick without a new progress */
 export function mangaUpdatesFeedLabel(progress: MangaUpdatesFeedProgress, now: number = Date.now()): string {
     const { running, unavailable, done, total, waiting, etaAt, etaCapped, pausedUntil } = progress;
+    const coversLeft = progress.coversLeft ?? 0; // progress stored by an older version has none
     if (running) {
         const left = etaAt === null ? 0 : etaAt - now;
         const eta = etaCapped ? `More than ${formatDuration(MAX_ETA_MS)} to go.` : etaAt === null || left <= 0 ? 'Almost done.' : `Done in ${formatDuration(left)}.`;
         const pause = pausedUntil !== null && pausedUntil > now ? ` Paused to give MangaUpdates a rest, continuing in ${formatDuration(pausedUntil - now)}.` : '';
-        return `Linking MangaUpdates feeds: ${done} of ${total}.${pause} ${eta}`;
+        const covers = coversLeft > 0 ? ` ${coversLeft} cover${coversLeft === 1 ? '' : 's'} to add.` : '';
+        return `Linking MangaUpdates feeds: ${done} of ${total}.${covers}${pause} ${eta}`;
     }
     if (unavailable) return `MangaUpdates did not answer: ${done} of ${total} linked, trying again within the hour.`;
     const retry = waiting ? ` ${waiting} will be tried again later.` : '';
@@ -63,18 +74,24 @@ export function mangaUpdatesFeedLabel(progress: MangaUpdatesFeedProgress, now: n
 /**
  * Sorts every item for the MangaUpdates feed step and counts why the others are left out ( for the log ).
  * - `notLinked`: declined in auto-subscribe, or unsubscribed
- * - `retryAfter`: item id → ISO time before which the item is left alone ( it had no match, or its feed would not link )
+ * - `retryAfter`: item id → ISO time before which the item is left alone ( it had no match, its feed would not link,
+ *   or its series has no cover )
  */
 export function scanForMangaUpdatesFeeds(items: Hermidata[], notLinked: Record<string, string>, retryAfter: Record<string, string>, now: number = Date.now()): MangaUpdatesFeedScan {
-    const scan: MangaUpdatesFeedScan = { candidates: [], linked: 0, unsubscribed: 0, notMatched: 0, waiting: 0 };
+    const scan: MangaUpdatesFeedScan = { candidates: [], coverOnly: [], linked: 0, unsubscribed: 0, notMatched: 0, waiting: 0 };
     for (const item of items) {
         const external = item?.meta?.external;
         if (external?.status !== 'matched') {
             scan.notMatched++;
             continue;
         }
-        if ((item.rss ?? []).some(feed => isMangaUpdatesFeedUrl(feed.url))) {
+        const feed = (item.rss ?? []).find(candidate => isMangaUpdatesFeedUrl(candidate.url));
+        if (feed) {
             scan.linked++;
+            // linked before covers were filled in, or the cover could not be had: fetched now, then not again for a month
+            const seriesId = seriesIdOfFeedUrl(feed.url);
+            const waiting = Date.parse(retryAfter[item.id] ?? '') > now;
+            if (seriesId && !hasRealImage(item.meta.image) && !waiting) scan.coverOnly.push({ item, seriesId, coverOnly: true });
             continue;
         }
         if (item.id in notLinked) {

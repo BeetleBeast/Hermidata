@@ -252,6 +252,15 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     await saveHermidata(saveKey, entry);
 }
 
+/** Gives an item a cover when it has no image of its own; false when it keeps the image it has */
+export async function setCoverIfMissing(itemId: string, coverUrl: string): Promise<boolean> {
+    const entry = await getHermidataViaKey(itemId);
+    if (!entry || hasRealImage(entry.meta.image)) return false;
+    entry.meta.image = { kind: 'url', url: coverUrl };
+    await saveHermidata(itemId, entry);
+    return true;
+}
+
 /** Finds ( or makes ) the item for a feed by its title; refuses to pick between several same-titled items */
 async function findEntryByTitle(title: string, type: AnyNovelType, url: string, rssData: RawFeed): Promise<{ entry: Hermidata, saveKey: string }> {
     // check if new entry is inside database

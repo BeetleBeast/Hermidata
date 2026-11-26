@@ -7,6 +7,7 @@ const store = vi.hoisted(() => ({
     settings: {} as Partial<Settings>,
     rawFeeds: [] as RawFeed[],
     linked: [] as Array<{ itemId: string | undefined; feed: RawFeed; coverUrl: string | undefined }>,
+    covers: [] as Array<{ itemId: string; coverUrl: string }>,
     local: {} as Record<string, any>,
     alarms: { created: [] as Array<{ name: string; period: unknown }>, cleared: [] as string[], existing: new Set<string>() },
 }));
@@ -20,6 +21,11 @@ vi.mock('../../scripts/rss/load', () => ({
     linkRSSFeed: vi.fn(async (_title: string, _type: string, _url: string, feed: RawFeed, itemId?: string, coverUrl?: string) => {
         store.linked.push({ itemId, feed, coverUrl });
         if (itemId && store.items[itemId]) store.items[itemId].rss = [{ url: feed.url } as any]; // what the real link stores
+    }),
+    setCoverIfMissing: vi.fn(async (itemId: string, coverUrl: string) => {
+        store.covers.push({ itemId, coverUrl });
+        if (store.items[itemId]) store.items[itemId].meta.image = { kind: 'url', url: coverUrl }; // what the real function saves
+        return true;
     }),
 }));
 vi.mock('../../scripts/background/rssCache', () => ({ rebuildRssCache: vi.fn(async () => ({})) }));
@@ -71,7 +77,7 @@ const muSettings = (enabled: boolean, notLinked: Record<string, string> = {}, lo
 }) as unknown as Settings;
 const searchAnswer = (id: number, title: string) =>
     respond(JSON.stringify({ results: [{ hit_title: title, record: { series_id: id, title, type: 'Manhwa', year: '2018' } }] }));
-const idle = { running: false, total: 0, done: 0, waiting: 0, unavailable: false, etaAt: null, etaCapped: false, slowdown: 1, pausedUntil: null, throttleStreak: 0 };
+const idle = { running: false, total: 0, done: 0, waiting: 0, unavailable: false, etaAt: null, etaCapped: false, slowdown: 1, pausedUntil: null, throttleStreak: 0, coversLeft: 0 };
 const manyMatched = (count: number) => Object.fromEntries(Array.from({ length: count }, (_, i) => [`i${i}`, saved(`i${i}`, matched(String(i)))]));
 
 beforeEach(() => {
@@ -79,6 +85,7 @@ beforeEach(() => {
     store.settings = {};
     store.rawFeeds = [];
     store.linked = [];
+    store.covers = [];
     store.local = {};
     store.alarms = { created: [], cleared: [], existing: new Set() };
     vi.unstubAllGlobals();
@@ -289,6 +296,95 @@ describe('the cover', () => {
 
         expect(fetcher).toHaveBeenCalledTimes(1);
         expect(store.linked).toEqual([]);
+    });
+});
+
+describe('titles linked before covers existed', () => {
+    const COVER = 'https://cdn.mangaupdates.com/image/i515366.jpg';
+    const seriesRecord = (original: string | null) => respond(JSON.stringify({ image: { url: { original, thumb: original } } }));
+    /** a title that has its MangaUpdates feed, and no image unless `placeholderImage` is false */
+    const linkedTitle = (id: string, seriesId: string, placeholderImage = true): Hermidata => {
+        const item = saved(id, matched(seriesId), placeholderImage);
+        item.rss = [{ url: mangaUpdatesFeedUrl(seriesId) } as any];
+        return item;
+    };
+
+    it('get their cover, and no feed is fetched or linked again', async () => {
+        const fetcher = vi.fn(async () => seriesRecord(COVER));
+        vi.stubGlobal('fetch', fetcher);
+        store.items = { a: linkedTitle('a', '555') };
+        store.settings = muSettings(true);
+        const table = vi.spyOn(console, 'table');
+
+        const more = await runMangaUpdatesFeedBatch();
+
+        expect(more).toBe(false);
+        expect(store.covers).toEqual([{ itemId: 'a', coverUrl: COVER }]);
+        expect(store.linked).toEqual([]);
+        expect((fetcher.mock.calls[0] as unknown as [string])[0]).toBe('https://api.mangaupdates.com/v1/series/555'); // the series record only
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(table).toHaveBeenLastCalledWith([{ title: 'Title a', result: 'feed already linked', latest: '', cover: 'set', url: '' }]);
+        expect(rebuildRssCache).toHaveBeenCalledTimes(1); // the popup data has to see the new cover
+    });
+
+    it('with an image are left alone, nothing is asked', async () => {
+        const fetcher = vi.fn();
+        vi.stubGlobal('fetch', fetcher);
+        store.items = { a: linkedTitle('a', '555', false) };
+        store.settings = muSettings(true);
+
+        expect(await runMangaUpdatesFeedBatch()).toBe(false);
+
+        expect(fetcher).not.toHaveBeenCalled();
+        expect(store.covers).toEqual([]);
+    });
+
+    it('whose series has no cover are not asked again for a month', async () => {
+        const fetcher = vi.fn(async () => seriesRecord(null));
+        vi.stubGlobal('fetch', fetcher);
+        store.items = { a: linkedTitle('a', '555') };
+        store.settings = muSettings(true);
+
+        await runMangaUpdatesFeedBatch();
+        expect(store.covers).toEqual([]);
+        expect(Date.parse(store.local[MANGAUPDATES_RETRY_KEY].a)).toBeGreaterThan(Date.now() + 29 * 24 * 60 * 60 * 1000);
+
+        await runMangaUpdatesFeedBatch();
+        expect(fetcher).toHaveBeenCalledTimes(1);
+    });
+
+    it('come after the feeds in a batch, and are counted in the progress', async () => {
+        vi.stubGlobal('fetch', vi.fn(async (url: string | URL | Request) => /\/series\/\d+$/.test(String(url)) ? seriesRecord(COVER) : respond(muFeed('Any', 1))));
+        const covered = Array.from({ length: MANGAUPDATES_BATCH_SIZE }, (_, i) => linkedTitle(`c${i}`, String(100 + i)));
+        store.items = { ...Object.fromEntries(covered.map(item => [item.id, item])), feed: saved('feed', matched('1')) };
+        store.settings = muSettings(true);
+        const table = vi.spyOn(console, 'table');
+
+        const more = await runMangaUpdatesFeedBatch();
+
+        // eight places in the batch: the feed first, then seven covers; one cover is left for the next batch
+        expect(more).toBe(true);
+        expect(store.linked.map(l => l.itemId)).toEqual(['feed']);
+        expect(store.covers).toHaveLength(MANGAUPDATES_BATCH_SIZE - 1);
+        expect((table.mock.calls.at(-1)![0] as Array<{ title: string }>)[0].title).toBe('Title feed');
+        expect(store.local[MANGAUPDATES_PROGRESS_KEY]).toMatchObject({ running: true, coversLeft: 1, done: MANGAUPDATES_BATCH_SIZE + 1, total: MANGAUPDATES_BATCH_SIZE + 1 });
+
+        await runMangaUpdatesFeedBatch();
+        expect(store.covers).toHaveLength(MANGAUPDATES_BATCH_SIZE);
+        expect(store.local[MANGAUPDATES_PROGRESS_KEY]).toMatchObject({ running: false, coversLeft: 0 });
+    });
+
+    it('pause the clock on a 429, and keep waiting for their cover without a wait of their own', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => respond('', { status: 429, headers: { 'Retry-After': '90' } })));
+        store.items = { a: linkedTitle('a', '555'), b: linkedTitle('b', '556') };
+        store.settings = muSettings(true);
+
+        const more = await runMangaUpdatesFeedBatch();
+
+        expect(more).toBe(true);
+        expect(store.covers).toEqual([]);
+        expect(store.local[MANGAUPDATES_RETRY_KEY] ?? {}).toEqual({});
+        expect(store.local[MANGAUPDATES_PROGRESS_KEY]).toMatchObject({ running: true, throttleStreak: 1, coversLeft: 1, waiting: 0 });
     });
 });
 

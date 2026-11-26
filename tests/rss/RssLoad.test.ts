@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getHermidataWithRss, isChapterLinkedFeed, linkRSSFeed, removeChapterLinkedRawFeeds } from '../../scripts/rss/load';
+import { getHermidataWithRss, isChapterLinkedFeed, linkRSSFeed, removeChapterLinkedRawFeeds, setCoverIfMissing } from '../../scripts/rss/load';
 import { removeRawFeeds } from '../../scripts/shared/db/db';
 import { PastHermidata } from '../../scripts/popup/core/Past';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
@@ -147,6 +147,34 @@ describe('linkRSSFeed', () => {
 function chapterLinkedFeed(site: string, latest: FeedItem): Feed {
     return { ...linkedFeed(site, latest), url: latest.link };
 }
+
+describe('setCoverIfMissing', () => {
+    const COVER = 'https://cdn.mangaupdates.com/image/i515366.jpg';
+
+    it('gives an item without an image the cover, and saves it', async () => {
+        const a = createSaved(hashId, 'a.com', []);
+        store.items = { [a.id]: a };
+
+        expect(await setCoverIfMissing(hashId, COVER)).toBe(true);
+
+        expect(store.items[hashId].meta.image).toEqual({ kind: 'url', url: COVER });
+    });
+
+    it('keeps an image the item has, and saves nothing', async () => {
+        const a = createSaved(hashId, 'a.com', []);
+        a.meta.image = { kind: 'stored', id: 'image-1' };
+        store.items = { [a.id]: a };
+        const before = structuredClone(store.items);
+
+        expect(await setCoverIfMissing(hashId, COVER)).toBe(false);
+
+        expect(store.items).toEqual(before);
+    });
+
+    it('does nothing for an item that is gone', async () => {
+        expect(await setCoverIfMissing('missing', COVER)).toBe(false);
+    });
+});
 
 describe('linkRSSFeed with a cover', () => {
     const COVER = 'https://cdn.mangaupdates.com/image/i515366.jpg';

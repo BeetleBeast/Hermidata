@@ -323,14 +323,21 @@ export type FeedFetchResult =
     /** httpStatus is absent when no answer came ( network error, still rate limited after retries ) */
     | { status: 'failed'; httpStatus?: number; /** what a 429 asked for ( Retry-After ) */ retryAfterMs?: number }
     | { status: 'ok'; text: string; meta: FeedHttpMeta };
-/** An item to give a MangaUpdates release feed; seriesId is null until it is searched on MangaUpdates */
+/**
+ * An item the MangaUpdates step has work for.
+ * - a feed to link: seriesId is null until it is searched on MangaUpdates
+ * - coverOnly: it has the feed already ( seriesId is in the feed address ) and still no image: only its cover is fetched
+ */
 export type MangaUpdatesFeedCandidate = {
     item: Hermidata;
     seriesId: string | null;
+    coverOnly?: boolean;
 }
 /** Which items get a MangaUpdates feed this check, and how many were left out and why */
 export type MangaUpdatesFeedScan = {
     candidates: MangaUpdatesFeedCandidate[];
+    /** already linked, but with no image: their cover is fetched after the feeds are linked */
+    coverOnly: MangaUpdatesFeedCandidate[];
     /** already have one */
     linked: number;
     unsubscribed: number;
@@ -343,12 +350,14 @@ export type MangaUpdatesFeedScan = {
 export type MangaUpdatesCoverResult = 'set' | 'kept' | 'none';
 /**
  * What linking one item's MangaUpdates feed came to.
+ * - covered: the feed was linked before; only the cover was dealt with
  * - skipped: this item failed; it waits before it is tried again
  * - throttled: MangaUpdates asked us to slow down ( 429 ) or was too slow to answer; the batch ends and the clock pauses
  * - unavailable: MangaUpdates itself did not answer ( no answer, 403, 5xx ); the batch ends and the clock stops
  */
 export type MangaUpdatesLinkOutcome =
     | { kind: 'linked'; rawFeed: RawFeed; cover: MangaUpdatesCoverResult }
+    | { kind: 'covered'; cover: MangaUpdatesCoverResult }
     | { kind: 'skipped'; reason: string }
     | { kind: 'throttled'; reason: string; retryAfterMs?: number; /** the title waits too ( its search timed out ) */ itemWaits?: boolean }
     | { kind: 'unavailable'; reason: string };
@@ -373,6 +382,8 @@ export type MangaUpdatesFeedProgress = {
     pausedUntil: number | null;
     /** 429s in a row */
     throttleStreak: number;
+    /** linked titles still to get a cover */
+    coversLeft: number;
 }
 /** One row of the MangaUpdates feed summary in the background console */
 export type MangaUpdatesLinkLog = {

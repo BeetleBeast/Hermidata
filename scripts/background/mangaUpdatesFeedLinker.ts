@@ -7,10 +7,10 @@ import { fetchMangaUpdatesCover, LookupError, LookupTimeoutError } from "../shar
 import { hasRealImage } from "../shared/utils/ImageSource";
 import {
     findMangaUpdatesSeriesId, isMangaUpdatesFeedsEnabled, mangaUpdatesFeedUrl, MANGAUPDATES_BATCH_SIZE, MANGAUPDATES_DOMAIN,
-    MANGAUPDATES_FAILED_WAIT_MS, MANGAUPDATES_NO_MATCH_WAIT_MS, MANGAUPDATES_PROGRESS_KEY, MANGAUPDATES_RETRY_KEY, MANGAUPDATES_TIMEOUT_WAIT_MS, scanForMangaUpdatesFeeds,
+    MANGAUPDATES_FAILED_WAIT_MS, MANGAUPDATES_NO_COVER_WAIT_MS, MANGAUPDATES_NO_MATCH_WAIT_MS, MANGAUPDATES_PROGRESS_KEY, MANGAUPDATES_RETRY_KEY, MANGAUPDATES_TIMEOUT_WAIT_MS, scanForMangaUpdatesFeeds,
 } from "../shared/lookup/mangaUpdatesFeeds";
 import { estimateRemainingMs, formatDuration, MAX_THROTTLE_STREAK, nextSlowdown, throttlePauseMs } from "../shared/lookup/mangaUpdatesPace";
-import { linkRSSFeed } from "../rss/load";
+import { linkRSSFeed, setCoverIfMissing } from "../rss/load";
 import type { FeedFetchResult, MangaUpdatesCoverResult, MangaUpdatesFeedCandidate, MangaUpdatesFeedProgress, MangaUpdatesLinkLog, MangaUpdatesLinkOutcome, RawFeed } from "../shared/types/index";
 import { fetchFeedText } from "./feedFetch";
 import { withFeedLock } from "./feedLock";
@@ -31,6 +31,7 @@ feed check, when the setting changes ) and removed when there is none, or when M
 Every link is stored right away, so a stopped background worker loses nothing.
 
 A title without an image of its own also gets its MangaUpdates cover ( one more request ); a title with an image keeps it.
+A title linked before covers existed, and still without an image, gets its cover in the same batches, after the feeds.
 
 The progress also carries a countdown ( etaAt ) that follows what really happens ( mangaUpdatesPace.ts ):
 a slow batch or a 429 makes it grow. A 429 pauses the clock for what MangaUpdates asked ( at most 10 minutes,
@@ -104,10 +105,11 @@ async function runBatch(): Promise<boolean> {
     const notLinked = settings?.ExtensionBehaviour?.AutoSubscribe?.HermidataNotLinkedToRSS ?? {};
     const retryAfter = await getRetryAfter();
     const scan = scanForMangaUpdatesFeeds(Object.values(await getAllHermidata()), notLinked, retryAfter);
-    const batch = scan.candidates.slice(0, MANGAUPDATES_BATCH_SIZE);
+    const work = [...scan.candidates, ...scan.coverOnly]; // the feeds first, then the covers of titles that have theirs
+    const batch = work.slice(0, MANGAUPDATES_BATCH_SIZE);
     const total = scan.linked + scan.candidates.length + scan.waiting;
 
-    const counts = `${scan.linked} have the feed, ${scan.unsubscribed} unsubscribed, ${scan.notMatched} not matched by the alt-title lookup, ${scan.waiting} waiting to be tried again ( no MangaUpdates match, or a feed that would not link )`;
+    const counts = `${scan.linked} have the feed, ${scan.unsubscribed} unsubscribed, ${scan.notMatched} not matched by the alt-title lookup, ${scan.waiting} waiting to be tried again ( no MangaUpdates match, or a feed that would not link ), ${scan.coverOnly.length} linked without a cover`;
     if (!batch.length) {
         console.log(`[Hermidata] MangaUpdates feeds: nothing to link. ${counts}`);
         await storeProgress({ ...idleProgress, total, done: scan.linked, waiting: scan.waiting }, retryAfter);
@@ -117,17 +119,22 @@ async function runBatch(): Promise<boolean> {
     const rawFeeds: RawFeed[] = [];
     const results: MangaUpdatesLinkLog[] = [];
     let skipped = 0;
+    let coversSet = 0;
+    let coversTried = 0;
     let unavailable: string | null = null;
     let throttled: Extract<MangaUpdatesLinkOutcome, { kind: 'throttled' }> | null = null;
     for (const candidate of batch) {
-        const outcome = await linkOne(candidate, retryAfter);
+        const outcome = candidate.coverOnly ? await addCover(candidate, retryAfter) : await linkOne(candidate, retryAfter);
         if (outcome.kind === 'linked') rawFeeds.push(outcome.rawFeed);
-        if (outcome.kind === 'skipped' || (outcome.kind === 'throttled' && outcome.itemWaits)) skipped++;
+        if (candidate.coverOnly) coversTried++;
+        if ((outcome.kind === 'linked' || outcome.kind === 'covered') && outcome.cover === 'set') coversSet++;
+        // a title that has its feed is not "waiting" for one, whatever happened to its cover
+        if (!candidate.coverOnly && (outcome.kind === 'skipped' || (outcome.kind === 'throttled' && outcome.itemWaits))) skipped++;
         results.push({
             title: candidate.item.title,
-            result: outcome.kind === 'linked' ? 'linked' : `not linked: ${outcome.reason}`,
+            result: outcome.kind === 'linked' ? 'linked' : outcome.kind === 'covered' ? 'feed already linked' : `not linked: ${outcome.reason}`,
             latest: outcome.kind === 'linked' ? outcome.rawFeed.latestItem.rawTitle : '',
-            cover: outcome.kind === 'linked' ? outcome.cover : '',
+            cover: outcome.kind === 'linked' || outcome.kind === 'covered' ? outcome.cover : '',
             url: outcome.kind === 'linked' ? outcome.rawFeed.url : '',
         });
         // MangaUpdates does not answer, or wants us to slow down: asking again right away only makes it worse
@@ -140,11 +147,9 @@ async function runBatch(): Promise<boolean> {
             break;
         }
     }
-    if (rawFeeds.length) {
-        await setAllRawFeeds(rawFeeds);
-        // the popup and the badge read the background's cache: it has to see the new feeds
-        await rebuildRssCache().then(data => updateUnreadBadge(getAllUnread(data).length));
-    }
+    if (rawFeeds.length) await setAllRawFeeds(rawFeeds);
+    // the popup and the badge read the background's cache: it has to see the new feeds and covers
+    if (rawFeeds.length || coversSet) await rebuildRssCache().then(data => updateUnreadBadge(getAllUnread(data).length));
 
     // how the pace went: 429s in a row, how much slower than planned, how long to pause
     const batchMs = Date.now() - startedAt;
@@ -153,7 +158,8 @@ async function runBatch(): Promise<boolean> {
     const slowdown = nextSlowdown(previous?.slowdown ?? 1, !!throttled, batchMs);
     const pauseMs = throttled && !unavailable ? throttlePauseMs(throttled.retryAfterMs, streak) : 0;
 
-    const left = scan.candidates.length - results.length;
+    const left = work.length - results.length;
+    const coversLeft = work.slice(results.length).filter(candidate => candidate.coverOnly).length;
     const more = left > 0 && !unavailable;
     const estimate = more ? estimateRemainingMs({ remaining: left, batchSize: MANGAUPDATES_BATCH_SIZE, lastBatchMs: batchMs, slowdown, pauseMs }) : null;
     const finishedAt = Date.now();
@@ -168,9 +174,10 @@ async function runBatch(): Promise<boolean> {
         slowdown,
         pausedUntil: pauseMs ? finishedAt + pauseMs : null,
         throttleStreak: streak,
+        coversLeft,
     }, retryAfter);
 
-    console.groupCollapsed(`[Hermidata] MangaUpdates feeds - linked ${rawFeeds.length} of ${results.length}${more ? ` ( ${left} more, a batch every minute )` : ''}`);
+    console.groupCollapsed(`[Hermidata] MangaUpdates feeds - linked ${rawFeeds.length}${coversTried ? `, ${coversSet} of ${coversTried} covers added` : ''} of ${results.length}${more ? ` ( ${left} more, a batch every minute )` : ''}`);
     console.log(`Left out: ${counts}`);
     if (throttled && !unavailable) console.warn(`MangaUpdates is throttling or slow ( ${streak} in a row ), continuing in ${formatDuration(pauseMs)}: ${throttled.reason}`);
     if (unavailable) console.warn(`MangaUpdates did not answer, the feed check retries in the next hour: ${unavailable}`);
@@ -181,7 +188,7 @@ async function runBatch(): Promise<boolean> {
 
 /** Nothing is running: no countdown, no pause, the pace back to normal */
 const idleProgress: Omit<MangaUpdatesFeedProgress, 'total' | 'done' | 'waiting'> = {
-    running: false, unavailable: false, etaAt: null, etaCapped: false, slowdown: 1, pausedUntil: null, throttleStreak: 0,
+    running: false, unavailable: false, etaAt: null, etaCapped: false, slowdown: 1, pausedUntil: null, throttleStreak: 0, coversLeft: 0,
 };
 
 async function readProgress(): Promise<MangaUpdatesFeedProgress | undefined> {
@@ -237,6 +244,29 @@ async function findCover(item: MangaUpdatesFeedCandidate['item'], seriesId: stri
         console.warn(`[Hermidata] No MangaUpdates cover for ${item.title}:`, err instanceof Error ? err.message : err);
         return { cover: 'none' };
     }
+}
+
+/**
+ * A title that has its MangaUpdates feed but no image: fetches its cover. The feed is not touched.
+ * A series without a cover is not asked again for a month; a title that gets one has an image and drops out by itself.
+ */
+async function addCover({ item, seriesId }: MangaUpdatesFeedCandidate, retryAfter: Record<string, string>): Promise<MangaUpdatesLinkOutcome> {
+    if (!seriesId) return { kind: 'skipped', reason: 'no series id in its feed address' };
+    const found = await findCover(item, seriesId, retryAfter);
+    if ('kind' in found) return found;
+    if (found.coverUrl) {
+        try {
+            await setCoverIfMissing(item.id, found.coverUrl);
+        } catch (err) {
+            logConsoleError(`[Hermidata] [✕] Could not save the cover of ${item.title}:`, err);
+            retryAfter[item.id] = new Date(Date.now() + MANGAUPDATES_FAILED_WAIT_MS).toISOString();
+            return { kind: 'skipped', reason: err instanceof Error ? err.message : String(err) };
+        }
+        delete retryAfter[item.id];
+        return { kind: 'covered', cover: 'set' };
+    }
+    if (found.cover === 'none') retryAfter[item.id] = new Date(Date.now() + MANGAUPDATES_NO_COVER_WAIT_MS).toISOString();
+    return { kind: 'covered', cover: found.cover };
 }
 
 /**

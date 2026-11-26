@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { findMangaUpdatesSeriesId, isMangaUpdatesFeedsEnabled, isMangaUpdatesFeedUrl, mangaUpdatesFeedLabel, mangaUpdatesFeedUrl, scanForMangaUpdatesFeeds } from '../../scripts/shared/lookup/mangaUpdatesFeeds';
+import { findMangaUpdatesSeriesId, isMangaUpdatesFeedsEnabled, isMangaUpdatesFeedUrl, mangaUpdatesFeedLabel, mangaUpdatesFeedUrl, scanForMangaUpdatesFeeds, seriesIdOfFeedUrl } from '../../scripts/shared/lookup/mangaUpdatesFeeds';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 import type { ExternalMatch, Feed, Hermidata, Settings } from '../../scripts/shared/types';
 
@@ -37,17 +37,36 @@ describe('isMangaUpdatesFeedsEnabled', () => {
     });
 });
 
+describe('seriesIdOfFeedUrl', () => {
+    it('reads the series id from a MangaUpdates release feed address, and nothing else', () => {
+        expect(seriesIdOfFeedUrl('https://api.mangaupdates.com/v1/series/15180124327/rss')).toBe('15180124327');
+        expect(seriesIdOfFeedUrl('https://example.com/series/15180124327/rss')).toBeNull();
+        expect(seriesIdOfFeedUrl('https://api.mangaupdates.com/v1/series/15180124327')).toBeNull();
+    });
+});
+
 describe('mangaUpdatesFeedLabel', () => {
     const now = Date.parse('2026-11-25T22:00:00.000Z');
     const progress = {
         running: false, total: 30, done: 30, waiting: 0, unavailable: false,
-        etaAt: null, etaCapped: false, slowdown: 1, pausedUntil: null, throttleStreak: 0,
+        etaAt: null, etaCapped: false, slowdown: 1, pausedUntil: null, throttleStreak: 0, coversLeft: 0,
     };
 
     it('counts down to when it is done', () => {
         const running = { ...progress, running: true, done: 8, etaAt: now + 315_000 };
         expect(mangaUpdatesFeedLabel(running, now)).toBe('Linking MangaUpdates feeds: 8 of 30. Done in 5 minutes and 15 seconds.');
         expect(mangaUpdatesFeedLabel(running, now + 15_000)).toBe('Linking MangaUpdates feeds: 8 of 30. Done in 5 minutes.');
+    });
+
+    it('says how many covers are still to add', () => {
+        const running = { ...progress, running: true, done: 30, etaAt: now + 120_000, coversLeft: 12 };
+        expect(mangaUpdatesFeedLabel(running, now)).toBe('Linking MangaUpdates feeds: 30 of 30. 12 covers to add. Done in 2 minutes.');
+        expect(mangaUpdatesFeedLabel({ ...running, coversLeft: 1 }, now)).toBe('Linking MangaUpdates feeds: 30 of 30. 1 cover to add. Done in 2 minutes.');
+    });
+
+    it('reads progress stored before covers were counted', () => {
+        const { coversLeft: _left, ...old } = { ...progress, running: true, done: 8, etaAt: now + 60_000 };
+        expect(mangaUpdatesFeedLabel(old as unknown as typeof progress, now)).toBe('Linking MangaUpdates feeds: 8 of 30. Done in 1 minute.');
     });
 
     it('says almost done when the estimate has run out but a batch is still to come', () => {
@@ -108,7 +127,34 @@ describe('scanForMangaUpdatesFeeds', () => {
         const scan = scanForMangaUpdatesFeeds(items, { unsubscribed: 'feed-id' }, retryAfter, now);
 
         expect(scan.candidates.map(c => c.item.id)).toEqual(['waitOver']);
-        expect({ ...scan, candidates: undefined }).toEqual({ candidates: undefined, linked: 1, unsubscribed: 1, notMatched: 2, waiting: 2 });
+        expect(scan.coverOnly.map(c => c.item.id)).toEqual(['linked']); // it has the feed and no image
+        expect({ ...scan, candidates: undefined, coverOnly: undefined }).toEqual({ candidates: undefined, coverOnly: undefined, linked: 1, unsubscribed: 1, notMatched: 2, waiting: 2 });
+    });
+
+    describe('titles that have the feed already', () => {
+        const feed = (id: string) => [{ url: mangaUpdatesFeedUrl(id) } as Feed];
+        const withImage = (item: Hermidata): Hermidata => ({ ...item, meta: { ...item.meta, image: { kind: 'url', url: 'https://example.com/own.jpg' } } });
+        const now = Date.parse('2026-11-25T00:00:00.000Z');
+
+        it('want their cover when they have no image, with the series id from the feed address', () => {
+            const scan = scanForMangaUpdatesFeeds([saved('a', matched('555'), feed('555')), saved('b', anilist('9'), feed('777'))], {}, {}, now);
+
+            expect(scan.coverOnly.map(c => [c.item.id, c.seriesId, c.coverOnly])).toEqual([['a', '555', true], ['b', '777', true]]); // not the AniList id
+            expect(scan.candidates).toEqual([]);
+            expect(scan.linked).toBe(2);
+        });
+
+        it('are left alone when they have an image, or while their cover is waiting', () => {
+            const waiting = saved('waiting', matched('1'), feed('1'));
+            const scan = scanForMangaUpdatesFeeds(
+                [withImage(saved('has', matched('2'), feed('2'))), waiting],
+                {}, { waiting: new Date(now + 1000).toISOString() }, now,
+            );
+
+            expect(scan.coverOnly).toEqual([]);
+            expect(scan.linked).toBe(2); // still counted as linked, and not as waiting for a feed
+            expect(scan.waiting).toBe(0);
+        });
     });
 
     it('a site feed does not count as the MangaUpdates feed', () => {
