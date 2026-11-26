@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EditDetail } from '../../scripts/library/build/edit';
 import { EventListener } from '../../scripts/rss/build/EventListener';
 import { HermidataMigration } from '../../scripts/shared/migration/Hermidata';
-import { saveHermidata, updateHermidata } from '../../scripts/shared/db/Storage';
+import { moveHermidata } from '../../scripts/shared/db/Storage';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash, TrimTitle } from '../../scripts/shared/utils/StringOutput';
 import type { Hermidata } from '../../scripts/shared/types';
@@ -13,7 +13,7 @@ vi.mock('../../scripts/shared/db/Storage', () => ({
     removeHermidata: vi.fn(),
     setAllHermidata: vi.fn(),
     setAllRawFeeds: vi.fn(),
-    updateHermidata: vi.fn().mockResolvedValue(undefined),
+    moveHermidata: vi.fn().mockResolvedValue(undefined),
     saveHermidata: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -72,12 +72,12 @@ describe('ID rekey flows outside the database layer', () => {
         const hermidata = createHermidata();
         const oldId = hermidata.id;
         const editDetail: EditDetail = Object.create(EditDetail.prototype);
-        const changeHermidata = vi.fn().mockResolvedValue(undefined);
+        const db = { saveHermidata: vi.fn().mockResolvedValue(undefined), moveHermidata: vi.fn().mockResolvedValue(undefined) };
         const replaceState = vi.fn();
         vi.stubGlobal('history', { replaceState });
         setPrivate(editDetail, 'hermidata', hermidata);
         setPrivate(editDetail, 'storedId', oldId);
-        setPrivate(editDetail, 'changeHermidata', changeHermidata);
+        setPrivate(editDetail, 'db', db);
         setPrivate(editDetail, 'AllHermidata', { [oldId]: hermidata.toJSON() });
 
         hermidata.title = 'Renamed Series';
@@ -85,7 +85,7 @@ describe('ID rekey flows outside the database layer', () => {
 
         const expectedId = generateHermidataHash(hermidata.title, hermidata.novelType, hermidata.GetUrl());
         expect(hermidata.id).toBe(expectedId);
-        expect(changeHermidata).toHaveBeenCalledWith(oldId, expectedId, hermidata.toJSON());
+        expect(db.moveHermidata).toHaveBeenCalledWith(oldId, expectedId, hermidata.toJSON());
         // the open page follows the entry to its new id
         expect(replaceState).toHaveBeenCalledWith(null, '', `#/id/${expectedId}`);
     });
@@ -95,20 +95,17 @@ describe('ID rekey flows outside the database layer', () => {
         const separate = createHermidata();
         separate.id = '6f1c2a3e-0000-4000-8000-000000000001';
         const editDetail: EditDetail = Object.create(EditDetail.prototype);
-        const changeHermidata = vi.fn().mockResolvedValue(undefined);
-        const update = vi.fn().mockResolvedValue(undefined);
+        const db = { saveHermidata: vi.fn().mockResolvedValue(undefined), moveHermidata: vi.fn().mockResolvedValue(undefined) };
         setPrivate(editDetail, 'hermidata', separate);
         setPrivate(editDetail, 'storedId', separate.id);
-        setPrivate(editDetail, 'changeHermidata', changeHermidata);
-        setPrivate(editDetail, 'updateHermidata', update);
-        setPrivate(editDetail, 'pushToSync', vi.fn().mockResolvedValue(undefined));
+        setPrivate(editDetail, 'db', db);
         setPrivate(editDetail, 'AllHermidata', { [original.id]: original.toJSON(), [separate.id]: separate.toJSON() });
 
         await callPrivate<Promise<void>>(editDetail, 'persist');
 
         expect(separate.id).toBe('6f1c2a3e-0000-4000-8000-000000000001');
-        expect(changeHermidata).not.toHaveBeenCalled();
-        expect(update).toHaveBeenCalledWith(separate.toJSON());
+        expect(db.moveHermidata).not.toHaveBeenCalled();
+        expect(db.saveHermidata).toHaveBeenCalledWith(separate.id, separate.toJSON());
     });
 
     it('renames an RSS entry in place when the new title hash belongs to another item', async () => {
@@ -122,6 +119,8 @@ describe('ID rekey flows outside the database layer', () => {
             querySelector: vi.fn().mockReturnValue(null),
         };
         const listener: EventListener = Object.create(EventListener.prototype);
+        const db = { saveHermidata: vi.fn().mockResolvedValue(undefined), moveHermidata: vi.fn().mockResolvedValue(undefined) };
+        setPrivate(listener, 'db', db);
         const otherJSON = other.toJSON();
         const allHermidata: Record<string, Hermidata> = { [oldId]: original.toJSON(), [other.id]: otherJSON };
         setPrivate(listener, 'AllHermidata', allHermidata);
@@ -130,8 +129,8 @@ describe('ID rekey flows outside the database layer', () => {
 
         await callPrivate<Promise<void>>(listener, 'RenameItem', {} as HTMLDivElement);
 
-        expect(updateHermidata).not.toHaveBeenCalled();
-        expect(saveHermidata).toHaveBeenCalledWith(oldId, expect.objectContaining({ id: oldId, title: 'Renamed Series' }));
+        // same key: the move only saves, it never removes the key it wrote
+        expect(db.moveHermidata).toHaveBeenCalledWith(oldId, oldId, expect.objectContaining({ id: oldId, title: 'Renamed Series' }));
         expect(allHermidata[other.id]).toBe(otherJSON);
     });
 
@@ -145,6 +144,8 @@ describe('ID rekey flows outside the database layer', () => {
         };
         const target = {} as HTMLDivElement;
         const listener: EventListener = Object.create(EventListener.prototype);
+        const db = { saveHermidata: vi.fn().mockResolvedValue(undefined), moveHermidata: vi.fn().mockResolvedValue(undefined) };
+        setPrivate(listener, 'db', db);
         const allHermidata: Record<string, Hermidata> = { [oldId]: original.toJSON() };
         setPrivate(listener, 'AllHermidata', allHermidata);
         setPrivate(listener, 'getEntriesItem', vi.fn().mockReturnValue(entryItem));
@@ -153,7 +154,7 @@ describe('ID rekey flows outside the database layer', () => {
         await callPrivate<Promise<void>>(listener, 'RenameItem', target);
 
         const expectedId = generateHermidataHash('Renamed Series', original.novelType, original.GetUrl(), false);
-        expect(updateHermidata).toHaveBeenCalledWith(oldId, expectedId, expect.objectContaining({
+        expect(db.moveHermidata).toHaveBeenCalledWith(oldId, expectedId, expect.objectContaining({
             id: expectedId,
             title: 'Renamed Series',
         }));
@@ -174,7 +175,7 @@ describe('ID rekey flows outside the database layer', () => {
 
         await migration.migrateAndCheckDuplicates();
 
-        expect(updateHermidata).toHaveBeenCalledWith(oldId, newId, expect.objectContaining({
+        expect(moveHermidata).toHaveBeenCalledWith(oldId, newId, expect.objectContaining({
             id: newId,
             novelType: entry.novelType,
         }));

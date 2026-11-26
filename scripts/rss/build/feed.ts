@@ -1,6 +1,6 @@
 import { findByTitleOrAlt, extractChapterFromFeedItemTitle } from "../../shared/utils/StringOutput";
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
-import { getSettings } from "../../shared/db/Storage";
+import { dbAccess } from "../../shared/db/Storage";
 import { describeUnread, getAllUnread, type UnreadInfo } from "../../shared/utils/Unread";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
@@ -62,6 +62,10 @@ export function refreshNotificationSection(): void {
 export class FeedItem {
 
     protected AllHermidata: AllHermidata;
+
+    private readonly db = new dbAccess();
+    /** Asked once and shared by every item of this list, not once per item */
+    private settings: Promise<Settings> | undefined;
     
     constructor(AllHermidata: AllHermidata) {
         this.AllHermidata = AllHermidata;
@@ -372,7 +376,7 @@ export class FeedItem {
         return ElTagContainer
     }
     private async createItemInfoContainer(key: string, item: HermidataModel, itemInfo: ItemInfo, isRSSItem: boolean, unread?: UnreadInfo): Promise<HTMLElement> {
-        const settings = await getSettings();
+        const settings = await ( this.settings ??= this.db.getSettings() );
         const ElInfo = document.createElement("div");
         ElInfo.className = "hermidata-item-info"
 

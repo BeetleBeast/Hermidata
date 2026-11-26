@@ -1,4 +1,4 @@
-import { getSettings, type dbAccess } from "../shared/db/Storage";
+import type { dbAccess } from "../shared/db/Storage";
 import type { GrabbedRow, Hermidata, QueueFilters, QueuePosition, RankedRow, ReadingQueuePriorityBand, RowActions, RowOptions } from "../shared/types";
 import { ext } from "../shared/utils/BrowserCompat";
 import { ErrorMessage } from "../shared/utils/ErrorMessage";
@@ -105,7 +105,7 @@ export class ReadingListController {
 
     private async load(): Promise<void> {
         resetCovers();
-        this.setAuto(resolveAutoReadingList((await getSettings()).ExtensionBehaviour?.AutoReadingList));
+        this.setAuto(resolveAutoReadingList((await this.db.getSettings()).ExtensionBehaviour?.AutoReadingList));
         this.all = Object.values(await this.db.getAllHermidata());
         // repair imports (all index 0) and finished titles before showing anything; the manual queue is left alone while auto is on
         const repairs = this.auto ? settlePins(this.all) : normaliseQueue(this.all);
@@ -140,12 +140,7 @@ export class ReadingListController {
         model.Touch();
         const saved = model.toJSON();
 
-        await this.db.updateHermidata(saved); // the hermidata store uses in-line keys, so no separate key is passed
-        try {
-            await this.db.pushToSync(saved);
-        } catch (error) {
-            console.warn('[Hermidata] Reading list sync push failed; the local copy is saved.', error);
-        }
+        await this.db.saveHermidata(saved.id, saved); // saved to IndexedDB and pushed to sync
         return saved;
     }
 

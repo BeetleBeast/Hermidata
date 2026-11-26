@@ -1,8 +1,8 @@
 import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { getHermidataWithRss } from "../rss/load"
 import { ext } from "../shared/utils/BrowserCompat"
-import { dbUpdateImageKey, getDb, putAllRawFeeds } from "../shared/db/db"
-import type { DbCall, DbStore, DetectedFeed, Filters, Hermidata, RawFeed, SyncCall } from "../shared/types"
+import { putAllRawFeeds } from "../shared/db/db"
+import type { DetectedFeed, Filters, Hermidata, RawFeed } from "../shared/types"
 import { getToken } from "./auth"
 import { updateCurrentBookmarkAndIcon, writeToBookmarks } from "./bookmarks"
 import { writeToSheet } from "./sheets"
@@ -13,7 +13,7 @@ import { updateUnreadBadge } from "./rssNotify"
 import { generateRssFeedId } from "../shared/utils/StringOutput"
 import { fetchFeedText, looksLikeHtml } from "./feedFetch"
 import { getLatestToken, parseChannelInfo, parseFeedXml, parseItems } from "./parseXML"
-import { pushToSync, removeFromSync } from "../shared/sync/sync.engine"
+import { runStorageCall } from "../shared/db/Storage"
 import { scheduleAltTitleLookup, storedKeyOf } from "./altTitles"
 
 let rssCache: Record<string, Hermidata> | null = null
@@ -167,90 +167,19 @@ async function buildRawFeed(detected: DetectedFeed): Promise<RawFeed | null> {
 }
 
 const settingsListeners = new Set<() => void>();
-/** Called after a page saved the settings through DB_OPERATION */
+/** Called after a page saved the settings through STORAGE_CALL */
 export function onSettingsSaved(listener: () => void): void {
     settingsListeners.add(listener);
 }
 
-export async function handleDbOperation( store: DbStore, call: DbCall, sendResponse: (r: unknown) => void): Promise<true> {
-    try {
-        const db = await getDb();
-        let result: any;
-
-        switch (call.operation) {
-            case 'getAll':
-                result = await db.getAll(store);
-                break;
-            case 'putAll':
-                result = await putAll(store, call.payload.data);
-                break;
-            case 'update':
-                result = await db.put(store, call.payload.data);
-                break;
-            case 'get':
-                result = await db.get(store, call.payload.id); 
-                break;
-            case 'put':
-                result = await db.put(store, call.payload.data, call.payload.id);
-                break;
-            case 'updateImageKey':
-                result = await dbUpdateImageKey(call.payload.oldId, call.payload.newId);
-                break;
-            case 'delete':
-                result = await db.delete(store, call.payload.id);
-                break;
-            case 'clear':
-                result = await db.clear(store);
-                break;
-            default:
-                sendResponse({ success: false, error: `Unknown operation: ${call}` });
-                break;
-        }
-        sendResponse({ success: true, result });
-        if (store === 'settings' && (call.operation === 'put' || call.operation === 'update')) {
-            for (const listener of settingsListeners) listener();
-        }
-    } catch (err) {
-        sendResponse({ success: false, error: String(err) });
+/** A page ( through `dbAccess` ) asks for one of the `storageCalls`: it runs the same function the background itself uses */
+export async function handleStorageCall(fn: unknown, args: unknown, sendResponse: (r: unknown) => void): Promise<true> {
+    const response = await runStorageCall(fn, args);
+    sendResponse(response);
+    if (response.success && fn === 'setSettings') {
+        for (const listener of settingsListeners) listener();
     }
     return true;
-}
-export async function handleSyncOperation(call: SyncCall, sendResponse: (r: unknown) => void): Promise<true> {
-    try {
-        switch (call.operation) {
-            case 'pushToSync':
-                pushToSync(call.payload.data);
-                break;
-            case 'removeFromSync':
-                removeFromSync(call.payload.id);
-                break;
-        }
-        sendResponse({ success: true });
-    } catch (err) {
-        sendResponse({ success: false, error: String(err) });
-    }
-    return true;
-}
-
-async function putAll(store: DbStore, data: Record<string, Hermidata> | RawFeed[]) {
-    try {
-        const db = await getDb();
-        const tx = db.transaction(store, 'readwrite');
-        if (store === 'hermidata') {
-            await Promise.all([
-                ...Object.values(data).map(d => tx.store.put(d)),
-                tx.done,
-            ]);
-        } else {
-            const feedData = data as RawFeed[]
-            await Promise.all([
-                ...feedData.map(d => tx.store.put(d)),
-                tx.done,
-            ]);
-        }
-    } catch (err) {
-        logConsoleError(`[DB] put${store.at(0)?.toUpperCase()}All:`, err);
-    }
 }
 
 export async function handleGetAllPossiblePaths(sendResponse: (r: unknown) => void, searchStart?: string): Promise<true> {

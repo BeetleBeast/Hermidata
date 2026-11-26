@@ -165,12 +165,7 @@ export type {
     ScalarConflict,
     MergeLetter,
     MergeSuggestion,
-    MergeConflictChoice,
-
-    DbStore,
-    DbCall,
-
-    SyncCall
+    MergeConflictChoice
 
 } from "./rss";
 

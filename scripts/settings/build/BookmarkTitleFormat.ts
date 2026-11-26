@@ -39,7 +39,7 @@ export class BookmarkTitleFormat extends Build {
 
     /** Shows the stored format, dropping unsaved edits */
     public async resetValues() {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         this.saved = resolveBookmarkTitleFormat(settings.ExtensionBehaviour.BookmarkTitleFormat);
         this.render(this.saved);
     }
@@ -276,7 +276,7 @@ export class BookmarkTitleFormat extends Build {
         const settings = await this.ensureSettingsUpToDate();
         const previous = resolveBookmarkTitleFormat(settings.ExtensionBehaviour.BookmarkTitleFormat);
         settings.ExtensionBehaviour.BookmarkTitleFormat = resolveBookmarkTitleFormat(format);
-        await this.setSettings(settings);
+        await this.db.setSettings(settings);
 
         this.saved = settings.ExtensionBehaviour.BookmarkTitleFormat;
         this.render(this.saved);

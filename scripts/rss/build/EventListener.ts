@@ -2,7 +2,6 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, openLink, generateHermidataHash, getFreeKey, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
-import { saveHermidata, updateHermidata, removeHermidata, getSettings, setSettings } from "../../shared/db/Storage";
 import { isMangaUpdatesFeedUrl } from "../../shared/lookup/mangaUpdatesFeeds";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
@@ -510,7 +509,7 @@ export class EventListener extends RssBuild {
         );
     
         // Save to storage
-        await saveHermidata(hashItem, entry.toJSON());
+        await this.db.saveHermidata(hashItem, entry.toJSON());
     
         console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
     }
@@ -545,9 +544,8 @@ export class EventListener extends RssBuild {
         if (TrimmedTitle === newTitle) newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), TrimmedTitle]) );
         else newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), oldData.title, TrimmedTitle]) );
     
-        // Save and clean up ( same key: a plain save, since a re-key deletes the old key after writing the new one )
-        if (newKey === oldKey) await saveHermidata(oldKey, newData.toJSON());
-        else await updateHermidata(oldKey, newKey, newData.toJSON());
+        // Save and clean up ( same key: only saved, nothing is removed )
+        await this.db.moveHermidata(oldKey, newKey, newData.toJSON());
     
         //  update your in-memory list
         delete this.AllHermidata[oldKey];
@@ -575,7 +573,7 @@ export class EventListener extends RssBuild {
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
             delete this.AllHermidata[hashItem]
-            removeHermidata(hashItem)
+            await this.db.removeHermidata(hashItem)
         }
         await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
     }
@@ -607,15 +605,15 @@ export class EventListener extends RssBuild {
         const mangaUpdatesFeed = entry.rss.find(feed => isMangaUpdatesFeedUrl(feed.url));
         entry.rss = [];
 
-        await saveHermidata(entry.id, entry.toJSON());
+        await this.db.saveHermidata(entry.id, entry.toJSON());
         if (mangaUpdatesFeed) await this.keepUnlinked(entry.id, mangaUpdatesFeed.id);
     }
     /** Without this the next feed check would link the MangaUpdates feed again */
     private async keepUnlinked(itemId: string, feedId: string) {
-        const settings = await getSettings();
+        const settings = await this.db.getSettings();
         const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe;
         autoSubscribe.HermidataNotLinkedToRSS = { ...autoSubscribe.HermidataNotLinkedToRSS, [itemId]: feedId };
-        await setSettings(settings);
+        await this.db.setSettings(settings);
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined

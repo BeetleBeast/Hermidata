@@ -5,7 +5,8 @@ import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { generateHermidataHash, getFreeKey, openLink } from "../../shared/utils/StringOutput";
 import { LibraryBuilder } from "../build";
-import { AltTitleLookupPanel } from "./altLookup";
+import { applyPatch, type LookupPatch } from "../../shared/lookup/altTitleLookup";
+import { AltTitleLookupPanel, type LookupApplied } from "./altLookup";
 import { ChipList } from "./chips";
 import { CoverCropper } from "./cropper";
 import { TagPicker } from "./tags";
@@ -129,7 +130,7 @@ export class EditDetail extends LibraryBuilder {
         this.bindDelete();
         this.bindToast();
 
-        new AltTitleLookupPanel(this.hermidata, this.settings, item => this.saveHermidata(item.id, item), () => this.renderAltTitles()).init();
+        new AltTitleLookupPanel(this.hermidata, this.settings, patch => this.applyLookup(patch), () => this.renderAltTitles()).init();
     }
 
     public reload(): void {
@@ -139,7 +140,7 @@ export class EditDetail extends LibraryBuilder {
     /** Apply a change, save it and offer an undo. Exposed so the markers card saves the same way */
     public commit: CommitChange = (message, change, options) => {
         const settings: CommitOptions = { undoable: true, ...options };
-        const run = async () => {
+        const run = async (): Promise<boolean> => {
             const before = structuredClone(this.hermidata.toJSON());
             try {
                 change();
@@ -147,15 +148,33 @@ export class EditDetail extends LibraryBuilder {
                 await this.persist();
                 this.setSaveState('saved');
                 if (settings.undoable) this.showToast(message, before);
+                return true;
             } catch (error) {
                 this.restore(before);
                 this.setSaveState('failed');
                 new ErrorMessage(`Could not save: ${message.toLowerCase()}. The previous value is back.`, undefined, { details: [error] }).sendMessage();
+                return false;
             }
         };
-        this.queue = this.queue.then(run);
-        return this.queue;
+        const saved = this.queue.then(run);
+        this.queue = saved.then(() => undefined);
+        return saved;
     };
+
+    /**
+     * What an online lookup found. The patch is applied to the item as it is when this change gets its turn
+     * ( not to a copy made earlier ), and saved like every other edit: same queue, same save, same sync.
+     */
+    private applyLookup(patch: LookupPatch): Promise<LookupApplied> {
+        let added: string[] = [];
+        const saved = this.commit('Alt titles looked up', () => {
+            const result = applyPatch(this.hermidata.toJSON(), patch);
+            added = result.added;
+            this.hermidata.meta.altTitles = result.item.meta.altTitles;
+            this.hermidata.meta.external = result.item.meta.external;
+        }, { undoable: false }); // an undo would leave the panel's status line describing the lookup that was undone
+        return saved.then(isSaved => ({ saved: isSaved, added }));
+    }
 
     // -- render --
 
@@ -478,8 +497,7 @@ export class EditDetail extends LibraryBuilder {
         const id = this.storedId;
         await this.queue; // let a pending save finish first, so it can't write the entry back
         try {
-            await this.removeHermidata(id);
-            await this.removeFromSync(id);
+            await this.db.removeHermidata(id);
             delete this.AllHermidata[id];
             console.log(`[Hermidata] %cRemoved Hermidata%c \nDeleted at ${new Date().toLocaleString()} | id: ${id} | title: ${this.hermidata.title} `,
                 'color: red; font-weight: bold;', 'color: inherit; font-weight: normal;'
@@ -500,9 +518,8 @@ export class EditDetail extends LibraryBuilder {
 
         if (newId === oldId) {
             const entry = this.hermidata.toJSON();
-            await this.updateHermidata(entry);
+            await this.db.saveHermidata(oldId, entry);
             this.AllHermidata[oldId] = entry;
-            void this.pushToSync(entry).catch(error => console.warn('[Hermidata] Sync push failed; the local copy is saved.', error));
             return;
         }
 
@@ -510,7 +527,7 @@ export class EditDetail extends LibraryBuilder {
         if (image.kind === 'stored' && image.id === oldId) this.hermidata.meta.image = { ...image, id: newId };
         this.hermidata.id = newId;
         const entry = this.hermidata.toJSON();
-        await this.changeHermidata(oldId, newId, entry);
+        await this.db.moveHermidata(oldId, newId, entry);
 
         delete this.AllHermidata[oldId];
         this.AllHermidata[newId] = entry;

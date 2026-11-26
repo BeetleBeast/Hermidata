@@ -1,4 +1,4 @@
-import { getSettings } from "../db/Storage";
+import { dbAccess } from "../db/Storage";
 import { ext } from "./BrowserCompat";
 
 const THEME_CACHE_KEY = "hermidataTheme";
@@ -23,6 +23,6 @@ export async function initTheme(): Promise<void> {
         applyLightMode(newSettings?.ExtensionBehaviour?.EnableLightMode === true);
     });
 
-    const settings = await getSettings();
+    const settings = await new dbAccess().getSettings();
     applyLightMode(settings.ExtensionBehaviour?.EnableLightMode === true);
 }

@@ -2,7 +2,7 @@ import { ext } from "../shared/utils/BrowserCompat"
 import { getSettings } from "../shared/db/Storage"
 import { countBookmarkRenames, renameBookmarks, updateCurrentBookmarkAndIcon } from "./bookmarks"
 import { checkFeedsForUpdates, handleGetLastSync, handleReloadRss } from "./feeds"
-import { handleBuildAndSaveRawFeeds, handleDbOperation, handleGetAllPossiblePaths, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleRefreshRssBadge, handleSaveNovel, handleSyncOperation } from "./rssCache"
+import { handleBuildAndSaveRawFeeds, handleGetAllPossiblePaths, handleGetRSS, handleInvalidateRSS, handleLocalFilterReset, handleRefreshRssBadge, handleSaveNovel, handleStorageCall } from "./rssCache"
 import { handleStartPickingFlow } from "./picking"
 import { ready, whenReady } from "./ready"
 import { showNotice } from "./notify"
@@ -26,8 +26,7 @@ const routes: Record<string, Route> = {
     REFRESH_RSS_BADGE: { run: () => handleRefreshRssBadge(), respondsAsync: false },
     BUILD_AND_SAVE_FEEDS: { run: (m, r) => handleBuildAndSaveRawFeeds(m.data, r), respondsAsync: true },
     GET_ALL_POSSIBLE_PATHS: { run: (m, r) => handleGetAllPossiblePaths(r, m.data), respondsAsync: true },
-    DB_OPERATION: { run: (m, r) => handleDbOperation(m.store, m.call, r), respondsAsync: true },
-    SYNC_OPERATION: { run: (m, r) => handleSyncOperation(m.call, r), respondsAsync: true },
+    STORAGE_CALL: { run: (m, r) => handleStorageCall(m.fn, m.args, r), respondsAsync: true },
     RESET_LOCAL_FILTERS: { run: (_, r) => handleLocalFilterReset(r), respondsAsync: true },
     START_PICKING_FLOW: { run: (m) => handleStartPickingFlow(m.entry, m.tabID), respondsAsync: false },
     SHOW_NOTICE_TOAST: { run: (m) => showNotice(m.message, m.closeAfterMs), respondsAsync: false },

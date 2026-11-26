@@ -1,4 +1,4 @@
-import { getAllTags, setSettings, getSettings } from "../../shared/db/Storage";
+import { dbAccess, getAllTags } from "../../shared/db/Storage";
 import { type AllHermidata, type Settings } from "../../shared/types";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
@@ -56,6 +56,7 @@ export class TagAutocomplete {
 }
 
 export class TagsSystem {
+    private readonly db = new dbAccess();
     private autocomplete: TagAutocomplete | null = null;
     private input = getElement<HTMLInputElement>('#tags');
     private ghostInput = getElement<HTMLSpanElement>('.autocomplete-ghost');
@@ -265,7 +266,7 @@ export class TagsSystem {
     public async saveTags(settings: Settings | null): Promise<void> {
         if (!this._tags.size) return;
 
-        settings = settings ?? await getSettings();
+        settings = settings ?? await this.db.getSettings();
         const allExistingTags = settings.TagManagement.tagColoring ? settings.TagManagement.tagColoring : {};
         for (const [tag, colour] of this._tags) {
             if (allExistingTags[tag]) continue; // ignore existing tags
@@ -273,7 +274,7 @@ export class TagsSystem {
             settings.TagManagement.tagColoring[tag] = colour;
         }
         
-        await setSettings(settings);
+        await this.db.setSettings(settings);
     }
     private generateRandomColour(usedColours: string[]): string {
         let colour = getRandomColor();
