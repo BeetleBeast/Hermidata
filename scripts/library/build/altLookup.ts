@@ -18,16 +18,18 @@ export class AltTitleLookupPanel {
     private readonly input = document.querySelector<HTMLInputElement>('#hermidata-alt-lookup-input');
     private readonly submit = document.querySelector<HTMLButtonElement>('#hermidata-alt-lookup-submit');
     private readonly candidates = document.querySelector<HTMLUListElement>('#hermidata-alt-lookup-candidates');
-    private readonly altTitleList = document.querySelector<HTMLElement>('#hermidata-alternative-titles-list');
 
     private readonly hermidata: HermidataModel;
     private readonly settings: Settings;
     private readonly save: (item: Hermidata) => Promise<void>;
+    private readonly onApplied: () => void;
 
-    constructor(hermidata: HermidataModel, settings: Settings, save: (item: Hermidata) => Promise<void>) {
+    /** `onApplied` runs after new alt titles were saved, so the page can show them */
+    constructor(hermidata: HermidataModel, settings: Settings, save: (item: Hermidata) => Promise<void>, onApplied: () => void) {
         this.hermidata = hermidata;
         this.settings = settings;
         this.save = save;
+        this.onApplied = onApplied;
     }
 
     public init(): void {
@@ -92,7 +94,7 @@ export class AltTitleLookupPanel {
         // the page keeps showing the item it has: bring it in step with what was saved
         this.hermidata.meta.altTitles = item.meta.altTitles;
         this.hermidata.meta.external = item.meta.external;
-        this.appendToList(added);
+        this.onApplied();
         this.form!.hidden = true;
 
         const same = before?.status === 'matched' && patch.external.status === 'matched' && before.id === patch.external.id && before.source === patch.external.source;
@@ -130,17 +132,6 @@ export class AltTitleLookupPanel {
 
         const asksAgain = !external || external.status === 'error';
         this.button!.textContent = asksAgain ? 'Look up' : 'Look up again';
-    }
-
-    private appendToList(titles: string[]): void {
-        // while the list is being edited it is a text field, not a list of rows
-        if (!this.altTitleList || this.altTitleList.tagName !== 'DIV') return;
-        for (const title of titles) {
-            const row = document.createElement('div');
-            row.classList.add('hermidata-alternative-title');
-            row.textContent = title;
-            this.altTitleList.appendChild(row);
-        }
     }
 
     private clearCandidates(): void {

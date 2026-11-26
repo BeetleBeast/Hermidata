@@ -1,6 +1,7 @@
-import { migrateFromChromeStorage, migrateHermidataToLatest } from "../db/db";
-import { getAllHermidata, getSettings, migrateSettings, resetSettings  } from "../db/Storage";
-import { calculateNovelStatusForAll } from "../utils/NovelStatusCalculator";
+import { getDb, migrateFromChromeStorage, migrateHermidataToLatest } from "../db/db";
+import { getAllHermidata, getAllRawFeeds, getSettings, migrateSettings, resetSettings, setAllHermidata  } from "../db/Storage";
+import { runFeedsSeenMigration } from "./Feeds";
+import { applyNovelStatusUpdates } from "../utils/NovelStatusCalculator";
 import { HermidataMigration } from "./Hermidata";
 
 
@@ -15,9 +16,8 @@ export async function migrationSteps(): Promise<void> {
     await migrateHermidataToLatest();
 
     await HermidataMigration.migrateFeedsToLatest();
+    await runFeedsSeenMigration(await getDb(), getAllHermidata, getAllRawFeeds, setAllHermidata);
 
-    const onlyRSSStatusScore = settings.ExtensionBehaviour.AutoSetStatusScore.onlyRSS;
-    const allowAllDateFields = settings.ExtensionBehaviour.AutoSetStatusScore.allowAllDateFields;
-
-    if (onlyRSSStatusScore || allowAllDateFields) await calculateNovelStatusForAll();
+    // reads the migrated settings itself, does nothing when turned off, and never throws
+    await applyNovelStatusUpdates();
 }

@@ -1,6 +1,7 @@
 import { findByTitleOrAlt, extractChapterFromFeedItemTitle } from "../../shared/utils/StringOutput";
 import type { Settings, AllHermidata, Hermidata } from "../../shared/types/index";
-import { getLocalNotificationItem, getSettings } from "../../shared/db/Storage";
+import { getSettings } from "../../shared/db/Storage";
+import { describeUnread, getAllUnread, type UnreadInfo } from "../../shared/utils/Unread";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
@@ -10,12 +11,50 @@ interface ItemInfo {
     title: string;
     url: string;
     chapter: number;
-    isRead: boolean;
-    clearedNotification: boolean;
     currentChapter: number;
     currentHermidata: Hermidata;
     /** false when the latest feed item carries no chapter number */
     feedHasChapter: boolean;
+}
+
+/** "just now", "5 min ago", "3h ago", "yesterday", "4 days ago", else the date */
+export function formatRelativeDate(date: Date, now: number = Date.now()): string {
+    const minutes = Math.floor((now - date.getTime()) / 60_000);
+    if (!Number.isFinite(minutes)) return '';
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString('fr-FR');
+}
+
+/**
+ * Brings the notification section in line with its rows: the count in the header,
+ * "No new chapters" when it's empty, and the "Clear notifications" button enabled only when there is something to clear.
+ */
+export function refreshNotificationSection(): void {
+    const section = getElement<HTMLElement>('#RSS-Notification');
+    if (!section) return;
+    const count = section.querySelectorAll('.hermidata-item[data-is-notification-item="true"]').length;
+
+    const counter = section.querySelector<HTMLElement>('.notification-count');
+    if (counter) counter.textContent = count ? ` (${count})` : '';
+
+    let empty = section.querySelector<HTMLElement>('.rss-notification-empty');
+    if (!count && !empty) {
+        empty = document.createElement('p');
+        empty.className = 'rss-notification-empty';
+        empty.textContent = 'No new chapters';
+        section.appendChild(empty);
+    }
+    if (count && empty) empty.remove();
+
+    const clearButton = getElement<HTMLButtonElement>('#clear-notifications');
+    // disabled, not hidden: the footer is a grid, hiding it would shift the other buttons
+    if (clearButton) clearButton.disabled = count === 0;
 }
 
 
@@ -37,24 +76,30 @@ export class FeedItem {
         return dateB - dateA;
     }
 
+    /**
+     * @param isRSSItem - false builds the notification list: only unread items, newest release first
+     */
     public async makeFeedItem(hermidataList: Record<string, Hermidata>, isRSSItem = false, sortByLastUpdated: boolean = false): Promise<DocumentFragment> {
         const fragment = document.createDocumentFragment();
-        const sortedList = sortByLastUpdated ? Object.values(hermidataList).sort(this.sortByLastUpdated) : Object.values(hermidataList);
+        const unreadById = new Map<string, UnreadInfo>();
+        let sortedList: Hermidata[];
+        if (!isRSSItem) {
+            const unread = getAllUnread(hermidataList);
+            for (const info of unread) unreadById.set(info.item.id, info);
+            sortedList = unread.map(info => info.item);
+        } else {
+            sortedList = sortByLastUpdated ? Object.values(hermidataList).sort(this.sortByLastUpdated) : Object.values(hermidataList);
+        }
 
-        for (const item of sortedList) {
-
-            const isFirstItem = sortedList.indexOf(item) === 0;
+        for (const [index, item] of sortedList.entries()) {
             const Hermidata = new HermidataModel(item);
-            
             const itemInfo = await this.getItemInfo(item.id, Hermidata, isRSSItem);
-            if ( getElement(`[data-hash-key="${item.id}"]`)?.dataset.hashKey && itemInfo.isRead && itemInfo.clearedNotification) continue;
+            const unread = unreadById.get(item.id);
 
             const li = this.createItemContainer(item.id, isRSSItem);
+            const lines = this.createItemLines(Hermidata, index === 0);
+            const ItemInfoContainer = await this.createItemInfoContainer(item.id, Hermidata, itemInfo, isRSSItem, unread);
 
-            const lines = this.createItemLines(Hermidata, isFirstItem);
-            
-            const ItemInfoContainer = await this.createItemInfoContainer(item.id, Hermidata, itemInfo, isRSSItem);
-            
             li.append(lines, ItemInfoContainer);
             fragment.appendChild(li);
         }
@@ -68,6 +113,9 @@ export class FeedItem {
         title.className = "titleHeader";
 
         title.textContent = 'Notifications'
+        const count = document.createElement('span');
+        count.className = 'notification-count';
+        title.appendChild(count);
         container.appendChild(title);
         const feedHeaderSymbol = document.createElement('div');
         feedHeaderSymbol.className = 'feed-header-symbol';
@@ -233,19 +281,22 @@ export class FeedItem {
         const useAutoDetectedChapter = extractChapterFromFeedItemTitle(title, item?.title, undefined, url);
         const chapter = item?.chapter?.latest || useAutoDetectedChapter || item?.GetChapter();
         
-        const currentHermidata = new HermidataModel(this.AllHermidata?.[key]);
+        const currentHermidata = new HermidataModel(this.AllHermidata?.[key] ?? item.toJSON());
         const currentChapter = currentHermidata?.GetChapter();
-        const clearedNotification = await getLocalNotificationItem(key);
-        const isRead = !isRSSItem && (currentChapter === chapter)
         // latestItem.chapter is null when the feed title has no chapter number (no latestItem = not fetched on this device yet)
         const latestFeedItem = item.GetLatestRssFeed()?.latestItem;
         const feedHasChapter = !latestFeedItem || latestFeedItem.chapter != null;
 
-        return { title, url, chapter, isRead, clearedNotification, currentChapter, currentHermidata, feedHasChapter };
+        return { title, url, chapter, currentChapter, currentHermidata, feedHasChapter };
     }
-    private createItemPubDate(item: HermidataModel): HTMLElement {
+    private createItemPubDate(item: HermidataModel, unread?: UnreadInfo): HTMLElement {
         const pubDate = document.createElement("p");
         pubDate.className = "hermidata-item-pubDate";
+        if (unread) {
+            pubDate.textContent = formatRelativeDate(unread.pubDate);
+            pubDate.title = `released: ${unread.pubDate.toLocaleString()}`;
+            return pubDate;
+        }
         const latestDate = this.showLatestDate(item);
         const dateString = latestDate.date.toLocaleDateString('fr-FR');
         const pubDateText = `${latestDate.originalDateVariable}: ${dateString}`;
@@ -272,18 +323,18 @@ export class FeedItem {
         
         return ELTitle
     }
-    private createItemChapter(chapter: number, currentChapter: number, isRSSItem: boolean = false, feedHasChapter: boolean = true): HTMLElement {
+    private createItemChapter(chapter: number, currentChapter: number, isRSSItem: boolean = false, unread?: UnreadInfo, feedHasChapter: boolean = true): HTMLElement {
         const ELchapter = document.createElement("div");
 
-        const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
+        const chapterText = unread ? describeUnread(unread) : chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
         // without a feed chapter, `chapter` falls back to what was read, so "up-to-date" would be a guess
         const AllItemChapterText = !feedHasChapter
             ? `read ${currentChapter} (feed has no chapter)`
             : currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
-        
 
         ELchapter.className = "hermidata-item-chapter"
         ELchapter.textContent = isRSSItem ? `${AllItemChapterText}` : `${chapterText}`;
+        ELchapter.title = ELchapter.textContent;
 
         return ELchapter
     }
@@ -320,7 +371,7 @@ export class FeedItem {
 
         return ElTagContainer
     }
-    private async createItemInfoContainer(key: string, item: HermidataModel, itemInfo: ItemInfo, isRSSItem: boolean): Promise<HTMLElement> {
+    private async createItemInfoContainer(key: string, item: HermidataModel, itemInfo: ItemInfo, isRSSItem: boolean, unread?: UnreadInfo): Promise<HTMLElement> {
         const settings = await getSettings();
         const ElInfo = document.createElement("div");
         ElInfo.className = "hermidata-item-info"
@@ -337,8 +388,8 @@ export class FeedItem {
         bottomRow.className = "bottom-row";
         
         // bottom row
-        const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem, itemInfo.feedHasChapter);
-        const pubDate = this.createItemPubDate(item);
+        const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem, unread, itemInfo.feedHasChapter);
+        const pubDate = this.createItemPubDate(item, unread);
         const ElFooter = this.createItemFooter(item);
         const ElTagContainer = this.createItemTags(itemInfo.currentHermidata, settings );
 

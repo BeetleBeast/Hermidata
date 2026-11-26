@@ -16,7 +16,8 @@ type View =
     | { kind: 'off'; config: SyncBackendConfig }
     | { kind: 'on'; config: SyncBackendConfig; header: EnvelopeHeader }
     | { kind: 'locked'; config: SyncBackendConfig; header: EnvelopeHeader }
-    | { kind: 'damaged'; config: SyncBackendConfig };
+    | { kind: 'damaged'; config: SyncBackendConfig }
+    | { kind: 'unavailable'; config: SyncBackendConfig };      // this device does not sync, so there is nothing to encrypt
 type Remote = { header: null } | { header: EnvelopeHeader; data: string } | 'damaged' | undefined;
 
 const REASONS: Record<SyncBackendConfig['kind'], string> = {
@@ -25,6 +26,8 @@ const REASONS: Record<SyncBackendConfig['kind'], string> = {
         + 'Turn this on if you want only your own devices to be able to read the library. It uses about 2 KB of the 100 KB space.',
     webdav: 'Recommended for a server you do not fully control: without it, anyone who can read files on the server '
         + '(its admin, or anyone with your account) can read your library.',
+    local: 'Not available while this device is set to "This device only": nothing is published, so there is nothing to encrypt. '
+        + 'Choose browser sync or your own server under Library sync to use encryption.',
 };
 
 /**
@@ -103,6 +106,15 @@ export class LibraryEncryption extends Build {
         }
     }
 
+    /** Greys the card out when there is nothing to encrypt; the reason stays readable. */
+    private setAvailable(available: boolean) {
+        const card = this.card();
+        if (!card) return;
+        if (available) card.removeAttribute('aria-disabled');
+        else card.setAttribute('aria-disabled', 'true');
+        card.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input').forEach(el => { el.disabled = !available; });
+    }
+
     private card() {
         return this.state?.closest<HTMLElement>('.library-encryption-card') ?? null;
     }
@@ -115,6 +127,7 @@ export class LibraryEncryption extends Build {
      */
     private async readView(): Promise<View> {
         const config = await loadSyncConfig(ext.storage.local);
+        if (config.kind === 'local') return { kind: 'unavailable', config };
         const local = await ext.storage.local.get([SYNC_SEAL_PENDING_KEY, SYNC_SEAL_HEADER_KEY]);
         const pending = local[SYNC_SEAL_PENDING_KEY] as { header: EnvelopeHeader | null } | false | undefined;
         const last = (local[SYNC_SEAL_HEADER_KEY] as EnvelopeHeader | null | undefined) ?? null;
@@ -154,6 +167,7 @@ export class LibraryEncryption extends Build {
     private async render(view?: View) {
         view ??= await this.readView();
         if (this.reason) this.reason.textContent = REASONS[view.config.kind];
+        this.setAvailable(view.kind !== 'unavailable');
         if (this.enablePanel) this.enablePanel.hidden = view.kind !== 'off';
         if (this.unlockPanel) this.unlockPanel.hidden = view.kind !== 'locked';
         if (this.managePanel) this.managePanel.hidden = view.kind !== 'on';
@@ -163,7 +177,10 @@ export class LibraryEncryption extends Build {
         }
         if (!this.state) return;
 
-        if (view.kind === 'off') {
+        if (view.kind === 'unavailable') {
+            this.state.dataset.state = 'signed-out';
+            this.state.textContent = 'Not available: this device does not sync.';
+        } else if (view.kind === 'off') {
             this.state.dataset.state = 'signed-out';
             this.state.textContent = 'Off: the synced library is stored readable.';
         } else if (view.kind === 'damaged') {

@@ -1,202 +1,213 @@
 import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ext } from "../shared/utils/BrowserCompat";
-import type { Feed, FeedItem, FeedExtras, RawFeed, Hermidata } from "../shared/types/index";
+import type { FeedItem, FeedExtras, RawFeed, Hermidata } from "../shared/types/index";
 import { getAllHermidata, getAllRawFeeds, getSettings, setAllHermidata, setAllRawFeeds } from "../shared/db/Storage";
-import { allHermidataCashed, setState } from "./state";
-import { generateRssFeedId, normalizeTag, TrimTitle } from "../shared/utils/StringOutput";
-import { XMLParser } from 'fast-xml-parser';
-import { getLatestToken, parseItems, parseFeedExtras } from "./parseXML";
+import { resolveRssCheckInterval } from "../shared/utils/SettingsValues";
+import { backgroundAlarms } from "../shared/sync/syncAlarms";
+import { normalizeTag } from "../shared/utils/StringOutput";
+import { hasRealImage } from "../shared/utils/ImageSource";
+import { applyLatestItem, getAllUnread } from "../shared/utils/Unread";
+import { getLatestToken, parseItems, parseFeedExtras, parseFeedXml } from "./parseXML";
+import { fetchFeedText, looksLikeHtml } from "./feedFetch";
+import { toRawFeed } from "./rawFeed";
+import { withFeedLock } from "./feedLock";
+import { kickMangaUpdatesFeeds } from "./mangaUpdatesFeedLinker";
+import { removeChapterLinkedRawFeeds } from "../rss/load";
+import { getRssData, onSettingsSaved, rebuildRssCache } from "./rssCache";
+import { initRssNotificationClicks, notifyNewReleases, updateUnreadBadge } from "./rssNotify";
+import { lastAutoFeedCheck, lastFeedCheck, setState } from "./state";
 
+/*
+One pass per check:
+1. what is unread now ( from the RSS cache, the same data the popup shows )
+2. fetch every linked feed once, put a newer latest item on the items that link it
+3. rebuild the cache, what is unread now
+4. notify about the difference, set the badge to the count
+5. ( setting ) start linking MangaUpdates release feeds, one batch a minute ( mangaUpdatesFeedLinker.ts )
+Runs on the `rss-check` alarm ( interval from settings ), on startup, and from the popup's "Manual sync".
+*/
 
-type Meta = {
-    etag: string | null;
-    lastModified: string | null
+export const RSS_CHECK_ALARM = 'hermidata-rss-check';
+const LAST_CHECK_KEY = 'rssLastCheck';
+const MANUAL_COOLDOWN_MS = 2 * 60 * 1000;
+
+let inFlight: Promise<void> | null = null;
+
+/** Call in the first tick: alarm, notification clicks and settings changes */
+export function initFeedListeners(): void {
+    backgroundAlarms()?.onAlarm.addListener(alarm => {
+        if (alarm.name === RSS_CHECK_ALARM) void checkFeedsForUpdates();
+    });
+    initRssNotificationClicks(() => void rebuildRssCache().then(data => updateUnreadBadge(getAllUnread(data).length)));
+    // a new interval or notification type: from the settings page, or synced from another device
+    const settingsChanged = () => {
+        void ensureRssAlarm();
+        void kickMangaUpdatesFeeds(); // the MangaUpdates setting may have been switched
+        void getRssData().then(data => updateUnreadBadge(getAllUnread(data).length));
+    };
+    onSettingsSaved(settingsChanged);
+    ext.storage?.onChanged.addListener((changes, area) => {
+        if ((area === 'sync' || area === 'local') && changes.Settings) settingsChanged();   // "local": a device that does not sync
+    });
 }
 
-
-
-export function initFeeds() {
-    setInterval(checkFeedsForUpdates, 60 * 60 * 1000) // 60min
+/** Call once the data is ready */
+export function initFeeds(): void {
+    void ensureRssAlarm();
+    void removeChapterLinkedRawFeeds().catch(error => logConsoleError('[RSS] could not remove chapter-linked feeds:', error));
+    void ext.storage.local.get(LAST_CHECK_KEY).then(stored => {
+        const last = Number((stored as Record<string, unknown>)?.[LAST_CHECK_KEY]) || 0;
+        if (last) setState.lastAutoFeedCheck(last);
+    }).catch(() => {});
 }
 
-export async function checkFeedsForUpdates() {
+/** Creates the alarm, or recreates it when the interval changed ( keeps it otherwise, so its period isn't reset ) */
+export async function ensureRssAlarm(): Promise<void> {
+    const alarms = backgroundAlarms();
+    if (!alarms) return;
     try {
-        await webSearch();
-        const savedFeeds = await getAllRawFeeds();
-        const allHermidata = await getAllHermidata();
+        const settings = await getSettings();
+        const minutes = resolveRssCheckInterval(settings?.ExtensionBehaviour?.RssCheckIntervalMinutes);
+        const existing = await Promise.resolve(alarms.get?.(RSS_CHECK_ALARM)).catch(() => undefined);
+        if (existing?.periodInMinutes === minutes) return;
+        await alarms.create(RSS_CHECK_ALARM, { periodInMinutes: minutes });
+    } catch (error) {
+        logConsoleError('[RSS] could not set the check alarm:', error);
+    }
+}
 
-        if (Object.keys(allHermidata).length === 0) {
-            console.log("[Hermidata] No Hermidata entries found, skipping feed check.");
-            return;
-        }
+/** A check while one runs gets that check, so two never run at once */
+export function checkFeedsForUpdates(): Promise<void> {
+    inFlight ??= runCheck().finally(() => { inFlight = null; });
+    return inFlight;
+}
 
-        for (const feed of Object.values(savedFeeds)) {
-            try {
-                if (shouldSkipFeed(feed, allHermidata)) continue;
+/** "Manual sync" in the popup: at most once every 2 minutes */
+export function handleReloadRss(): true {
+    const now = Date.now();
+    if (now - lastFeedCheck < MANUAL_COOLDOWN_MS) {
+        console.log('[RSS] Skipping - already checked recently');
+        return true;
+    }
+    setState.lastFeedCheck(now);
+    void checkFeedsForUpdates().then(() => ext.runtime.sendMessage({ type: "SYNC_COMPLETED" }).catch(() => {}));
+    return true;
+}
 
-                
-                // Fetch the full feed
-                // And try to get HEAD metadata (ETag, Last-Modified)
-                const savedMeta: Meta = {
-                    etag: feed.lastToken,
-                    lastModified: feed.lastBuildDate ? new Date(feed.lastBuildDate).toUTCString() : null
-                }
-                const {text, meta} = await fetchFeedText(feed, savedMeta);
-                if (!text) continue;
-                if (isFeedUnchanged(feed, meta)) {
-                    continue;
-                }
+export function handleGetLastSync(sendResponse: (r: unknown) => void): true {
+    // Send the age in minutes (max 2 digits)
+    const diffMinutes = lastAutoFeedCheck
+        ? Math.min(99, Math.floor((Date.now() - lastAutoFeedCheck) / 60000))
+        : null;
 
-                // Detect content changes via token or hash
-                if (!await hasFeedChanged(feed, text)) {
-                    continue;
-                }
+    sendResponse({ minutesAgo: diffMinutes });
+    return true
+}
 
-                // Parse and handle feed contents
-                const parser = new XMLParser({ ignoreAttributes: false });
-                const doc = parser.parse(text);
-                const item = parseItems(doc, feed.title);
-                if (!item) continue;
+async function runCheck(): Promise<void> {
+    try {
+        await withFeedLock(async () => {
+            const before = new Set(getAllUnread(await getRssData()).map(info => info.item.id));
 
-                // Save item
-                compareLastSeen(item, feed);
+            const changed = await fetchAllFeeds();
 
-                // Save metadata
-                saveFeedMetaData(feed, meta);
+            const after = getAllUnread(changed ? await rebuildRssCache() : await getRssData());
+            const newlyUnread = after.filter(info => !before.has(info.item.id));
 
-            } catch (err) {
-                logConsoleError(`[Hermidata] [✕] Failed to check feed ${feed.url}:`, err);
-            }
-        }
+            await notifyNewReleases(newlyUnread);
+            await updateUnreadBadge(after.length);
 
-        setState.lastAutoFeedCheck(Date.now());
-        await setAllRawFeeds(Object.values(savedFeeds));
+            const now = Date.now();
+            setState.lastAutoFeedCheck(now);
+            void ext.storage.local.set({ [LAST_CHECK_KEY]: now }).catch(() => {});
+        });
     } catch (err) {
         logConsoleError(`[Hermidata] [✕] Failed to check feeds:`, err);
     }
+    void kickMangaUpdatesFeeds(); // titles matched since the last check, and waits that ended
 }
 
-async function webSearch() {
-    // search the web for new releases
-
-    // get the links to check
-    const savedFeeds = await getAllRawFeeds();
+/** Fetches every linked feed once. Returns true when a stored item changed. */
+async function fetchAllFeeds(): Promise<boolean> {
     const allHermidata = await getAllHermidata();
-    const allNovelRSS = Object.values(allHermidata).flatMap(novel => novel?.rss ?? []);
+    const rawFeeds = await getAllRawFeeds();
 
-    const allNewItemsKey: string[] = [];
-    const extrasByUrl = new Map<string, FeedExtras>();
-
-    console.groupCollapsed(`[Hermidata] Web search - total RSS feeds to check: ${allNovelRSS.length}`);
-
-    const combined = Object.values(savedFeeds)
-    //const test = Object.values(savedFeeds).flatMap(f => f?.items).filter(Boolean);
-
-    for (const novel of allNovelRSS) {
-        if (!novel) continue;
-        if (!novel.domain || !novel.latestItem?.title || !novel.url) {
-            // console.groupEnd();
-            continue;
-        }
-        console.groupCollapsed(`[Hermidata] Web search for ${novel.latestItem?.title} in ${novel.domain}`);
-
-        // get the rss feed text
-        const feedText = (await fetchFeedText(novel)).text;
-        if (!feedText) {
-            console.warn("No feed text found:", novel.url);
-            console.groupEnd();
-            continue;
-        }
-        // if feedText ins't a Feed but a html page, skip
-        if (looksLikeHtml(feedText)) {
-            console.warn(`[Hermidata] ${novel.url} returned HTML, not a feed. Skipping.`);
-            console.dirxml(feedText);
-            console.groupEnd();
-            continue;
-        }
-
-        // get the latest token
-        const token = getFeedLatestToken(feedText);
-        if (!token) {
-            console.warn("No token for feed:", novel.url);
-            console.groupEnd();
-            continue;
-        }
-        console.log(`[Hermidata] Latest token: ${token}`);
-
-        // get the items
-        const parser = new XMLParser({ ignoreAttributes: false });
-        const doc = parser.parse(feedText);
-        const item: FeedItem | null = parseItems(doc, novel.latestItem?.title);
-        if (!item) {
-            console.warn("No items found in feed:", novel.url);
-            console.groupEnd();
-            continue;   
-        }
-
-        const newFeed: RawFeed = {
-            id: generateRssFeedId(novel.latestItem?.title, novel.url),
-            title: TrimTitle.trimTitle(novel.latestItem?.title, novel.url).title,
-            url: novel.url,
-            domain: novel.domain,
-            lastFetched: new Date().toISOString(),
-            lastBuildDate: novel.lastBuildDate ?? new Date(),
-            image: novel.image || "",
-            latestItem: item,
-            lastToken: token,
-        };
-        allNewItemsKey.push(newFeed.id);
-        extrasByUrl.set(novel.url, parseFeedExtras(doc));
-
-        // check if the feed is already in savedFeeds via token
-        // const existingFeed = savedFeeds.find(f => f.lastToken === token);
-        // if (existingFeed?.items?.[0]?.title === items[0].title) {
-        //     console.log(`[Hermidata] Feed already exists v1: ${existingFeed.items[0].title}`);
-        //     console.log(`[Hermidata] Feed already exists v2: ${items[0].title}`);
-        //     console.groupEnd();
-        //     continue;
-        // }
-        console.log(`[Hermidata] Adding feed title: ${item.title}`);
-        
-        const existing = combined.find(f => f.url === newFeed.url);
-
-        
-        if (!existing) {
-            combined.push(newFeed);
-            console.log(`[Hermidata] New feed added: ${newFeed.latestItem.title}`);
-        } else if (newFeed.lastFetched > existing.lastFetched) {
-            Object.assign(existing, newFeed);
-            console.log(`[Hermidata] Updated feed: ${newFeed.latestItem.title}`);
-        }
-        
-        console.groupEnd();
-    }
-    await setAllRawFeeds(combined).then(() => {
-        console.log(`[Hermidata] ${Object.keys(combined).length} feeds saved to local storage`);
-    })
-
-    const HermidataToUpdate: Hermidata[] = [];
-    for (const feed of combined) {
-        const related = Object.values(allHermidata).find(h => h.rss.some(rss => rss.url === feed.url));
-        const relatedFeed = related?.rss.find(rss => rss.url === feed.url);
-        if (related && relatedFeed) {
-            relatedFeed.lastFetched = feed.lastFetched;
-            relatedFeed.latestItem = feed.latestItem;
-            if (allNewItemsKey.includes(related.id)) relatedFeed.Notified = true;
-            applyFeedExtras(related, extrasByUrl.get(feed.url));
-
-            HermidataToUpdate.push(related);
+    // feed url → the items that link it
+    const linkedBy = new Map<string, Hermidata[]>();
+    for (const item of Object.values(allHermidata)) {
+        for (const feed of item.rss ?? []) {
+            if (!feed?.url) continue;
+            if (!linkedBy.has(feed.url)) linkedBy.set(feed.url, []);
+            linkedBy.get(feed.url)!.push(item);
         }
     }
-    if (HermidataToUpdate.length > 0) await setAllHermidata(HermidataToUpdate);
+    if (linkedBy.size === 0) return false;
 
+    console.groupCollapsed(`[Hermidata] RSS check - ${linkedBy.size} feeds`);
+    const changedItems = new Map<string, Hermidata>();
+    const changedRawFeeds: RawFeed[] = [];
+
+    for (const [url, items] of linkedBy) {
+        try {
+            const saved = rawFeeds[url];
+            const result = await fetchFeedText(url, { etag: saved?.etag ?? null, lastModified: saved?.lastModified ?? null });
+            if (result.status !== 'ok') continue;
+            if (looksLikeHtml(result.text)) {
+                console.warn(`[Hermidata] ${url} returned HTML, not a feed. Skipping.`);
+                continue;
+            }
+
+            const doc = parseFeedXml(result.text);
+            if (!doc) {
+                console.warn(`[Hermidata] ${url} is not an RSS or Atom feed. Skipping.`);
+                continue;
+            }
+            const linkedFeed = items[0].rss.find(f => f.url === url);
+            const item = parseItems(doc, linkedFeed?.latestItem?.title ?? items[0].title);
+            if (!item) continue;
+
+            changedRawFeeds.push(toRawFeed(url, item, result.meta, getLatestToken(doc, result.text), saved, linkedFeed?.domain, linkedFeed?.image));
+
+            const extras = parseFeedExtras(doc);
+            for (const hermidata of items) {
+                if (applyToItem(hermidata, url, item)) changedItems.set(hermidata.id, hermidata);
+                if (applyFeedExtras(hermidata, extras)) changedItems.set(hermidata.id, hermidata);
+            }
+        } catch (err) {
+            logConsoleError(`[Hermidata] [✕] Failed to check feed ${url}:`, err);
+        }
+    }
     console.groupEnd();
+
+    if (changedRawFeeds.length) await setAllRawFeeds(changedRawFeeds);
+    // a cache refresh, not a user edit: not pushed to sync and meta.updated is left alone
+    if (changedItems.size) await setAllHermidata([...changedItems.values()]);
+    return changedItems.size > 0;
 }
-/** Fill gaps in the Hermidata meta from feed info; never overwrites what the user already set */
-function applyFeedExtras(hermidata: Hermidata, extras?: FeedExtras) {
-    if (!extras) return;
+
+/** Puts the fetched item on the item's feed. True when something stored changed. */
+function applyToItem(hermidata: Hermidata, url: string, item: FeedItem): boolean {
+    const feed = hermidata.rss.find(f => f.url === url);
+    if (!feed) return false;
+    const hadSeen = !!feed.seen;
+    const isNewer = applyLatestItem(feed, item);
+    feed.lastFetched = new Date().toISOString();
+    if (isNewer) {
+        console.log(`[Hermidata] New release for ${hermidata.title}: ${item.title}`);
+        if (Number.isFinite(item.chapter) && item.chapter > (hermidata.chapter.latest || 0)) hermidata.chapter.latest = item.chapter;
+    }
+    return isNewer || !hadSeen;
+}
+
+/** Fill gaps in the Hermidata meta from feed info; never overwrites what the user already set. True when it changed. */
+function applyFeedExtras(hermidata: Hermidata, extras?: FeedExtras): boolean {
+    if (!extras) return false;
     const meta = hermidata.meta;
-    if (extras.author && !meta.author) meta.author = extras.author;
+    let changed = false;
+    if (extras.author && !meta.author) {
+        meta.author = extras.author;
+        changed = true;
+    }
     if (extras.categories?.length) {
         const known = new Set(meta.tags.map(t => t.toLowerCase()));
         for (const category of extras.categories) {
@@ -204,133 +215,15 @@ function applyFeedExtras(hermidata: Hermidata, extras?: FeedExtras) {
             if (tag && !known.has(tag.toLowerCase())) {
                 meta.tags.push(tag);
                 known.add(tag.toLowerCase());
+                changed = true;
             }
         }
     }
-    const hasRealImage = meta.image.kind === 'stored' || (meta.image.url && !meta.image.url.endsWith('icon48.png'));
-    if (extras.image && !hasRealImage) meta.image = { kind: 'url', url: extras.image };
-}
-function shouldSkipFeed(feed: RawFeed, allHermidata: Record<string, Hermidata>) {
-    const novel = Object.values(allHermidata).find(novel => novel?.rss.some(rss => rss.url === feed.url));
-    return novel === undefined;
-}
-
-// Helper: SHA-1 hash as hex
-async function sha1Hex(str: string) {
-    const enc = new TextEncoder();
-    const data = enc.encode(str);
-    const hashBuffer = await crypto.subtle.digest("SHA-1", data);
-    return Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, "0"))
-        .join("");
-}
-
-// ==== feed helpers ====
-
-// Helper: parse only the first 1–2 items
-function getFeedLatestToken(xmlText: string): string | null {
-    const parser = new XMLParser({ ignoreAttributes: false });
-    const doc = parser.parse(xmlText);
-    return getLatestToken(doc, xmlText);
-}
-
-function isFeedUnchanged(feed: RawFeed, meta: Meta) {
-    return (
-        meta.etag &&
-        meta.lastModified &&
-        feed.lastToken === meta.etag &&
-        feed.lastBuildDate.getTime() === new Date(meta.lastModified).getTime()
-    );
-}
-
-async function fetchWithRetry(url: string, headers: HeadersInit = {}, retries = 3): Promise<Response | null> {
-    for (let i = 0; i < retries; i++) {
-        const res = await fetch(url, { headers });
-        if (res.status === 429) {
-            const wait = parseInt(res.headers.get("Retry-After") ?? "60") * 1000;
-            console.warn(`[Hermidata] 429 on ${url}, waiting ${wait}ms`);
-            await new Promise(r => setTimeout(r, wait));
-            continue;
-        }
-        return res;
+    if (extras.image && !hasRealImage(meta.image)) {
+        meta.image = { kind: 'url', url: extras.image };
+        changed = true;
     }
-    return null;
-}
-
-function looksLikeHtml(text: string): boolean {
-    return /^\s*(<!doctype\s+html|<html[\s>])/i.test(text);
-}
-
-async function fetchFeedText(feed: RawFeed | Feed, savedMeta?: Meta): Promise<{ text: string | null; meta: Meta }> {
-    const headers: HeadersInit = {};
-
-    // Add If-None-Match or If-Modified-Since based on saved metadata
-    if (savedMeta?.etag) headers["If-None-Match"] = savedMeta.etag;
-    else if (savedMeta?.lastModified) headers["If-Modified-Since"] = savedMeta.lastModified;
-
-    const response = await fetchWithRetry(feed.url, headers, 3);
-    if (!response) return { text: null, meta: { etag: null, lastModified: null } };
-
-    if (response.status === 304) return { text: null, meta: { etag: null, lastModified: null } }; // unchanged, skip
-    
-    if (!response.ok) {
-        console.warn(`[Hermidata] Feed GET failed: ${feed.url} (${response.status})`);
-        return { text: null, meta: { etag: null, lastModified: null } };
-    }
-
-    return {
-        text: await response.text(),
-        meta: {
-        etag: response.headers.get("etag"),
-        lastModified: response.headers.get("last-modified"),
-        }
-    };
-}
-async function hasFeedChanged(feed: RawFeed, text: string) {
-    const latestToken = getFeedLatestToken(text);
-    let feedChanged = false;
-
-    if (latestToken && feed.lastToken !== latestToken) {
-        feedChanged = true;
-        feed.lastToken = latestToken;
-    } else if (!latestToken) {
-        if (looksLikeHtml(text)) return false;
-        // fallback: hash of first 5KB
-        const snippet = text.slice(0, 5000);
-        const hash = await sha1Hex(snippet);
-        if (feed.lastToken !== hash) {
-            feedChanged = true;
-            feed.lastToken = hash;
-        }
-    }
-
-    return feedChanged;
-}
-
-function saveFeedMetaData(feed: RawFeed, meta: Meta) {
-    if (meta.lastModified) feed.lastBuildDate = new Date(meta.lastModified);
-    feed.lastFetched = new Date().toISOString();
-}
-
-function compareLastSeen(item: FeedItem | null, feed: RawFeed) {
-    if (!item) return feed;
-    
-    if (item.guid !== feed.lastToken || item.pubDate !== feed.lastBuildDate) {
-        notifyUser(feed, item);
-    }
-    return feed;
-}
-
-async function notifyUser(feed: RawFeed, newItems: FeedItem) {
-    const allHermidata = allHermidataCashed || await getAllHermidata();
-    if (shouldSkipFeed(feed, allHermidata)) return;
-    const settings = await getSettings();
-    // "Badge" | "MessageMinimum" | "MessageFull" | "None"
-    const notificationType = settings.ExtensionBehaviour.EnableNotification
-    if (notificationType === "None") return;
-    if (notificationType === "Badge") return createBadgeNotification(feed, newItems);
-    if (notificationType === "MessageMinimum") return createMessageMinimumNotification(feed, newItems);
-    if (notificationType === "MessageFull") return createMessageFullNotification(feed, newItems);
+    return changed;
 }
 
 export function getCurrentDate() {
@@ -339,38 +232,4 @@ export function getCurrentDate() {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     return `${day}/${month}/${year}`;
-}
-
-function createBadgeNotification(rawFeed: RawFeed, _feed: FeedItem) {
-    ext.notifications.create({
-        type: "image",
-        iconUrl: rawFeed.image || "assets/icon48.png",
-        title: rawFeed.latestItem.title,
-        message: ""
-    });
-}
-function createMessageMinimumNotification(rawFeed: RawFeed, _feed: FeedItem) {
-    const title = `${rawFeed.latestItem.title}: new chapters`;
-    const message = rawFeed.latestItem.title.concat("\n");
-    ext.notifications.create({
-        type: "basic",
-        iconUrl: rawFeed.image || "assets/icon48.png",
-        title,
-        message
-    });
-}
-function createMessageFullNotification(rawFeed: RawFeed, feed: FeedItem) {
-    const title = `${rawFeed.latestItem.title}: new chapters`;
-    const message = `
-        title: ${rawFeed.latestItem.title.concat("\n")}
-        domain: ${rawFeed.domain}
-        link: ${feed.link}
-    `;
-    
-    ext.notifications.create({
-        type: "basic",
-        iconUrl: rawFeed.image || "assets/icon48.png",
-        title,
-        message
-    });
 }

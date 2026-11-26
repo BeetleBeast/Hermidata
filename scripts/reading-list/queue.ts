@@ -13,8 +13,10 @@ export function getActiveStatus(entry: Hermidata): string | undefined {
     return entry.chapter.bookmarks[entry.chapter.bookmarkInUse]?.readStatus;
 }
 
+/** In the manual queue; an entry that only holds a priority or pin for the automatic list is not */
 export function isQueued(entry: Hermidata): boolean {
-    return entry.meta.readingQueue !== false;
+    const queue = entry.meta.readingQueue;
+    return queue !== false && !queue.autoOnly;
 }
 
 /** Finished and dropped titles cannot be queued */
@@ -39,6 +41,11 @@ function queueOf(entry: Hermidata): ReadingQueue {
     return entry.meta.readingQueue as ReadingQueue;
 }
 
+/** Priority of any title; one that was never queued or ranked has the default */
+export function priorityOf(entry: Hermidata): number {
+    return entry.meta.readingQueue ? entry.meta.readingQueue.priority : QUEUE_PRIORITY_DEFAULT;
+}
+
 /**
  * Queued entries in reading order.
  * Ties on the index (imports all start at 0) fall back to priority, then date added.
@@ -55,7 +62,7 @@ export function getQueue(all: readonly Hermidata[]): Hermidata[] {
 }
 
 /** A copy of the entry with new queue data; the original stays untouched so it can be restored by undo */
-function withQueue(entry: Hermidata, queue: ReadingQueue | false): Hermidata {
+export function withQueue(entry: Hermidata, queue: ReadingQueue | false): Hermidata {
     const model = new HermidataModel(structuredClone(entry));
     model.SetReadingQueue(queue);
     return model.toJSON();
@@ -142,7 +149,7 @@ export function sortQueueByPriority(all: readonly Hermidata[]): Hermidata[] {
 export function pickForMe(queue: readonly Hermidata[], random: () => number = Math.random): Hermidata | null {
     if (queue.length === 0) return null;
 
-    const weights = queue.map(entry => queueOf(entry).priority);
+    const weights = queue.map(priorityOf);
     let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
     for (let i = 0; i < queue.length; i++) {
         roll -= weights[i];

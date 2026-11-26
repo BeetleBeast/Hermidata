@@ -115,7 +115,7 @@ export function getSeriesUrl(url: string): string {
     }
     return [host, ...seriesSegs].join('/');
 }
-export type ChapterSource = 'titleKeyword' | 'titleSegment' | 'urlKeyword' | 'titleSingleNumber' | 'none';
+export type ChapterSource = 'titleKeyword' | 'titleRelease' | 'titleSegment' | 'urlKeyword' | 'titleSingleNumber' | 'none';
 export interface ChapterResult { chapter: number; source: ChapterSource }
 
 export function detectChapter(title: string | undefined, url: string): ChapterResult {
@@ -133,6 +133,11 @@ export function detectChapter(title: string | undefined, url: string): ChapterRe
     );
     const titleKeyword = keywordAdjacentRegex.exec(normalized)?.[1] ?? '';
 
+    // Release notation ( MangaUpdates ): "v.2 c.45"; a range "c.10-12" counts as its last chapter
+    const releaseRegex = new RegExp(String.raw`(?:^|[\s(])c\.\s*(${numberToken})(?:\s*-\s*(${numberToken}))?`, 'i');
+    const release = releaseRegex.exec(normalized);
+    const titleRelease = release?.[2] ?? release?.[1] ?? '';
+
     // A title segment that IS just a number once split on separators
     const exactNumberRegex = new RegExp(`^${numberToken}$`);
     const titleSegment = normalized.split(/[-–—|:]/).map(p => p.trim()).find(p => exactNumberRegex.test(p)) ?? '';
@@ -147,6 +152,7 @@ export function detectChapter(title: string | undefined, url: string): ChapterRe
     // Ordered from most to least trusted. The old "any digits in the URL" rule is gone.
     const candidates: [ChapterSource, string][] = [
         ['titleKeyword', titleKeyword],
+        ['titleRelease', titleRelease],
         ['titleSegment', titleSegment],
         ['urlKeyword', urlKeyword],
         ['titleSingleNumber', titleSingleNumber],

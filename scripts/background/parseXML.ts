@@ -1,4 +1,5 @@
-import type { FeedItem, FeedExtras } from "../shared/types";
+import { XMLParser } from 'fast-xml-parser';
+import type { FeedItem, FeedExtras, FeedChannelInfo } from "../shared/types";
 import { getChapterFromTitle, generateRssFeedId, TrimTitle } from "../shared/utils/StringOutput";
 
 // A value that might come as a bare string, or as an object with #text (when it has attributes)
@@ -28,17 +29,47 @@ interface FeedItemRaw {
 
 interface RssChannel {
     title?: string;
+    link?: FeedItemRaw["link"];
+    lastBuildDate?: string;
+    image?: { url?: string };
     item?: FeedItemRaw | FeedItemRaw[]; // <-- the key ambiguity
 }
 
 interface AtomFeedBody {
     entry?: FeedItemRaw | FeedItemRaw[];
     title?: string;
+    link?: AtomLink | AtomLink[];
+    updated?: string;
+    logo?: string;
+    icon?: string;
+}
+
+interface RdfBody {
+    channel?: RssChannel;
+    item?: FeedItemRaw | FeedItemRaw[]; // RSS 1.0 puts the items next to the channel
 }
 
 interface ParsedFeedDoc {
-    rss?: { channel?: RssChannel; };  // RSS
+    rss?: { channel?: RssChannel; };  // RSS 2.0
     feed?: AtomFeedBody;    // Atom
+    "rdf:RDF"?: RdfBody;    // RSS 1.0
+}
+
+/** Parses feed XML; null when the text is not an RSS, Atom or RDF document */
+export function parseFeedXml(text: string): ParsedFeedDoc | null {
+    try {
+        const doc = new XMLParser({ ignoreAttributes: false }).parse(text) as ParsedFeedDoc;
+        return doc?.rss || doc?.feed || doc?.["rdf:RDF"] ? doc : null;
+    } catch {
+        return null;
+    }
+}
+
+/** RSS, Atom and RDF items as one flat list, newest first ( as the feed lists them ) */
+function entriesOf(doc: ParsedFeedDoc): FeedItemRaw[] {
+    if (doc?.rss?.channel) return toArray(doc.rss.channel.item);
+    if (doc?.feed) return toArray(doc.feed.entry);
+    return toArray(doc?.["rdf:RDF"]?.item);
 }
 
 // Always returns an array, whether input was undefined, a single object, or already an array
@@ -69,6 +100,28 @@ function linkOf(val: FeedItemRaw["link"]): string {
     return "";
 }
 
+/** The site page a channel points to: RSS <link>text</link>, or Atom's rel="alternate" link */
+function pageLinkOf(val: FeedItemRaw["link"]): string {
+    if (val === undefined) return "";
+    if (typeof val === "string") return val.trim();
+    const links: AtomLink[] = Array.isArray(val) ? val : [val as AtomLink]; // { "#text" } is an AtomLink without attributes
+    const page = links.find(l => l["@_href"] && (!l["@_rel"] || l["@_rel"] === "alternate"));
+    return (page?.["@_href"] ?? textOf(links[0]) ?? "").trim();
+}
+
+/** Link, image and build date of the feed itself */
+export function parseChannelInfo(doc: ParsedFeedDoc): FeedChannelInfo {
+    const channel = doc?.rss?.channel ?? doc?.["rdf:RDF"]?.channel;
+    const atom = doc?.feed;
+    const built = channel?.lastBuildDate ?? atom?.updated;
+    const date = built ? new Date(built) : null;
+    return {
+        link: pageLinkOf(channel?.link ?? atom?.link),
+        image: (channel?.image?.url ?? atom?.logo ?? atom?.icon ?? "").trim(),
+        lastBuildDate: date && !Number.isNaN(date.getTime()) ? date : null,
+    };
+}
+
 function authorOf(item: FeedItemRaw): string {
     const a = item.author;
     if (a && typeof a === "object" && "name" in a && typeof a.name === "string") return a.name.trim();
@@ -90,7 +143,7 @@ function imageOf(item: FeedItemRaw): string {
 
 /** Author, categories and image from the latest item, for filling in Hermidata meta */
 export function parseFeedExtras(doc: ParsedFeedDoc): FeedExtras {
-    const first = (doc?.rss?.channel ? toArray(doc.rss.channel.item) : toArray(doc.feed?.entry))[0];
+    const first = entriesOf(doc)[0];
     if (!first) return {};
     const author = authorOf(first);
     const categories = categoriesOf(first);
@@ -103,10 +156,7 @@ export function parseFeedExtras(doc: ParsedFeedDoc): FeedExtras {
 }
 
 export function parseItems(doc: ParsedFeedDoc, title: string): FeedItem | null {
-    // Normalize RSS vs Atom into one flat list of raw items
-    const rawEntries: FeedItemRaw[] = doc?.rss?.channel
-        ? toArray(doc.rss.channel.item)
-        : toArray(doc.feed?.entry);
+    const rawEntries = entriesOf(doc);
 
     if (!rawEntries.length) {
         console.warn(`[Hermidata] No <item> or <entry> elements found in ${title}.`);
@@ -116,7 +166,8 @@ export function parseItems(doc: ParsedFeedDoc, title: string): FeedItem | null {
     const first = rawEntries[0];
 
     const rawTitle = first.title ?? title ?? "";
-    const linkUrl = linkOf(first.link);
+    // some feeds ( MangaUpdates ) give their items no link: point at the series page instead
+    const linkUrl = linkOf(first.link) || parseChannelInfo(doc).link;
     const trimmedTitle = TrimTitle.trimTitle(rawTitle, linkUrl).title;
 
     const pubDateStr = first.pubDate ?? first.updated ?? first.published;
@@ -137,10 +188,7 @@ export function parseItems(doc: ParsedFeedDoc, title: string): FeedItem | null {
 export function getLatestToken(doc: ParsedFeedDoc, title: string): string | null {
     try {
 
-        // Normalize RSS vs Atom into one flat list of raw items
-        const rawEntries: FeedItemRaw[] = doc?.rss?.channel
-            ? toArray(doc.rss.channel.item)
-            : toArray(doc.feed?.entry);
+        const rawEntries = entriesOf(doc);
 
         if (!rawEntries.length) {
             console.warn(`[Hermidata] No <item> or <entry> elements found in ${title}.`);

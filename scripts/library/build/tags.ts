@@ -1,113 +1,178 @@
-import { DEMOGRAPHIC_TAGS } from "../../shared/constants";
-import type { HermidataModel } from "../../shared/utils/HermidataSelector";
+import type { TagPickerOptions } from "../../shared/types";
 
-export class Tags {
+/**
+ * Selected tags as removable chips, plus an "Add" button that opens a filterable picker.
+ * Removing a chip is reported at once; picks made in the open picker are reported together when it closes,
+ * so one round of picking is one change ( and one undo ).
+ */
+export class TagPicker {
 
-    private readonly hermidata: HermidataModel;
+    private selected: string[] = [];
 
-    private readonly allTagsAllowed: string[];
+    private pickedBeforeOpen: string[] | null = null;
 
-    private readonly allDemographicsUsed: string[];
-    private readonly allGenresUsed: string[];
+    private readonly chips = document.createElement('div');
+    private readonly panel = document.createElement('div');
+    private readonly filter = document.createElement('input');
+    private readonly list = document.createElement('div');
 
-    private readonly selectedRow: HTMLDivElement;
-    private readonly allTags: HTMLDivElement;
-    private readonly filterInput: HTMLInputElement;
+    private readonly container: HTMLElement;
+    private readonly options: TagPickerOptions;
 
-    private isGenre: boolean;
+    constructor(container: HTMLElement, options: TagPickerOptions) {
+        this.container = container;
+        this.options = options;
+        this.chips.className = 'ov-chip-list';
+        this.chips.setAttribute('role', 'list');
+        this.buildPanel();
+        this.container.append(this.chips, this.panel);
 
-    private _selected: Set<string> = new Set();
-
-    public get selected(): Set<string> { return this._selected; }
-
-    constructor(tagsUsed: string[], isGenre: boolean, hermidata: HermidataModel, { selectedRow, allTags: allTagsElement, filterInput }: { selectedRow: HTMLDivElement, allTags: HTMLDivElement, filterInput: HTMLInputElement }) {
-        this.hermidata = hermidata;
-
-        this.allTagsAllowed = tagsUsed;
-
-        this.allDemographicsUsed = hermidata.meta.tags.filter(tag => DEMOGRAPHIC_TAGS.includes(tag));
-        this.allGenresUsed = hermidata.meta.tags.filter(tag => !DEMOGRAPHIC_TAGS.includes(tag));
-
-        this.selectedRow = selectedRow;
-        this.allTags = allTagsElement;
-        this.filterInput = filterInput;
-
-        const usedTags = isGenre ? this.allGenresUsed : this.allDemographicsUsed;
-        usedTags.forEach(tag => this._selected.add(tag));
-
-        this.isGenre = isGenre;
-        
-        this.eventListeners();
-
-        this.renderSelected();
-        this.renderAllTags();
-
-
+        document.addEventListener('pointerdown', (event) => {
+            if (this.isOpen() && !this.container.contains(event.target as Node)) this.close(false);
+        });
+        this.container.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.isOpen()) {
+                event.preventDefault();
+                this.close(true);
+            }
+        });
     }
 
-    private eventListeners() {
-        this.filterInput?.addEventListener('input', () => this.renderAllTags(this.filterInput?.value));
+    public render(selected: string[]): void {
+        this.selected = [...selected];
+        this.renderChips();
+        if (this.isOpen()) this.renderOptions();
     }
 
-    public createPill(tag: string, withRemoveButton: 'WithRemoveButton' | 'WithoutRemoveButton' = 'WithRemoveButton') {
-        const pill = document.createElement('div');
-        pill.classList.add(this.isGenre ? 'hermidata-genre' : 'hermidata-demographic');
-        pill.textContent = tag;
-
-        if (withRemoveButton === 'WithRemoveButton') {
-            const rm = document.createElement('button');
-            rm.type = 'button';
-            rm.setAttribute('aria-label', 'Remove ' + tag);
-            rm.classList.add('tag-pill-removeX');
-            rm.textContent = '\u00d7';
-            rm.addEventListener('click', () => { this._selected.delete(tag); this.renderSelected(); this.renderAllTags(this.filterInput?.value); });
-
-            pill.appendChild(rm);
-        }
-        this.selectedRow!.appendChild(pill);
+    private isOpen(): boolean {
+        return !this.panel.hidden;
     }
 
+    private buildPanel(): void {
+        this.panel.className = 'ov-picker';
+        this.panel.hidden = true;
+        this.panel.setAttribute('role', 'group');
+        this.panel.setAttribute('aria-label', `Pick ${this.options.itemName}s`);
 
-    private renderSelected() {
-        if (!this.selectedRow) return;
+        this.filter.type = 'search';
+        this.filter.className = 'ov-picker-filter';
+        this.filter.placeholder = `Find or create a ${this.options.itemName}…`;
+        this.filter.setAttribute('aria-label', `Find ${this.options.itemName}`);
+        this.filter.autocomplete = 'off';
+        this.filter.addEventListener('input', () => this.renderOptions());
+        this.filter.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const query = this.filter.value.trim();
+            if (!query) return;
+            const match = this.options.available().find(tag => tag.toLowerCase() === query.toLowerCase());
+            this.toggle(match ?? query);
+            this.filter.value = '';
+            this.renderOptions();
+        });
 
-        this.selectedRow.innerHTML = '';
-        if (this._selected.size === 0) {
-            this.noMessageSelected();
+        this.list.className = 'ov-picker-list';
+
+        const done = document.createElement('button');
+        done.type = 'button';
+        done.className = 'ov-btn ov-btn-small ov-picker-done';
+        done.textContent = 'Done';
+        done.addEventListener('click', () => this.close(true));
+
+        this.panel.append(this.filter, this.list, done);
+    }
+
+    private renderChips(): void {
+        const chips = this.selected.map(tag => {
+            const chip = document.createElement('span');
+            chip.className = 'ov-chip ov-chip-tag';
+            chip.setAttribute('role', 'listitem');
+            chip.textContent = tag;
+
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'ov-chip-remove';
+            remove.setAttribute('aria-label', `Remove ${this.options.itemName} ${tag}`);
+            remove.textContent = '×';
+            remove.addEventListener('click', () => {
+                this.toggle(tag);
+                if (!this.isOpen()) this.report();
+                this.addButton()?.focus();
+            });
+            chip.append(remove);
+            return chip;
+        });
+
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'ov-chip-add';
+        add.innerHTML = '<svg class="ov-icon" aria-hidden="true"><use href="#i-plus"/></svg>';
+        add.append(document.createTextNode(this.selected.length ? 'Edit' : 'Add'));
+        add.setAttribute('aria-label', `Choose ${this.options.itemName}s`);
+        add.setAttribute('aria-expanded', String(this.isOpen()));
+        add.addEventListener('click', () => this.isOpen() ? this.close(true) : this.open());
+
+        this.chips.replaceChildren(...chips, add);
+    }
+
+    private renderOptions(): void {
+        // the list is rebuilt on every pick: keep the keyboard on the option that was just toggled
+        const focusedTag = this.list.contains(document.activeElement) ? document.activeElement?.textContent : null;
+        const query = this.filter.value.trim().toLowerCase();
+        const options = [...new Set([...this.selected, ...this.options.available()])]
+            .filter(tag => tag.toLowerCase().includes(query))
+            .sort((a, b) => a.localeCompare(b));
+
+        const buttons = options.map(tag => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'ov-picker-option';
+            option.textContent = tag;
+            option.setAttribute('aria-pressed', String(this.selected.includes(tag)));
+            option.addEventListener('click', () => this.toggle(tag));
+            return option;
+        });
+        if (buttons.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'ov-picker-empty';
+            empty.textContent = query ? `Press Enter to add "${this.filter.value.trim()}"` : `No ${this.options.itemName}s yet`;
+            this.list.replaceChildren(empty);
             return;
         }
-        this._selected.forEach(tag => this.createPill(tag));
+        this.list.replaceChildren(...buttons);
+        if (focusedTag) buttons.find(button => button.textContent === focusedTag)?.focus();
     }
-    private noMessageSelected() {
-        if (!this.selectedRow) return;
-        const hint = document.createElement('div');
-        hint.textContent = 'No genres selected yet';
-        hint.dataset.empty = 'true';
-        hint.style.cssText = 'font-size:13px;color:var(--text-muted);';
-        this.selectedRow.appendChild(hint);
+
+    private toggle(tag: string): void {
+        this.selected = this.selected.includes(tag) ? this.selected.filter(item => item !== tag) : [...this.selected, tag];
+        this.renderChips();
+        if (this.isOpen()) this.renderOptions();
     }
-    private renderAllTags(filter: string | undefined = '') {
-        if (!this.allTags) return;
 
-        this.allTags.innerHTML = '';
-        const list = this.allTagsAllowed.filter(t => t.toLowerCase().includes((filter || '').toLowerCase()));
+    private open(): void {
+        this.pickedBeforeOpen = [...this.selected];
+        this.panel.hidden = false;
+        this.filter.value = '';
+        this.renderChips();
+        this.renderOptions();
+        this.filter.focus();
+    }
 
-        for (const tag of list) {
-            const isSelected = this._selected.has(tag);
-            const chip = document.createElement('button');
-            chip.type = 'button';
-            chip.textContent = tag;
-            chip.classList.add('hermidata-tag-pill');
-            chip.dataset.isSelected = String(isSelected);
-            chip.setAttribute('aria-pressed', String(isSelected));
+    private close(returnFocus: boolean): void {
+        this.panel.hidden = true;
+        this.renderChips();
+        const before = this.pickedBeforeOpen;
+        this.pickedBeforeOpen = null;
+        const changed = !before || before.length !== this.selected.length || before.some(tag => !this.selected.includes(tag));
+        if (changed) this.report();
+        if (returnFocus) this.addButton()?.focus();
+    }
 
-            chip.addEventListener('click', () => {
-                if (this._selected.has(tag)) this._selected.delete(tag);
-                else this._selected.add(tag);
-                this.renderSelected();
-                this.renderAllTags(this.filterInput?.value);
-            });
-            this.allTags.appendChild(chip);
-        }
+    private report(): void {
+        this.options.onChange([...this.selected]);
+    }
+
+    private addButton(): HTMLButtonElement | null {
+        return this.chips.querySelector<HTMLButtonElement>('.ov-chip-add');
     }
 }

@@ -2,13 +2,18 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, openLink, generateHermidataHash, getFreeKey, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
-import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
+import { saveHermidata, updateHermidata, removeHermidata, getSettings, setSettings } from "../../shared/db/Storage";
+import { isMangaUpdatesFeedUrl } from "../../shared/lookup/mangaUpdatesFeeds";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
-import { getHermidataWithRssFromBackground } from "../load";
+import { clearNotifications, getHermidataWithRssFromBackground } from "../load";
+import { refreshNotificationSection } from "./feed";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import type { PickedElementData } from "../../shared/types/rss";
+
+/** Smallest gap kept between a context menu and the viewport edge, in px */
+const MENU_EDGE_MARGIN = 8;
 
 export class EventListener extends RssBuild {
     
@@ -25,7 +30,7 @@ export class EventListener extends RssBuild {
             feed.addEventListener('contextmenu', (e) => this.rightMouseClickOnItem(e, true, true));
             const hashItem = this.GetHashItem(feed);
             makeButtonLike(feed, this.describeItem(feedListLocalReload[hashItem]), 'link');
-            feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], true);
+            feed.onclick = () => this.clickOnItem(feedListLocalReload[hashItem], true, feed);
         }
         for (let items of allItems) {
             const item = this.getEntriesItem(items) || this.getNotificationItem(items);
@@ -47,11 +52,12 @@ export class EventListener extends RssBuild {
         const linked = hermidata.hasRSS() ? 'linked to an RSS feed' : 'not linked to an RSS feed';
         return `${hermidata.title}, ${linked}. Open the latest chapter, or press the context menu key for more actions`;
     }
-    private async clickOnItem(value: Hermidata, isNotificationItem: boolean) {
+    private async clickOnItem(value: Hermidata, isNotificationItem: boolean, element: HTMLDivElement | null = null) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
 
         const hermidata = new HermidataModel(value);
 
+        await this.clearIfNotification(element);
         await openLink(hermidata.GetLatestRssFeed()?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
     }
     private async rightMouseClickOnItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
@@ -273,25 +279,17 @@ export class EventListener extends RssBuild {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
-        // Vertical positioning
-        let top = e.clientY;
-        if (e.clientY + menuHeight > viewportHeight) {
-            top = e.clientY- (menuHeight / 2);
-            
-            if (top < 0) top = e.clientY - menuHeight;
-            if (top < 0) top = 0 + menuHeight;
-            if (top < 0) top = viewportHeight - menuHeight - 10; // clamp if menu is taller than viewport
-        }
-
-        // Horizontal positioning (same idea, for completeness)
-        let left = e.clientX;
-        if (e.clientX + menuWidth > viewportWidth) {
-            left = e.clientX - menuWidth;
-            if (left < 0) left = viewportWidth - menuWidth - 10;
-        }
+        const top = this.placeAlongAxis(e.clientY, menuHeight, viewportHeight);
+        const left = this.placeAlongAxis(e.clientX, menuWidth, viewportWidth);
 
         menu.style.top = `${top}px`;
         menu.style.left = `${left}px`;
+    }
+    /** Start of a box of `size` opened at `cursor`: below/after the cursor, flipped before it, or pinned inside the viewport edge */
+    private placeAlongAxis(cursor: number, size: number, viewportSize: number): number {
+        if (cursor + size <= viewportSize - MENU_EDGE_MARGIN) return cursor;
+        if (cursor - size >= MENU_EDGE_MARGIN) return cursor - size;
+        return Math.max(MENU_EDGE_MARGIN, viewportSize - size - MENU_EDGE_MARGIN);
     }
     private setSubMenuPosition(subMenuContainer: HTMLDivElement, subMenu: HTMLDivElement, menu: HTMLDivElement) {
         // calculate if enough space right
@@ -302,7 +300,10 @@ export class EventListener extends RssBuild {
 
         const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
         
-        subMenu.style.top = `${topSpace}px`;
+        // keep the submenu inside the viewport vertically, shifting it up when it would run off the bottom
+        const menuTop = menu.getBoundingClientRect().top;
+        const maxTop = window.innerHeight - MENU_EDGE_MARGIN - subMenu.offsetHeight - menuTop;
+        subMenu.style.top = `${Math.max(MENU_EDGE_MARGIN - menuTop, Math.min(topSpace, maxTop))}px`;
 
         const isRight = enoughSpaceRight ? "right" : "left";
 
@@ -393,6 +394,7 @@ export class EventListener extends RssBuild {
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
         if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
+        await this.clearIfNotification(target);
         await openLink(currentUrl, 'sameTab', currentScrollPosition);
     }
 
@@ -410,6 +412,7 @@ export class EventListener extends RssBuild {
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
         if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
+        await this.clearIfNotification(target);
         await openLink(currentUrl, 'newTab', currentScrollPosition);
     }
     
@@ -427,26 +430,33 @@ export class EventListener extends RssBuild {
         const currentScrollPosition = id ? entry.GetScrollPosition(id) : entry.GetScrollPosition();
         if (!currentUrl || !this.isNumber(currentScrollPosition)) return; 
         
+        await this.clearIfNotification(target);
         await openLink(currentUrl, 'newWindow', currentScrollPosition);
     }
     private isNumber(number: number) {
         return !isNaN(number) && number !== undefined;
     }
     
-    private clearNotification(target: HTMLDivElement | null) {
+    /** Opening a notification item clears it; cleared before opening, since a new tab or window closes the popup */
+    private async clearIfNotification(target: HTMLDivElement | null) {
+        if (target && this.getNotificationItem(target)) await this.clearNotification(target);
+    }
+    private async clearNotification(target: HTMLDivElement | null) {
         if (!target) return;
-        console.log("Cleared notification for", target);
         // find id of list item
         const item = this.getNotificationItem(target);
         if (!item) {
             console.log('isn\'t a notification item');
             return;
         }
-        item.remove()
+        item.remove();
+        refreshNotificationSection();
         const hashItem = this.GetHashItem(item);
 
-        for (const feed of this.AllHermidata[hashItem].rss) feed.Notified = undefined;
-        saveHermidata(hashItem, this.AllHermidata[hashItem]);
+        // the RSS view's copy has the newest fetched item; the stored one may not
+        const rssItems = await getHermidataWithRssFromBackground();
+        const entry = rssItems[hashItem] ?? this.AllHermidata[hashItem];
+        if (entry) await clearNotifications([entry]);
     }
     private async pickElement(target: HTMLDivElement | null) {
         if (!target) return;
@@ -594,9 +604,18 @@ export class EventListener extends RssBuild {
     private async unLinkRSSFeed(entry: HermidataModel) {
         if (!entry) return;
 
+        const mangaUpdatesFeed = entry.rss.find(feed => isMangaUpdatesFeedUrl(feed.url));
         entry.rss = [];
 
         await saveHermidata(entry.id, entry.toJSON());
+        if (mangaUpdatesFeed) await this.keepUnlinked(entry.id, mangaUpdatesFeed.id);
+    }
+    /** Without this the next feed check would link the MangaUpdates feed again */
+    private async keepUnlinked(itemId: string, feedId: string) {
+        const settings = await getSettings();
+        const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe;
+        autoSubscribe.HermidataNotLinkedToRSS = { ...autoSubscribe.HermidataNotLinkedToRSS, [itemId]: feedId };
+        await setSettings(settings);
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined

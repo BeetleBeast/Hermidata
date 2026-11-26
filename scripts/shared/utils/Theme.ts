@@ -18,7 +18,7 @@ export function applyLightMode(enabled: boolean): void {
 /** Matches the page to the saved setting and follows changes from other pages or devices. */
 export async function initTheme(): Promise<void> {
     ext.storage.onChanged.addListener((changes, area) => {
-        if (area !== "sync" || !changes.Settings) return;
+        if ((area !== "sync" && area !== "local") || !changes.Settings) return;   // "local": a device that does not sync
         const newSettings = changes.Settings.newValue as { ExtensionBehaviour?: { EnableLightMode?: boolean } } | undefined;
         applyLightMode(newSettings?.ExtensionBehaviour?.EnableLightMode === true);
     });

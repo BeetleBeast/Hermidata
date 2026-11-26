@@ -9,6 +9,8 @@ import { getAllRawFeeds, getHermidataViaKey, saveHermidata } from "../shared/db/
 import { getAllHermidataWithRss, removeRawFeeds } from "../shared/db/db";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { ConsoleMessage } from "../shared/utils/ErrorMessage";
+import { getAllUnread, markSeen, seenFromItem } from "../shared/utils/Unread";
+import { hasRealImage } from "../shared/utils/ImageSource";
 
 /*
 
@@ -57,6 +59,22 @@ export async function cullRawFeeds(AllHermidata: Record<string, Hermidata>, thre
 
     // remove the raw feeds
     await removeRawFeeds(feedIdsToRemove);
+}
+
+/**
+ * Feed discovery used to store a feed under its newest chapter's link instead of its own address.
+ * Such a feed answers with a chapter page, never with releases: true for those.
+ */
+export function isChapterLinkedFeed(feed: Pick<Feed, 'url' | 'latestItem'>): boolean {
+    return !!feed.latestItem?.link && feed.url === feed.latestItem.link;
+}
+
+/** Removes the stored feeds that discovery saved under a chapter link; the next visit stores them right */
+export async function removeChapterLinkedRawFeeds(): Promise<void> {
+    const broken = Object.values(await getAllRawFeeds()).filter(isChapterLinkedFeed).map(feed => feed.url);
+    if (!broken.length) return;
+    console.info(`[RSS] Removing ${broken.length} stored feed(s) saved under a chapter link`);
+    await removeRawFeeds(broken);
 }
 
 async function getRawFeedsRecord( AllHermidata: Record<string, Hermidata> ): Promise<Record<string, RawFeed>> {
@@ -157,12 +175,26 @@ export async function getHermidataWithRssFromBackground(): Promise<Record<string
         });
     });
 }
-/** get hermidata with RSS that have the notification set to true */
+/**
+ * Clears notifications: marks every feed of these items seen up to its newest item, saves ( and syncs ) them,
+ * then rebuilds the background cache, which also updates the badge.
+ * Pass the items as the RSS view has them ( from GET_RSS ), so the newest fetched item is the one marked seen.
+ */
+export async function clearNotifications(items: Hermidata[]): Promise<void> {
+    for (const item of items) {
+        if (!item?.rss?.length) continue;
+        await saveHermidata(item.id, markSeen(item));
+    }
+    await ext.runtime.sendMessage({ type: 'INVALIDATE_RSS' }).catch(() => {});
+    // the popup keeps a prebuilt RSS view: it has to be rebuilt next time
+    if (typeof document !== 'undefined') document.dispatchEvent(new CustomEvent(RSS_CHANGED_EVENT));
+}
+export const RSS_CHANGED_EVENT = 'hermidata:rss-changed';
+
+/** The items with a chapter the user hasn't read or cleared, newest release first */
 export async function getHermidataNotification(): Promise<Record<string, Hermidata>> {
     const hermidata = await getHermidataWithRssFromBackground();
-    const newNotification = Object.values(hermidata).filter(h => h.rss.some(feed => feed.Notified))
-
-    return Object.fromEntries(newNotification.map(h => [h.id, h]));
+    return Object.fromEntries(getAllUnread(hermidata).map(info => [info.item.id, info.item]));
 }
 
 
@@ -187,8 +219,9 @@ export function updateFeed(hermidata: Hermidata, allFeeds: Record<string, RawFee
  * @param {String} type - the RSS input type
  * @param {Object} rssData  - the RSS feed data
  * @param {String} itemId - the saved item to link to; without it the item is looked up by title
+ * @param {String} coverUrl - a cover for the item; used only when the item has no image of its own
 */
-export async function linkRSSFeed(title: string, type: AnyNovelType, url: string, rssData: RawFeed, itemId?: string) {
+export async function linkRSSFeed(title: string, type: AnyNovelType, url: string, rssData: RawFeed, itemId?: string, coverUrl?: string) {
     // the caller knows which item it means: link exactly that one, not the first item sharing its title
     const known = itemId ? await getHermidataViaKey(itemId) : null;
     const { entry, saveKey } = known ? { entry: known, saveKey: known.id } : await findEntryByTitle(title, type, url, rssData);
@@ -200,8 +233,14 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
         image: rssData.image,
         domain: rssData.domain,
         lastFetched: new Date().toISOString(),
-        latestItem: rssData.latestItem ?? null
+        latestItem: rssData.latestItem ?? null,
+        // linking a feed is not a new release: what it has now counts as seen
+        ...(rssData.latestItem && { seen: seenFromItem(rssData.latestItem) }),
     };
+    if (coverUrl && !hasRealImage(entry.meta.image)) entry.meta.image = { kind: 'url', url: coverUrl };
+
+    // a chapter-linked feed from the same site never worked: the working one takes its place
+    entry.rss = entry.rss.filter(feed => !(isChapterLinkedFeed(feed) && feed.domain === newFeed.domain));
     const existingFeedIndex = entry.rss.findIndex(feed => feed.url === newFeed.url);
     if (existingFeedIndex === -1) entry.rss.push(newFeed);
     else entry.rss[existingFeedIndex] = newFeed;
@@ -211,6 +250,15 @@ export async function linkRSSFeed(title: string, type: AnyNovelType, url: string
     if (latestChapter) entry.chapter.latest = latestChapter;
 
     await saveHermidata(saveKey, entry);
+}
+
+/** Gives an item a cover when it has no image of its own; false when it keeps the image it has */
+export async function setCoverIfMissing(itemId: string, coverUrl: string): Promise<boolean> {
+    const entry = await getHermidataViaKey(itemId);
+    if (!entry || hasRealImage(entry.meta.image)) return false;
+    entry.meta.image = { kind: 'url', url: coverUrl };
+    await saveHermidata(itemId, entry);
+    return true;
 }
 
 /** Finds ( or makes ) the item for a feed by its title; refuses to pick between several same-titled items */

@@ -1,4 +1,15 @@
 export type {
+    CommitOptions,
+    CommitChange,
+    SaveState,
+    ChipListOptions,
+    CoverSource,
+    TagPickerOptions,
+    MarkerSortKey,
+    SortDirection,
+} from "./overview";
+
+export type {
     QueueFilters,
     QueuePosition,
     RowOptions,
@@ -8,6 +19,9 @@ export type {
     GrabbedRow,
     WaitingCover,
     QueueIconName,
+    ReadingGroup,
+    RankedRow,
+    AutoRowOptions,
 } from "./readingList";
 
 export type {
@@ -27,6 +41,7 @@ export type {
     Hermidata,
     Bookmark,
     ReadingQueue,
+    ReadingPin,
     ReadingQueuePriorityBand,
 
     OnlyPlainHermidata,
@@ -52,6 +67,7 @@ export type {
     AllFeeds,
 
     Feed,
+    SeenMarker,
     RawFeed,
     FeedItem,
     FeedExtras,
@@ -72,9 +88,17 @@ export type {
     StringListFieldPath,
     ValueAtPath,
 
-    RawScrapedItem,
-    RawScrappedFeed,
-    
+    DetectedFeed,
+    FeedHttpMeta,
+    FeedFetchResult,
+    FeedChannelInfo,
+    MangaUpdatesLinkLog,
+    MangaUpdatesFeedCandidate,
+    MangaUpdatesFeedScan,
+    MangaUpdatesLinkOutcome,
+    MangaUpdatesCoverResult,
+    MangaUpdatesFeedProgress,
+
     Migration,
 
     ReleaseSchedule,
@@ -132,8 +156,6 @@ export type {
     RssDOM,
     RSSData,
 
-    TagMap,
-    SwitchConfig,
 
     FuzzyHermidataMatches,
     FuzzyBookmarkMatches,
@@ -141,7 +163,9 @@ export type {
 
     HermidataMigrationConfiguration,
     ScalarConflict,
-    MergeAnalysis,
+    MergeLetter,
+    MergeSuggestion,
+    MergeConflictChoice,
 
     DbStore,
     DbCall,
@@ -173,7 +197,11 @@ export type {
     KeyboardShortcutSettings,
     BookmarkTitleValues,
     BookmarkTitlePlaceholder,
-    BookmarkTitleFormatPart
+    BookmarkTitleFormatPart,
+    AutoSetStatusMode,
+    AutoSetStatusSettings,
+    AutoReadingListSettings,
+    LegacyAutoSetStatusSettings
 
 } from "./settings";
 

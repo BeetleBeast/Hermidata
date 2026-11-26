@@ -1,6 +1,6 @@
-import type { Hermidata, PickActions, QueueIconName, QueueProgress, ReadingQueue, RowActions, RowOptions, WaitingCover } from "../shared/types";
+import type { Hermidata, PickActions, QueueIconName, QueueProgress, RowActions, RowOptions, WaitingCover } from "../shared/types";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
-import { getActiveStatus, getPriorityBand, QUEUE_PRIORITY_MAX, QUEUE_PRIORITY_MIN } from "./queue";
+import { getActiveStatus, getPriorityBand, priorityOf, QUEUE_PRIORITY_MAX, QUEUE_PRIORITY_MIN } from "./queue";
 
 const MAX_HERO_TAGS = 4;
 
@@ -125,8 +125,9 @@ function textButton(className: string, name: QueueIconName, text: string, onClic
     return btn;
 }
 
-function queueOf(entry: Hermidata): ReadingQueue {
-    return entry.meta.readingQueue as ReadingQueue;
+/** In the automatic list only pinned rows can be moved; every other position is computed */
+function canGrab(options: RowOptions): boolean {
+    return options.canReorder && (!options.auto || options.auto.group === 'pinned');
 }
 
 function getProgress(entry: Hermidata): QueueProgress {
@@ -177,7 +178,7 @@ function buildHandle(entry: Hermidata, options: RowOptions): HTMLButtonElement {
 }
 
 function buildPriority(entry: Hermidata, actions: RowActions): HTMLElement {
-    const priority = queueOf(entry).priority;
+    const priority = priorityOf(entry);
     const wrap = el('label', 'rl-priority');
     wrap.dataset.band = getPriorityBand(priority).toLowerCase();
 
@@ -204,13 +205,16 @@ function buildMenu(entry: Hermidata, options: RowOptions, actions: RowActions): 
 
     const list = el('div', 'rl-menu-list');
     list.append(textButton('rl-menu-item', 'info', 'View details', () => actions.openOverview(entry)));
+    const pinned = options.auto?.group === 'pinned';
+    const verb = options.auto && !pinned ? 'Pin' : 'Move';
     if (options.canReorder && options.index > 0) {
-        list.append(textButton('rl-menu-item', 'toTop', 'Move to top', () => actions.moveTo(entry, 0)));
+        list.append(textButton('rl-menu-item', 'toTop', `${verb} to top`, () => actions.moveTo(entry, 0)));
     }
     if (options.canReorder && options.index < options.total - 1) {
-        list.append(textButton('rl-menu-item', 'toBottom', 'Move to bottom', () => actions.moveTo(entry, options.total - 1)));
+        list.append(textButton('rl-menu-item', 'toBottom', `${verb} to bottom`, () => actions.moveTo(entry, options.total - 1)));
     }
-    list.append(textButton('rl-menu-item rl-menu-danger', 'trash', 'Remove from queue', () => actions.remove(entry)));
+    const removeLabel = !options.auto ? 'Remove from queue' : pinned ? 'Unpin' : 'Dismiss until next release';
+    list.append(textButton('rl-menu-item rl-menu-danger', 'trash', removeLabel, () => actions.remove(entry)));
 
     menu.append(summary, list);
     return menu;
@@ -231,6 +235,17 @@ function metaText(entry: Hermidata): string {
     return [entry.novelType, entry.source, getActiveStatus(entry)].filter(Boolean).join(' · ');
 }
 
+/** The meta line; in the automatic list it starts with the reason the title is there */
+function buildMeta(entry: Hermidata, options: RowOptions): HTMLElement {
+    const meta = el('p', 'rl-meta', metaText(entry));
+    if (options.auto) {
+        const reason = el('span', 'rl-reason', options.auto.reason);
+        reason.dataset.group = options.auto.group;
+        meta.prepend(reason);
+    }
+    return meta;
+}
+
 function continueLabel(progress: QueueProgress): string {
     const verb = progress.unit === 'Ep.' ? 'watching' : 'reading';
     return progress.read > 0 ? `Continue ${verb}` : `Start ${verb}`;
@@ -244,7 +259,8 @@ export function buildUpNext(entry: Hermidata, options: RowOptions, actions: RowA
     const card = el('article', 'rl-hero');
     card.dataset.queueId = entry.id;
     card.dataset.index = String(options.index);
-    card.draggable = options.canReorder;
+    card.draggable = canGrab(options);
+    if (options.auto?.group === 'pinned') card.dataset.pinned = '';
 
     const backdrop = el('img', 'rl-hero-backdrop');
     backdrop.alt = '';
@@ -258,10 +274,11 @@ export function buildUpNext(entry: Hermidata, options: RowOptions, actions: RowA
     }));
 
     const controls = el('div', 'rl-hero-controls');
-    controls.append(buildHandle(entry, options), buildMenu(entry, options, actions));
+    if (canGrab(options)) controls.append(buildHandle(entry, options));
+    controls.append(buildMenu(entry, options, actions));
 
     const body = el('div', 'rl-hero-body');
-    body.append(buildTitle(entry, actions), el('p', 'rl-meta', metaText(entry)));
+    body.append(buildTitle(entry, actions), buildMeta(entry, options));
     if (entry.meta.tags.length) {
         const tags = el('ul', 'rl-tags');
         tags.append(...entry.meta.tags.slice(0, MAX_HERO_TAGS).map(tag => el('li', undefined, tag)));
@@ -285,13 +302,15 @@ export function buildRow(entry: Hermidata, options: RowOptions, actions: RowActi
     const row = el('li', 'rl-row');
     row.dataset.queueId = entry.id;
     row.dataset.index = String(options.index);
-    row.draggable = options.canReorder;
+    row.draggable = canGrab(options);
+    if (options.auto?.group === 'pinned') row.dataset.pinned = '';
 
     const grab = el('div', 'rl-grab');
-    grab.append(el('span', 'rl-position', String(options.index + 1)), buildHandle(entry, options));
+    grab.append(el('span', 'rl-position', String(options.index + 1)));
+    if (canGrab(options)) grab.append(buildHandle(entry, options));
 
     const main = el('div', 'rl-row-main');
-    main.append(buildTitle(entry, actions), el('p', 'rl-meta', metaText(entry)));
+    main.append(buildTitle(entry, actions), buildMeta(entry, options));
 
     const rowActions = el('div', 'rl-row-actions');
     rowActions.append(
@@ -303,13 +322,20 @@ export function buildRow(entry: Hermidata, options: RowOptions, actions: RowActi
     return row;
 }
 
+/** A heading between the groups of the automatic list */
+export function buildGroupDivider(label: string): HTMLLIElement {
+    const divider = el('li', 'rl-group', label);
+    divider.setAttribute('role', 'presentation');
+    return divider;
+}
+
 /** Content of the "Pick for me" dialog */
 export function buildPickCard(entry: Hermidata, actions: PickActions): HTMLElement {
     const progress = getProgress(entry);
     const card = el('div', 'rl-pick');
 
     const body = el('div', 'rl-pick-body');
-    const band = getPriorityBand(queueOf(entry).priority);
+    const band = getPriorityBand(priorityOf(entry));
     body.append(
         el('p', 'rl-eyebrow', 'Picked for you'),
         el('h2', undefined, entry.title),

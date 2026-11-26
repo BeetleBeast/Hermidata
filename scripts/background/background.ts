@@ -1,7 +1,7 @@
 import { initTabs } from './tabs'
 import { initMessaging, initInstalled } from './messaging'
 import { initContextMenus } from './contextMenus'
-import { initFeeds } from './feeds'
+import { initFeedListeners, initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
 import { initSync } from '../shared/sync/sync.engine'
 import { initSyncAlarmListener } from '../shared/sync/syncAlarms'
@@ -11,6 +11,8 @@ import { scheduleCull } from './culling'
 import { initShortcuts } from './shortcuts'
 import { initBackfillAlarm, resumeBackfill } from './altTitleBackfill'
 import { markFailed, markReady } from './ready'
+import { allowMangaUpdatesRequests } from './mangaUpdatesRequests'
+import { initMangaUpdatesFeedAlarm, kickMangaUpdatesFeeds } from './mangaUpdatesFeedLinker'
 
 /*
 ./background/
@@ -42,11 +44,14 @@ initContextMenus();
 initInstalled();
 initSyncAlarmListener();
 initBackfillAlarm();
+initMangaUpdatesFeedAlarm();
+initFeedListeners();
 
 // Phase 2: async startup. Things that need migrated data.
 (async () => {
     try {
         await migrationSteps();
+        await allowMangaUpdatesRequests(); // before the first feed check or alt-title lookup talks to MangaUpdates
         initRssCache();
         initFeeds();
         initSync();
@@ -54,6 +59,7 @@ initBackfillAlarm();
         scheduleCull(() => cached);
         markReady();
         void resumeBackfill(); // an alt-title backfill that the browser interrupted
+        void kickMangaUpdatesFeeds(); // MangaUpdates links the browser interrupted ( Firefox keeps no alarms over a restart )
     } catch (e) {
         console.error('[Hermidata] startup failed', e);
         markFailed(e);

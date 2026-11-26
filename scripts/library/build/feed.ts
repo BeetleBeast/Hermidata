@@ -16,42 +16,11 @@ export class feed extends LibraryBuilder {
 
     public async build(): Promise<void> {
         await this.buildFeedAll();
-
-        this.setCheckBoxAtCorrectState();
         return Promise.resolve();
     }
     /** Rebuild every entry from the current data */
     public async reload(): Promise<void> {
         await this.buildFeedAll();
-
-        this.setCheckBoxAtCorrectState();
-    }
-    private setCheckBoxAtCorrectState() {
-        const visibleElements = this.AllHermidataContainer?.querySelectorAll<HTMLDivElement>('div[aria-hidden="false"]');
-        if (!visibleElements) return;
-
-        const updates: { checkbox: HTMLInputElement; position: number }[] = [];
-
-        const translationPosition = () => this.viewMode === 'list' ? -20 : 10;
-
-        const setWith = (siteWidth: number) => this.viewMode === 'grid' ? 0 : -(150 - siteWidth);
-
-        // READ phase — no writes here
-        for (const el of visibleElements) {
-            const site = this.viewMode === 'grid' ? el.querySelector<HTMLImageElement>('.hermidata-item-image') : el.querySelector<HTMLDivElement>('.hermidata-item-site');
-            const checkbox = el.querySelector<HTMLInputElement>('.hermidata-item-checkbox-invisible-container');
-            if (!site || !checkbox) continue;
-
-            const siteWidth = site.getBoundingClientRect().width;
-            updates.push({ checkbox, position: setWith(siteWidth) });
-        }
-
-        // WRITE phase — no reads here
-        for (const { checkbox, position } of updates) {
-            checkbox.style.opacity = '0';
-            checkbox.style.transform = `translateX(${translationPosition()}px)`;
-            checkbox.style.left = `${position}px`;
-        }
     }
 
     public setGridViewMode(newViewMode: 'grid' | 'list'): void {
@@ -73,8 +42,6 @@ export class feed extends LibraryBuilder {
         this.viewMode = newViewMode;
 
         document.body.dataset.listMode = this.viewMode === 'list' ? 'true' : 'false';
-
-        this.setCheckBoxAtCorrectState();
     }
 
     private async buildFeedAll() {
@@ -129,34 +96,11 @@ export class feed extends LibraryBuilder {
         container.dataset.viewMode = this.viewMode;
         container.ariaHidden = 'false';
 
+        // the selection checkbox is revealed on hover / focus by CSS ( library/feed.css )
         container.addEventListener('click', () => openLink('./Overview.html#/id/' + entry.id, 'sameTab'));
-        container.addEventListener('mouseover', (e) => this.transformCheckboxPosition(e, 'show'));
-        container.addEventListener('mouseout', (e) => this.transformCheckboxPosition(e, 'hide'));
-        // keyboard users reveal the hover-only checkbox by focusing into the entry
-        container.addEventListener('focusin', (e) => this.transformCheckboxPosition(e, 'show'));
-        container.addEventListener('focusout', (e) => this.transformCheckboxPosition(e, 'hide'));
 
         return container;
     }
-    private transformCheckboxPosition(event: Event, entry: 'show' | 'hide') {
-        const container = event.currentTarget as HTMLDivElement;
-        const checkbox = container.querySelector<HTMLInputElement>('.hermidata-item-checkbox-invisible-container');
-        if (!checkbox) return;
-
-        const isListMode = this.viewMode === 'list';
-
-        const normal = () => (entry === 'show') ? '0px' : '-20px';
-        const reverse = () => (entry === 'show') ? '-20px' : '10px';
-
-        const value = isListMode ? normal() : reverse();
-
-
-
-        checkbox.style.opacity = `${entry === 'show' ? '1' : '0'}`;
-
-        checkbox.style.transform = `translateX(${value})`;
-    }
-
     private async buildImage(entry: HermidataModel): Promise<HTMLImageElement> {
         const img = document.createElement('img');
 
@@ -274,6 +218,8 @@ export class feed extends LibraryBuilder {
         svg.setAttribute('aria-hidden', 'true');
         svg.setAttribute('width', '25px');
         svg.setAttribute('height', '25px');
+        // viewBox lets CSS scale the dot without clipping the circle
+        svg.setAttribute('viewBox', '0 0 24 24');
 
         const circle = this.buildNovelTypeCircle(entry);
 
@@ -341,10 +287,6 @@ export class feed extends LibraryBuilder {
         checkbox.checked = false;
         checkbox.ariaChecked = 'false';
         checkbox.setAttribute('aria-label', `Select ${title}`);
-
-        const value = this.viewMode === 'list' ? '-20px' : '10px';
-
-        invisibleContainer.style.transform = `translateX(${value})`;
 
         checkbox.addEventListener('click', (e) => e.stopPropagation());
 

@@ -33,7 +33,25 @@ export type AutoSubscribe = {
     HermidataNotLinkedToRSS: Record<string, string>;
 }
 
-export type StatusScores = {
+/**
+ * Which dates count as activity when the novel status is set automatically.
+ * - off: never change a status
+ * - rss: only the newest RSS item ( safer )
+ * - all: the newest RSS item or the last time a chapter was checked
+ */
+export type AutoSetStatusMode = 'off' | 'rss' | 'all';
+
+export type AutoSetStatusSettings = {
+    mode: AutoSetStatusMode
+}
+
+/** Whether the reading list ranks itself from releases ( off: the manual queue ) */
+export type AutoReadingListSettings = {
+    enabled: boolean
+}
+
+/** The shape before settings version 10; both flags true was possible but meaningless */
+export type LegacyAutoSetStatusSettings = {
     onlyRSS: boolean,
     allowAllDateFields: boolean
 }
@@ -83,13 +101,19 @@ export interface Settings {
         KeyboardShortcuts: KeyboardShortcutSettings;
         AutoSubscribe: AutoSubscribe;
         SaveTarget: SaveTargets;
-        AutoSetStatusScore: StatusScores;
+        AutoSetStatusScore: AutoSetStatusSettings;
+        /** Optional: settings saved before this existed lack it, and it counts as off */
+        AutoReadingList?: AutoReadingListSettings;
         /** Optional: settings saved before this existed lack it, and it counts as off */
         AltTitleLookup?: { Enable: boolean };
+        /** Optional: settings saved before this existed lack it, and it counts as off. Links MangaUpdates release feeds to items the alt-title lookup matched there. */
+        MangaUpdatesFeeds?: { Enable: boolean };
         /** Optional: settings saved before this existed lack it, and it counts as the default. Days a deletion is remembered for sync. */
         TombstoneTtlDays?: number;
         /** Optional: settings saved before this existed lack it, and it counts as the default. Uses {title} and {chapter}. */
         BookmarkTitleFormat?: string;
+        /** Optional: settings saved before this existed lack it, and it counts as the default. Minutes between RSS checks. */
+        RssCheckIntervalMinutes?: number;
     }
     DefaultBookmarkSettings: {
         DefaultChoice: DefaultChoice,

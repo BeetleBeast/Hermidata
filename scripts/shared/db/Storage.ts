@@ -15,6 +15,7 @@ import { getHermidataByKey, putHermidata, deleteHermidata,
     dbSaveAllImages,
     dbUpdateImageKey} from './db';
 import { pushToSync, removeFromSync } from '../sync/sync.engine';
+import { loadSyncConfig } from '../sync/syncConfig';
 import { CalcDiff, PastHermidata } from '../../popup/core/Past';
 import { generateHermidataHash } from '../utils/StringOutput';
 import { getElement, setElement } from '../utils/Selection';
@@ -141,6 +142,20 @@ export async function getAllHermidata(): Promise<Record<string, OnlyPlainHermida
         logConsoleError('[Storage] getAllHermidata:', err);
         return {};
     }
+}
+/**
+ * Saves edited entries in one transaction, the batch version of saveHermidata: each one is stamped as updated
+ * so sync ( newest meta.updated wins ) carries the change to other devices. Use setAllHermidata to write without that.
+ */
+export async function saveAllHermidata(entries: OnlyPlainHermidata[]): Promise<void> {
+    if (entries.length === 0) return;
+    const now = new Date().toISOString();
+    for (const entry of entries) entry.meta.updated = now;
+
+    await putAllHermidata(entries);
+    pushToSync();
+    PastHermidata.invalidateCache();
+    console.log(`[Storage] saved ${entries.length} edited entries`);
 }
 export async function setAllHermidata(hermidata: OnlyPlainHermidata[]): Promise<void> {
     try {
@@ -292,7 +307,8 @@ export async function updateImageKey(oldId: string, newId: string): Promise<bool
 
 
 // ============================================================
-// Settings — still in storage.sync (small, needs cross-device sync)
+// Settings — IndexedDB, mirrored to storage.sync (small, needs cross-device sync).
+// A device set to "local only" mirrors to storage.local instead, so nothing leaves it.
 // ============================================================
 
 export async function getSettings(): Promise<Settings> {
@@ -319,7 +335,9 @@ export async function getSettings(): Promise<Settings> {
 export async function setSettings(settings: Settings): Promise<void> {
     try {
         await putSettings(settings);                            // IndexedDB
-        await ext.storage.sync.set({ Settings: settings });    // sync for cross-device
+        const { kind } = await loadSyncConfig(ext.storage.local);
+        if (kind === 'local') await ext.storage.local.set({ Settings: settings });   // same change event, but never synced
+        else await ext.storage.sync.set({ Settings: settings });                      // sync for cross-device
         console.log('[Storage] Settings saved');
     } catch (err) {
         logConsoleError('[Storage] setSettings:', err);
@@ -429,41 +447,6 @@ export function sheetUrlInput(): Promise<string> {
 export async function setSpreadsheetUrl(url: string): Promise<void> {
     const settings = await getSettings();
     await setSettings({ ...settings, AccountAndConnections : { ...settings.AccountAndConnections, spreadsheetUrl: url }});
-}
-
-// ============================================================
-// Notifications — kept in storage.local (device-specific, no sync needed)
-// ============================================================
-
-export async function getLocalNotificationItem(key: string): Promise<boolean> {
-    try {
-        return await new Promise<boolean>((resolve, reject) => {
-            ext.storage.local.get('clearedNotification', (result: { clearedNotification: Record<string, boolean> }) => {
-                if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-                resolve(result?.clearedNotification?.[key] ?? false);
-            });
-        });
-    } catch (err) {
-        logConsoleError('[Storage] getLocalNotificationItem:', key, err);
-        return false;
-    }
-}
-
-export async function setNotificationList(key: string, value = true): Promise<Record<string, boolean>> {
-    try {
-        return await new Promise<Record<string, boolean>>((resolve, reject) => {
-            ext.storage.local.get('clearedNotification', (result: { clearedNotification: Record<string, boolean> }) => {
-                const combined = { ...result?.clearedNotification, [key]: value };
-                ext.storage.local.set({ clearedNotification: combined }, () => {
-                    if (ext.runtime.lastError) return reject(new Error(ext.runtime.lastError.message));
-                    resolve(combined);
-                });
-            });
-        });
-    } catch (err) {
-        logConsoleError('[Storage] setNotificationList:', err);
-        return {};
-    }
 }
 
 // ============================================================

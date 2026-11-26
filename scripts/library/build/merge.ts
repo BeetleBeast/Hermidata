@@ -1,480 +1,477 @@
 import { logConsoleError } from "../../shared/utils/ErrorMessage";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
-import type { Hermidata, Settings, MergeAnalysis } from "../../shared/types";
+import type { Hermidata, Settings, MergeLetter, MergeSuggestion, MergeConflictChoice } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { LibraryBuilder } from "../build";
 
+const LETTERS: readonly MergeLetter[] = ['A', 'B'];
+const TOAST_DURATION = 5000;
+/** How many tags a record card lists before it summarises the rest */
+const MAX_TAGS_SHOWN = 4;
+
+/** Readable names for the field paths HermidataMigration.mergeHermidata reports */
+const FIELD_LABELS: Record<string, string> = {
+    title: 'Title',
+    novelType: 'Type',
+    source: 'Source site',
+    'meta.notes': 'Notes',
+    'meta.novelStatus': 'Status',
+    'chapter.bookmarks': 'Bookmarks',
+    'chapter.latest': 'Latest chapter',
+    'chapter.lastChecked': 'Last checked',
+    'meta.tags': 'Tags',
+    'meta.altSources': 'Other sources',
+    'meta.altTitles': 'Alternative titles',
+    'meta.updated': 'Last updated',
+    'meta.added': 'Date added',
+};
+
+/**
+ * Merging two entries in the Library.
+ *
+ * Selection is the shared entry checkboxes ( bulk actions use them too ), so merging has no selection UI of its own.
+ * The toolbar button acts on it: with exactly two entries ticked it opens the compare dialog ( pick the entry that
+ * stays, pick a value for each conflicting field, see what is combined automatically, then merge ). Otherwise a toast
+ * says what is missing and the checkboxes flash to show where to tick.
+ */
 export class HermidataMerge extends LibraryBuilder {
 
-    
+    private readonly mergeButton = document.querySelector<HTMLButtonElement>('#mergeTwoHermidatas');
+    private readonly entriesContainer = document.querySelector<HTMLDivElement>('#library-entries-container');
 
-    private get getAllItemWithSelectedCheckboxes(): NodeListOf<HTMLDivElement> | null {
-        return document.querySelectorAll<HTMLDivElement>('.hermidata-item:has(.hermidata-item-checkbox:checked)');
+    private readonly dialog = document.querySelector<HTMLDialogElement>('#merge-dialog');
+    private readonly dialogBody = document.querySelector<HTMLDivElement>('#merge-dialog-body');
+    private readonly dialogSummary = document.querySelector<HTMLParagraphElement>('#merge-dialog-summary');
+    private readonly dialogError = document.querySelector<HTMLParagraphElement>('#merge-dialog-error');
+    private readonly dialogConfirm = document.querySelector<HTMLButtonElement>('#merge-dialog-confirm');
+    private readonly dialogCancel = document.querySelector<HTMLButtonElement>('#merge-dialog-cancel');
+    private readonly dialogClose = document.querySelector<HTMLButtonElement>('#merge-dialog-close');
+
+    private readonly toast = document.querySelector<HTMLDivElement>('#library-toast');
+    private toastTimer: number | undefined;
+
+    /** the two entries in the open dialog */
+    private records: Record<MergeLetter, Hermidata> | null = null;
+    private keep: MergeLetter = 'A';
+    private conflicts: MergeConflictChoice[] = [];
+
+    private readonly onMerged: () => Promise<void>;
+
+    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings, onMerged: () => Promise<void>) {
+        super(AllHermidata, settings);
+        this.onMerged = onMerged;
     }
-    private get getAllCheckboxes(): NodeListOf<HTMLInputElement> | null {
-        return document.querySelectorAll<HTMLInputElement>('.hermidata-item-checkbox');
-    }
-
-
 
     public build(): void {
-
-        this.eventListener();
-        
-        this.checkProgress();
-
-
+        this.bindEvents();
+        this.refreshButton();
     }
-    /** Entries were rebuilt: hook the new checkboxes up again and refresh the panel */
+    /** Entries were rebuilt ( their checkboxes start unchecked ): refresh the button state */
     public reload(): void {
-        this.addCheckboxListeners();
-        this.checkProgress();
+        this.refreshButton();
     }
 
-    constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
-        super(AllHermidata, settings)
+    // --- selection ---
+
+    private get selectedItems(): HTMLDivElement[] {
+        return Array.from(document.querySelectorAll<HTMLDivElement>('.hermidata-item:has(.hermidata-item-checkbox:checked)'));
     }
-    private closeMergePanel() {
-        const mergePanel = document.querySelector<HTMLDivElement>('#merger-dialog');
-        if (!mergePanel) return;
-        
-        if (mergePanel.matches(':popover-open')) {
-            mergePanel.hidePopover();
+
+    private bindEvents(): void {
+        // one delegated listener survives feed rebuilds
+        this.entriesContainer?.addEventListener('change', (e) => {
+            if ((e.target as HTMLElement).matches('.hermidata-item-checkbox')) this.refreshButton();
+        });
+
+        this.mergeButton?.addEventListener('click', () => this.startMerge());
+
+        this.dialogCancel?.addEventListener('click', () => this.dialog?.close());
+        this.dialogClose?.addEventListener('click', () => this.dialog?.close());
+        this.dialogConfirm?.addEventListener('click', () => void this.confirmMerge());
+        // a click on the backdrop ( the dialog element itself, outside its content ) closes it
+        this.dialog?.addEventListener('click', (e) => { if (e.target === e.currentTarget) this.dialog?.close(); });
+    }
+
+    /** the button stands out once exactly two entries are ticked */
+    private refreshButton(): void {
+        if (!this.mergeButton) return;
+        const ready = this.selectedItems.length === 2;
+        this.mergeButton.dataset.ready = String(ready);
+        this.mergeButton.title = ready ? 'Compare and merge the two ticked entries' : 'Tick two entries to merge them';
+    }
+
+    private startMerge(): void {
+        const selected = this.selectedItems;
+        if (selected.length === 2) return this.openDialog();
+
+        this.showToast(this.selectionHint(selected));
+        if (selected.length < 2) this.flashCheckboxes();
+    }
+    private selectionHint(selected: HTMLDivElement[]): string {
+        switch (selected.length) {
+            case 0: return 'Tick the two entries you want to merge, then press Merge duplicates again.';
+            case 1: return `Tick one more entry to merge with “${this.AllHermidata[this.GetHashItem(selected[0])]?.title ?? 'Unknown'}”.`;
+            default: return `Merging works on exactly two entries. Untick ${selected.length - 2}.`;
         }
     }
-    private removeAllMergeElements(exceptionClass?: string): void {
-        const container = document.querySelector('#merger-dialog');
-        if (!container) return;
-
-        const allElements = container.querySelectorAll('*');
-        for (const element of allElements) {
-            if (exceptionClass && element.closest(`${exceptionClass}`)) {
-                continue;
-            }
-            element.remove();
-        }
+    /** briefly highlights every checkbox ( spinning ring, library/feed.css ) so it is clear where to tick */
+    private flashCheckboxes(): void {
+        const checkboxes = document.querySelectorAll<HTMLInputElement>('.hermidata-item-checkbox');
+        for (const checkbox of checkboxes) checkbox.dataset.temporaryChecked = 'true';
+        window.setTimeout(() => { for (const checkbox of checkboxes) checkbox.dataset.temporaryChecked = 'false'; }, 2000);
     }
 
-    private addCheckboxListeners(): void {
-        this.getAllCheckboxes?.forEach(checkbox => {
-            checkbox.addEventListener('change', () => this.checkProgress())
-        })
-    }
-    private eventListener(): void {
-        this.addCheckboxListeners();
+    // --- compare dialog ---
 
-        // upon click press merge, visualize all checkboxes
-        const mergeButton = document.querySelector<HTMLButtonElement>('#mergeTwoHermidatas');
-        if (!mergeButton) return;
-        mergeButton.addEventListener('click', () => this.visualizeCheckboxes());
-    }
-    private checkProgress(): void {
-        if (!this.getAllItemWithSelectedCheckboxes) throw new Error("No items selected found");
+    private openDialog(): void {
+        const selected = this.selectedItems;
+        if (selected.length !== 2 || !this.dialog || !this.dialogBody) return;
 
-        const amountOfSelectedItems = this.getAllItemWithSelectedCheckboxes?.length;
-        
-        switch(amountOfSelectedItems) {
-            case 0:
-                this.buildIncompleteMerger('nothing', amountOfSelectedItems);
-                break;
-                case 1:
-                    const FirstTitleId = this.getAllItemWithSelectedCheckboxes[0].dataset.id;
-                    const firstTitle = this.AllHermidata[FirstTitleId!].title;
-                    this.buildIncompleteMerger('one', amountOfSelectedItems, firstTitle);
-                    break;
-            case 2:
-                const records = this.getAllItemWithSelectedCheckboxes;
-                this.buildFirstStepMerger(records);
-                break;
-            case undefined:
-                logConsoleError("No items selected found");
-                break;
-            default:
-                this.buildIncompleteMerger('tooMany', amountOfSelectedItems);
-                break;
-        }
-    }
-    /** upon click press merge, visualize all checkboxes */
-    private visualizeCheckboxes() {
+        const [a, b] = selected.map(item => this.AllHermidata[this.GetHashItem(item)]);
+        if (!a || !b) return;
+        this.records = { A: a, B: b };
 
-        const allcheckboxes = this.getAllCheckboxes;
-        
-        const setOn = (getAllCheckboxes: NodeListOf<HTMLInputElement> | null) => {
-            if (!getAllCheckboxes) throw new Error("No checkboxes found");
-            for (const checkbox of getAllCheckboxes) {
-                checkbox.dataset.temporaryChecked = 'true';
-            }
-        }
-        const setOff = (getAllCheckboxes: NodeListOf<HTMLInputElement> | null) => {
-            if (!getAllCheckboxes) throw new Error("No checkboxes found");
-            for (const checkbox of getAllCheckboxes) {
-                checkbox.dataset.temporaryChecked = 'false';
-            }
-        }
+        const suggestion = this.calculateSuggestion(a, b);
+        this.keep = suggestion.keep;
 
-        setOn(allcheckboxes);
-
-        setTimeout(() => setOff(allcheckboxes), 2000);
-        
-    }
-
-    private buildIncompleteMerger(completionLevel: 'nothing', amountOfSelectedItems: number): void;
-    private buildIncompleteMerger(completionLevel: 'tooMany', amountOfSelectedItems: number): void;
-    private buildIncompleteMerger(completionLevel: 'one', amountOfSelectedItems: number, record1Title: string): void;
-    private buildIncompleteMerger(completionLevel: 'one' | 'tooMany' | 'nothing', amountOfSelectedItems: number, record1Title?: string): void {
-        const container = document.querySelector<HTMLDivElement>('#merger-dialog');
-
-        if (!container) return;
-
-        this.removeAllMergeElements(".merger-dialog-progression-container");
-        container.dataset.step = 'incomplete';
-
-        // mini functions
-        const textTitle = () => {
-            switch (completionLevel) {
-                case 'nothing':
-                    return 'Nothing selected';
-                case 'one':
-                    return 'One more to go';
-                case 'tooMany':
-                    return 'Two many selected';
-            }
-        }
-        const subText = () => {
-            switch (completionLevel) {
-                case 'nothing':
-                    return 'Select 2 records to merge.';
-                case 'one':
-                    if (!record1Title) throw new Error("No record title given");
-                    return `Select a second record to merge "${record1Title}" with.`;
-                case 'tooMany':
-                    const numberToDeselect = amountOfSelectedItems - 2;
-                    return `Merge works on exactly two records. Deselect ${numberToDeselect} to continue.`;
-            }
-        }
-        
-        // counter
-        const counter = document.createElement('p');
-        counter.className = 'merger-dialog-counter';
-        counter.setAttribute('role', 'status');
-        const amount = this.getAllItemWithSelectedCheckboxes?.length || 0;
-        counter.textContent = `${amount} selected`;
-        
-
-        // exit button ( x )
-        const exitButton = document.createElement('button');
-        exitButton.className = 'merger-dialog-exit';
-        exitButton.textContent = 'x';
-        exitButton.setAttribute('aria-label', 'Close merge panel');
-        exitButton.addEventListener('click', this.closeMergePanel);
-
-        // text
-        const text = document.createElement('p');
-        text.className = 'merger-dialog-text';
-        
-        text.textContent = textTitle();
-        
-        
-
-        // sub text
-        const subtext = document.createElement('p');
-        subtext.className = 'merger-dialog-subtext';
-        
-        subtext.textContent = subText();
-
-        // button ( disabled )
-        const button = document.createElement('button');
-        button.className = 'merger-dialog-button';
-        button.disabled = true;
-        button.textContent = 'Merge';
-
-
-        container.append(counter, exitButton, text, subtext, button);
-    }
-
-    private buildFirstStepMerger(recordElements: NodeListOf<HTMLDivElement>): void {
-        const recordList = Array.from(recordElements.values())
-        const selectedItems = recordList.map(record => this.AllHermidata[this.GetHashItem(record)]);
-
-        // reset container
-        const container = document.querySelector<HTMLDivElement>('#merger-dialog');
-        if (!container) return;
-
-        
-        this.removeAllMergeElements(".merger-dialog-progression-container");
-        container.dataset.step = 'firstStep';
-
-
-        // progression
-        this.updateProgression(1);
-        // const progression = this.createProgression(1);
-
-        // steps
-        const steps = document.createElement('div');
-        steps.classList.add('merger-dialog-steps');
-        steps.textContent = `step 1 of 2`;
-
-        // text
-        const text = document.createElement('p');
-        text.className = 'merger-dialog-text';
-        text.textContent = 'Compare them, then choose which to keep.';
-
-        // blue suggestion text
-        const blueSuggestion = document.createElement('p');
-        blueSuggestion.className = 'merger-dialog-suggestion';
-        const infoIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="info-icon" aria-hidden="true" x="0px" y="0px" width="100" height="100" viewBox="0 0 48 48">
-            <path class="cls-1" fill="#2196f3" d="M44,24c0,11.045-8.955,20-20,20S4,35.045,4,24S12.955,4,24,4S44,12.955,44,24z"></path>
-            <path class="cls-2" fill="#fff" d="M22 22h4v11h-4V22zM26.5 16.5c0 1.379-1.121 2.5-2.5 2.5s-2.5-1.121-2.5-2.5S22.621 14 24 14 26.5 15.121 26.5 16.5z"></path>
-            </svg>`;
-        const suggestion = this.calculateSuggestion(selectedItems);
-        blueSuggestion.innerHTML = `${infoIcon} Suggested: ${suggestion.finalString}`;
-
-        // record A
-        const hermiData_A = new HermidataModel(selectedItems[0]);
-        const recordA = this.buildRecord(hermiData_A, 'A', suggestion.recordToKeep);
-        
-        // record B
-        const hermiData_B = new HermidataModel(selectedItems[1]);
-        const recordB = this.buildRecord(hermiData_B, 'B',  suggestion.recordToKeep);
-
-        // merge button
-        const mergeButton_A = recordA.querySelector<HTMLButtonElement>('.merger-dialog-record-continue-button');
-        const mergeButton_B = recordB.querySelector<HTMLButtonElement>('.merger-dialog-record-continue-button');
-        if (!mergeButton_A || !mergeButton_B) return;
-        const bothButtons = [mergeButton_A, mergeButton_B];
-        bothButtons.forEach(button => button.addEventListener('click', () => {
-            const recordToKeepLetter = button.dataset.record as 'A' | 'B';
-            const keepingRecord = recordToKeepLetter === 'A' ? recordA : recordB;
-            const removingRecord = recordToKeepLetter === 'A' ? recordB : recordA;
-            const hermidata_keepingRecord = this.AllHermidata[keepingRecord.dataset.hash as string];
-            const hermidata_removingRecord = this.AllHermidata[removingRecord.dataset.hash as string];
-            this.buildSecondStepMerger(hermidata_keepingRecord, hermidata_removingRecord, recordToKeepLetter)
+        // conflict detection is symmetric, so A/B order here only decides which value is `valueA`
+        const { conflicts, autoResolved } = HermidataMigration.mergeHermidata(a, b);
+        this.conflicts = conflicts.map(conflict => ({
+            path: conflict.path,
+            label: this.fieldLabel(conflict.path),
+            values: { A: conflict.valueA, B: conflict.valueB },
+            chosen: this.keep,
+            touched: false,
         }));
-        
 
-        // cancel button
-        const cancelButton = document.createElement('button');
-        cancelButton.className = 'merger-dialog-button';
-        cancelButton.textContent = 'Cancel';
-        cancelButton.addEventListener('click', this.closeMergePanel);
+        this.dialogBody.replaceChildren(
+            this.buildKeepSection(suggestion),
+            this.buildConflictSection(),
+            this.buildAutoSection(autoResolved),
+        );
+        this.setError(null);
+        this.setBusy(false);
+        this.syncKeepState();
 
-
-        container.append( steps, text, blueSuggestion, recordA, recordB, cancelButton);
-
+        this.dialog.showModal();
+        this.dialogBody.scrollTop = 0;
     }
-    private buildSecondStepMerger(recordToKeep: Hermidata, recordToRemove: Hermidata, recordToKeepLetter: 'A' | 'B'): void {
-        // reset container
-        const container = document.querySelector<HTMLDivElement>('#merger-dialog');
-        if (!container) return;
 
-        const merging = this.mergeRecord(recordToKeep, recordToRemove);
+    private buildKeepSection(suggestion: MergeSuggestion): HTMLElement {
+        const section = this.buildSection('Which entry stays?', 'The other one is merged into it, then removed.');
 
-        // container.innerHTML = "";
-        this.removeAllMergeElements(".merger-dialog-progression-container");
-        container.dataset.step = 'secondStep';
+        const records = document.createElement('div');
+        records.className = 'merge-records';
+        records.setAttribute('role', 'radiogroup');
+        records.setAttribute('aria-label', 'Entry to keep');
 
-        // progression
-        this.updateProgression(2, recordToKeepLetter);
-        // const progression = this.createProgression(2, recordToKeepLetter);
+        records.append(...LETTERS.map(letter => this.buildRecordCard(letter, suggestion.keep)));
 
-        // steps
-        const steps = document.createElement('div');
-        steps.classList.add('merger-dialog-steps');
-        steps.textContent = `step 2 of 2`;
+        const hint = document.createElement('p');
+        hint.className = 'merge-suggestion';
+        hint.textContent = `Suggested: keep ${suggestion.keep}, ${suggestion.reason}.`;
 
-        // green field
-        const greenField = document.createElement('div');
-        greenField.classList.add('merger-dialog-green-field');
-        
-        // green field text 1
-        const greenFieldText1 = document.createElement('p');
-        greenFieldText1.classList.add('merger-dialog-green-field-text-1');
-        greenFieldText1.textContent = `✓ ${merging.automaticallyMergedFieldsAmount} fields merged automatically.`;
-        
-        // green field text 2
-        const greenFieldText2 = document.createElement('p');
-        greenFieldText2.classList.add('merger-dialog-green-field-text-2');
-        const greenFieldText2Content = merging.automaticallyMergedFields.flatMap(field => {
-            const fieldText = field.split('.')[1];
-            const allLetters = fieldText.toLowerCase();
-            const firstLetter = fieldText.toLowerCase().at(0);
-            if (!firstLetter) return '';
-            return allLetters.replace(firstLetter.toLowerCase(), firstLetter.toUpperCase());
-        }).join(', ');
-        greenFieldText2.textContent = greenFieldText2Content;
-
-        // warning field
-        const warningField = document.createElement('div');
-        warningField.classList.add('merger-dialog-warning-field');
-        
-        // warning field text 1
-        const warningFieldText1 = document.createElement('p');
-        warningFieldText1.classList.add('merger-dialog-warning-field-text');
-        warningFieldText1.textContent = `⚠️ ${merging.manuallyMergedFieldsAmount} needs your input.`;
-        
-        // warning fields
-        const waringFieldElements = this.createWarningFields(merging.manuallyMergedFields, recordToKeepLetter);
-
-        // back button
-        const cancelButton = document.createElement('button');
-        cancelButton.className = 'merger-dialog-button-back';
-        cancelButton.textContent = 'Back';
-        const recordsElements = this.getAllItemWithSelectedCheckboxes;
-        if (!recordsElements) throw new Error('No records found');
-        cancelButton.addEventListener('click', () => this.buildFirstStepMerger(recordsElements));
-
-        // merge button
-        const mergeButton = document.createElement('button');
-        mergeButton.className = 'merger-dialog-button-merge';
-        mergeButton.textContent = 'Merge';
-        mergeButton.addEventListener('click', async () => this.mergeRecordsAndClosePanel(recordToKeep, recordToRemove, merging));
-
-        // append
-        // green field
-        greenField.append(greenFieldText1, greenFieldText2);
-        // waring field
-        warningField.append(warningFieldText1, waringFieldElements);
-        
-        container.append( steps, greenField, warningField, cancelButton, mergeButton);
+        section.append(records, hint);
+        return section;
     }
-    private async mergeRecordsAndClosePanel(recordToKeep: Hermidata, recordToRemove: Hermidata, merging: MergeAnalysis): Promise<void> {
-        this.getAllMergedFields(merging);
+    private buildRecordCard(letter: MergeLetter, suggested: MergeLetter): HTMLLabelElement {
+        if (!this.records) throw new Error('No records to compare');
+        const record = new HermidataModel(this.records[letter]);
+        const other = new HermidataModel(this.records[letter === 'A' ? 'B' : 'A']);
 
-        const merged = await HermidataMigration.mergeTwoHermidataWithConfiguration(recordToKeep, recordToRemove, merging.configuration);
+        const card = document.createElement('label');
+        card.className = 'merge-record';
+        card.dataset.letter = letter;
 
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'merge-keep';
+        radio.value = letter;
+        radio.className = 'merge-record-radio';
+        radio.checked = letter === this.keep;
+        radio.addEventListener('change', () => this.setKeep(letter));
 
-        // remove stael cache and remove elements from DOM
-        for (const removedId of merged.removedIds) {
-            delete this.AllHermidata[removedId];
+        // head: letter, suggested badge, "stays" / "removed" state
+        const head = document.createElement('div');
+        head.className = 'merge-record-head';
+        head.append(this.buildLetter(letter));
+        if (letter === suggested) head.append(this.buildBadge('Suggested', 'suggested'));
+        const state = document.createElement('span');
+        state.className = 'merge-record-state';
+        head.append(state);
 
-            document.querySelector<HTMLDivElement>(`.hermidata-item[data-id="${removedId}"]`)?.remove();
+        const cover = document.createElement('img');
+        cover.className = 'merge-record-cover';
+        cover.alt = '';
+        cover.loading = 'lazy';
+        // the cover can come from IndexedDB: open the dialog now, fill the cover in when it resolves
+        record.getDisplayImageUrl()
+            .then(src => { cover.src = src; })
+            .catch(err => logConsoleError('Merge: cover failed to load', err));
+
+        const title = document.createElement('p');
+        title.className = 'merge-record-title';
+        title.textContent = record.title;
+
+        const facts = this.buildFacts(record, other);
+
+        card.append(radio, head, cover, title, facts);
+        return card;
+    }
+    /** key facts of one record; a value that differs from the other record is marked */
+    private buildFacts(record: HermidataModel, other: HermidataModel): HTMLDListElement {
+        const rows: [string, string, string][] = [
+            ['Type', record.novelType, other.novelType],
+            ['Site', record.source || record.meta.altSources[0] || '', other.source || other.meta.altSources[0] || ''],
+            ['Status', record.meta.novelStatus ?? '', other.meta.novelStatus ?? ''],
+            ['Read up to', `Ch. ${record.GetLatestReadChapter()}`, `Ch. ${other.GetLatestReadChapter()}`],
+            ['Latest', `Ch. ${record.chapter.latest}`, `Ch. ${other.chapter.latest}`],
+            ['Tags', this.tagSummary(record.meta.tags), this.tagSummary(other.meta.tags)],
+            ['Added', this.isoToLocal(record.meta.added), this.isoToLocal(other.meta.added)],
+            ['Updated', this.isoToLocal(record.meta.updated), this.isoToLocal(other.meta.updated)],
+        ];
+
+        const list = document.createElement('dl');
+        list.className = 'merge-record-facts';
+        for (const [label, value, otherValue] of rows) {
+            const row = document.createElement('div');
+            row.className = 'merge-fact';
+            if (value !== otherValue) row.dataset.differs = 'true';
+
+            const term = document.createElement('dt');
+            term.textContent = label;
+            const detail = document.createElement('dd');
+            detail.textContent = value || '—';
+
+            row.append(term, detail);
+            list.appendChild(row);
         }
-        
-
-        console.log("merged", merged.merged);
-
-        this.closeMergePanel();
+        return list;
     }
-    private getAllMergedFields(merging: MergeAnalysis): MergeAnalysis {
-        const allCheckedRadioButtons = document.querySelectorAll<HTMLInputElement>('.merger-dialog-warning-field-value-input:checked');
-        const mergedFields = Array.from(allCheckedRadioButtons.values()).map(input => ({ field: input.dataset.field, value: input.dataset.value, record: input.dataset.record as 'A' | 'B'}));
-            for (const mergedField of mergedFields) {
-                if ( mergedField.field === undefined || mergedField.value === undefined || mergedField.record === undefined) throw new Error('No field found');
-                merging.configuration.resolutions[mergedField.field] = mergedField.record;
-            }
-        return merging;
+    private tagSummary(tags: string[]): string {
+        const unique = Array.from(new Set(tags));
+        if (unique.length <= MAX_TAGS_SHOWN) return unique.join(', ');
+        return `${unique.slice(0, MAX_TAGS_SHOWN).join(', ')} +${unique.length - MAX_TAGS_SHOWN}`;
     }
-    private updateProgression(progression: 1): void;
-    private updateProgression(progression: 2, keptRecord: 'A' | 'B'): void;
-    private updateProgression(progression: 1 | 2, keptRecord?: 'A' | 'B'): void {
-        const step1 = document.querySelector<HTMLDivElement>('.merger-dialog-progression.merger-dialog-progression-1');
-        if (!step1) return;
-        step1.dataset.progression = String(progression);
 
-        const step1Text = document.querySelector<HTMLParagraphElement>('.merger-dialog-progression-1-text');
-        if (!step1Text) return;
-        step1Text.textContent = progression === 1 ? '1' : '✓';
+    private buildConflictSection(): HTMLElement {
+        const count = this.conflicts.length;
+        const section = count === 0
+            ? this.buildSection('Differences', 'None. Both entries agree on every field you would have to pick.')
+            : this.buildSection(`Pick what to keep · ${count}`, 'These fields are filled in differently. The kept entry\'s value is selected until you change it.');
 
-        const step1MainText = document.querySelector<HTMLParagraphElement>('.merger-dialog-progression-1-main-text');
-        if (!step1MainText) return;
-        step1MainText.dataset.progression = String(progression);
-        step1MainText.textContent = progression === 1 ? 'Choose which to keep' : `Keep record ${keptRecord}`;
-
-        const step2 = document.querySelector<HTMLDivElement>('.merger-dialog-progression.merger-dialog-progression-2');
-        if (!step2) return;
-        step2.dataset.progression = String(progression);
-
-        const step2Text = document.querySelector<HTMLParagraphElement>('.merger-dialog-progression-2-text');
-        if (!step2Text) return;
-        step2Text.dataset.progression = String(progression);
-
-        const step2MainText = document.querySelector<HTMLParagraphElement>('.merger-dialog-progression-2-main-text');
-        if (!step2MainText) return;
-        step2MainText.dataset.progression = String(progression);
+        for (const conflict of this.conflicts) section.appendChild(this.buildConflict(conflict));
+        return section;
     }
-    private createProgression(progression: 1): HTMLDivElement;
-    private createProgression(progression: 2, keptRecord: 'A' | 'B'): HTMLDivElement
-    private createProgression(progression: 1 | 2, keptRecord?: 'A' | 'B'): HTMLDivElement {
-        const container = document.createElement('div');
-        container.classList.add('merger-dialog-progression-container');
+    private buildConflict(conflict: MergeConflictChoice): HTMLFieldSetElement {
+        const fieldset = document.createElement('fieldset');
+        fieldset.className = 'merge-conflict';
+        fieldset.dataset.path = conflict.path;
 
-        // progression 1 circle
-        const step1 = document.createElement('div');
-        step1.classList.add('merger-dialog-progression', 'merger-dialog-progression-1');
-        step1.dataset.progression = String(progression);
+        const legend = document.createElement('legend');
+        legend.textContent = conflict.label;
+        fieldset.appendChild(legend);
 
-        // text in progression 1 circle
-        const step1Text = document.createElement('p');
-        step1Text.classList.add('merger-dialog-progression-1-text');
-        step1Text.textContent = progression === 1 ? '1' : '✓';
+        for (const letter of LETTERS) {
+            const option = document.createElement('label');
+            option.className = 'merge-option';
 
-        // progression 1 text
-        const step1MainText = document.createElement('p');
-        step1MainText.classList.add('merger-dialog-progression-1-main-text');
-        step1MainText.dataset.progression = String(progression);
-        step1MainText.textContent = progression === 1 ? 'Choose which to keep' : `Keep record ${keptRecord}`;
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = `merge-conflict-${conflict.path}`;
+            radio.value = letter;
+            radio.className = 'merge-option-radio';
+            radio.checked = conflict.chosen === letter;
+            radio.addEventListener('change', () => {
+                conflict.chosen = letter;
+                conflict.touched = true;
+            });
 
-        // svg line
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.classList.add('merger-dialog-progression-line');
-        svg.innerHTML = `<line x1="0" y1="25" x2="100%" y2="25" stroke="var(--border)" stroke-width="1"></line>`;
+            const value = document.createElement('span');
+            value.className = 'merge-option-value';
+            value.textContent = this.formatValue(conflict.values[letter]);
 
-        // progression 2 circle
-        const step2 = document.createElement('div');
-        step2.classList.add('merger-dialog-progression', 'merger-dialog-progression-2');
-        step2.dataset.progression = String(progression);
-
-        // text in progression 2 circle
-        const step2Text = document.createElement('p');
-        step2Text.classList.add('merger-dialog-progression-2-text');
-        step2Text.dataset.progression = String(progression);
-        step2Text.textContent = '2';
-
-        // progression 2 text
-        const step2MainText = document.createElement('p');
-        step2MainText.classList.add('merger-dialog-progression-2-main-text');
-        step2MainText.dataset.progression = String(progression);
-        step2MainText.textContent = 'Resolve conflict';
-
-
-
-        // append to progression circle
-        step1.appendChild(step1Text);
-        step2.appendChild(step2Text);
-        // append to container
-        container.append(step1, step1MainText, svg, step2, step2MainText);
-
-        return container;
+            option.append(radio, this.buildLetter(letter), value);
+            fieldset.appendChild(option);
+        }
+        return fieldset;
     }
-    /* returns the record to keep and the reason why */
-    private calculateSuggestion(selectedItems: Hermidata[]): { recordToKeep: 'A' | 'B', record: Hermidata, reason: string, finalString: string } {
-        const [itemOne, itemTwo] = selectedItems;
-        const filledOne = this.countFilledFields(itemOne);
-        const filledTwo = this.countFilledFields(itemTwo);
+
+    private buildAutoSection(autoResolved: string[]): HTMLDetailsElement {
+        const labels = Array.from(new Set(autoResolved.map(path => this.fieldLabel(path))));
+
+        const details = document.createElement('details');
+        details.className = 'merge-auto';
+
+        const summary = document.createElement('summary');
+        summary.textContent = `Combined automatically · ${labels.length}`;
+
+        const note = document.createElement('p');
+        note.className = 'merge-section-hint';
+        note.textContent = 'Lists are joined, the furthest reading progress and the earliest added date win, and an empty field takes the other entry\'s value.';
+
+        const chips = document.createElement('ul');
+        chips.className = 'merge-auto-list';
+        for (const label of labels) {
+            const chip = document.createElement('li');
+            chip.textContent = label;
+            chips.appendChild(chip);
+        }
+
+        details.append(summary, note, chips);
+        return details;
+    }
+
+    private buildSection(title: string, hint: string): HTMLElement {
+        const section = document.createElement('section');
+        section.className = 'merge-section';
+
+        const heading = document.createElement('h3');
+        heading.className = 'merge-section-title';
+        heading.textContent = title;
+
+        const text = document.createElement('p');
+        text.className = 'merge-section-hint';
+        text.textContent = hint;
+
+        section.append(heading, text);
+        return section;
+    }
+    private buildLetter(letter: MergeLetter): HTMLSpanElement {
+        const badge = document.createElement('span');
+        badge.className = 'merge-letter';
+        badge.dataset.letter = letter;
+        badge.textContent = letter;
+        badge.setAttribute('aria-label', `Entry ${letter}`);
+        return badge;
+    }
+    private buildBadge(text: string, kind: string): HTMLSpanElement {
+        const badge = document.createElement('span');
+        badge.className = `merge-badge merge-badge--${kind}`;
+        badge.textContent = text;
+        return badge;
+    }
+
+    /** the kept entry changed: untouched conflict choices follow it */
+    private setKeep(letter: MergeLetter): void {
+        this.keep = letter;
+        for (const conflict of this.conflicts) {
+            if (conflict.touched) continue;
+            conflict.chosen = letter;
+            const radio = this.dialogBody?.querySelector<HTMLInputElement>(`input[name="merge-conflict-${CSS.escape(conflict.path)}"][value="${letter}"]`);
+            if (radio) radio.checked = true;
+        }
+        this.syncKeepState();
+    }
+    /** card states and the footer summary reflect the kept entry */
+    private syncKeepState(): void {
+        if (!this.records) return;
+        const remove = this.other(this.keep);
+
+        for (const card of this.dialogBody?.querySelectorAll<HTMLLabelElement>('.merge-record') ?? []) {
+            const kept = card.dataset.letter === this.keep;
+            card.dataset.kept = String(kept);
+            const state = card.querySelector('.merge-record-state');
+            if (state) state.textContent = kept ? 'Stays' : 'Merged in, then removed';
+        }
+
+        if (this.dialogSummary) {
+            this.dialogSummary.textContent = `“${this.records[remove].title}” (${remove}) will be merged into “${this.records[this.keep].title}” (${this.keep}). This can't be undone.`;
+        }
+        if (this.dialogConfirm) this.dialogConfirm.textContent = `Merge into ${this.keep}`;
+    }
+
+    private async confirmMerge(): Promise<void> {
+        if (!this.records) return;
+        const keepRecord = this.records[this.keep];
+        const removeRecord = this.records[this.other(this.keep)];
+
+        // the migration reads 'A' as "the kept record's value" and 'B' as "the removed record's value"
+        const resolutions: Record<string, MergeLetter> = {};
+        for (const conflict of this.conflicts) resolutions[conflict.path] = conflict.chosen === this.keep ? 'A' : 'B';
+
+        this.setError(null);
+        this.setBusy(true);
+
+        const result = await HermidataMigration.mergeTwoHermidataWithConfiguration(keepRecord, removeRecord, {
+            keepId: keepRecord.id,
+            removeId: removeRecord.id,
+            resolutions,
+        });
+
+        if (!result.merged) {
+            this.setBusy(false);
+            this.setError('Merging failed. Reload the library to check both entries, then try again.');
+            return;
+        }
+
+        const titleConflict = this.conflicts.find(conflict => conflict.path === 'title');
+        const mergedTitle = titleConflict ? String(titleConflict.values[titleConflict.chosen]) : keepRecord.title;
+
+        this.dialog?.close();
+        this.records = null;
+
+        try {
+            await this.onMerged();
+        } catch (err) {
+            logConsoleError('Merged, but reloading the library failed:', err);
+        }
+        this.showToast(`Merged into “${mergedTitle}”`);
+    }
+
+    private setBusy(busy: boolean): void {
+        if (!this.dialogConfirm) return;
+        this.dialogConfirm.disabled = busy;
+        if (busy) this.dialogConfirm.textContent = 'Merging…';
+        else this.syncKeepState();
+    }
+    private setError(message: string | null): void {
+        if (!this.dialogError) return;
+        this.dialogError.hidden = message === null;
+        this.dialogError.textContent = message ?? '';
+    }
+    private showToast(message: string): void {
+        if (!this.toast) return;
+        this.toast.textContent = message;
+        this.toast.hidden = false;
+        window.clearTimeout(this.toastTimer);
+        this.toastTimer = window.setTimeout(() => { if (this.toast) this.toast.hidden = true; }, TOAST_DURATION);
+    }
+
+    // --- helpers ---
+
+    private other(letter: MergeLetter): MergeLetter {
+        return letter === 'A' ? 'B' : 'A';
+    }
+    private fieldLabel(path: string): string {
+        if (FIELD_LABELS[path]) return FIELD_LABELS[path];
+        // fallback: last path part, camelCase split into words
+        const last = path.split('.').at(-1) ?? path;
+        const words = last.replace(/([A-Z])/g, ' $1').trim().toLowerCase();
+        return words.charAt(0).toUpperCase() + words.slice(1);
+    }
+    private formatValue(value: unknown): string {
+        if (value == null || value === '') return '—';
+        if (Array.isArray(value)) return value.join(', ');
+        return String(value);
+    }
+
+    /* returns the record to keep and why */
+    private calculateSuggestion(a: Hermidata, b: Hermidata): MergeSuggestion {
+        const filledA = this.countFilledFields(a);
+        const filledB = this.countFilledFields(b);
 
         // 1. most filled in fields wins
         // 2. tie: furthest reading progress wins
         // 3. tie: record A
-        let letterToKeep: 'A' | 'B';
-        let reason: string;
-        if (filledOne !== filledTwo) {
-            letterToKeep = filledOne > filledTwo ? 'A' : 'B';
-            const difference = Math.abs(filledOne - filledTwo);
-            reason = `it has ${difference} more field${difference > 1 ? 's' : ''} filled in`;
-        } else if (itemOne.chapter.latest !== itemTwo.chapter.latest) {
-            letterToKeep = itemOne.chapter.latest > itemTwo.chapter.latest ? 'A' : 'B';
-            reason = 'it is further along in the story';
-        } else {
-            letterToKeep = 'A';
-            reason = 'both records are equally complete';
+        if (filledA !== filledB) {
+            const difference = Math.abs(filledA - filledB);
+            return { keep: filledA > filledB ? 'A' : 'B', reason: `it has ${difference} more field${difference > 1 ? 's' : ''} filled in` };
         }
-
-        return {
-            recordToKeep: letterToKeep,
-            record: letterToKeep === 'A' ? itemOne : itemTwo,
-            reason,
-            finalString: `keep record ${letterToKeep}, ${reason}`
+        if (a.chapter.latest !== b.chapter.latest) {
+            return { keep: a.chapter.latest > b.chapter.latest ? 'A' : 'B', reason: 'it is further along in the story' };
         }
+        return { keep: 'A', reason: 'both are equally complete' };
     }
     /* counts the fields that hold a meaningful value, looking inside nested objects and arrays */
     private countFilledFields(value: unknown): number {
@@ -485,231 +482,4 @@ export class HermidataMerge extends LibraryBuilder {
         if (value && typeof value === 'object') return Object.values(value).reduce<number>((sum, child) => sum + this.countFilledFields(child), 0);
         return 0; // null / undefined
     }
-    private createElementOfRecord(label: string, content: string, className: string, isNumericValue?: boolean): HTMLDivElement {
-        const containerElement = document.createElement('div');
-        containerElement.classList.add(`merger-dialog-record-${className}`, `merger-dialog-record-container`);
-        
-
-
-        const labelElement = document.createElement('p');
-        labelElement.classList.add(`merger-dialog-record-${className}-label`, `merger-dialog-record-label`);
-        labelElement.textContent = label;
-
-        const contentElement = document.createElement('span');
-        contentElement.classList.add(`merger-dialog-record-${className}-content`, `merger-dialog-record-content`);
-        contentElement.textContent = content;
-
-        if (isNumericValue) {
-            contentElement.classList.add('merger-dialog-record-content--numeric');
-            contentElement.dataset.numeric = 'true';
-        }
-
-        containerElement.append(labelElement, contentElement);
-        return containerElement;
-    }
-    private createTagsOfRecord(tags: string[]): HTMLDivElement {
-        // container
-        const container = document.createElement('div');
-        container.classList.add('merger-dialog-record-tags', 'merger-dialog-record-container');
-
-
-        // tag label
-        const tagLabel = document.createElement('p');
-        tagLabel.classList.add('merger-dialog-record-tag-label', 'merger-dialog-record-label');
-        tagLabel.textContent = 'Tags:';
-
-        // tag container
-        const tagContainer = document.createElement('div');
-        tagContainer.classList.add('merger-dialog-record-tags-container');
-        // tags
-        const allTagsUsed = Array.from(new Set(tags));
-        for (const tag of allTagsUsed) {
-            const tags = document.createElement('p');
-            tags.classList.add('merger-dialog-record-tag');
-            tags.textContent = tag ?? 'Unknown';
-
-            tagContainer.appendChild(tags);
-        }
-        if (allTagsUsed.length === 0) {
-            tagContainer.textContent = "--None--";
-            tagContainer.dataset.hasNone = 'true';
-        }
-
-        container.append(tagLabel, tagContainer);
-
-        return container;
-    }
-    
-    private buildRecord(record: HermidataModel, recordLetter: 'A' | 'B', suggestedLetterToKeep: 'A' | 'B'): HTMLDivElement {
-        const container = document.createElement('div');
-        container.classList.add('merger-dialog-record');
-        container.id = `merger-dialog-record-${recordLetter}`;
-        container.dataset.record = recordLetter;
-        container.dataset.hash = record.id;
-
-        // record letter
-        const letterContainer = this.createElementOfRecord('Record:', recordLetter, 'letter');
-        letterContainer.dataset.suggested = recordLetter === suggestedLetterToKeep ? 'true' : 'false';
-
-        // record title
-        const titleContainer = this.createElementOfRecord('Title:', record.title ?? 'Unknown', 'title');
-
-        // novel Type
-        const novelTypeContainer = this.createElementOfRecord('Novel Type:', record.novelType ?? 'Unknown', 'novel-type');
-
-        // site
-        const siteContainer = this.createElementOfRecord('Site:', record.source ?? record.meta.altSources[0] ?? 'Unknown', 'site');
-
-        // latest chapter
-        const latestChapterContainer = this.createElementOfRecord('Latest Chapter:', String(record.GetChapter()) ?? 'Unknown', 'latest-chapter');
-
-        // tags
-        const tagsContainer = this.createTagsOfRecord(record.meta.tags);
-
-        // last updated
-        const lastUpdatedContainer = this.createElementOfRecord('Last Updated:', this.isoToLocal(record.meta.updated) ?? 'Unknown', 'last-updated');
-
-        // first created
-        const firstCreatedContainer = this.createElementOfRecord('Created at:', this.isoToLocal(record.meta.added) ?? 'Unknown', 'first-created');
-
-        // continuation button
-        const continueButton = document.createElement('button');
-        continueButton.classList.add('merger-dialog-record-continue-button');
-        continueButton.textContent = `Keep Record ${recordLetter}`;
-        continueButton.dataset.record = recordLetter;
-        continueButton.dataset.suggested = recordLetter === suggestedLetterToKeep ? 'true' : 'false';
-
-
-
-        // append to container
-        container.append(
-            letterContainer,
-            titleContainer,
-            novelTypeContainer,
-            siteContainer,
-            latestChapterContainer,
-            tagsContainer,
-            lastUpdatedContainer,
-            firstCreatedContainer,
-            continueButton
-        );
-
-        return container;
-    }
-    private mergeRecord(recordToKeep: Hermidata, recordToRemove: Hermidata): MergeAnalysis {
-        const { conflicts, autoResolved } = HermidataMigration.mergeHermidata(recordToKeep, recordToRemove);
-
-        const manuallyMergedFields: Record<string, { A: unknown; B: unknown }> = {};
-        const resolutions: Record<string, 'A' | 'B'> = {};
-    
-        for (const conflict of conflicts) {
-        manuallyMergedFields[conflict.path] = { A: conflict.valueA, B: conflict.valueB };
-        resolutions[conflict.path] = "A"; // default suggestion: keep recordToKeep's value
-        }
-    
-        return {
-            automaticallyMergedFields: autoResolved,
-            automaticallyMergedFieldsAmount: autoResolved.length,
-            manuallyMergedFieldsAmount: conflicts.length,
-            manuallyMergedFields,
-            configuration: {
-                keepId: recordToKeep.id,
-                removeId: recordToRemove.id,
-                resolutions,
-            },
-        };
-
-    }
-    private createWarningFields(automaticallyMergedFields: MergeAnalysis['manuallyMergedFields'], suggestedLetterToKeep: 'A' | 'B' ): HTMLDivElement {
-
-        const parent = document.createElement('div');
-        parent.classList.add('merger-dialog-warning-fields-container');
-        
-
-        for (const [field, value] of Object.entries(automaticallyMergedFields)) {
-            // container
-            const container = document.createElement('div');
-            container.classList.add('merger-dialog-warning-field-container');
-            container.dataset.field = field;
-            container.id = `merger-dialog-warning-field-${field}`;
-            container.setAttribute('role', 'radiogroup');
-            container.setAttribute('aria-label', this.trimFieldName(field));
-
-            // field
-            const fieldElement = document.createElement('p');
-            fieldElement.classList.add('merger-dialog-warning-field-title');
-            fieldElement.textContent = this.trimFieldName(field);
-
-            // value A container
-            const value_A_Container = this.createWarningValue(value.A, field, 'A', suggestedLetterToKeep);
-
-            // value B container
-            const value_B_Container = this.createWarningValue(value.B, field, 'B', suggestedLetterToKeep);
-
-            // add event listeners
-            // on click switch the input value
-            value_A_Container.addEventListener('click', () => {
-                this.switchInputValue('A', field);
-            });
-            value_B_Container.addEventListener('click', () => {
-                this.switchInputValue('B', field);
-            });
-
-
-
-            container.append(fieldElement, value_A_Container, value_B_Container);
-            parent.appendChild(container);
-        }
-        return parent;
-    }
-    private trimFieldName(fieldName: string): string {
-        // remove everything before the last dot
-        const trimmed = fieldName.split('.');
-        const individualName = trimmed[trimmed.length - 1];
-        // add spaces before each capital letter
-        return individualName.replace(/([A-Z])/g, ' $1').trim();
-    }
-    private switchInputValue(newInputLetter: 'A' | 'B', field: string) {
-        const inputs = document.querySelectorAll<HTMLInputElement>(`.merger-dialog-warning-field-value-input[data-field="${field}"]`);
-        for (const input of inputs) {
-            if (input.dataset.record === newInputLetter) input.checked = true;
-            else input.checked = false;
-        }
-    }
-    private createWarningValue(value: any, field: string, recordLetter: 'A' | 'B', suggestedLetterToKeep?: 'A' | 'B'): HTMLDivElement {
-        // container
-        const container = document.createElement('div');
-        container.classList.add('merger-dialog-warning-field-value-container', `merger-dialog-warning-field-value-container-${recordLetter.toLowerCase()}`);
-        container.dataset.value = recordLetter;
-
-        // input
-        const input = document.createElement('input');
-        input.classList.add('merger-dialog-warning-field-value-input');
-        input.value = String(value);
-        input.type = "radio";
-        input.name = field;
-        input.dataset.field = field;
-        input.dataset.value = value;
-        input.dataset.record = recordLetter;
-        input.checked = recordLetter === suggestedLetterToKeep;
-        input.setAttribute('aria-label', `Use "${value}" from record ${recordLetter}`);
-
-        // value
-        const valueElement = document.createElement('p');
-        valueElement.classList.add('merger-dialog-warning-field-value');
-        valueElement.textContent = `"${value}"`;
-
-        // text ( from which record )
-        const text = document.createElement('p');
-        text.classList.add('merger-dialog-warning-field-value-text');
-        text.textContent = `- From record ${recordLetter}`;
-
-
-
-        container.append(input, valueElement, text);
-        return container;
-    }
-
-
-
 }

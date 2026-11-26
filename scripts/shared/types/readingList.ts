@@ -10,6 +10,27 @@ export interface QueueFilters {
 
 export type QueuePosition = 'top' | 'bottom';
 
+/**
+ * Why a title sits where it does in the automatic reading list
+ * - pinned: placed there by the user
+ * - new-today: a chapter came out today that has not been read
+ * - priority-backlog: behind the latest chapter, priority 7-10
+ * - earlier: a chapter came out before today that has not been read
+ * - backlog: behind the latest chapter, priority 1-6
+ */
+export type ReadingGroup = 'pinned' | 'new-today' | 'priority-backlog' | 'earlier' | 'backlog';
+
+export interface RankedRow {
+    entry: Hermidata;
+    group: ReadingGroup;
+    /** 0-based position in the automatic list */
+    position: number;
+    /** When the newest chapter came out, epoch ms; null when the title has none to show */
+    releasedAt: number | null;
+    /** Chapters behind the latest, when known */
+    behind: number | null;
+}
+
 /** Where a row sits and what it may do */
 export interface RowOptions {
     /** 0-based position in the whole queue */
@@ -20,6 +41,14 @@ export interface RowOptions {
     canReorder: boolean;
     /** True while this row's handle is grabbed for keyboard reordering */
     grabbed: boolean;
+    /** Set in the automatic list: why the row is there, and whether the user pinned it. Null in the manual queue. */
+    auto: AutoRowOptions | null;
+}
+
+export interface AutoRowOptions {
+    group: ReadingGroup;
+    /** Short text such as "New today" or "14 behind" */
+    reason: string;
 }
 
 export interface RowActions {

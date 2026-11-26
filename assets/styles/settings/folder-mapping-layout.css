@@ -136,7 +136,7 @@ nav {
 
 .sync-choices {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     width: 100%;
     margin: 0;
@@ -285,6 +285,12 @@ nav {
 
 .account-connection-card .encryption-reason {
     font-size: 0.82rem;
+}
+
+/* Not available (this device does not sync): everything but the reason is greyed out */
+.library-encryption-card[aria-disabled="true"] > div:first-child,
+.library-encryption-card[aria-disabled="true"] .account-auth-status {
+    opacity: 0.5;
 }
 
 .encryption-panel {

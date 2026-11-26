@@ -194,6 +194,13 @@
     transform: translateX(var(--line-v1-x, 60px));
 }
 
+/* centre of the diamond: halfway between the image column ( 54px ) and the line bend ( 12.5% ), 22px down.
+   Done in CSS so it follows the item width without waiting for layout, size is set in SetPositionSvg.ts */
+.diamond-group-line {
+    transform: translate(calc(27px + 6.25%), 22px);
+    transform-box: view-box;
+}
+
 .line-diamond {
     stroke-width: 1;
     vector-effect: non-scaling-stroke;
@@ -202,6 +209,12 @@
 .line-diamond.hermidata-item-lines:hover {
 	stroke: var(--accent-hover-dark);
 	cursor: help;
+}
+
+/* right side shape: 100% of the svg width, so it stays on the item's right edge whatever the popup width */
+.diamond-group-r {
+    transform: translateX(100%);
+    transform-box: view-box;
 }
 
 .diamond-l,
@@ -918,4 +931,22 @@
     height: fit-content;
     border: 1px solid var(--border);
     border-radius: 8px;
+}
+
+/* Notification section: count in the header and the empty state */
+.containerHeader-feed .notification-count {
+    margin-left: 0.25em;
+    color: var(--accent, #01af76);
+    font-variant-numeric: tabular-nums;
+}
+.rss-notification-empty {
+    margin: 0 auto 10px;
+    text-align: center;
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+#RSS-Notification:has(
+    > .containerHeader-feed > .titleHeader > .feed-header-symbol[data-feed-state="up"]
+    ) > .rss-notification-empty {
+    display: none;
 }
