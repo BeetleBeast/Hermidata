@@ -1,18 +1,22 @@
 # Library sync
 
 Hermidata can keep your library the same on several devices. Each device chooses **where** its synced copy
-lives:
+lives, or **not to sync at all**:
 
-| | Browser sync | Your own server (WebDAV) |
-| --- | --- | --- |
-| Setup | None | A WebDAV server, its URL and an account |
-| Space | About 100 KB (the browser's sync quota): a few hundred typical entries, fewer with long notes and histories | Whatever your server allows |
-| How fast other devices see a change | Usually within seconds | Within 5 minutes, or right away when you open the popup |
-| Who stores your data | Your browser vendor (Google, Mozilla, …), with your browser account | You |
-| Works across browsers | No: Chrome syncs with Chrome, Firefox with Firefox | Yes |
+| | Browser sync | Your own server (WebDAV) | This device only |
+| --- | --- | --- | --- |
+| Setup | None | A WebDAV server, its URL and an account | None |
+| Space | About 100 KB (the browser's sync quota): a few hundred typical entries, fewer with long notes and histories | Whatever your server allows | This device's own storage |
+| How fast other devices see a change | Usually within seconds | Within 5 minutes, or right away when you open the popup | Other devices never see it |
+| Who stores your data | Your browser vendor (Google, Mozilla, …), with your browser account | You | Only this device |
+| Works across browsers | No: Chrome syncs with Chrome, Firefox with Firefox | Yes | Not applicable |
+| Settings | Sync through your browser account | Sync through your browser account | Stay on this device |
+| Encryption | Optional | Recommended | Not available (nothing is published) |
 
-Browser sync is the default. Devices only sync with devices that use the **same place**: a laptop on browser sync
-and a phone on your WebDAV server do not see each other's changes.
+**This device only is the default for new installs:** nothing leaves the device until you pick a place to sync
+through. A device that already held a library when it was updated keeps browser sync, because that is what it was
+doing, and can switch at any time. Devices only sync with devices that use the **same place**: a laptop on browser
+sync and a phone on your WebDAV server do not see each other's changes.
 
 - [What gets synced](#what-gets-synced)
 - [Setting up a WebDAV server](#setting-up-a-webdav-server)
@@ -28,8 +32,8 @@ and a phone on your WebDAV server do not see each other's changes.
 
 - **Your whole library** (entries, markers, tags, notes, metadata), as one compressed file.
 - **Deletions.** A deleted entry stays deleted on other devices, as long as they sync within 30 days.
-- **Not part of library sync:** your settings, which always sync through your browser account whichever place
-  you pick; the RSS cache (each device fetches its own feeds); and the sync choice and password themselves, which
+- **Not part of library sync:** your settings, which sync through your browser account whether you pick browser
+  sync or your own server (on a device set to **This device only** they stay on the device); the RSS cache (each device fetches its own feeds); and the sync choice and password themselves, which
   stay on the device.
 
 When two devices edit **different** entries at the same time, both edits are kept. When they edit the **same**
@@ -129,6 +133,21 @@ updates, and deletes it again. Possible results:
 
 Switching away from browser sync does not delete the copy in browser sync, so other devices still using browser
 sync keep working.
+
+### Keeping everything on this device
+
+Choose **This device only** and click **Save and switch**. From then on this device:
+
+- publishes nothing and reads nothing, so there is no server, no polling and no quota;
+- keeps its settings in the extension's local storage instead of your browser account's sync storage, so they
+  are not synced either;
+- does not record deletions (there is nobody to tell);
+- greys out the Encryption card, with the reason, because there is no synced copy to protect.
+
+Copies that were already published to browser sync or a server are left as they are: Hermidata does not delete
+them. Switching to another place later asks the usual merge-or-use-the-copy question when both sides hold a
+library. Entries you deleted while local only can come back from a copy that still holds them, so back up
+(*Import & Export → Create quick backup*) before switching a device that has deleted entries.
 
 ---
 
@@ -254,6 +273,7 @@ The engine decides **what** to publish; a backend decides **where**. Exactly one
 | --- | --- |
 | `scripts/shared/sync/sync.engine.ts` | `HermidataSync`: queue, merge, tombstones, push loop, `switchBackend()`; plus the wiring (`initSync`, `pushToSync`, `removeFromSync`, `refreshSync`, `switchSyncBackend`) |
 | `scripts/shared/sync/BrowserSyncBackend.ts` | `storage.sync`: chunks (`lib:0…n`) plus `lib:meta`, quota guard, legacy-key cleanup |
+| `scripts/shared/sync/LocalBackend.ts` | The "backend" of a device that does not sync: reads nothing, refuses to write; the engine never pulls or pushes while it is active |
 | `scripts/shared/sync/WebDavBackend.ts` | One file over HTTP: ETag versions, `If-Match` / `If-None-Match`, `MKCOL`, alarm polling, `testConnection()` |
 | `scripts/shared/sync/syncConfig.ts` | Per-device config in `storage.local`, URL validation, host permission pattern, backend factory |
 | `scripts/shared/sync/syncAlarms.ts` | The one `alarms.onAlarm` listener, registered synchronously at startup (MV3), fanned out to the active backend |
@@ -315,7 +335,7 @@ header revision, not the stored string.
 
 | Key | Content |
 | --- | --- |
-| `syncBackend` | `{ kind: 'browser' }` or `{ kind: 'webdav', url, username?, password?, pollMinutes? }` |
+| `syncBackend` | Written the first time the background starts (`resolveSyncConfig`): `{ kind: 'local' }` on a device with an empty library, `{ kind: 'browser' }` on one that already has entries. `{ kind: 'browser' }`, `{ kind: 'local' }` or `{ kind: 'webdav', url, username?, password?, pollMinutes? }` |
 | `syncAdoptPending` | `true` while a "use the server copy" switch waits for its first successful pull |
 | `syncTombstones` | Deletions not yet expired |
 | `syncBlocked`, `syncWarnAt` | Quota state for the "too big" / "nearly full" warnings |
@@ -324,7 +344,8 @@ header revision, not the stored string.
 
 Unlocked data keys live in IndexedDB (`hermidata-sync-keys`, store `keys`, keyed by `kid`), not in `storage.local`.
 
-The synced `Settings` key in `storage.sync` is never touched by sync.
+The `Settings` key in `storage.sync` is never touched by library sync. On a `local` device `setSettings()` writes the
+`Settings` mirror to `storage.local` instead, and the theme and RSS listeners follow either area.
 
 ### Tests
 
@@ -338,19 +359,20 @@ npx vitest run tests/sync          # every sync suite, against in-memory fakes
 | `sync.backend.test.ts` | The contract, run against every backend |
 | `sync.webdav.test.ts` | WebDAV requests, preconditions, folders, servers without ETags, `testConnection`, polling; the engine on WebDAV |
 | `sync.switch.test.ts` | Switching backends, merge and adopt |
+| `sync.local.test.ts` | A local-only device: no pulls, pushes or tombstones, no encryption, syncing again afterwards |
 | `sync.config.test.ts` | URL validation, config storage, the alarm hub |
 | `sync.crypto.test.ts` | Envelope, passphrase and recovery keys, rewrapping, tampering, hostile headers |
 | `sync.encryption.test.ts` | The engine encrypted: turning it on and off, locked devices, rewraps, the plaintext dedupe, browser sync |
 
-`tests/sync.fakeDav.ts` has `FakeDavServer` (an in-memory WebDAV server behind a real `fetch` signature) and
+`tests/sync/sync.fakeDav.ts` has `FakeDavServer` (an in-memory WebDAV server behind a real `fetch` signature) and
 `FakeAlarms`.
 
-**Against a real server.** `tests/sync.live.test.ts` runs the backend against a real WebDAV server and is skipped
+**Against a real server.** `tests/sync/sync.live.test.ts` runs the backend against a real WebDAV server and is skipped
 unless you point it at a **folder** it may write to (it creates and deletes its own files there):
 
 ```bash
 npm run sync:server                # in a second terminal (needs rclone)
-HERMIDATA_DAV_URL=http://127.0.0.1:8080/ HERMIDATA_DAV_USER=hermidata HERMIDATA_DAV_PASS=hermidata npx vitest run tests/sync.live.test.ts --reporter=verbose
+HERMIDATA_DAV_URL=http://127.0.0.1:8080/ HERMIDATA_DAV_USER=hermidata HERMIDATA_DAV_PASS=hermidata npx vitest run tests/sync/sync.live.test.ts --reporter=verbose
 ```
 
 In PowerShell, set the variables first with `$env:HERMIDATA_DAV_URL = '…'`. With `--reporter=verbose` the test

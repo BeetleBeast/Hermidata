@@ -1,4 +1,5 @@
 import { type Hermidata } from "../shared/types/index";
+import { dbAccess } from "../shared/db/Storage";
 import {  getHermidataWithRssFromBackground } from "./load";
 import { PastHermidata } from "../popup/core/Past";
 import { FeedItem, refreshNotificationSection } from "./build/feed";
@@ -11,6 +12,8 @@ export abstract class RssBuild {
     protected readonly hermidata: HermidataModel;
 
     protected AllHermidata: Record<string, Hermidata>;
+
+    protected readonly db = new dbAccess();
 
     constructor(hermidata: HermidataModel, AllHermidata: Record<string, Hermidata>) {
         this.hermidata = hermidata;

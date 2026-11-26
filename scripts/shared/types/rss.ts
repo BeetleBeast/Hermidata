@@ -130,12 +130,20 @@ export interface HermidataMigrationConfiguration {
     removeId: string;
     resolutions: Record<string, "A" | "B">; // only for fields that need a manual pick
 }
-export interface MergeAnalysis {
-    automaticallyMergedFields: string[];
-    automaticallyMergedFieldsAmount: number;
-    manuallyMergedFieldsAmount: number;
-    manuallyMergedFields: Record<string, { A: unknown; B: unknown }>;
-    configuration: HermidataMigrationConfiguration;
+/** The two entries in the Library merge dialog, in the order they were selected */
+export type MergeLetter = "A" | "B";
+export interface MergeSuggestion {
+    keep: MergeLetter;
+    reason: string;
+}
+/** A field both entries fill in differently; the user picks which value survives */
+export interface MergeConflictChoice {
+    path: string;
+    label: string;
+    values: Record<MergeLetter, unknown>;
+    chosen: MergeLetter;
+    /** false while the choice still follows the kept entry */
+    touched: boolean;
 }
 export interface ScalarConflict<K extends string = string> {
     field: K;
@@ -143,57 +151,3 @@ export interface ScalarConflict<K extends string = string> {
     valueA: unknown;
     valueB: unknown;
 }
-
-export type DbStore = 'hermidata' | 'feeds' | 'settings' | 'images';
-export type SyncCall = PushToSync | RemoveFromSync;
-export type DbCall = NoPayload | IdPayloadOnly | PutAll | Update | Put | UpdateImageKey;
-
-// syncCall
-type PushToSync =  {
-    operation: 'pushToSync';
-    payload: {
-        data: OnlyPlainHermidata;
-    }
-}
-type RemoveFromSync = {
-    operation: 'removeFromSync';
-    payload: {
-        id: string;
-    }
-}
-// dbCall
-type NoPayload = {
-    operation: 'getAll' | 'clear';
-};
-type IdPayloadOnly = {
-    operation: 'get' | 'delete';
-    payload: {
-        id: string;
-    }
-};
-type PutAll = {
-    operation: 'putAll';
-    payload: {
-        data: Record<string, OnlyPlainHermidata> | RawFeed[];
-    }
-};
-type Update = {
-    operation: 'update';
-    payload: {
-        data: OnlyPlainHermidata | Settings | RawFeed | Blob;
-    }
-};
-type Put = {
-    operation: 'put';
-    payload: {
-        id: string;
-        data: OnlyPlainHermidata | Settings | RawFeed | Blob;
-    }
-};
-type UpdateImageKey = {
-    operation: 'updateImageKey';
-    payload: {
-        oldId: string;
-        newId: string;
-    }
-};

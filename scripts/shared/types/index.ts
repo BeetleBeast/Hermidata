@@ -19,6 +19,9 @@ export type {
     GrabbedRow,
     WaitingCover,
     QueueIconName,
+    ReadingGroup,
+    RankedRow,
+    AutoRowOptions,
 } from "./readingList";
 
 export type {
@@ -38,6 +41,7 @@ export type {
     Hermidata,
     Bookmark,
     ReadingQueue,
+    ReadingPin,
     ReadingQueuePriorityBand,
 
     OnlyPlainHermidata,
@@ -84,9 +88,17 @@ export type {
     StringListFieldPath,
     ValueAtPath,
 
-    RawScrapedItem,
-    RawScrappedFeed,
-    
+    DetectedFeed,
+    FeedHttpMeta,
+    FeedFetchResult,
+    FeedChannelInfo,
+    MangaUpdatesLinkLog,
+    MangaUpdatesFeedCandidate,
+    MangaUpdatesFeedScan,
+    MangaUpdatesLinkOutcome,
+    MangaUpdatesCoverResult,
+    MangaUpdatesFeedProgress,
+
     Migration,
 
     ReleaseSchedule,
@@ -151,12 +163,9 @@ export type {
 
     HermidataMigrationConfiguration,
     ScalarConflict,
-    MergeAnalysis,
-
-    DbStore,
-    DbCall,
-
-    SyncCall
+    MergeLetter,
+    MergeSuggestion,
+    MergeConflictChoice
 
 } from "./rss";
 
@@ -186,6 +195,7 @@ export type {
     BookmarkTitleFormatPart,
     AutoSetStatusMode,
     AutoSetStatusSettings,
+    AutoReadingListSettings,
     LegacyAutoSetStatusSettings
 
 } from "./settings";

@@ -1,5 +1,5 @@
 import { DEFAULT_RSS_CHECK_INTERVAL, DEFAULT_TOMBSTONE_TTL_DAYS, MAX_TOMBSTONE_TTL_DAYS, RSS_CHECK_INTERVALS } from "../constants";
-import type { AutoSetStatusMode, AutoSetStatusSettings, LegacyAutoSetStatusSettings } from "../types";
+import type { AutoReadingListSettings, AutoSetStatusMode, AutoSetStatusSettings, LegacyAutoSetStatusSettings } from "../types";
 
 /*
 Turn a stored settings value into one that is safe to use: stored settings can be missing a field, hold an old shape,
@@ -28,4 +28,9 @@ export function resolveAutoSetStatusMode(value: unknown): AutoSetStatusMode {
     if (legacy.onlyRSS === true) return 'rss';
     if (legacy.allowAllDateFields === true) return 'all';
     return 'off';
+}
+
+/** Is the automatic reading list on? A missing or unreadable value counts as off, so the manual queue stays as it was */
+export function resolveAutoReadingList(value: unknown): boolean {
+    return !!value && typeof value === 'object' && (value as Partial<AutoReadingListSettings>).enabled === true;
 }

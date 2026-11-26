@@ -51,7 +51,13 @@ export const defaultSettings: Settings = {
         AutoSetStatusScore: {
             mode: 'off',
         },
+        AutoReadingList: {
+            enabled: false,
+        },
         AltTitleLookup: {
+            Enable: false,
+        },
+        MangaUpdatesFeeds: {
             Enable: false,
         },
         TombstoneTtlDays: DEFAULT_TOMBSTONE_TTL_DAYS,

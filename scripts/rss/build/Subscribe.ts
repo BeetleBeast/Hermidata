@@ -1,5 +1,4 @@
 import { PastHermidata } from "../../popup/core/Past";
-import { getAllRawFeeds, getSettings, removeRawFeedByUrl, setSettings } from "../../shared/db/Storage";
 import { findAllByTitleOrAlt, findByTitleOrAlt, generateRawFeedId, TrimTitle } from "../../shared/utils/StringOutput";
 import { resolveItem } from "../../popup/core/ItemResolver";
 import type { AnyNovelType, Hermidata, RawFeed } from "../../shared/types/index";
@@ -26,7 +25,7 @@ export class Subscribe extends RssBuild {
     private matchedFeed: RawFeed | null = null;
 
     public async makeSubscribeBtn(): Promise<void> {
-        const [feedListGlobal, allHermidata] = await Promise.all([ getAllRawFeeds(), PastHermidata.getAllHermidata() ]);
+        const [feedListGlobal, allHermidata] = await Promise.all([ this.db.getAllRawFeeds(), PastHermidata.getAllHermidata() ]);
         const subscribeBtn = getElement<HTMLButtonElement>("#subscribeBtn");
         const notificationSection = getElement<HTMLDivElement>("#RSS-Notification");
         const allItemSection = getElement<HTMLDivElement>("#All-RSS-entries");
@@ -112,14 +111,14 @@ export class Subscribe extends RssBuild {
      * @returns true if it has subscribed to any feed
      */
     public async autoSubscribe(): Promise<boolean> {
-        const settings = await getSettings();
+        const settings = await this.db.getSettings();
         const autoSubscribe = settings?.ExtensionBehaviour.AutoSubscribe.EnableAutoSubscribe ?? false;
         const allowSimilarityScanning = settings?.ExtensionBehaviour.AutoSubscribe.AllowSimilarityScanning ?? false;
         const autoSubscribeThreshold = settings?.ExtensionBehaviour.AutoSubscribe.Threshold ?? false;
         if (!autoSubscribe) return false;
         // 1. take all raw feeds
         // raw feeds are automatically collected by the background script
-        const allRawFeeds = await getAllRawFeeds();
+        const allRawFeeds = await this.db.getAllRawFeeds();
         
         // 2. take all hermidata
         const allHermidata = await PastHermidata.getAllHermidata();
@@ -159,7 +158,7 @@ export class Subscribe extends RssBuild {
                 const newRecord: Record<string, string> = { [Hermidata.id]: RawFeedID };
                 const HermidataNotLinkedToRSS = settings.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
                 settings.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS = HermidataNotLinkedToRSS ? { ...HermidataNotLinkedToRSS, ...newRecord } : newRecord;
-                await setSettings(settings);
+                await this.db.setSettings(settings);
                 continue;
             }
             // 5. link matching feed
@@ -178,11 +177,15 @@ export class Subscribe extends RssBuild {
         console.log('Raw Feeds:', Object.keys(allRawFeeds).length);
         console.log('All Hermidata Without RSS:', Object.keys(allHermidata).length);
 
+        // asked once for the whole scan ( every question is a message to the background )
+        const settings = await this.db.getSettings();
+        const RSSIdsNotAllowed = settings?.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
+
         for (const RawFeed of Object.values(allRawFeeds)) {
             // find matching entry
             if (!RawFeed.latestItem) {
                 // remove from db
-                await removeRawFeedByUrl(RawFeed.url);
+                await this.db.removeRawFeedByUrl(RawFeed.url);
                 // remove from local
                 await removeRawFeedFromLocal(RawFeed.url);
                 console.info(`Raw feed with url ${RawFeed.url} has no items and has been removed from storage.`);
@@ -202,8 +205,6 @@ export class Subscribe extends RssBuild {
             const matchedEntry = resolution.kind === 'match' ? resolution.item : undefined;
 
             // check if this check is a not excluded
-            const settings = await getSettings();
-            const RSSIdsNotAllowed = settings?.ExtensionBehaviour.AutoSubscribe.HermidataNotLinkedToRSS;
             // skip if this Hermidata is excluded
             if (Object.keys(RSSIdsNotAllowed).includes(matchedEntry?.id ?? '')) continue;
 

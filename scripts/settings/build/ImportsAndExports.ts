@@ -261,9 +261,9 @@ export class ImportsAndExports extends Build {
         try {
             const importedData = await new Blob([file]).text();
             
-            const existingData = await this.getSettings();
+            const existingData = await this.db.getSettings();
             const mergedData: Settings = { ...existingData, ...JSON.parse(importedData) };
-            await this.setSettings(mergedData);
+            await this.db.setSettings(mergedData);
 
             alert("Settings imported successfully!");
         } catch (err) {
@@ -276,7 +276,7 @@ export class ImportsAndExports extends Build {
 
     private async exportHermidata() {
         try {
-            const Data = await this.getAllHermidata();
+            const Data = await this.db.getAllHermidata();
             
             const jsonSTR = JSON.stringify(Data, null, 2);
             const blob = new Blob([jsonSTR], { type: "application/json" });
@@ -310,13 +310,13 @@ export class ImportsAndExports extends Build {
                 const importedData: Record<string, Hermidata> = JSON.parse(target?.result as string);
 
                 // Get existing storage
-                const existingData =  await this.getAllHermidata();
+                const existingData =  await this.db.getAllHermidata();
 
                 // Merge
                 const mergedDataRecord = { ...existingData, ...importedData };
 
                 // Save merged result
-                await this.putAllHermidata(mergedDataRecord);
+                await this.db.setAllHermidata(Object.values(mergedDataRecord));
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
@@ -339,16 +339,11 @@ export class ImportsAndExports extends Build {
         reader.onload = async (e) => {
             try {
                 const target = e.target ?? null;
-                const importedData: RawFeed[] = JSON.parse(target?.result as string);
+                // the export is a record keyed by url, an older file may be a list
+                const importedData: Record<string, RawFeed> | RawFeed[] = JSON.parse(target?.result as string);
 
-                // Get existing storage
-                const existingData = await this.getAllFeeds();
-
-                // Merge
-                const mergedData: RawFeed[] = { ...existingData, ...importedData };
-
-                // Save merged result
-                await this.putAllFeeds(mergedData);
+                // feeds are stored by url, so saving the imported ones replaces a stored feed with the same url and keeps the rest
+                await this.db.setAllRawFeeds(Object.values(importedData));
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
@@ -363,8 +358,7 @@ export class ImportsAndExports extends Build {
 
     private async exportRSSBtn() { // possible rss
         try {
-            const DataList = await this.getAllFeeds();
-            const Data = Object.fromEntries(DataList.map(h => [h.url, h]));
+            const Data = await this.db.getAllRawFeeds();
             
             const jsonSTR = JSON.stringify(Data, null, 2);
             const blob = new Blob([jsonSTR], { type: "application/json" });
@@ -387,7 +381,7 @@ export class ImportsAndExports extends Build {
 
     private async exportFolderMapping() {
         try {
-            const settings = await this.getSettings();
+            const settings = await this.db.getSettings();
             const folderMapping = settings.FolderMapping;
             
             const jsonSTR = JSON.stringify(folderMapping, null, 2);
@@ -422,15 +416,15 @@ export class ImportsAndExports extends Build {
                 const importedData: Settings['FolderMapping'] = JSON.parse(target?.result as string);
 
                 // Get existing storage
-                const settings = await this.getSettings();
-                const existingData = (await this.getSettings()).FolderMapping;
+                const settings = await this.db.getSettings();
+                const existingData = (await this.db.getSettings()).FolderMapping;
 
                 // Merge folderMapping
                 const mergedDataObject = { ...existingData, ...importedData };
                 // Merge Settings
                 const mergedSettings = { ...settings, FolderMapping: mergedDataObject };
                 // Save merged result
-                await this.setSettings( mergedSettings );
+                await this.db.setSettings( mergedSettings );
 
                 console.log("FolderMapping import + merge complete!");
             } catch (error) {
@@ -515,13 +509,12 @@ export class ImportsAndExports extends Build {
     private async quickBackup() {
         try {
             // get Settings, Hermidata, RSSData, SyncData
-            const [updatedSettings, hermidata, RSSDataList, SyncData ] = await Promise.all([
+            const [updatedSettings, hermidata, RSSData, SyncData ] = await Promise.all([
                 this.ensureSettingsUpToDate(),
-                this.getAllHermidata(),
-                this.getAllFeeds(),
+                this.db.getAllHermidata(),
+                this.db.getAllRawFeeds(),
                 ext.storage.sync.get(null)
             ])
-            const RSSData = Object.fromEntries(RSSDataList.map(h => [h.url, h]));
 
             const BackupData: quickBackup = {
                 Settings: updatedSettings,
@@ -562,13 +555,13 @@ export class ImportsAndExports extends Build {
                 const importedData = this.makeHermidataFromMAL(target?.result as string);
                 
                 // Get existing storage
-                const existingData = await this.getAllHermidata();
+                const existingData = await this.db.getAllHermidata();
 
                 // Merge
                 const mergedDataRecord = { ...existingData, ...importedData };
 
                 // Save merged result
-                await this.putAllHermidata(mergedDataRecord);
+                await this.db.setAllHermidata(Object.values(mergedDataRecord));
 
                 console.log("Hermidata import + merge complete!");
             } catch (error) {
@@ -583,7 +576,7 @@ export class ImportsAndExports extends Build {
     private async exportToMAL() {
         try {
             // get data
-            const existingData = await this.getAllHermidata();
+            const existingData = await this.db.getAllHermidata();
             // transform data
             const opml = this.makeMalFromHermidata(existingData);
             const blob = new Blob([opml], { type: "application/json" });
@@ -750,8 +743,8 @@ export class ImportsAndExports extends Build {
         this.updateBookmarkImportState();
 
         // get all Hermidata
-        const allHermidata = await this.getAllHermidata();
-        const settings = await this.getSettings();
+        const allHermidata = await this.db.getAllHermidata();
+        const settings = await this.db.getSettings();
         const allNovelTypes = settings.ContentTypesAndStatuses.TYPE_OPTIONS;
         
         // get folder path
@@ -854,8 +847,8 @@ export class ImportsAndExports extends Build {
             const value: [AnyNovelType, Hermidata] = [(NovelTypeChanger.value as AnyNovelType), this.finalAllHermidatas[hermidata.id]];
             // save immediately and remove from list to review
             const newHermidataList = await AutoSetAllHermidata.setHermidataType(value);
-            const toSave = AutoSetAllHermidata.withoutStored({ [newHermidataList.id]: newHermidataList }, await this.getAllHermidata());
-            if (toSave[newHermidataList.id]) await this.setHermidata(newHermidataList.id, newHermidataList);
+            const toSave = AutoSetAllHermidata.withoutStored({ [newHermidataList.id]: newHermidataList }, await this.db.getAllHermidata());
+            if (toSave[newHermidataList.id]) await this.db.saveHermidata(newHermidataList.id, newHermidataList);
             else this.temporaryStatus(`"${newHermidataList.title}" is already in your library, so it was not imported.`, this.massImportFromBookmarkFolderStatus);
 
             // remove from list to review
@@ -899,12 +892,12 @@ export class ImportsAndExports extends Build {
     /** @returns how many items were not imported because they are already stored */
     private async saveAllHermidatas(hermidata: Record<string, Hermidata>): Promise<number> {
         // Get existing storage
-        const existingData = await this.getAllHermidata();
+        const existingData = await this.db.getAllHermidata();
         // Merge, without letting an imported item replace a stored one
         const newOnly = AutoSetAllHermidata.withoutStored(hermidata, existingData);
         const mergedDataRecord: Record<string, Hermidata> = { ...existingData, ...newOnly };
         // Save
-        await this.putAllHermidata(mergedDataRecord);
+        await this.db.setAllHermidata(Object.values(mergedDataRecord));
         return Object.keys(hermidata).length - Object.keys(newOnly).length;
     }
 }

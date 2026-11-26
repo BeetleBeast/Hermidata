@@ -5,8 +5,8 @@ export interface CommitOptions {
     undoable: boolean;
 }
 
-/** Applies a change to the shown item, saves it and reports it; changes run one after another */
-export type CommitChange = (message: string, change: () => void, options?: Partial<CommitOptions>) => Promise<void>;
+/** Applies a change to the shown item, saves it and reports it; changes run one after another. Resolves to whether it was saved */
+export type CommitChange = (message: string, change: () => void, options?: Partial<CommitOptions>) => Promise<boolean>;
 
 export type SaveState = 'saving' | 'saved' | 'failed';
 

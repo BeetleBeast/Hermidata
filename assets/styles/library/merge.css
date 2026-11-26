@@ -1,0 +1,538 @@
+/*
+ * Merge two entries ( scripts/library/build/merge.ts )
+ * toolbar button ( acts on the ticked entries ) → compare dialog → toast
+ * Uses the Library tokens from library/base.css ( --lib-* ) on top of the theme palette.
+ */
+
+/* --- shared buttons --- */
+
+.merge-btn {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: var(--lib-radius-sm);
+}
+.merge-btn:active:not(:disabled) {
+    transform: none;
+}
+.merge-btn--ghost {
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+}
+.merge-btn--ghost:hover {
+    color: var(--text-highlight);
+    background: var(--lib-hover);
+    border-color: transparent;
+}
+.merge-btn--primary {
+    color: var(--bg);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-soft);
+}
+.merge-btn--primary:hover {
+    background: var(--accent-hover-soft);
+    border-color: var(--accent-hover-soft);
+}
+.merge-btn--primary:disabled {
+    color: var(--text-disabled);
+    background: var(--surface-input);
+    border-color: transparent;
+}
+:root[data-theme="light"] .merge-btn--primary:not(:disabled) {
+    color: #fff;
+}
+
+.merge-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    flex: none;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--lib-radius-sm);
+}
+.merge-icon-btn:hover {
+    color: var(--text-highlight);
+    background: var(--lib-hover);
+}
+
+/* letter badge: identifies entry A / B everywhere in the flow */
+.merge-letter {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    flex: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    color: var(--text-highlight);
+    background: var(--surface-input);
+}
+
+/* --- toolbar button: stands out once exactly two entries are ticked --- */
+
+#mergeTwoHermidatas[data-ready="true"] {
+    color: var(--accent-soft);
+    background: var(--lib-hover);
+    border-color: color-mix(in srgb, var(--accent-soft) 40%, transparent);
+}
+
+/* --- compare dialog --- */
+
+.merge-dialog {
+    width: min(100% - 32px, 920px);
+    max-height: min(100% - 48px, 860px);
+    padding: 0;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--lib-line);
+    border-radius: var(--lib-radius-lg);
+    box-shadow: 0 24px 64px -16px var(--overlay);
+}
+.merge-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    animation: merge-pop 0.18s ease-out;
+}
+.merge-dialog::backdrop {
+    background: var(--overlay);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+@keyframes merge-pop {
+    from { opacity: 0; transform: scale(0.97); }
+}
+
+.merge-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--lib-line);
+}
+.merge-dialog-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-highlight);
+}
+.merge-dialog-header p {
+    margin: 4px 0 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.merge-dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding: 20px 24px 24px;
+}
+
+.merge-dialog-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 14px 24px;
+    background: var(--surface-raised);
+    border-top: 1px solid var(--lib-line);
+    border-radius: 0 0 var(--lib-radius-lg) var(--lib-radius-lg);
+}
+.merge-dialog-summary {
+    flex: 1 1 280px;
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.merge-dialog-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+.merge-dialog-error {
+    flex-basis: 100%;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    border-radius: var(--lib-radius-sm);
+}
+.merge-dialog-error[hidden] {
+    display: none;
+}
+
+/* sections */
+
+.merge-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+}
+.merge-section-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-highlight);
+}
+.merge-section-hint {
+    margin: -8px 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* keep: two record cards as one radio group */
+
+.merge-records {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.merge-record {
+    position: relative;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-areas:
+        "cover head"
+        "cover title"
+        "facts facts";
+    grid-template-rows: auto 1fr auto;
+    gap: 6px 14px;
+    margin: 0;
+    padding: 14px;
+    white-space: normal;
+    cursor: pointer;
+    background: var(--bg);
+    border: 1px solid var(--lib-line);
+    border-radius: var(--lib-radius);
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.merge-record:hover {
+    border-color: var(--border);
+}
+.merge-record[data-kept="true"] {
+    border-color: var(--accent-soft);
+    background: color-mix(in srgb, var(--bg) 92%, var(--accent-soft));
+    box-shadow: 0 0 0 1px var(--accent-soft);
+}
+.merge-record[data-kept="false"] {
+    opacity: 0.8;
+}
+.merge-record:has(.merge-record-radio:focus-visible) {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: 2px;
+}
+
+/* the radio stays in the tab order and accessibility tree, the card shows its state */
+.merge-record-radio,
+.merge-option-radio {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    pointer-events: none;
+}
+
+.merge-record-head {
+    grid-area: head;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.merge-record[data-kept="true"] .merge-letter {
+    color: var(--bg);
+    background: var(--accent-soft);
+}
+:root[data-theme="light"] .merge-record[data-kept="true"] .merge-letter {
+    color: #fff;
+}
+.merge-record-state {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.merge-record[data-kept="true"] .merge-record-state {
+    color: var(--accent-soft);
+}
+
+.merge-badge {
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 999px;
+}
+.merge-badge--suggested {
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 15%, transparent);
+}
+
+.merge-record-cover {
+    grid-area: cover;
+    width: 64px;
+    height: 96px;
+    object-fit: cover;
+    background: var(--surface-input);
+    border-radius: 6px;
+}
+.merge-record-cover[src*="assets/icon/icon48.png"] {
+    object-fit: scale-down;
+}
+:root[data-theme="light"] .merge-record-cover[src*="assets/icon/icon48.png"] {
+    filter: brightness(0) opacity(0.6);
+    background-color: rgba(0, 0, 0, 0.12);
+}
+
+.merge-record-title {
+    grid-area: title;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text-highlight);
+}
+
+.merge-record-facts {
+    grid-area: facts;
+    display: grid;
+    gap: 2px;
+    margin: 8px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--lib-line);
+}
+.merge-fact {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 8px;
+    padding: 3px 6px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+.merge-fact dt {
+    color: var(--text-muted);
+}
+.merge-fact dd {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+/* values that differ between the two entries get a soft highlight, so the eye finds them */
+.merge-fact[data-differs="true"] {
+    background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+.merge-fact[data-differs="true"] dd {
+    color: var(--text-highlight);
+}
+
+.merge-suggestion {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* conflicts: one row per field, two option cards */
+
+.merge-conflict {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+}
+.merge-conflict legend {
+    float: left;
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.merge-option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 0.875rem;
+    white-space: normal;
+    cursor: pointer;
+    background: var(--bg);
+    border: 1px solid var(--lib-line);
+    border-radius: var(--lib-radius-sm);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.merge-option:hover {
+    border-color: var(--border);
+}
+.merge-option:has(.merge-option-radio:checked) {
+    border-color: var(--accent-soft);
+    background: color-mix(in srgb, var(--bg) 92%, var(--accent-soft));
+}
+.merge-option:has(.merge-option-radio:checked) .merge-letter {
+    color: var(--bg);
+    background: var(--accent-soft);
+}
+:root[data-theme="light"] .merge-option:has(.merge-option-radio:checked) .merge-letter {
+    color: #fff;
+}
+.merge-option:has(.merge-option-radio:focus-visible) {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: 2px;
+}
+.merge-option-value {
+    min-width: 0;
+    max-height: 7.5em;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+/* combined automatically */
+
+.merge-auto {
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--lib-line);
+    border-radius: var(--lib-radius);
+}
+.merge-auto summary {
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.merge-auto summary::marker {
+    color: var(--text-muted);
+}
+.merge-auto[open] summary {
+    margin-bottom: 16px;
+}
+.merge-auto-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+}
+.merge-auto-list li {
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+    border-radius: 999px;
+}
+
+/* --- toast --- */
+
+.library-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 300;
+    max-width: calc(100% - 32px);
+    padding: 12px 18px;
+    transform: translateX(-50%);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--bg);
+    background: var(--text-highlight);
+    border-radius: var(--lib-radius);
+    box-shadow: 0 12px 32px -8px var(--overlay);
+    animation: merge-rise 0.2s ease-out;
+}
+.library-toast[hidden] {
+    display: none;
+}
+@keyframes merge-rise {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+}
+
+/* --- responsive --- */
+
+/* phone: the dialog becomes a full-screen sheet, everything single column */
+@media (max-width: 600px) {
+    .merge-dialog {
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: none;
+        border: none;
+        border-radius: 0;
+    }
+    .merge-dialog-header {
+        padding: 16px;
+    }
+    .merge-dialog-body {
+        gap: 24px;
+        padding: 16px;
+    }
+    .merge-dialog-footer {
+        padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+        border-radius: 0;
+    }
+    .merge-dialog-actions {
+        width: 100%;
+    }
+    .merge-dialog-actions .merge-btn {
+        flex: 1;
+        height: 44px;
+    }
+
+    .merge-records,
+    .merge-conflict {
+        grid-template-columns: 1fr;
+    }
+    .merge-record {
+        grid-template-columns: 52px minmax(0, 1fr);
+    }
+    .merge-record-cover {
+        width: 52px;
+        height: 78px;
+    }
+    .merge-fact {
+        grid-template-columns: 76px minmax(0, 1fr);
+    }
+
+    .library-toast {
+        bottom: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .merge-dialog[open],
+    .library-toast {
+        animation: none;
+    }
+}

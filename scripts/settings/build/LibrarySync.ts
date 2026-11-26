@@ -22,7 +22,7 @@ const PROBLEM_HINTS: Record<WebDavProblem, string> = {
 };
 
 /**
- * "Library sync" card: where this device syncs (browser storage or a WebDAV file), the WebDAV credentials,
+ * "Library sync" card: where this device syncs (browser storage, a WebDAV file, or nowhere), the WebDAV credentials,
  * a connection test, and the first-run choice when switching to a place that already holds a library.
  * The config lives in storage.local (per device); the background script owns the switch itself.
  */
@@ -30,6 +30,7 @@ export class LibrarySync extends Build {
 
     private readonly browserRadio = getElement<HTMLInputElement>("#syncBackendBrowser");
     private readonly webdavRadio = getElement<HTMLInputElement>("#syncBackendWebdav");
+    private readonly localRadio = getElement<HTMLInputElement>("#syncBackendLocal");
     private readonly webdavSetup = getElement<HTMLDivElement>("#webdavSetup");
     private readonly urlInput = getElement<HTMLInputElement>("#webdavUrl");
     private readonly urlCheck = getElement<HTMLParagraphElement>("#webdavUrlCheck");
@@ -65,6 +66,7 @@ export class LibrarySync extends Build {
     private bindEvents() {
         this.browserRadio?.addEventListener('change', () => this.toggleWebdavFields());
         this.webdavRadio?.addEventListener('change', () => this.toggleWebdavFields());
+        this.localRadio?.addEventListener('change', () => this.toggleWebdavFields());
         this.urlInput?.addEventListener('input', () => this.showUrlCheck());
         // editing the URL or the credentials makes the form differ from what is saved (autofill fires these too)
         for (const input of [this.urlInput, this.userInput, this.passInput]) {
@@ -82,6 +84,7 @@ export class LibrarySync extends Build {
     private fill(config: SyncBackendConfig) {
         if (this.browserRadio) this.browserRadio.checked = config.kind === 'browser';
         if (this.webdavRadio) this.webdavRadio.checked = config.kind === 'webdav';
+        if (this.localRadio) this.localRadio.checked = config.kind === 'local';
         if (config.kind === 'webdav') {
             if (this.urlInput) this.urlInput.value = config.url;
             if (this.userInput) this.userInput.value = config.username ?? '';
@@ -92,7 +95,8 @@ export class LibrarySync extends Build {
     }
 
     private selectedKind(): SyncBackendConfig['kind'] {
-        return this.webdavRadio?.checked ? 'webdav' : 'browser';
+        if (this.webdavRadio?.checked) return 'webdav';
+        return this.localRadio?.checked ? 'local' : 'browser';
     }
 
     private toggleWebdavFields() {
@@ -104,7 +108,8 @@ export class LibrarySync extends Build {
     }
 
     private readForm(): FormResult {
-        if (this.selectedKind() === 'browser') return { config: { kind: 'browser' } };
+        const kind = this.selectedKind();
+        if (kind !== 'webdav') return { config: { kind } };
 
         const check = validateWebDavUrl(this.urlInput?.value ?? '');
         if (!check.ok) return { error: check.error };
@@ -131,7 +136,8 @@ export class LibrarySync extends Build {
     }
     /** What the form says right now, without validating: only used to tell whether saving would change anything. */
     private formConfig(): SyncBackendConfig {
-        if (this.selectedKind() === 'browser') return { kind: 'browser' };
+        const kind = this.selectedKind();
+        if (kind !== 'webdav') return { kind };
         const raw = this.urlInput?.value ?? '';
         const check = validateWebDavUrl(raw);
         return {
@@ -156,8 +162,10 @@ export class LibrarySync extends Build {
     }
 
     private showCurrent() {
-        if (this.currentTarget) this.currentTarget.textContent = `This device syncs through: ${describeTarget(this.saved)}.`;
-        
+        if (!this.currentTarget) return;
+        this.currentTarget.textContent = this.saved.kind === 'local'
+            ? 'This device does not sync. Your library and settings stay on this device.'
+            : `This device syncs through: ${describeTarget(this.saved)}.`;
     }
 
     private async showHealth() {
@@ -279,6 +287,7 @@ export class LibrarySync extends Build {
 
     private switchedMessage(config: SyncBackendConfig, mode: SyncSwitchMode): string {
         const where = describeTarget(config);
+        if (config.kind === 'local') return 'This device no longer syncs. Your library and settings now stay on this device. Copies already stored in browser sync or on a server are left as they are.';
         if (mode === 'adopt') return `This device now syncs through ${where} and is taking over the library stored there.`;
         return `This device now syncs through ${where}. Use the same setting on your other devices.`;
     }
@@ -308,7 +317,7 @@ export class LibrarySync extends Build {
     }
 
     private async deviceHasLibrary(): Promise<boolean> {
-        return Object.keys(await this.getAllHermidata()).length > 0;
+        return Object.keys(await this.db.getAllHermidata()).length > 0;
     }
 
     private askChoice(config: SyncBackendConfig): Promise<Choice> {

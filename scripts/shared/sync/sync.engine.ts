@@ -7,12 +7,13 @@ import { isNewerItem } from "../utils/Unread";
 import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion, getSettings } from '../db/db';
 import { resolveTombstoneTtlDays } from '../utils/SettingsValues';
 import { BrowserSyncBackend } from './BrowserSyncBackend';
+import { LocalBackend } from './LocalBackend';
 import type { EnvelopeHeader, KeyStore, RemoteBlob, SyncBackend, SyncBackendConfig, SyncStatus, SyncSwitchMode, WriteResult } from '../types';
 import { ConflictError } from '../utils/dedicatedErrors';
 import { headerRev, isEnvelope, openSnapshot, readEnvelopeHeader, sealSnapshot } from './libraryCrypto';
 import { IdbKeyStore } from './keyStore';
 import {
-    createBackend, loadSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_SEAL_HEADER_KEY, SYNC_SEAL_PENDING_KEY, SYNC_STATUS_KEY, validateWebDavUrl,
+    createBackend, resolveSyncConfig, saveSyncConfig, SYNC_ADOPT_KEY, SYNC_SEAL_HEADER_KEY, SYNC_SEAL_PENDING_KEY, SYNC_STATUS_KEY, validateWebDavUrl,
 } from './syncConfig';
 import { backgroundAlarms } from './syncAlarms';
 import { POLL_ALARM } from './WebDavBackend';
@@ -178,6 +179,7 @@ export class HermidataSync {
     private readonly deps: SyncDeps;
     private readonly api: typeof ext;                   // device-local state: tombstones, flags
     private backend: SyncBackend;
+    private localOnly = false;                          // this device does not sync: nothing is pulled, pushed or remembered
     private stopWatching: (() => void) | undefined;
 
     constructor(deps: SyncDeps, api: typeof ext = ext, backend?: SyncBackend) {
@@ -190,6 +192,7 @@ export class HermidataSync {
 
     /** Call synchronously at the top level of the background script (MV3 requirement). */
     start(): void {
+        if (this.localOnly) return;
         this.stopWatching = this.backend.watch?.(() => this.schedulePull());
         this.enqueue(() => this.pull());
     }
@@ -209,10 +212,12 @@ export class HermidataSync {
             await opts.persist?.();
 
             this.backend = backend;
+            this.localOnly = backend instanceof LocalBackend;
             this.known = null;
             this.ready = false;
             this.pendingPush = false;                                   // the first pull on the new backend decides what to publish
             this.incompleteRetries = 0;
+            if (this.localOnly) { await this.api.storage.local.remove(SYNC_STATUS_KEY); return; }   // nothing left to report
             this.stopWatching = backend.watch?.(() => this.schedulePull());
             await this.pull();
         });
@@ -220,6 +225,7 @@ export class HermidataSync {
 
     /** Call after every local put. Cheap: debounced into one write per burst. */
     schedulePush(): void {
+        if (this.localOnly) return;
         if (!this.ready) { this.dirty = true; return; }
         clearTimeout(this.pushTimer);
         this.pushTimer = setTimeout(() => this.enqueue(() => this.pushSnapshot()), PUSH_DEBOUNCE_MS);
@@ -236,6 +242,7 @@ export class HermidataSync {
      * write is retried with the next push. Resolves true when it was published right away.
      */
     async setEncryption(header: EnvelopeHeader | null): Promise<boolean> {
+        this.assertSyncing();
         if (header && !await this.keyFor(header.kid)) throw new Error('This device does not hold the key for that encryption.');
 
         let published = false;
@@ -254,6 +261,7 @@ export class HermidataSync {
      * unreadable copy is merged; other devices merge their own libraries back in once they can read the new one.
      */
     async replaceUnreadable(header: EnvelopeHeader | null): Promise<boolean> {
+        this.assertSyncing();
         if (header && !await this.keyFor(header.kid)) throw new Error('This device does not hold the key for that encryption.');
 
         let published = false;
@@ -273,6 +281,7 @@ export class HermidataSync {
 
     /** Call after every local delete. Records a tombstone, then schedules a push. */
     recordDelete(id: string): void {
+        if (this.localOnly) return;                                     // no remote to tell, so nothing to remember
         this.enqueue(async () => {
             const tombs = await this.loadTombstones();
             tombs[id] = Date.now();
@@ -300,7 +309,12 @@ export class HermidataSync {
         await this.api.storage.local.set({ [SYNC_STATUS_KEY]: status });
     }
 
+    private assertSyncing(): void {
+        if (this.localOnly) throw new Error('This device is local only, so there is no synced library to encrypt.');
+    }
+
     private schedulePull(): void {
+        if (this.localOnly) return;
         clearTimeout(this.pullTimer);
         this.pullTimer = setTimeout(() => this.enqueue(() => this.pull()), PULL_DEBOUNCE_MS);
     }
@@ -798,12 +812,13 @@ const backendEnv = () => ({ api: ext, getDeviceId, alarms: backgroundAlarms() })
 export const initSync = () => { void startConfiguredSync(); };
 
 async function startConfiguredSync(): Promise<void> {
-    const config = await loadSyncConfig(ext.storage.local);
+    const config = await resolveSyncConfig(ext.storage.local, async () => Object.keys(await getAllHermidata()).length > 0);
     if (config.kind === 'browser') {
         void backgroundAlarms()?.clear(POLL_ALARM);                 // a poll alarm left over from WebDAV
         sync.start();
         return;
     }
+    if (config.kind === 'local') void backgroundAlarms()?.clear(POLL_ALARM);
     await sync.switchBackend(createBackend(config, backendEnv()));
 }
 
@@ -826,6 +841,6 @@ export async function switchSyncBackend(config: SyncBackendConfig, mode: SyncSwi
         void backgroundAlarms()?.clear(POLL_ALARM);
     }
     await sync.switchBackend(createBackend(config, backendEnv()), {
-        persist: () => saveSyncConfig(ext.storage.local, config, mode),
+        persist: () => saveSyncConfig(ext.storage.local, config, config.kind === 'local' ? 'merge' : mode),
     });
 }

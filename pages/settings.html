@@ -73,7 +73,7 @@
             <div class="card account-connection-card library-sync-card">
                 <div>
                     <h3>Library sync</h3>
-                    <p>Choose where this device keeps its synced library. Devices only sync with devices that use the same place.</p>
+                    <p>Choose where this device keeps its synced library, or keep everything on this device only. Devices only sync with devices that use the same place.</p>
                 </div>
                 <p id="syncCurrentTarget" class="account-auth-status" data-state="connected"></p>
                 <p id="syncHealth" class="account-auth-status" role="status" aria-live="polite" hidden></p>
@@ -89,6 +89,11 @@
                         <input type="radio" id="syncBackendWebdav" name="syncBackend" value="webdav">
                         <strong>Your own server (WebDAV)</strong>
                         <span>Nextcloud, ownCloud, rclone, a NAS, or any WebDAV server.</span>
+                    </label>
+                    <label class="choice" for="syncBackendLocal">
+                        <input type="radio" id="syncBackendLocal" name="syncBackend" value="local">
+                        <strong>This device only</strong>
+                        <span>No sync. Your library and settings never leave this device.</span>
                     </label>
                 </fieldset>
 
@@ -446,6 +451,16 @@
             </div>
 
             <h2 class="settings-group">Library &amp; automation</h2>
+            <!-- Auto reading list -->
+            <div class="card">
+                <div class="setting">
+                    <div class="setting-text">
+                        <label for="enableAutoReadingList">Rank the reading list automatically</label>
+                        <p>Show what to read today: titles with a new chapter come first, then the ones you are still catching up on. A title leaves the list when you have read up to it, and returns with the next release. You can pin a title to a position. Needs an RSS feed linked to the title. Off by default; your manual queue is kept.</p>
+                    </div>
+                    <input id="enableAutoReadingList" class="switch" type="checkbox" role="switch" title="Rank the reading list automatically">
+                </div>
+            </div>
             <!-- Alt title lookup -->
             <div class="card">
                 <div class="setting">
@@ -458,6 +473,20 @@
                 <div class="sub" id="altTitleBackfill" hidden>
                     <progress id="altTitleBackfillProgress" max="1" value="0" aria-labelledby="altTitleBackfillStatus"></progress>
                     <p id="altTitleBackfillStatus" aria-live="polite"></p>
+                </div>
+                <!-- MangaUpdates release feeds: a sub-option, it needs the lookup above -->
+                <div class="sub">
+                    <div class="setting">
+                        <div class="setting-text">
+                            <label for="enableMangaUpdatesFeeds">Release feeds from MangaUpdates</label>
+                            <p>Link the free MangaUpdates release feed to every title the lookup matched, so you hear about new chapters even when the site you read on has no feed. A title matched on AniList is first searched on MangaUpdates by its title. Titles are linked 8 a minute, so a big library takes a few minutes. A title without a cover image gets the one from MangaUpdates, also a title linked before; a title with an image keeps it. New chapters link to MangaUpdates, not to the site you read on, and its chapter numbers can differ from that site's. Unsubscribing a title stops this for it. Needs "Look up alt titles online". Off by default.</p>
+                        </div>
+                        <input id="enableMangaUpdatesFeeds" class="switch" type="checkbox" role="switch" title="Release feeds from MangaUpdates" disabled>
+                    </div>
+                    <div id="mangaUpdatesFeedsProgressRow" hidden>
+                        <progress id="mangaUpdatesFeedsProgress" max="1" value="0" aria-labelledby="mangaUpdatesFeedsStatus"></progress>
+                        <p id="mangaUpdatesFeedsStatus" aria-live="off"></p>
+                    </div>
                 </div>
             </div>
 

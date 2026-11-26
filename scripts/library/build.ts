@@ -1,7 +1,6 @@
 import { PastHermidata } from "../popup/core/Past";
 import { dbAccess } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
-import type { OnlyPlainHermidata } from "../shared/types/popup";
 
 export abstract class LibraryBuilder {
 
@@ -9,26 +8,7 @@ export abstract class LibraryBuilder {
 
     protected settings: Settings;
 
-    private dbAccess = new dbAccess();
-
-    protected saveHermidata(id: string, data: OnlyPlainHermidata): Promise<void> {
-        return this.dbAccess.setHermidata(id, data);
-    }
-    protected updateHermidata(entry: OnlyPlainHermidata): Promise<void> {
-        return this.dbAccess.updateHermidata(entry);
-    }
-    protected changeHermidata(oldKey: string, newKey: string, entry: OnlyPlainHermidata): Promise<void> {
-        return this.dbAccess.changeHermidata(oldKey, newKey, entry);
-    }
-    protected removeHermidata(id: string): Promise<void> {
-        return this.dbAccess.deleteHermidata(id);
-    }
-    protected pushToSync(entry: OnlyPlainHermidata): Promise<void> {
-        return this.dbAccess.pushToSync(entry);
-    }
-    protected removeFromSync(id: string): Promise<void> {
-        return this.dbAccess.removeFromSync(id);
-    }
+    protected readonly db = new dbAccess();
 
     constructor(AllHermidata: Record<string, Hermidata>, settings: Settings) {
         this.settings = settings;

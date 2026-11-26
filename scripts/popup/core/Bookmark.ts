@@ -1,4 +1,4 @@
-import { saveHermidata } from "../../shared/db/Storage";
+import { dbAccess } from "../../shared/db/Storage";
 import { generateBookmarkId } from "../../shared/utils/StringOutput";
 import type { Bookmark } from "../../shared/types";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
@@ -10,6 +10,7 @@ import { ConsoleMessage, ErrorMessage, logConsoleError, WarningMessage} from "..
 
 export class BookmarkController {
 
+    private readonly db = new dbAccess();
     private hermidata: HermidataModel;
     public bookmarkInUseID: string | null = null;
 
@@ -477,7 +478,7 @@ export class BookmarkController {
                     if (this.hermidata.chapter.bookmarkInUse === key) this.imgBookmark!.style.fill = newColor;
                     this.hermidata.chapter.bookmarks[key].color = newColor;
                     try {
-                        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
+                        if (!this.isNewHermidata) await this.db.saveHermidata(this.hermidata.id, this.hermidata.toJSON());
                     } catch (error) {
                         logConsoleError('Failed to save bookmark color:', error);
                     }
@@ -501,7 +502,7 @@ export class BookmarkController {
         // remove bookmark
         delete this.hermidata.chapter.bookmarks[key];
 
-        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
+        if (!this.isNewHermidata) await this.db.saveHermidata(this.hermidata.id, this.hermidata.toJSON());
         this.renderBookmarkMenuManager(); // refresh
         return true;
     }
@@ -563,7 +564,7 @@ export class BookmarkController {
         this.hermidata.chapter.bookmarks[key].label = label;
         this.hermidata.chapter.bookmarks[key].updatedAt = new Date().toISOString();
 
-        if (!this.isNewHermidata) await saveHermidata(this.hermidata.id, this.hermidata.toJSON());
+        if (!this.isNewHermidata) await this.db.saveHermidata(this.hermidata.id, this.hermidata.toJSON());
         if (this.bookmarkMenuManagerContainer?.matches(':popover-open')) this.renderBookmarkMenuManager();
     }
 

@@ -84,10 +84,28 @@ export interface Bookmark { // new
     url: string;
 }
 
+/**
+ * A title pinned to a position of the automatic reading list.
+ * Nothing about the position is stored as a number: it is the count of `ahead` titles still in the list,
+ * so the pin moves up by itself as those titles are read.
+ * It is spent once the title is read past `from`.
+ */
+export interface ReadingPin {
+    /** Ids of the automatic titles that were above the pin when it was set */
+    /** readonly keeps it out of StringListFieldPath, which is only for lists the model merges */
+    ahead: readonly string[];
+    /** Chapter of the marker in use when pinned; -1 when nothing was read yet */
+    from: number;
+}
+
 export interface ReadingQueue {
     readNext: boolean; // true if it is the first in the queue
     priority: number; // 1-10
     queueIndex: number;
+    /** Present when the title is pinned in the automatic reading list */
+    pin?: ReadingPin;
+    /** True when this only holds a priority or pin for the automatic list; the title is not in the manual queue */
+    autoOnly?: boolean;
 }
 
 export type ReadingQueuePriorityBand = 'High' | 'Medium' | 'Low';
@@ -288,23 +306,102 @@ export type FeedExtras = {
     categories?: string[],
     image?: string
 }
-/** scripts file output */
-export type RawScrappedFeed = {
+/** A feed link the content script found on a page; the background fetches it */
+export type DetectedFeed = {
     title: string;
+    /** the feed's own address, never a chapter link */
     url: string;
     domain: string;
-    lastFetched: string;
-    lastBuildDateStr: string;
-    image: string;
-    latestItem: RawScrapedItem;
-    lastToken: string | null;
 }
-/** scripts file output */
-export type RawScrapedItem  = {
+/** HTTP validators of a feed, sent back as If-None-Match / If-Modified-Since */
+export type FeedHttpMeta = {
+    etag: string | null;
+    lastModified: string | null;
+}
+export type FeedFetchResult =
+    | { status: 'unchanged' }
+    /** httpStatus is absent when no answer came ( network error, still rate limited after retries ) */
+    | { status: 'failed'; httpStatus?: number; /** what a 429 asked for ( Retry-After ) */ retryAfterMs?: number }
+    | { status: 'ok'; text: string; meta: FeedHttpMeta };
+/**
+ * An item the MangaUpdates step has work for.
+ * - a feed to link: seriesId is null until it is searched on MangaUpdates
+ * - coverOnly: it has the feed already ( seriesId is in the feed address ) and still no image: only its cover is fetched
+ */
+export type MangaUpdatesFeedCandidate = {
+    item: Hermidata;
+    seriesId: string | null;
+    coverOnly?: boolean;
+}
+/** Which items get a MangaUpdates feed this check, and how many were left out and why */
+export type MangaUpdatesFeedScan = {
+    candidates: MangaUpdatesFeedCandidate[];
+    /** already linked, but with no image: their cover is fetched after the feeds are linked */
+    coverOnly: MangaUpdatesFeedCandidate[];
+    /** already have one */
+    linked: number;
+    unsubscribed: number;
+    /** the alt-title lookup has no match for them ( not run, no match, ambiguous ) */
+    notMatched: number;
+    /** tried lately without success ( no match, or the feed would not link ): left alone for a while */
+    waiting: number;
+}
+/** What became of the title's cover when its feed was linked: filled in from MangaUpdates, left alone because it has an image, or none found */
+export type MangaUpdatesCoverResult = 'set' | 'kept' | 'none';
+/**
+ * What linking one item's MangaUpdates feed came to.
+ * - covered: the feed was linked before; only the cover was dealt with
+ * - skipped: this item failed; it waits before it is tried again
+ * - throttled: MangaUpdates asked us to slow down ( 429 ) or was too slow to answer; the batch ends and the clock pauses
+ * - unavailable: MangaUpdates itself did not answer ( no answer, 403, 5xx ); the batch ends and the clock stops
+ */
+export type MangaUpdatesLinkOutcome =
+    | { kind: 'linked'; rawFeed: RawFeed; cover: MangaUpdatesCoverResult }
+    | { kind: 'covered'; cover: MangaUpdatesCoverResult }
+    | { kind: 'skipped'; reason: string }
+    | { kind: 'throttled'; reason: string; retryAfterMs?: number; /** the title waits too ( its search timed out ) */ itemWaits?: boolean }
+    | { kind: 'unavailable'; reason: string };
+/** Progress of linking MangaUpdates feeds, kept in storage.local for the settings page */
+export type MangaUpdatesFeedProgress = {
+    /** more batches follow */
+    running: boolean;
+    /** items that can have a feed: linked, left to link, and waiting */
+    total: number;
+    done: number;
+    /** tried without success, tried again later */
+    waiting: number;
+    /** MangaUpdates did not answer; the next feed check tries again */
+    unavailable: boolean;
+    /** epoch ms when the last batch is expected to be done; null when nothing is running */
+    etaAt: number | null;
+    /** the real estimate is beyond the maximum shown */
+    etaCapped: boolean;
+    /** 1 = as planned; grows with 429s and slow batches ( see mangaUpdatesPace.ts ) */
+    slowdown: number;
+    /** epoch ms: the clock is paused until then to give MangaUpdates a rest ( it asked us to slow down, or was too slow to answer ) */
+    pausedUntil: number | null;
+    /** 429s in a row */
+    throttleStreak: number;
+    /** linked titles still to get a cover */
+    coversLeft: number;
+}
+/** One row of the MangaUpdates feed summary in the background console */
+export type MangaUpdatesLinkLog = {
     title: string;
+    /** "linked", or "not linked: <why>" */
+    result: string;
+    /** the newest release in the feed, when linked */
+    latest: string;
+    /** what became of the cover, when linked */
+    cover: MangaUpdatesCoverResult | '';
+    url: string;
+}
+/** Channel level info of a feed */
+export type FeedChannelInfo = {
+    /** the site page the feed belongs to */
     link: string;
-    pubDate: Date;
-    guid: string;
+    image: string;
+    lastBuildDate: Date | null;
 }
 
 export interface LatestValue {

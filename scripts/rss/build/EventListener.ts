@@ -2,7 +2,7 @@ import { customConfirm, customPrompt } from "../../popup/frontend/confirm";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { getMultipleTitles, openLink, generateHermidataHash, getFreeKey, TrimTitle } from "../../shared/utils/StringOutput";
 import type { Hermidata, MenuOptions, subMenu } from "../../shared/types/index";
-import { saveHermidata, updateHermidata, removeHermidata } from "../../shared/db/Storage";
+import { isMangaUpdatesFeedUrl } from "../../shared/lookup/mangaUpdatesFeeds";
 import { makeButtonLike } from "../../shared/utils/Accessibility";
 import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
@@ -10,6 +10,9 @@ import { clearNotifications, getHermidataWithRssFromBackground } from "../load";
 import { refreshNotificationSection } from "./feed";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import type { PickedElementData } from "../../shared/types/rss";
+
+/** Smallest gap kept between a context menu and the viewport edge, in px */
+const MENU_EDGE_MARGIN = 8;
 
 export class EventListener extends RssBuild {
     
@@ -275,25 +278,17 @@ export class EventListener extends RssBuild {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
-        // Vertical positioning
-        let top = e.clientY;
-        if (e.clientY + menuHeight > viewportHeight) {
-            top = e.clientY- (menuHeight / 2);
-            
-            if (top < 0) top = e.clientY - menuHeight;
-            if (top < 0) top = 0 + menuHeight;
-            if (top < 0) top = viewportHeight - menuHeight - 10; // clamp if menu is taller than viewport
-        }
-
-        // Horizontal positioning (same idea, for completeness)
-        let left = e.clientX;
-        if (e.clientX + menuWidth > viewportWidth) {
-            left = e.clientX - menuWidth;
-            if (left < 0) left = viewportWidth - menuWidth - 10;
-        }
+        const top = this.placeAlongAxis(e.clientY, menuHeight, viewportHeight);
+        const left = this.placeAlongAxis(e.clientX, menuWidth, viewportWidth);
 
         menu.style.top = `${top}px`;
         menu.style.left = `${left}px`;
+    }
+    /** Start of a box of `size` opened at `cursor`: below/after the cursor, flipped before it, or pinned inside the viewport edge */
+    private placeAlongAxis(cursor: number, size: number, viewportSize: number): number {
+        if (cursor + size <= viewportSize - MENU_EDGE_MARGIN) return cursor;
+        if (cursor - size >= MENU_EDGE_MARGIN) return cursor - size;
+        return Math.max(MENU_EDGE_MARGIN, viewportSize - size - MENU_EDGE_MARGIN);
     }
     private setSubMenuPosition(subMenuContainer: HTMLDivElement, subMenu: HTMLDivElement, menu: HTMLDivElement) {
         // calculate if enough space right
@@ -304,7 +299,10 @@ export class EventListener extends RssBuild {
 
         const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
         
-        subMenu.style.top = `${topSpace}px`;
+        // keep the submenu inside the viewport vertically, shifting it up when it would run off the bottom
+        const menuTop = menu.getBoundingClientRect().top;
+        const maxTop = window.innerHeight - MENU_EDGE_MARGIN - subMenu.offsetHeight - menuTop;
+        subMenu.style.top = `${Math.max(MENU_EDGE_MARGIN - menuTop, Math.min(topSpace, maxTop))}px`;
 
         const isRight = enoughSpaceRight ? "right" : "left";
 
@@ -511,7 +509,7 @@ export class EventListener extends RssBuild {
         );
     
         // Save to storage
-        await saveHermidata(hashItem, entry.toJSON());
+        await this.db.saveHermidata(hashItem, entry.toJSON());
     
         console.log(`[Hermidata] Added alt title "${trimmed}" for ${entry.title}`);
     }
@@ -546,9 +544,8 @@ export class EventListener extends RssBuild {
         if (TrimmedTitle === newTitle) newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), TrimmedTitle]) );
         else newData.meta.altTitles = Array.from( new Set([...(newData.meta.altTitles || []), oldData.title, TrimmedTitle]) );
     
-        // Save and clean up ( same key: a plain save, since a re-key deletes the old key after writing the new one )
-        if (newKey === oldKey) await saveHermidata(oldKey, newData.toJSON());
-        else await updateHermidata(oldKey, newKey, newData.toJSON());
+        // Save and clean up ( same key: only saved, nothing is removed )
+        await this.db.moveHermidata(oldKey, newKey, newData.toJSON());
     
         //  update your in-memory list
         delete this.AllHermidata[oldKey];
@@ -576,7 +573,7 @@ export class EventListener extends RssBuild {
         if ( confirmation) {
             console.warn(`Removing item ${Object.values(toBeRemovedItem)}`)
             delete this.AllHermidata[hashItem]
-            removeHermidata(hashItem)
+            await this.db.removeHermidata(hashItem)
         }
         await this.reloadContent(getElement<HTMLDivElement>("#RSS-Notification")!, getElement<HTMLDivElement>("#All-RSS-entries")!)
     }
@@ -605,9 +602,18 @@ export class EventListener extends RssBuild {
     private async unLinkRSSFeed(entry: HermidataModel) {
         if (!entry) return;
 
+        const mangaUpdatesFeed = entry.rss.find(feed => isMangaUpdatesFeedUrl(feed.url));
         entry.rss = [];
 
-        await saveHermidata(entry.id, entry.toJSON());
+        await this.db.saveHermidata(entry.id, entry.toJSON());
+        if (mangaUpdatesFeed) await this.keepUnlinked(entry.id, mangaUpdatesFeed.id);
+    }
+    /** Without this the next feed check would link the MangaUpdates feed again */
+    private async keepUnlinked(itemId: string, feedId: string) {
+        const settings = await this.db.getSettings();
+        const autoSubscribe = settings.ExtensionBehaviour.AutoSubscribe;
+        autoSubscribe.HermidataNotLinkedToRSS = { ...autoSubscribe.HermidataNotLinkedToRSS, [itemId]: feedId };
+        await this.db.setSettings(settings);
     }
     private getEntriesItem(el: HTMLElement | null): HTMLElement | undefined {
         if (!el) return undefined

@@ -45,6 +45,11 @@ export type AutoSetStatusSettings = {
     mode: AutoSetStatusMode
 }
 
+/** Whether the reading list ranks itself from releases ( off: the manual queue ) */
+export type AutoReadingListSettings = {
+    enabled: boolean
+}
+
 /** The shape before settings version 10; both flags true was possible but meaningless */
 export type LegacyAutoSetStatusSettings = {
     onlyRSS: boolean,
@@ -98,7 +103,11 @@ export interface Settings {
         SaveTarget: SaveTargets;
         AutoSetStatusScore: AutoSetStatusSettings;
         /** Optional: settings saved before this existed lack it, and it counts as off */
+        AutoReadingList?: AutoReadingListSettings;
+        /** Optional: settings saved before this existed lack it, and it counts as off */
         AltTitleLookup?: { Enable: boolean };
+        /** Optional: settings saved before this existed lack it, and it counts as off. Links MangaUpdates release feeds to items the alt-title lookup matched there. */
+        MangaUpdatesFeeds?: { Enable: boolean };
         /** Optional: settings saved before this existed lack it, and it counts as the default. Days a deletion is remembered for sync. */
         TombstoneTtlDays?: number;
         /** Optional: settings saved before this existed lack it, and it counts as the default. Uses {title} and {chapter}. */

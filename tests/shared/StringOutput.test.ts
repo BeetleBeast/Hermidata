@@ -1,0 +1,238 @@
+// scripts/shared/titleUtils.test.ts
+import { describe, it, expect } from 'vitest'
+import { TrimTitle, getChapterFromTitle, getTitleAndChapterFromUrl } from '../../scripts/shared/utils/StringOutput';
+
+describe('trimTitle', () => {
+    it.each([
+        ["66.666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", "66.666 Years: Advent of the Dark Mage"],
+        ["86 - Eighty Six - Chapter 12", "Eighty Six"],
+        ["66,666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", "66,666 Years: Advent of the Dark Mage"],
+        ["Read Mobulus strantum andum Chapter 26 Online - Poznan", "Mobulus strantum andum"],
+        ["Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
+        [`Destiny Unchain Online chapter 99 - Read Manga Online`, `Destiny Unchain Online`],
+        [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, 'The Wandering Fairy [LitRPG World-Hopping]'],
+        [`Chapter 1 | My Villainous Family Won't Let Me Be | Weeb Central`, `My Villainous Family Won't Let Me Be`],
+        [`Chapter 98 | Destiny Unchain Online Remake | Weeb Central`, `Destiny Unchain Online Remake`],
+        [`Manga: The Maid is a Vampire Chapter - 15-eng-li`, `The Maid is a Vampire`],
+        [`The Novel's Extra chapter 150 - Read Manga Online`, `The Novel's Extra`],
+        [`Lord of the Mysteries (2025) chapter 3 - Read Manga Online`, `Lord of the Mysteries (2025)`],
+        [`The 100th Regression of the Max-Level Player chapter 81 - Read Manga Online`, `The 100th Regression of the Max-Level Player`],
+        [`Was Manager Seo Disposed of as an Industrial Accident? chapter 1 - Read Manga Online`, `Was Manager Seo Disposed of as an Industrial Accident?`],
+        [`My 990 Thousand Past Lives Help Me chapter 79 - Read Manga Online`, `My 990 Thousand Past Lives Help Me`],
+        [`Rebirth ( 69michi) chapter 2 - Read Manga Online`, `Rebirth ( 69michi)`],
+        [`Lord of the Mysteries #Chapter 544 - Expert - Read Lord of the Mysteries Chapter 544 - Expert Online - All Page - Novel Bin`, `Lord of the Mysteries`],
+        [`Slime Reader Volume 20 - Edited MTL`, `Slime Reader`],
+        ["Prologue - My Hero Academia", "My Hero Academia"],
+        ["One Piece - Chapter 0: Strong World", "One Piece"],
+        ["One Piece - Chapter 1000.5", "One Piece"],
+        ["Berserk Chapter 83.5 - Lost Children", "Berserk"],
+        ["Chapter 10B - The Return", "The Return"],
+        ["Attack on Titan - 139a", "Attack on Titan"],
+        ["Vol.3 Chapter 12 - The Fight", "The Fight"],
+        ["Volume 2, Chapter 5: Revenge", "Revenge"],
+        ["Re:Zero - Chapter 3: Truth of Zero - Part 7", "Re:Zero"],
+        ["Mushoku Tensei - 001", "Mushoku Tensei"],
+        ["The 100 Girlfriends - Chapter 4", "The 100 Girlfriends"],
+        ["One Punch Man - Bonus Chapter", "One Punch Man"],
+        ["Extras - Behind the Scenes", "Extras"],
+        ["Index", "Index"],
+        ["My Title • Chapter 12", "My Title"], // → 12 or NaN? (bullet not in your split regex)
+        ["Title／Chapter 12", "Title"], // → 12 or NaN? (fullwidth slash)
+        ["Title　Chapter 12", "Title"], // → 12 or NaN? (ideographic space)
+        ["the generic title Chapter 3 English online <site>", "the generic title"],
+        ["Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", 'Kuro no Senki II Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu'],
+        ["the generic title Chapter 3 English online", "the generic title"],
+        ["MookHyang - Dark Lady - Chapter 293", "MookHyang - Dark Lady"],
+    ])('TrimTitle.trimTitle(%s) → %s', (input, expected) => {
+        expect(TrimTitle.trimTitle(input, '').title).toBe(expected)
+    })
+})
+
+const trim = (input: string, url = '') => TrimTitle.trimTitle(input, url);
+
+describe('trimTitle: title words colliding with keyword/junk lists', () => {
+    it.each([
+        // trailingJunkRegex runs on each part before chapter removal, so a title ending in "Online" loses it
+        ["Sword Art Online - Chapter 5", "Sword Art Online"],
+        // cleanTitleKeywordStart strips a leading "comic"/"manga"/"novel"/"anime"
+        ["Comic Girls Chapter 5", "Comic Girls"],
+        // junkRegex drops the whole part if it contains the word "page" or "bin"
+        ["The Page Turner Chapter 3 | Asura Scans", "The Page Turner"],
+        // chapterRemoveRegexV3 spans from the FIRST keyword match to the LAST
+        ["The Last Chapter of My Life Chapter 4", "The Last Chapter of My Life"],
+        // group 1 (leading number) swallows a number that belongs to the title
+        ["Mob Psycho 100 Chapter 5", "Mob Psycho 100"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
+
+describe('trimTitle: titles that start with a number', () => {
+    it.each([
+        // the "remove leading numbers if followed by text" replace in makeTitle
+        ["7 Seeds Chapter 12", "7 Seeds"],
+        ["12 Monkeys - Chapter 3", "12 Monkeys"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
+
+describe('trimTitle: regressions from the rejoin rule I gave you', () => {
+    it('keeps title when a site name sits in the middle', () => {
+        // rejoined to "Solo Leveling - MangaDex", then siteNameRegex drops the whole part
+        expect(trim("Solo Leveling - MangaDex - Chapter 5", "https://mangadex.org/chapter/abc").title)
+.toBe("Solo Leveling");
+    });
+    it.each([
+        ["Solo Leveling - Read Online - Chapter 5", "Solo Leveling"],
+        ["Berserk - Berserk - Chapter 3", "Berserk"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
+
+describe('trimTitle: note output (currently untested)', () => {
+    it('captures a chapter subtitle', () => {
+        expect(trim("Berserk Chapter 83.5 - Lost Children")).toEqual({ title: "Berserk", note: "Chapter Title: Lost Children" });
+    });
+    it('does not lose a subtitle after a chapter part', () => {
+        expect(trim("Solo Leveling - Chapter 5 - The Hunter").note).toBe("Chapter Title: The Hunter");
+    });
+    it('does not put the site name in the note when the domain has a subdomain', () => {
+        // extractDomainFromUrl takes the first label, so siteName = "m", not "mangakakalot"
+        expect(trim("Solo Leveling Chapter 5 - MangaKakalot", "https://m.mangakakalot.com/chapter/1").note).toBe("");
+    });
+});
+
+describe('trimTitle: other gaps', () => {
+    it.each([
+        ["   ", ""],
+        ["Solo Leveling Chapter5", "Solo Leveling"],
+        ["Solo Leveling Chapitre 5", "Solo Leveling"],
+        ["進撃の巨人 第5話", "進撃の巨人"],
+    ])('%s → %s', (input, expected) => {
+        expect(trim(input).title).toBe(expected);
+    });
+});
+
+describe('trimtitle notes', () => {
+    it.each([
+        [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, `Chapter Title: Illythia's Mission`],
+        [`Rebirth ( 69michi) chapter 2 - Read Manga Online`, ``],
+        [`Lord of the Mysteries #Chapter 544 - Expert - Read Lord of the Mysteries Chapter 544 - Expert Online - All Page - Novel Bin`, `Chapter Title: Expert`],
+    ])('TrimTitle.trimTitle(%s) → %s', (input, expected) => {
+        expect(TrimTitle.trimTitle(input, '').note).toBe(expected)
+    })
+});
+
+
+describe('getChapterFromTitle', () => {
+    it.each([
+        ["66.666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", 1],
+        ["86 - Eighty Six - Chapter 12", 12],
+        ["66,666 Years: Advent of the Dark Mage Chapter 1 - Read Manga Online", 1],
+        ["Read Mobulus strantum andum Chapter 26 Online - Poznan", 26],
+        ["Kuro no Senki II - Isekai Teni Shita Boku ga Saikyou na no wa Bed no Ue dake no You desu", Number.NaN],
+        [`Destiny Unchain Online chapter 99 - Read Manga Online`, 99],
+        [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, 222],
+        [`Chapter 1 | My Villainous Family Won't Let Me Be | Weeb Central`, 1],
+        [`Chapter 98 | Destiny Unchain Online Remake | Weeb Central`, 98],
+        [`Manga: The Maid is a Vampire Chapter - 15-eng-li`, 15],
+        [`The Novel's Extra chapter 150 - Read Manga Online`, 150],
+        [`Lord of the Mysteries (2025) chapter 3 - Read Manga Online`, 3],
+        [`The 100th Regression of the Max-Level Player chapter 81 - Read Manga Online`, 81],
+        [`Was Manager Seo Disposed of as an Industrial Accident? chapter 1 - Read Manga Online`, 1],
+        [`My 990 Thousand Past Lives Help Me chapter 79 - Read Manga Online`, 79],
+        [`Rebirth ( 69michi) chapter 2 - Read Manga Online`, 2],
+        [`Destiny Unchain Online chapter 99 - Read Manga Online`, 99],
+        [`Chapter 222: Illythia's Mission - The Wandering Fairy [LitRPG World-Hopping] | Royal Road`, 222],
+        [`Chapter 1 | My Villainous Family Won't Let Me Be | Weeb Central`, 1],
+        [`Chapter 98 | Destiny Unchain Online Remake | Weeb Central`, 98],
+        [`Manga: The Maid is a Vampire Chapter - 15-eng-li`, 15],
+        [`The Novel's Extra chapter 150 - Read Manga Online`, 150],
+        [`Lord of the Mysteries (2025) chapter 3 - Read Manga Online`, 3],
+        [`The 100th Regression of the Max-Level Player chapter 81 - Read Manga Online`, 81],
+        [`Was Manager Seo Disposed of as an Industrial Accident? chapter 1 - Read Manga Online`, 1],
+        [`My 990 Thousand Past Lives Help Me chapter 79 - Read Manga Online`, 79],
+        [`Rebirth ( 69michi) chapter 2 - Read Manga Online`, 2],
+        ["Prologue - My Hero Academia", Number.NaN],
+        ["One Piece - Chapter 0: Strong World", 0],
+        ["One Piece - Chapter 1000.5", 1000.5],
+        ["Berserk Chapter 83.5 - Lost Children", 83.5],
+        ["Chapter 10B - The Return", 10],
+        ["Attack on Titan - 139a", 139],
+        ["Vol.3 Chapter 12 - The Fight", 12],
+        ["Volume 2, Chapter 5: Revenge", 5],
+        ["86 - Eighty Six - Chapter 12", 12],
+        ["Re:Zero - Chapter 3: Truth of Zero - Part 7", 3],
+        ["Mushoku Tensei - 001", 0o1],
+        ["The 100 Girlfriends - Chapter 4", 4],
+        ["One Punch Man - Bonus Chapter", Number.NaN],
+        ["Extras - Behind the Scenes", Number.NaN],
+        ["Index", Number.NaN],
+        ["My Title • Chapter 12", 12], // → 12 or NaN? (bullet not in your split regex)
+        ["Title／Chapter 12", 12], // → 12 or NaN? (fullwidth slash)
+        ["Title　Chapter 12", 12], // → 12 or NaN? (ideographic space)
+        ["第12話 - Title", 12], // → NaN (Japanese episode marker)
+        ["화 12 - Title", 12], // → NaN (Korean)
+        ["One Piece - Chapter 1107", 1107], // → 1107 (your regex caps at \d{1,5} so fine)
+        ["Tower of God - Chapter 10000", 10000], //  → NaN (5 digits, doesn't exceeds \d{1,5})
+        //
+        ["my Title 14 chapters", 14],
+        //
+        ["Part 3 Volume 12", Number.NaN],
+        ["Part 3.5 Volume 12", Number.NaN],
+        ["S2E05", Number.NaN],
+        ["Chapter 1e10", 1e10],
+        //
+        ["Chapter -5", 5],
+        ["Chapter −5", 5],
+        //
+        ["Chapter 5", 5],
+        //
+        ["第5章", 5],
+        ["第五章", 5], // (CJK numeral, no ASCII digit)	any	NaN	silent total failure, no numeral support
+        ["Chapter ５", 5], // (fullwidth U+FF10)	any	NaN	\d doesn't match fullwidth digits
+        ["🎉Chapter5🎉", 5],
+        // bad data
+        ["123", 123],
+        ["", Number.NaN],
+        [undefined, Number.NaN],
+    ])('getChapterFromTitle(%s) → %s', (input, expected) => {
+        expect(getChapterFromTitle(input, '')).toBe(expected)
+    })
+})
+
+describe('getTitleAndChapterFromUrl', () => {
+    it.each([
+        ['https://mangafire.to/read/sss-class-suicide-hunterr.krq9/en/chapter-154',{ title: 'Sss Class Suicide Hunter', chapter: 154 }],
+        ['https://www.royalroad.com/fiction/94680/the-wandering-fairy-litrpg-world-hopping/chapter/1822766/chapter-2-record',{ title: 'The Wandering Fairy Litrpg World Hopping', chapter: 2 }],
+        ['https://mangafire.to/read/nano-machinee.m2y8v/en/chapter-304',{ title: 'Nano Machine', chapter: 304 }],
+        ['https://mangafire.to/read/destiny-unchain-onlinee.yk9n1/en/chapter-98',{ title: 'Destiny Unchain Online', chapter: 98 }],
+        ['https://weebcentral.com/chapters/01KHYAF03QVF3MSD15Z2861F8Q',{ title: null, chapter: Number.NaN }],
+        ['https://example.com/chapters/ABC123XYZ',{ title: null, chapter: Number.NaN }],
+        ['https://example.com/read/solo-leveling-2/en/chapter-10',{ title: 'Solo Leveling 2', chapter: 10 }],
+        ['https://example.com/read/overlord-ln',{ title: 'Overlord Ln', chapter: Number.NaN }],
+        ['https://example.com/',{ title: null, chapter: Number.NaN }],
+        ['https://mangafire.to/read/helloo.abcd/en/chapter-1',{ title: 'Hello', chapter: 1 }],
+        ['https://example.com/read/my-awesome.series.v2/en/chapter-5',{ title: 'My Awesome', chapter: 5 }],
+        ['https://example.com/read/ABC123DEF456/en/chapter-1',{ title: null, chapter: 1 }],
+    ])('getTitleAndChapterFromUrl(%s) → %o', (input, expected) => {
+        expect(getTitleAndChapterFromUrl(input)).toStrictEqual(expected);
+    });
+    describe('isATitle regex', () => {
+        const isATitle = /^(?![A-Z0-9]+$).+/;;
+
+        it.each([
+['Sss Class Suicide Hunter', true],
+['Nano Machine', true],
+['Solo Leveling 2', true],
+['01KHYAF03QVF3MSD15Z2861F8Q', false],
+['ABC123XYZ', false],
+['HELLOWORLD', false],
+['HelloWorld', true],
+        ])('"%s" → %s', (input, expected) => {
+expect(isATitle.test(input)).toBe(expected);
+        });
+    });
+});

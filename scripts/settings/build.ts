@@ -1,7 +1,7 @@
 import { logConsoleError } from "../shared/utils/ErrorMessage";
 import { ext } from "../shared/utils/BrowserCompat";
 import { defaultSettings } from "../shared/constants";
-import { type Hermidata, type RawFeed, type Settings } from "../shared/types";
+import { type Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
 import { dbAccess } from "../shared/db/Storage";
 
@@ -16,33 +16,8 @@ export abstract class Build {
 
 
 
-    private readonly dbAccess = new dbAccess();
+    protected readonly db = new dbAccess();
     private readonly temporaryStatusTimeouts = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
-
-    protected getSettings(): Promise<Settings> {
-        return this.dbAccess.getSettings();
-    }
-    protected setSettings(data: Settings): Promise<void> {
-        return this.dbAccess.setSettings(data);
-    }
-    protected setHermidata(id: string, data: Hermidata): Promise<void> {
-        return this.dbAccess.setHermidata(id, data);
-    }
-    protected updateHermidata(data: Hermidata): Promise<void> {
-        return this.dbAccess.updateHermidata(data);
-    }
-    protected getAllHermidata(): Promise<Record<string, Hermidata>> {
-        return this.dbAccess.getAllHermidata();
-    }
-    protected putAllHermidata(data: Record<string, Hermidata>): Promise<void> {
-        return this.dbAccess.putAllHermidata(data);
-    }
-    protected getAllFeeds(): Promise<RawFeed[]> {
-        return this.dbAccess.getAllFeeds();
-    }
-    protected putAllFeeds(data: RawFeed[]): Promise<void> {
-        return this.dbAccess.putAllFeeds(data);
-    }
 
     protected temporaryStatus(status: string, elementTag: string | HTMLElement | null, timeout: number = 2000, color: string = 'var(--success)'): void {
         if (!elementTag) {
@@ -72,7 +47,7 @@ export abstract class Build {
 
     protected async ensureSettingsUpToDate(): Promise<Settings> {
 
-        const storedSettings = await this.getSettings();
+        const storedSettings = await this.db.getSettings();
         
 
         let updated = false;
@@ -80,7 +55,7 @@ export abstract class Build {
         updated = this.deepMerge(storedSettings, defaultSettings);
 
         if (updated) {
-            await this.setSettings(storedSettings);
+            await this.db.setSettings(storedSettings);
             return storedSettings;
         }
         return storedSettings;

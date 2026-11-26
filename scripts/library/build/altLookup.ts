@@ -1,9 +1,15 @@
-import type { Hermidata, Settings } from "../../shared/types";
-import { applyPatch, isLookupEnabled, lookupCandidate, lookupManual, type ManualOutcome } from "../../shared/lookup/altTitleLookup";
+import type { Settings } from "../../shared/types";
+import { isLookupEnabled, lookupCandidate, lookupManual, type LookupPatch, type ManualOutcome } from "../../shared/lookup/altTitleLookup";
 import type { LookupCandidate } from "../../shared/lookup/matching";
 import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 
 const SOURCE_NAME = { anilist: 'AniList', mangaupdates: 'MangaUpdates' } as const;
+
+/** What handing a lookup patch to the page's save came to: whether it was saved, and the titles it added */
+export interface LookupApplied {
+    saved: boolean;
+    added: string[];
+}
 
 /**
  * The "online lookup" part of the alt titles section of the item detail view.
@@ -21,14 +27,17 @@ export class AltTitleLookupPanel {
 
     private readonly hermidata: HermidataModel;
     private readonly settings: Settings;
-    private readonly save: (item: Hermidata) => Promise<void>;
+    private readonly applyToItem: (patch: LookupPatch) => Promise<LookupApplied>;
     private readonly onApplied: () => void;
 
-    /** `onApplied` runs after new alt titles were saved, so the page can show them */
-    constructor(hermidata: HermidataModel, settings: Settings, save: (item: Hermidata) => Promise<void>, onApplied: () => void) {
+    /**
+     * The panel only finds things: `applyToItem` is the page's own save ( it puts the patch on the item and saves it ),
+     * and `onApplied` runs after it was saved, so the page can show the new alt titles
+     */
+    constructor(hermidata: HermidataModel, settings: Settings, applyToItem: (patch: LookupPatch) => Promise<LookupApplied>, onApplied: () => void) {
         this.hermidata = hermidata;
         this.settings = settings;
-        this.save = save;
+        this.applyToItem = applyToItem;
         this.onApplied = onApplied;
     }
 
@@ -67,7 +76,8 @@ export class AltTitleLookupPanel {
         try {
             await this.handle(await request());
         } catch (error) {
-            this.setStatus(`Something went wrong: ${error instanceof Error ? error.message : String(error)}`, true);
+            console.error('[Hermidata] Alt title lookup failed:', error); // the details stay in the console, the page gets one line
+            this.setStatus('The lookup failed. Try again later.', true);
         } finally {
             this.setBusy(false);
         }
@@ -86,14 +96,14 @@ export class AltTitleLookupPanel {
         }
     }
 
-    private async apply(patch: Parameters<typeof applyPatch>[1]): Promise<void> {
+    private async apply(patch: LookupPatch): Promise<void> {
         const before = this.hermidata.meta.external;
-        const { item, added } = applyPatch(this.hermidata.toJSON(), patch);
-        await this.save(item);
-
-        // the page keeps showing the item it has: bring it in step with what was saved
-        this.hermidata.meta.altTitles = item.meta.altTitles;
-        this.hermidata.meta.external = item.meta.external;
+        const { saved, added } = await this.applyToItem(patch);
+        if (!saved) {
+            // the page's save already put the item back and logged why
+            this.setStatus('Could not save the lookup result.', true);
+            return;
+        }
         this.onApplied();
         this.form!.hidden = true;
 

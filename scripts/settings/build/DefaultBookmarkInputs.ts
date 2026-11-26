@@ -45,7 +45,7 @@ export class DefaultBookmarkInputs extends Build {
         // Load & populate page inputs and tables
         await this.loadTableInput(settings);
 
-        this.tagAutocomplete = new TagAutocomplete(await this.getAllHermidata());
+        this.tagAutocomplete = new TagAutocomplete(await this.db.getAllHermidata());
         this.bindTagAutocomplete();
         this.bindEvents();
     }
@@ -124,7 +124,7 @@ export class DefaultBookmarkInputs extends Build {
         this.setValuesToElements(this.elements.menu, defaultSettings.DefaultBookmarkSettings.DefaultChoiceText_Menu);
     }
     private async updateSettings(sectionKey: "DefaultChoice" | "DefaultChoiceText_Menu", values: DefaultChoice, statusElement: HTMLElement | null = null) {
-        const settings = await this.getSettings();
+        const settings = await this.db.getSettings();
         
         const updatedSettings: Settings = { 
             ...settings, DefaultBookmarkSettings: { 
@@ -132,7 +132,7 @@ export class DefaultBookmarkInputs extends Build {
             } 
         };
 
-        await this.setSettings(updatedSettings);
+        await this.db.setSettings(updatedSettings);
 
         this.temporaryStatus("Saved!", statusElement);
     }

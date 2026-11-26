@@ -6,7 +6,7 @@ import { type AnyNovelStatus, type AnyNovelType, type AnyReadStatus, type Curren
 import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
 import { RSS } from '../../rss/main';
-import { getAllHermidata, getSettings } from '../../shared/db/Storage';
+import { dbAccess } from '../../shared/db/Storage';
 import { checkSyncQuota } from '../../shared/sync/sync.engine';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 document.addEventListener('keydown', async (e) => shortcutEventListener(e));
 
+const db = new dbAccess();
+
 class HermidataController {
     private hermidata: HermidataModel;
 
@@ -99,7 +101,7 @@ class HermidataController {
 
     public async init(): Promise<void> {
         console.time('[POPUP] init: get-settings');
-        const settings = await getSettings();
+        const settings = await db.getSettings();
         console.timeEnd('[POPUP] init: get-settings');
 
         this.populateUI(settings);
@@ -107,7 +109,7 @@ class HermidataController {
         this.bindEvents();
 
         // initialize RSS mode
-        this.RSS = new RSS(this.hermidata, await getAllHermidata());
+        this.RSS = new RSS(this.hermidata, await PastHermidata.getAllHermidata());
         // open RSS mode if shortcut was used
         await this.openRSSIfSetInsideSession();
 
@@ -283,7 +285,7 @@ class HermidataController {
     private async saveSheet(): Promise<void> {
         if (this.isSaving) return;
         this.isSaving = true;
-        this.setSaveInProgress(true);
+        this.setSaveInProgress(true, '#save');
         let closeAfterSave = false;
 
         try {
@@ -299,7 +301,7 @@ class HermidataController {
             const hasMigrated = await this.migrateIfDuplicate();
             if (hasMigrated) console.info('migration plan activated');
 
-            const settings = await getSettings();
+            const settings = await db.getSettings();
             
             // update settings ( add new tags if new added in UI )
             await this.updateSettings(settings);
@@ -318,19 +320,20 @@ class HermidataController {
         } finally {
             if (!closeAfterSave) {
                 this.isSaving = false;
-                this.setSaveInProgress(false);
+                this.setSaveInProgress(false, '#save');
             }
         }
     }
-    private setSaveInProgress(isSaving: boolean): void {
-        setElement<HTMLButtonElement>('#saveSeparate', el => el.disabled = isSaving);
-
-        const button = getElement<HTMLButtonElement>('#save');
-        if (!button) return;
-
-        button.disabled = isSaving;
-        button.setAttribute('aria-busy', String(isSaving));
-        button.dataset.saving = String(isSaving);
+    /** Both save buttons lock while saving, but only the one that was clicked shows it is working */
+    private setSaveInProgress(isSaving: boolean, clicked: '#save' | '#saveSeparate'): void {
+        for (const selector of ['#save', '#saveSeparate'] as const) {
+            setElement<HTMLButtonElement>(selector, button => {
+                const isBusy = isSaving && selector === clicked;
+                button.disabled = isSaving;
+                button.setAttribute('aria-busy', String(isBusy));
+                button.dataset.saving = String(isBusy);
+            });
+        }
     }
     /** Shows "Save as separate item" as prominently as the match calls for ( styled by .saveActions[data-separate] ) */
     private updateSeparateProminence(): void {
@@ -348,7 +351,7 @@ class HermidataController {
     private async saveAsSeparateItem(): Promise<void> {
         if (this.isSaving || !this.service) return;
         this.isSaving = true;
-        this.setSaveInProgress(true);
+        this.setSaveInProgress(true, '#saveSeparate');
         let closeAfterSave = false;
 
         try {
@@ -369,7 +372,7 @@ class HermidataController {
                 { accept: "Link", reject: "Don't link" }
             );
 
-            await this.updateSettings(await getSettings());
+            await this.updateSettings(await db.getSettings());
             const saved = await this.service.saveAsSeparateItem(page);
 
             if (saved && link && original) await linkAsAdaptation(original.id, page.id).catch(error => new ErrorMessage("Saved the new item, but could not link it to the existing one.", undefined, {
@@ -389,7 +392,7 @@ class HermidataController {
         } finally {
             if (!closeAfterSave) {
                 this.isSaving = false;
-                this.setSaveInProgress(false);
+                this.setSaveInProgress(false, '#saveSeparate');
             }
         }
     }
@@ -532,7 +535,7 @@ const startupPromise = (async () => startup())();
 export async function startup(): Promise<{Hermidata: HermidataModel, past: PastHermidata}> {
     const [ CurrentTabInfo, settings ]: [CurrentTab, Settings] = await Promise.all([
         HermidataController.getCurrentTabInfo(),
-        getSettings(),
+        db.getSettings(),
     ]);
 
     const defaultNovelType = settings.ContentTypesAndStatuses.TYPE_OPTIONS[0];

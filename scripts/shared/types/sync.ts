@@ -87,9 +87,13 @@ export type WebDavConfig = {
     alarms?: AlarmsLike;
 };
 
-/** Which backend this device syncs through. Per device, kept in storage.local, never in the synced Settings. */
+/**
+ * Which backend this device syncs through. Per device, kept in storage.local, never in the synced Settings.
+ * `local` means no sync at all: the library and the settings stay on this device.
+ */
 export type SyncBackendConfig =
     | { kind: 'browser' }
+    | { kind: 'local' }
     | { kind: 'webdav'; url: string; username?: string; password?: string; pollMinutes?: number };
 
 /** What to do when this device and the new backend both already hold a library. */
