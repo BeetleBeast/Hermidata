@@ -14,6 +14,8 @@ interface ItemInfo {
     clearedNotification: boolean;
     currentChapter: number;
     currentHermidata: Hermidata;
+    /** false when the latest feed item carries no chapter number */
+    feedHasChapter: boolean;
 }
 
 
@@ -235,8 +237,11 @@ export class FeedItem {
         const currentChapter = currentHermidata?.GetChapter();
         const clearedNotification = await getLocalNotificationItem(key);
         const isRead = !isRSSItem && (currentChapter === chapter)
-        
-        return { title, url, chapter, isRead, clearedNotification, currentChapter, currentHermidata };
+        // latestItem.chapter is null when the feed title has no chapter number (no latestItem = not fetched on this device yet)
+        const latestFeedItem = item.GetLatestRssFeed()?.latestItem;
+        const feedHasChapter = !latestFeedItem || latestFeedItem.chapter != null;
+
+        return { title, url, chapter, isRead, clearedNotification, currentChapter, currentHermidata, feedHasChapter };
     }
     private createItemPubDate(item: HermidataModel): HTMLElement {
         const pubDate = document.createElement("p");
@@ -267,11 +272,14 @@ export class FeedItem {
         
         return ELTitle
     }
-    private createItemChapter(chapter: number, currentChapter: number, isRSSItem: boolean = false): HTMLElement {
+    private createItemChapter(chapter: number, currentChapter: number, isRSSItem: boolean = false, feedHasChapter: boolean = true): HTMLElement {
         const ELchapter = document.createElement("div");
 
         const chapterText = chapter ? `latest Chapter: ${chapter}` : 'No chapter info';
-        const AllItemChapterText = currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
+        // without a feed chapter, `chapter` falls back to what was read, so "up-to-date" would be a guess
+        const AllItemChapterText = !feedHasChapter
+            ? `read ${currentChapter} (feed has no chapter)`
+            : currentChapter == chapter ?  `up-to-date (${chapter})` : `read ${currentChapter} of ${chapter}`;
         
 
         ELchapter.className = "hermidata-item-chapter"
@@ -329,7 +337,7 @@ export class FeedItem {
         bottomRow.className = "bottom-row";
         
         // bottom row
-        const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem);
+        const ELchapter = this.createItemChapter(itemInfo.chapter, itemInfo.currentChapter, isRSSItem, itemInfo.feedHasChapter);
         const pubDate = this.createItemPubDate(item);
         const ElFooter = this.createItemFooter(item);
         const ElTagContainer = this.createItemTags(itemInfo.currentHermidata, settings );

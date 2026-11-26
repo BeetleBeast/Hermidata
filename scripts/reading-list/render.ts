@@ -147,7 +147,8 @@ function buildProgress(progress: QueueProgress): HTMLElement {
     const count = el('span', 'rl-progress-count', `${unit} ${read}`);
     if (latest > 0) count.append(el('span', 'rl-progress-of', ` / ${latest}`));
     line.append(count);
-    if (latest > read) line.append(el('span', 'rl-new', `+${latest - read}`));
+    // round: decimal chapters (30.2) leave float noise in the difference (7.800000000000001)
+    if (latest > read) line.append(el('span', 'rl-new', `+${Number((latest - read).toFixed(2))}`));
     else if (latest > 0) line.append(el('span', 'rl-caught-up', 'Caught up'));
     wrap.append(line);
 
