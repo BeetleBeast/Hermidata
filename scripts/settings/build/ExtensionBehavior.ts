@@ -1,6 +1,6 @@
 import { DEFAULT_TOMBSTONE_TTL_DAYS, defaultSettings } from "../../shared/constants";
 import { resolveAutoReadingList, resolveAutoSetStatusMode, resolveRssCheckInterval, resolveTombstoneTtlDays } from "../../shared/utils/SettingsValues";
-import { type AutoSetStatusMode, type KeyboardShortcutSettings, type NotificationTypes, type Settings } from "../../shared/types";
+import { type AutoSetStatusMode, type KeyboardShortcutSettings, type MangaUpdatesFeedProgress, type NotificationTypes, type Settings } from "../../shared/types";
 import { getElement, setElement } from "../../shared/utils/Selection";
 import {
     BROWSER_COMMAND_SHORTCUTS,
@@ -17,6 +17,8 @@ import { ext } from "../../shared/utils/BrowserCompat";
 import { applyLightMode } from "../../shared/utils/Theme";
 import { customConfirm } from "../../popup/frontend/confirm";
 import { BACKFILL_STATE_KEY, backfillLabel, backfillMinutes, type BackfillState } from "../../shared/lookup/backfill";
+import { isMangaUpdatesFeedsEnabled, MANGAUPDATES_PROGRESS_KEY, mangaUpdatesFeedLabel } from "../../shared/lookup/mangaUpdatesFeeds";
+import { isLookupEnabled } from "../../shared/lookup/altTitleLookup";
 
 export class ExtensionBehavior extends Build {
 
@@ -47,6 +49,12 @@ export class ExtensionBehavior extends Build {
     private readonly altTitleBackfill = getElement<HTMLDivElement>("#altTitleBackfill");
     private readonly altTitleBackfillProgress = getElement<HTMLProgressElement>("#altTitleBackfillProgress");
     private readonly altTitleBackfillStatus = getElement<HTMLParagraphElement>("#altTitleBackfillStatus");
+    private readonly enableMangaUpdatesFeeds = getElement<HTMLInputElement>("#enableMangaUpdatesFeeds");
+    private readonly mangaUpdatesFeedsProgressRow = getElement<HTMLDivElement>("#mangaUpdatesFeedsProgressRow");
+    private readonly mangaUpdatesFeedsProgress = getElement<HTMLProgressElement>("#mangaUpdatesFeedsProgress");
+    private readonly mangaUpdatesFeedsStatus = getElement<HTMLParagraphElement>("#mangaUpdatesFeedsStatus");
+    private mangaUpdatesFeedsProgressState: MangaUpdatesFeedProgress | undefined;
+    private mangaUpdatesFeedsCountdown: ReturnType<typeof setInterval> | undefined;
 
     private readonly bookmarkTitleFormat = new BookmarkTitleFormat();
     private readonly tombstoneTtlDays = getElement<HTMLInputElement>("#tombstoneTtlDays");
@@ -83,6 +91,8 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionAutoReadingList(settings);
         this.setValueOptionAltTitleLookup(settings);
         void this.watchAltTitleBackfill();
+        this.setValueOptionMangaUpdatesFeeds(settings);
+        void this.watchMangaUpdatesFeedProgress();
         // Bookmark title format
         await this.bookmarkTitleFormat.init();
         // Tombstone TTL
@@ -127,6 +137,7 @@ export class ExtensionBehavior extends Build {
         
         this.enableAutoReadingList?.addEventListener("change", (e) => this.EnableAutoReadingList(e));
         this.enableAltTitleLookup?.addEventListener("change", (e) => this.EnableAltTitleLookup(e));
+        this.enableMangaUpdatesFeeds?.addEventListener("change", (e) => this.EnableMangaUpdatesFeeds(e));
 
         this.tombstoneTtlDays?.addEventListener("change", (e) => this.TombstoneTtlDays(e));
         this.rssCheckInterval?.addEventListener("change", (e) => this.RssCheckInterval(e));
@@ -155,6 +166,7 @@ export class ExtensionBehavior extends Build {
         this.setValueOptionSaveTarget(updatedSettings);
         this.setValueOptionAutoReadingList(updatedSettings);
         this.setValueOptionAltTitleLookup(updatedSettings);
+        this.setValueOptionMangaUpdatesFeeds(updatedSettings);
         await this.bookmarkTitleFormat.resetValues();
         this.setValueOptionTombstoneTtl(updatedSettings);
         this.setValueOptionRssCheckInterval(updatedSettings);
@@ -348,6 +360,13 @@ export class ExtensionBehavior extends Build {
         const enabled = settings.ExtensionBehaviour.AltTitleLookup?.Enable ?? false;
         setElement<HTMLInputElement>("#enableAltTitleLookup", el => el.checked = enabled);
     }
+    /** A sub-option of the alt-title lookup: it can only be switched while the lookup is on */
+    private setValueOptionMangaUpdatesFeeds(settings: Settings) {
+        setElement<HTMLInputElement>("#enableMangaUpdatesFeeds", el => {
+            el.checked = isMangaUpdatesFeedsEnabled(settings);
+            el.disabled = !isLookupEnabled(settings);
+        });
+    }
     private setValueOptionRssCheckInterval(settings: Settings) {
         const minutes = resolveRssCheckInterval(settings.ExtensionBehaviour.RssCheckIntervalMinutes);
         setElement<HTMLSelectElement>("#rssCheckInterval", el => el.value = String(minutes));
@@ -448,13 +467,23 @@ export class ExtensionBehavior extends Build {
         updatedSettings.ExtensionBehaviour.AutoReadingList = { enabled: isChecked };
         await this.setSettings(updatedSettings);
     }
+    // MangaUpdates release feeds ( linked on the next feed check )
+    private async EnableMangaUpdatesFeeds(e: Event) {
+        const isChecked = (e.target as HTMLInputElement).checked;
+        const updatedSettings = await this.ensureSettingsUpToDate();
+        updatedSettings.ExtensionBehaviour.MangaUpdatesFeeds = { Enable: isChecked };
+        await this.setSettings(updatedSettings);
+    }
     // Alt title lookup
     private async EnableAltTitleLookup(e: Event) {
         const isChecked = (e.target as HTMLInputElement).checked;
         const updatedSettings = await this.ensureSettingsUpToDate();
         updatedSettings.ExtensionBehaviour.AltTitleLookup = { Enable: isChecked };
+        // the MangaUpdates feeds are its sub-option: switching the lookup off switches them off too
+        if (!isChecked) updatedSettings.ExtensionBehaviour.MangaUpdatesFeeds = { Enable: false };
 
         await this.setSettings(updatedSettings);
+        this.setValueOptionMangaUpdatesFeeds(updatedSettings);
 
         try {
             if (isChecked) await this.offerAltTitleBackfill();
@@ -513,6 +542,37 @@ export class ExtensionBehavior extends Build {
         this.altTitleBackfillProgress.max = state.total;
         this.altTitleBackfillProgress.value = state.done;
         this.altTitleBackfillStatus.textContent = backfillLabel(state);
+    }
+    /** The progress bar follows the background's linking progress as it is stored */
+    private async watchMangaUpdatesFeedProgress() {
+        try {
+            const stored = await ext.storage.local.get(MANGAUPDATES_PROGRESS_KEY) as Record<string, MangaUpdatesFeedProgress | undefined>;
+            this.renderMangaUpdatesFeedProgress(stored?.[MANGAUPDATES_PROGRESS_KEY]);
+        } catch (error) {
+            console.warn('[Settings] could not read the MangaUpdates feed progress:', error);
+        }
+        ext.storage.onChanged.addListener((changes, area) => {
+            if (area === 'local' && changes[MANGAUPDATES_PROGRESS_KEY]) this.renderMangaUpdatesFeedProgress(changes[MANGAUPDATES_PROGRESS_KEY].newValue as MangaUpdatesFeedProgress | undefined);
+        });
+    }
+    private renderMangaUpdatesFeedProgress(progress: MangaUpdatesFeedProgress | undefined) {
+        if (!this.mangaUpdatesFeedsProgressRow || !this.mangaUpdatesFeedsProgress || !this.mangaUpdatesFeedsStatus) return;
+        this.mangaUpdatesFeedsProgressState = progress;
+        const visible = !!progress && progress.total > 0;
+        this.mangaUpdatesFeedsProgressRow.hidden = !visible;
+        // the countdown ticks every second, but only while the linking runs
+        clearInterval(this.mangaUpdatesFeedsCountdown);
+        this.mangaUpdatesFeedsCountdown = undefined;
+        if (!visible) return;
+        this.mangaUpdatesFeedsProgress.max = progress.total;
+        this.mangaUpdatesFeedsProgress.value = progress.done;
+        this.renderMangaUpdatesFeedStatus();
+        if (progress.running) this.mangaUpdatesFeedsCountdown = setInterval(() => this.renderMangaUpdatesFeedStatus(), 1000);
+    }
+    /** A new estimate from the background replaces the countdown: it jumps up when the pace slowed down */
+    private renderMangaUpdatesFeedStatus() {
+        if (!this.mangaUpdatesFeedsStatus || !this.mangaUpdatesFeedsProgressState) return;
+        this.mangaUpdatesFeedsStatus.textContent = mangaUpdatesFeedLabel(this.mangaUpdatesFeedsProgressState, Date.now());
     }
     // Auto Subscribe
     private async EnableAutoSubscribe(e: Event) {

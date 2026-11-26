@@ -88,9 +88,17 @@ export type {
     StringListFieldPath,
     ValueAtPath,
 
-    RawScrapedItem,
-    RawScrappedFeed,
-    
+    DetectedFeed,
+    FeedHttpMeta,
+    FeedFetchResult,
+    FeedChannelInfo,
+    MangaUpdatesLinkLog,
+    MangaUpdatesFeedCandidate,
+    MangaUpdatesFeedScan,
+    MangaUpdatesLinkOutcome,
+    MangaUpdatesCoverResult,
+    MangaUpdatesFeedProgress,
+
     Migration,
 
     ReleaseSchedule,
