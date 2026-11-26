@@ -12,6 +12,9 @@ import { refreshNotificationSection } from "./feed";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import type { PickedElementData } from "../../shared/types/rss";
 
+/** Smallest gap kept between a context menu and the viewport edge, in px */
+const MENU_EDGE_MARGIN = 8;
+
 export class EventListener extends RssBuild {
     
     private activeSubMenu: HTMLDivElement | null = null;
@@ -276,25 +279,17 @@ export class EventListener extends RssBuild {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
-        // Vertical positioning
-        let top = e.clientY;
-        if (e.clientY + menuHeight > viewportHeight) {
-            top = e.clientY- (menuHeight / 2);
-            
-            if (top < 0) top = e.clientY - menuHeight;
-            if (top < 0) top = 0 + menuHeight;
-            if (top < 0) top = viewportHeight - menuHeight - 10; // clamp if menu is taller than viewport
-        }
-
-        // Horizontal positioning (same idea, for completeness)
-        let left = e.clientX;
-        if (e.clientX + menuWidth > viewportWidth) {
-            left = e.clientX - menuWidth;
-            if (left < 0) left = viewportWidth - menuWidth - 10;
-        }
+        const top = this.placeAlongAxis(e.clientY, menuHeight, viewportHeight);
+        const left = this.placeAlongAxis(e.clientX, menuWidth, viewportWidth);
 
         menu.style.top = `${top}px`;
         menu.style.left = `${left}px`;
+    }
+    /** Start of a box of `size` opened at `cursor`: below/after the cursor, flipped before it, or pinned inside the viewport edge */
+    private placeAlongAxis(cursor: number, size: number, viewportSize: number): number {
+        if (cursor + size <= viewportSize - MENU_EDGE_MARGIN) return cursor;
+        if (cursor - size >= MENU_EDGE_MARGIN) return cursor - size;
+        return Math.max(MENU_EDGE_MARGIN, viewportSize - size - MENU_EDGE_MARGIN);
     }
     private setSubMenuPosition(subMenuContainer: HTMLDivElement, subMenu: HTMLDivElement, menu: HTMLDivElement) {
         // calculate if enough space right
@@ -305,7 +300,10 @@ export class EventListener extends RssBuild {
 
         const enoughSpaceRight = (Number(rightSpace) >= Number(subMenu.offsetWidth));
         
-        subMenu.style.top = `${topSpace}px`;
+        // keep the submenu inside the viewport vertically, shifting it up when it would run off the bottom
+        const menuTop = menu.getBoundingClientRect().top;
+        const maxTop = window.innerHeight - MENU_EDGE_MARGIN - subMenu.offsetHeight - menuTop;
+        subMenu.style.top = `${Math.max(MENU_EDGE_MARGIN - menuTop, Math.min(topSpace, maxTop))}px`;
 
         const isRight = enoughSpaceRight ? "right" : "left";
 
