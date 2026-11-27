@@ -2,7 +2,9 @@ import { ErrorMessage, logConsoleError } from "../../shared/utils/ErrorMessage";
 
 import { TrimTitle, generateBookmarkId, generateHermidataHash } from "../../shared/utils/StringOutput";
 import type {  Hermidata, AnyNovelType, Bookmark } from "../../shared/types/index";
-import { getHermidataViaKey, saveHermidata } from "../../shared/db/Storage";
+import { getAllHermidata, getHermidataViaKey, linkHermidata, saveHermidata } from "../../shared/db/Storage";
+import { HERMIDATA_VERSION } from "../../shared/constants";
+import { groupRoles } from "../../shared/utils/Relations";
 import { PastHermidata } from "./Past";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import type { PastHermidataPromptOptions } from "./Past";
@@ -93,7 +95,7 @@ export async function makeHermidata(title: string, url: string, novelType: AnyNo
     }
 
     return {
-        version: 12,
+        version: HERMIDATA_VERSION,
         id: hash,
         title: Title.title,
         novelType,
@@ -158,16 +160,12 @@ export async function createSeparateItem(title: string, url: string, novelType: 
     return item;
 }
 
-/** Links two items as adaptations of each other ( e.g. a novel and its manga ) */
-export async function linkAsAdaptation(idA: string, idB: string): Promise<void> {
-    const [a, b] = await Promise.all([getHermidataViaKey(idA), getHermidataViaKey(idB)]);
-    if (!a || !b) throw new Error("Could not find both items to link.");
-
-    const modelA = new HermidataModel(a);
-    const modelB = new HermidataModel(b);
-    modelA.AddRelatedWork('adaptation', idB);
-    modelB.AddRelatedWork('adaptation', idA);
-
-    await saveHermidata(idA, modelA.toJSON());
-    await saveHermidata(idB, modelB.toJSON());
+/**
+ * Links an item to one telling the same story in another medium ( e.g. the manga of a novel ):
+ * it joins the related titles of `originalId` with the same type, so the manga of a sequel is a sequel too.
+ */
+export async function linkAsSameStory(originalId: string, id: string): Promise<void> {
+    const type = groupRoles(originalId, await getAllHermidata())[originalId];
+    if (!type) throw new Error("Could not find the item to link to.");
+    await linkHermidata(originalId, id, type);
 }

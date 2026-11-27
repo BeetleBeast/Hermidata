@@ -1,6 +1,6 @@
 import { logConsoleError } from "../utils/ErrorMessage";
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { type Hermidata, type HermidataV11, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
+import { type Hermidata, type HermidataV11, type HermidataV12, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
 import { ext } from '../utils/BrowserCompat';
 import { pushToSync, removeFromSync } from '../sync/sync.engine';
 import { HermidataMigration } from '../migration/Hermidata';
@@ -713,8 +713,8 @@ export function isHermidataV11( data: AnyHermidataVersion ): data is HermidataV1
     )
 
 }
-export function isHermidataV12( data: AnyHermidataVersion ): data is Hermidata {
-    return (data as Hermidata)?.version === 12;
+export function isHermidataV12( data: AnyHermidataVersion ): data is HermidataV12 {
+    return (data as HermidataV12)?.version === 12;
 }
 export function isHermidataLatestVersion(data: AnyHermidataVersion): data is Hermidata {
     return 'version' in data && data.version === HERMIDATA_VERSION;

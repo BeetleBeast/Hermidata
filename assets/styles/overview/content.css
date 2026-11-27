@@ -425,6 +425,58 @@ input.ov-chip-input { width: 220px; min-height: 28px; border-radius: 999px; }
     text-align: center;
 }
 
+/* related titles */
+
+.ov-relation-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.ov-relation-form[hidden] { display: none; }
+.ov-relation-form label { color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.ov-relation-search { position: relative; flex: 1; min-width: 200px; }
+.ov-relation-search input { width: 100%; }
+
+.ov-relations {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--ov-hairline);
+    border-radius: var(--ov-radius);
+    overflow: hidden;
+}
+
+.ov-relation {
+    display: grid;
+    grid-template-columns: 136px minmax(0, 1fr) auto 32px;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 4px 8px;
+}
+.ov-relation + .ov-relation { border-top: 1px solid var(--ov-hairline); }
+.ov-relation:hover { background: var(--ov-hover); }
+
+.ov-relation-title {
+    overflow: hidden;
+    color: var(--text-highlight);
+    font-weight: 600;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ov-relation-title:hover, .ov-relation-title:focus-visible { text-decoration: underline; }
+.ov-relation-meta { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.ov-relation[data-current="true"] { background: var(--ov-hover); }
+.ov-relation[data-current="true"] .ov-relation-title { color: var(--text); font-weight: 500; }
+
+.ov-relation-remove { opacity: 0; }
+.ov-relation:hover .ov-relation-remove, .ov-relation-remove:focus-visible { opacity: 1; }
+
 /* notes */
 
 .ov-notes {
@@ -457,6 +509,9 @@ input.ov-chip-input { width: 220px; min-height: 28px; border-radius: 999px; }
     .ov-marker-status, .ov-marker-time { display: none; }
     .ov-marker-edit { opacity: 1; }
     .ov-marker-note { padding-left: 16px; }
+    .ov-relation { grid-template-columns: 116px minmax(0, 1fr) 32px; }
+    .ov-relation-meta { display: none; }
+    .ov-relation-remove { opacity: 1; }
 }
 
 /* -- wide and short viewports -- */

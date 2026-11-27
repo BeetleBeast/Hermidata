@@ -51,18 +51,34 @@ export type ContentWarning = 'Nudity' | 'Violence' | 'Sex' | 'Language' | 'Mild 
 
 export type ReleaseSchedule = 'Once' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly' | 'Irregular' | 'Unknown';
 
-export type RelatedWorkType = 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary' | 'adaptation';
+/**
+ * Where a title sits in the story of its related titles ( a link `{ type: 'sequel', id: B }`: B is a sequel ).
+ * It describes the title itself, so every related title lists B with the same type. The medium is not part of it:
+ * a novel and its manga are both the main story, told apart by their `novelType`.
+ */
+export type RelatedWorkType = 'mainStory' | 'prequel' | 'sequel' | 'sideStory' | 'spinOff' | 'summary';
+
+export type RelatedWork = {
+    type: RelatedWorkType;
+    id: string;
+}
 
 export type Relation = {
     series?: { // optional: an item can be related to others without being part of a series
         seriesId: string;
         position: number;
     },
-    relatedWorks: {
-        type: RelatedWorkType;
-        id: string;
-    }[]
+    relatedWorks: RelatedWork[]
 }
+
+/** A title of a related group as the detail page shows it */
+export type RelatedEntry = {
+    type: RelatedWorkType;
+    entry: Hermidata;
+}
+
+/** The type of every title in a related group, by id */
+export type RelatedRoles = Record<string, RelatedWorkType>;
 
 export interface Bookmark { // new
     version: number;

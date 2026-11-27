@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createSeparateItem, linkAsAdaptation } from '../../scripts/popup/core/save';
+import { createSeparateItem, linkAsSameStory } from '../../scripts/popup/core/save';
+import { linkHermidata } from '../../scripts/shared/db/Storage';
 import { HermidataService } from '../../scripts/popup/in/service';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash } from '../../scripts/shared/utils/StringOutput';
@@ -12,6 +13,7 @@ vi.mock('../../scripts/shared/db/Storage', () => ({
     getHermidataViaKey: vi.fn(async (key: string) => store.items[key] ? structuredClone(store.items[key]) : null),
     saveHermidata: vi.fn(async (key: string, entry: Hermidata) => { store.items[key] = structuredClone({ ...entry, id: key }); }),
     getSettings: vi.fn(async () => ({ ContentTypesAndStatuses: { TYPE_OPTIONS: ['Manga', 'Novel'] } })),
+    linkHermidata: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../scripts/popup/frontend/confirm', () => ({
@@ -39,6 +41,7 @@ async function seed(title: string, type: AnyNovelType, url: string, chapter: num
 
 beforeEach(() => {
     store.items = {};
+    vi.mocked(linkHermidata).mockClear();
 });
 
 describe('createSeparateItem', () => {
@@ -104,21 +107,31 @@ describe('retyping a separate item', () => {
     });
 });
 
-describe('linkAsAdaptation', () => {
-    it('links both items to each other, once', async () => {
+describe('linkAsSameStory', () => {
+    it('links a title without related titles as the main story, like the one it is linked to', async () => {
         const novel = await seed('Solo Leveling', 'Novel', 'https://novels.com/solo-leveling/chapter-3', 3);
         const manga = await seed('Solo Leveling', 'Manga', 'https://manga.com/solo-leveling/chapter-40', 40);
 
-        await linkAsAdaptation(novel.id, manga.id);
-        await linkAsAdaptation(novel.id, manga.id);
+        await linkAsSameStory(novel.id, manga.id);
 
-        expect(store.items[novel.id].meta.relations).toEqual({ relatedWorks: [{ type: 'adaptation', id: manga.id }] });
-        expect(store.items[manga.id].meta.relations).toEqual({ relatedWorks: [{ type: 'adaptation', id: novel.id }] });
+        expect(linkHermidata).toHaveBeenCalledWith(novel.id, manga.id, 'mainStory');
     });
 
-    it('fails without writing when one of the items is missing', async () => {
+    it('gives the new title the type of the one it is linked to: the manga of a sequel is a sequel', async () => {
         const novel = await seed('Solo Leveling', 'Novel', 'https://novels.com/solo-leveling/chapter-3', 3);
-        await expect(linkAsAdaptation(novel.id, 'missing')).rejects.toThrow();
-        expect(store.items[novel.id].meta.relations).toBe('None');
+        const sequel = await seed('Solo Leveling Ragnarok', 'Novel', 'https://novels.com/ragnarok/chapter-1', 1);
+        const manga = await seed('Solo Leveling Ragnarok', 'Manga', 'https://manga.com/ragnarok/chapter-1', 1);
+        store.items[novel.id].meta.relations = { relatedWorks: [{ type: 'sequel', id: sequel.id }] };
+        store.items[sequel.id].meta.relations = { relatedWorks: [{ type: 'mainStory', id: novel.id }] };
+
+        await linkAsSameStory(sequel.id, manga.id);
+
+        expect(linkHermidata).toHaveBeenCalledWith(sequel.id, manga.id, 'sequel');
+    });
+
+    it('fails without linking when the item to link to is missing', async () => {
+        const manga = await seed('Solo Leveling', 'Manga', 'https://manga.com/solo-leveling/chapter-40', 40);
+        await expect(linkAsSameStory('missing', manga.id)).rejects.toThrow();
+        expect(linkHermidata).not.toHaveBeenCalled();
     });
 });

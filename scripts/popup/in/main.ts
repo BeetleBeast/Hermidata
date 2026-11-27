@@ -14,7 +14,7 @@ import { BookmarkController } from '../core/Bookmark';
 import { HermidataModel } from '../../shared/utils/HermidataSelector';
 import { customConfirm } from '../frontend/confirm';
 import { chooseItem } from '../frontend/itemChooser';
-import { linkAsAdaptation } from '../core/save';
+import { linkAsSameStory } from '../core/save';
 import { getSeparateProminence } from '../core/separateProminence';
 import { HermidataService } from "./service";
 import { shortcutEventListener } from "../core/shortcuts";
@@ -396,16 +396,16 @@ class HermidataController {
                 { accept: "Save as new", reject: "Cancel" }
             )) return;
 
-            // a different type of the same title is most likely an adaptation ( novel <-> manga )
+            // a different type of the same title is most likely the same story in another medium ( novel <-> manga )
             const link = original !== null && original.novelType !== page.novelType && await customConfirm(
-                `Link "${page.title}" (${page.novelType}) and "${original.title}" (${original.novelType}) as adaptations of each other?`,
+                `Link "${page.title}" (${page.novelType}) and "${original.title}" (${original.novelType}) as the same story?`,
                 { accept: "Link", reject: "Don't link" }
             );
 
             await this.updateSettings(await db.getSettings());
             const saved = await this.service.saveAsSeparateItem(page);
 
-            if (saved && link && original) await linkAsAdaptation(original.id, page.id).catch(error => new ErrorMessage("Saved the new item, but could not link it to the existing one.", undefined, {
+            if (saved && link && original) await linkAsSameStory(original.id, page.id).catch(error => new ErrorMessage("Saved the new item, but could not link it to the existing one.", undefined, {
                 consoleLevel: 'error',
                 details: [error]
             }).sendMessage());

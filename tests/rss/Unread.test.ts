@@ -33,7 +33,7 @@ function saved(read: number, rss: Feed[], id = 'solo'): Hermidata {
             bookmarks: { bm1: { id: 'bm1', current: read } as Hermidata['chapter']['bookmarks'][string] },
         } as unknown as Hermidata['chapter'],
         meta: { image: { kind: 'url', url: '' } } as unknown as Hermidata['meta'],
-        version: 12,
+        version: 13,
     } as Hermidata;
 }
 

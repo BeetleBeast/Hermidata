@@ -168,6 +168,28 @@
       <ul id="hermidata-markers-list" class="ov-markers" aria-label="Markers"></ul>
     </section>
 
+    <section id="hermidata-relations" class="ov-card" aria-labelledby="hermidata-relations-label">
+      <div class="ov-card-head">
+        <h2 id="hermidata-relations-label">Related titles <span id="hermidata-relations-count" class="ov-count"></span></h2>
+        <div class="ov-card-tools">
+          <button id="hermidata-relations-add" type="button" class="ov-btn ov-btn-small" aria-expanded="false" aria-controls="hermidata-relations-form">
+            <svg class="ov-icon" aria-hidden="true"><use href="#i-plus"/></svg>
+            Link a title
+          </button>
+        </div>
+      </div>
+      <form id="hermidata-relations-form" class="ov-relation-form" hidden>
+        <label for="hermidata-relations-type">Add as</label>
+        <select id="hermidata-relations-type" class="ov-field ov-select"></select>
+        <div class="ov-relation-search">
+          <input id="hermidata-relations-search" class="ov-field" type="search" placeholder="Search your library…" aria-label="Title to link" autocomplete="off" />
+          <div id="hermidata-relations-suggestions" class="ov-suggestions" aria-label="Titles to link"></div>
+        </div>
+        <button id="hermidata-relations-cancel" type="button" class="ov-btn ov-btn-ghost ov-btn-small">Cancel</button>
+      </form>
+      <ul id="hermidata-relations-list" class="ov-relations" aria-label="Related titles"></ul>
+    </section>
+
     <section id="hermidata-notes" class="ov-card">
       <div class="ov-card-head">
         <h2><label for="hermidata-notes-content" id="hermidata-notes-label">Notes</label></h2>

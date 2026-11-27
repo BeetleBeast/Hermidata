@@ -1,9 +1,9 @@
 import { logConsoleError } from "./ErrorMessage";
 import type { PastHermidata } from "../../popup/core/Past";
 import { makeDefaultHermidata, HERMIDATA_VERSION } from "../constants";
-import { isHermidataV1, isHermidataV10, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
+import { isHermidataLatestVersion, isHermidataV1, isHermidataV10, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9 } from "../db/db";
 import { getImage, removeImage, saveImage, getSettings } from "../db/Storage";
-import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule, type RelatedWorkType, type ReadingQueue } from "../types";
+import { type AnyNovelType, type Bookmark, type CurrentTab, type Feed, type Hermidata, type HermidataImageSource, type InputArraySheetType, type InputArrayType, type RawFeed, type StringListFieldPath, type ValueAtPath, type ReleaseSchedule, type ReadingQueue } from "../types";
 import { AutoSetAllHermidata } from "./AutoSetAllHermidata";
 import { openLink, generateBookmarkId, generateRssFeedId, generateHermidataHash, TrimTitle } from "./StringOutput";
 import { applyLatestItem } from "./Unread";
@@ -70,6 +70,7 @@ export class HermidataModel implements Hermidata {
     private CalculateHermidataVersion(): number {
         const Hermidata = this.toJSON();
 
+        if (isHermidataLatestVersion(Hermidata)) return HERMIDATA_VERSION;
         if (isHermidataV12(Hermidata)) return 12;
         if (isHermidataV10(Hermidata)) return 10;
         if (isHermidataV9(Hermidata)) return 9;
@@ -153,12 +154,6 @@ export class HermidataModel implements Hermidata {
     }
     GetAltTitles(): string[] {
         return this.meta.altTitles;
-    }
-    /** Links another item to this one ( one direction ); linking the same item twice is a no-op */
-    AddRelatedWork(type: RelatedWorkType, id: string): void {
-        const relations = this.meta.relations === 'None' ? { relatedWorks: [] } : this.meta.relations;
-        if (!relations.relatedWorks.some(work => work.id === id)) relations.relatedWorks.push({ type, id });
-        this.meta.relations = relations;
     }
     GetSourceOfLatestChapter(): string { 
         // find the source of the latest chapter

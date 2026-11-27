@@ -1,7 +1,7 @@
 import { generateBookmarkId } from "../utils/StringOutput";
-import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NormalSortsType, NovelStatus, NovelType, ReadStatus } from "../types";
+import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NormalSortsType, NovelStatus, NovelType, ReadStatus, RelatedWorkType } from "../types";
 
-export const HERMIDATA_VERSION = 12;
+export const HERMIDATA_VERSION = 13;
 
 
 // Default arrays — used to seed settings on first install
@@ -28,6 +28,16 @@ export const CONTENT_RATING_MAP: Array<[string, string, boolean]> = new Array(
 );
 
 export const CONTENT_RATING = ['Safe', 'Suggestive', 'Erotica', 'Pornographic'];
+
+/** What a related title is called on the detail page, in the order the type picker and the list show them */
+export const RELATED_WORK_LABELS: Record<RelatedWorkType, string> = {
+    mainStory: 'Main story',
+    prequel: 'Prequel',
+    sequel: 'Sequel',
+    sideStory: 'Side story',
+    spinOff: 'Spin-off',
+    summary: 'Summary',
+};
 
 export const DEMOGRAPHIC_TAGS: string[] = [
     'Seinen', 'Josei', 'Shoujo', 'Yaoi', 'Shounen', 'Shoujoai', 'Shounenai'
@@ -100,7 +110,7 @@ export const filterName: FilterName = {
 
 
 export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
-    version: 12,
+    version: HERMIDATA_VERSION,
     id: '',
     title: '',
     novelType: type,

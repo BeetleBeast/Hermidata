@@ -24,6 +24,7 @@ const FIELD_LABELS: Record<string, string> = {
     'meta.altTitles': 'Alternative titles',
     'meta.updated': 'Last updated',
     'meta.added': 'Date added',
+    'meta.relations': 'Related titles',
 };
 
 /**
@@ -308,7 +309,7 @@ export class HermidataMerge extends LibraryBuilder {
 
         const note = document.createElement('p');
         note.className = 'merge-section-hint';
-        note.textContent = 'Lists are joined, the furthest reading progress and the earliest added date win, and an empty field takes the other entry\'s value.';
+        note.textContent = 'Lists and related titles are joined, the furthest reading progress and the earliest added date win, and an empty field takes the other entry\'s value.';
 
         const chips = document.createElement('ul');
         chips.className = 'merge-auto-list';

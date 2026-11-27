@@ -34,6 +34,24 @@ describe('HermidataMigration.mergeHermidata', () => {
         expect(keep.id).toBe(generateHermidataHash(keep.title, keep.novelType));
         expect(discard.id).toBe(generateHermidataHash(discard.title, discard.novelType));
     });
+
+    it('joins the links of both entries and drops the links between them', () => {
+        const keep = createHermidata('Manga');
+        const discard = createHermidata('Anime', 'Series Alt');
+        keep.meta.relations = { relatedWorks: [{ type: 'sideStory', id: discard.id }, { type: 'sequel', id: 'c' }] };
+        discard.meta.relations = { relatedWorks: [{ type: 'sideStory', id: keep.id }, { type: 'prequel', id: 'd' }] };
+
+        const { merged, autoResolved } = HermidataMigration.mergeHermidata(keep, discard);
+
+        expect(merged.meta.relations).toEqual({ relatedWorks: [{ type: 'sequel', id: 'c' }, { type: 'prequel', id: 'd' }] });
+        expect(autoResolved).toContain('meta.relations');
+    });
+
+    it('does not list related titles as combined when neither entry has any', () => {
+        const { autoResolved } = HermidataMigration.mergeHermidata(createHermidata('Manga'), createHermidata('Anime', 'Series Alt'));
+
+        expect(autoResolved).not.toContain('meta.relations');
+    });
 });
 
 describe('HermidataMigration.mergeTwoHermidata after a novel type change', () => {
@@ -105,7 +123,9 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
             title: keep.title,
             novelType: 'Anime',
         }));
-        expect(removeHermidata).toHaveBeenCalledWith(keep.id);
+        // the kept record moves too, so its links follow it to the merged one
+        expect(moveHermidata).toHaveBeenCalledWith(keep.id, expectedId, expect.objectContaining({ id: expectedId }));
+        expect(removeHermidata).not.toHaveBeenCalled();
     });
 
     it('does not report the merged item as removed when its new ID is the ID of the discarded one', async () => {
@@ -126,8 +146,8 @@ describe('HermidataMigration.mergeTwoHermidata after a novel type change', () =>
 
         expect(result).toEqual({ merged: true, removedIds: [keep.id], addedId: expectedId });
         expect(moveHermidata).toHaveBeenCalledWith(expectedId, expectedId, expect.objectContaining({ id: expectedId }));
-        expect(removeHermidata).toHaveBeenCalledWith(keep.id);
-        expect(removeHermidata).not.toHaveBeenCalledWith(expectedId);
+        expect(moveHermidata).toHaveBeenCalledWith(keep.id, expectedId, expect.objectContaining({ id: expectedId }));
+        expect(removeHermidata).not.toHaveBeenCalled();
     });
 
     it('keeps the existing ID and removes only the discarded key when identity is unchanged', async () => {
@@ -174,5 +194,20 @@ describe('HermidataMigration.mergeTwoHermidata alt sources', () => {
         expect(merged.meta.altSources).toEqual(expect.arrayContaining(['b.example.com']));
         expect(merged.meta.altSources).not.toContain('Series One');
         expect(merged.meta.altSources).not.toContain('Series Two');
+    });
+});
+
+describe('HermidataMigration.mergeTwoHermidata relations', () => {
+    it('keeps the links of the older entry too, instead of only the newer one', async () => {
+        vi.stubGlobal('chrome', { ...chrome, tabs: { query: vi.fn().mockResolvedValue([]) } });
+        const newer = createHermidata('Manga', 'Series One');
+        const older = createHermidata('Manga', 'Series Two');
+        newer.meta.relations = { relatedWorks: [{ type: 'sequel', id: 'c' }] };
+        older.meta.relations = { relatedWorks: [{ type: 'sideStory', id: 'd' }, { type: 'sideStory', id: newer.id }] };
+
+        const merged = await HermidataMigration.mergeTwoHermidata(newer, older);
+        if (merged instanceof Error) throw merged;
+
+        expect(merged.meta.relations).toEqual({ relatedWorks: [{ type: 'sequel', id: 'c' }, { type: 'sideStory', id: 'd' }] });
     });
 });
