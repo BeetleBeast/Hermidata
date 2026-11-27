@@ -54,11 +54,14 @@ body::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    position: relative;
     width: 100%;
 }
-/* a dot beside the label: this page has a feed to subscribe to ( the button itself opens RSS mode ) */
+/* a dot at the end of the button: this page has a feed to subscribe to ( the button itself opens RSS mode ).
+   out of the flow, so the label stays centred like the one of the Classic button */
 .subscribableHint {
+    position: absolute;
+    right: 10px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -69,6 +72,8 @@ body::after {
 }
 #HDClassicBtn {
     display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
 }
 
@@ -211,7 +216,7 @@ select.autoInput[data-loading="true"] {
     color: transparent;
     background-image: var(--loading-shimmer);
     background-size: 200% 100%;
-    animation: loading-shimmer 1.2s linear infinite;
+    animation: loading-shimmer 2s linear infinite;
 }
 input.autoInput[data-loading="true"]::placeholder {
     color: transparent;
