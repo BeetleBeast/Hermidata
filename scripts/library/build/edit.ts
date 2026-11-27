@@ -3,8 +3,7 @@ import { getAllTags } from "../../shared/db/Storage";
 import type { CommitChange, CommitOptions, ContentRating, CoverSource, Hermidata, SaveState, Settings } from "../../shared/types";
 import { ErrorMessage } from "../../shared/utils/ErrorMessage";
 import type { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { generateHermidataHash, getFreeKey } from "../../shared/utils/StringOutput";
-import { navigateToPage } from "../../shared/utils/PageTransition";
+import { generateHermidataHash, getFreeKey, openLink } from "../../shared/utils/StringOutput";
 import { LibraryBuilder } from "../build";
 import { applyPatch, type LookupPatch } from "../../shared/lookup/altTitleLookup";
 import { AltTitleLookupPanel, type LookupApplied } from "./altLookup";
@@ -503,7 +502,7 @@ export class EditDetail extends LibraryBuilder {
             console.log(`[Hermidata] %cRemoved Hermidata%c \nDeleted at ${new Date().toLocaleString()} | id: ${id} | title: ${this.hermidata.title} `,
                 'color: red; font-weight: bold;', 'color: inherit; font-weight: normal;'
             );
-            navigateToPage('./Library.html');
+            openLink('./Library.html', 'sameTab');
         } catch (error) {
             new ErrorMessage('Could not delete this entry.', undefined, { details: [error] }).sendMessage();
         }

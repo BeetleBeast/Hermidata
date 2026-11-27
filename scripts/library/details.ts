@@ -1,7 +1,7 @@
 import { dbAccess, resolveIdRedirect } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
-import { navigateToPage } from "../shared/utils/PageTransition";
+import { openLink } from "../shared/utils/StringOutput";
 import { Detail } from "./build/detail";
 import { EditDetail } from "./build/edit";
 import { MarkerList } from "./build/markers";
@@ -51,7 +51,7 @@ async function ensureEntryExists(allHermidata: Record<string, Hermidata>): Promi
     message.className = 'hermidata-not-found';
     message.textContent = 'This entry no longer exists, it may have been renamed, merged or deleted.';
     document.body.prepend(message);
-    document.querySelector<HTMLButtonElement>('#back-btn')?.addEventListener('click', () => navigateToPage('./Library.html'));
+    document.querySelector<HTMLButtonElement>('#back-btn')?.addEventListener('click', () => openLink('./Library.html', 'sameTab'));
     return false;
 }
 
@@ -83,7 +83,7 @@ export class Controller {
         await this.detail.build();
 
         this.reloadData?.addEventListener('click', () => this.reloadDetails());
-        this.backToLibrary?.addEventListener('click', () => navigateToPage('./Library.html'));
+        this.backToLibrary?.addEventListener('click', () => openLink('./Library.html', 'sameTab'));
     }
 
     public reloadDetails() {

@@ -5,7 +5,6 @@ import { ErrorMessage } from "../shared/utils/ErrorMessage";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { resolveAutoReadingList } from "../shared/utils/SettingsValues";
 import { openLink } from "../shared/utils/StringOutput";
-import { navigateToPage } from "../shared/utils/PageTransition";
 import { markSeen } from "../shared/utils/Unread";
 import {
     addToQueue, clampPriority, getPriorityBand, getQueue, isQueueable, isQueued, moveInQueue, normaliseQueue,
@@ -84,7 +83,7 @@ export class ReadingListController {
 
     private readonly actions: RowActions = {
         open: (entry) => void openLink(new HermidataModel(entry).GetUrl(), 'newTab'),
-        openOverview: (entry) => navigateToPage('./Overview.html#/id/' + entry.id),
+        openOverview: (entry) => void openLink('./Overview.html#/id/' + entry.id, 'sameTab'),
         moveTo: (entry, index) => void this.commit(this.moveEntry(entry, index)).then(() => this.focusHandle(entry.id)),
         remove: (entry) => void this.removeEntry(entry),
         setPriority: (entry, priority) => void this.commit(this.auto ? setAutoPriority(entry, priority) : setQueuePriority(this.all, entry.id, priority)).then(() => this.focusPriority(entry.id)),
@@ -332,7 +331,7 @@ export class ReadingListController {
 
     private bindEvents(): void {
         requireElement('#reloadData').addEventListener('click', () => void this.load());
-        requireElement('#back-to-library').addEventListener('click', () => navigateToPage('Library.html'));
+        requireElement('#back-to-library').addEventListener('click', () => void openLink('Library.html', 'sameTab'));
         this.sortButton.addEventListener('click', () => void this.commit(sortQueueByPriority(this.all), 'Sorted by priority'));
         this.pickButton.addEventListener('click', () => this.pick());
         this.pickDialog.addEventListener('click', (event) => { if (event.target === this.pickDialog) this.pickDialog.close(); });

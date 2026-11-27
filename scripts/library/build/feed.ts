@@ -1,6 +1,6 @@
 import type { Hermidata, Settings } from "../../shared/types";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
-import { navigateToPage } from "../../shared/utils/PageTransition";
+import { openLink } from "../../shared/utils/StringOutput";
 import { LibraryBuilder } from "../build";
 
 export class feed extends LibraryBuilder {
@@ -102,7 +102,7 @@ export class feed extends LibraryBuilder {
         container.ariaHidden = 'false';
 
         // the selection checkbox is revealed on hover / focus by CSS ( library/feed.css )
-        container.addEventListener('click', () => navigateToPage('./Overview.html#/id/' + entry.id));
+        container.addEventListener('click', () => openLink('./Overview.html#/id/' + entry.id, 'sameTab'));
 
         return container;
     }

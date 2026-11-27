@@ -1,5 +1,6 @@
 /**
- * Page transitions, built on the View Transition API.
+ * Same-document page transitions, built on the View Transition API.
+ * ( Cross-document ones need no code: the pages opt in with `@view-transition`, see `general/transitions.css`, and `openLink` navigates in the page. )
  * Where it is missing ( older browsers ) or motion is reduced, everything still works, just without the animation.
  */
 
@@ -24,15 +25,4 @@ export function withViewTransition(update: () => void): Promise<void> {
     transition.ready.catch(() => {});
     transition.finished.catch(() => {});
     return transition.updateCallbackDone;
-}
-
-/**
- * Open another extension page in this tab.
- * Goes through the page itself ( not `tabs.update` ) because browsers only animate
- * a cross-document view transition for navigations the page started.
- * Both pages opt in with `@view-transition` in `general/transitions.css`.
- * @param path - a page next to this one, e.g. `Library.html`
- */
-export function navigateToPage(path: string): void {
-    location.assign(new URL(path, location.href).href);
 }
