@@ -63,6 +63,7 @@ export class Controller {
 
         await this.feed.reload();
         this.merger.reload();
+        this.bulkOpen.reload();
         await this.filterLogic.reload();
     }
 

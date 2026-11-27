@@ -8,15 +8,6 @@ body {
     overflow: auto;
 }
 
-.genericPromptParent {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    width: 40%;
-    height: 20%;
-    align-items: center;
-    justify-content: center;
-}
 .genericInput {
     display: none;
 }

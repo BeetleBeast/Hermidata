@@ -22,12 +22,14 @@ export function bulkOpenSummary(opened: number, skipped: number): string {
 /**
  * Opening every ticked entry in its own tab.
  *
- * Selection is the shared entry checkboxes ( merging uses them too ). Entries without a link are skipped and counted
- * in the toast, and opening more than BULK_OPEN_CONFIRM_THRESHOLD tabs asks first.
+ * Selection is the shared entry checkboxes ( merging uses them too ), the button stands out once at least one is ticked.
+ * Entries without a link are skipped and counted in the toast, and opening more than BULK_OPEN_CONFIRM_THRESHOLD tabs
+ * asks first.
  */
 export class HermidataBulkOpen extends LibraryBuilder {
 
     private readonly openButton = document.querySelector<HTMLButtonElement>('#bulkOpen');
+    private readonly entriesContainer = document.querySelector<HTMLDivElement>('#library-entries-container');
     private readonly toast = document.querySelector<HTMLDivElement>('#library-toast');
     private toastTimer: number | undefined;
 
@@ -36,10 +38,25 @@ export class HermidataBulkOpen extends LibraryBuilder {
     }
 
     public build(): void {
+        // one delegated listener survives feed rebuilds
+        this.entriesContainer?.addEventListener('change', (e) => {
+            if ((e.target as HTMLElement).matches('.hermidata-item-checkbox')) this.refreshButton();
+        });
         this.openButton?.addEventListener('click', () => void this.openSelected());
+        this.refreshButton();
     }
-    /** Nothing to refresh, the selection is looked up by id on every click */
-    protected reload(): void {}
+    /** Entries were rebuilt ( their checkboxes start unchecked ): refresh the button state */
+    public reload(): void {
+        this.refreshButton();
+    }
+
+    /** the button stands out once at least one entry is ticked */
+    private refreshButton(): void {
+        if (!this.openButton) return;
+        const ready = this.selectedEntries.length > 0;
+        this.openButton.dataset.ready = String(ready);
+        this.openButton.title = ready ? 'Open the ticked entries in new tabs' : 'Tick the entries you want to open';
+    }
 
     private get selectedEntries(): Hermidata[] {
         const items = document.querySelectorAll<HTMLDivElement>('.hermidata-item:has(.hermidata-item-checkbox:checked)');
