@@ -37,6 +37,9 @@ export class BuildRSSController {
     public async makeSubscribeBtn(): Promise<void> {
         return this.subscriber.makeSubscribeBtn();
     }
+    public async hasSubscribableFeed(): Promise<boolean> {
+        return await this.subscriber.findSubscribableFeed() !== null;
+    }
     public async activateAutoSubscribe(): Promise<boolean> {
         return this.subscriber.autoSubscribe();
     }

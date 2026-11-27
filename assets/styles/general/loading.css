@@ -65,3 +65,13 @@ span.loading-bar-label {
 
 
 
+/* shimmer for a field whose value is still loading: background-image: var(--loading-shimmer), background-size: 200% 100%, animation: loading-shimmer.
+   it stays close to the background of the field, so it only hints at loading instead of drawing the eye */
+:root {
+	--loading-shimmer: linear-gradient(90deg, var(--bg) 25%, color-mix(in srgb, var(--text) 7%, var(--bg)) 50%, var(--bg) 75%);
+}
+
+@keyframes loading-shimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}

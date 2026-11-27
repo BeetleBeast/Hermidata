@@ -54,6 +54,11 @@ export class RSS {
         setElement("#HDRssBtn", el => el.setAttribute("aria-pressed", "false"));
     }
 
+    /** Whether RSS mode would offer to subscribe this page ( for the hint in classic mode ) */
+    public hasSubscribableFeed(): Promise<boolean> {
+        return this.BuildRSS.hasSubscribableFeed();
+    }
+
     public async openRSS(e?: PointerEvent) {
         try {
 

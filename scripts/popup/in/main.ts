@@ -19,9 +19,11 @@ import { getSeparateProminence } from '../core/separateProminence';
 import { HermidataService } from "./service";
 import { shortcutEventListener } from "../core/shortcuts";
 import { initTheme } from "../../shared/utils/Theme";
+import { setClassicLoading } from "../frontend/classicLoading";
+import { setSubscribableHint } from "../frontend/subscribableHint";
 
 void initTheme();
-
+setClassicLoading(true);
 
 const stateConfig = {
     new: {
@@ -42,11 +44,24 @@ const stateConfig = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const { Hermidata, past } = await startupPromise;
-    // initialize the controller class
-    const controller = new HermidataController(Hermidata, past);
-    // initialize the controller
-    await controller.init();
+    let controller: HermidataController;
+    try {
+        const { Hermidata, past } = await startupPromise;
+        // initialize the controller class
+        controller = new HermidataController(Hermidata, past);
+        // initialize the controller
+        await controller.init();
+    } catch (error) {
+        // nothing was loaded: leave the form empty rather than loading forever
+        setClassicLoading(false);
+        new ErrorMessage("Could not load the details of this page.", undefined, {
+            consoleLevel: 'error',
+            details: [error]
+        }).sendMessage();
+        return;
+    }
+
+    void controller.showSubscribableHint();
 
     // After popup init — start quietly in the background
     await controller.RSS?.preloadRSS().catch(error => {
@@ -105,7 +120,8 @@ class HermidataController {
         console.timeEnd('[POPUP] init: get-settings');
 
         this.populateUI(settings);
-        
+        setClassicLoading(false);
+
         this.bindEvents();
 
         // initialize RSS mode
@@ -121,6 +137,20 @@ class HermidataController {
         // log a table of all potential duplicates
         // set it up in the background
         setTimeout(() => this.checkForDuplicates(), 0);
+    }
+    /** Hints on the RSS button that this page can be subscribed to, so RSS mode need not be opened to find out */
+    public async showSubscribableHint(): Promise<void> {
+        try {
+            const isSubscribable = await this.RSS?.hasSubscribableFeed() ?? false;
+            setSubscribableHint(isSubscribable);
+        } catch (error) {
+            // the hint is optional: no need to bother the user
+            new ErrorMessage("Could not check whether this page can be subscribed to.", undefined, {
+                notifyUser: false,
+                consoleLevel: 'error',
+                details: [error]
+            }).sendMessage();
+        }
     }
     private async openRSSIfSetInsideSession(): Promise<void> {
         const { popupMode } = await ext.storage.session.get<{ popupMode: 'rss' | 'classic' }>('popupMode');
