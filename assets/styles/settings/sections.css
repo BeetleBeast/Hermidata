@@ -314,6 +314,18 @@
     display: none;
 }
 
+/* Settings only animates its content ( general/transitions.css ): the rest of the page, sidebar included, stays put.
+   The old snapshot is dropped instead of faded, otherwise it would show through while the new one is still in place.
+   :root raises the specificity: the built page loads transitions.css after this file. */
+@media (prefers-reduced-motion: no-preference) {
+    :root::view-transition-old(root) {
+        display: none;
+    }
+    :root::view-transition-new(root) {
+        animation: none;
+    }
+}
+
 body {
     display: grid;
     grid-template-columns: 25% auto;
