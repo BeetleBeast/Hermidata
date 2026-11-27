@@ -107,3 +107,124 @@ export function stubActiveTab(scrollY = 120): void {
         scripting: { executeScript: async () => [{ result: scrollY }] },
     });
 }
+
+/** How long each of the two steps of a cover takes: the IndexedDB image read and the image load ( Windows rounds timers up to ~15ms ) */
+export const COVER_STEP_MS = 2;
+
+/** Waits one cover step */
+export const coverStep = (): Promise<void> => new Promise(resolve => setTimeout(resolve, COVER_STEP_MS));
+
+/** Just enough of a DOM element for the library entry builder ( node has no DOM ) */
+export class FakeElement {
+    public children: FakeElement[] = [];
+    public readonly dataset: Record<string, string> = {};
+    public readonly style: Record<string, string> = {};
+    public readonly attributes: Record<string, string> = {};
+    public className = '';
+    public textContent = '';
+    public ariaHidden: string | null = null;
+    private readonly listeners = new Map<string, Set<EventListener>>();
+    public readonly tagName: string;
+
+    constructor(tagName: string) {
+        this.tagName = tagName;
+    }
+
+    addEventListener(type: string, listener: EventListener): void {
+        if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+        this.listeners.get(type)!.add(listener);
+    }
+    removeEventListener(type: string, listener: EventListener): void {
+        this.listeners.get(type)?.delete(listener);
+    }
+    dispatch(type: string): void {
+        for (const listener of [...this.listeners.get(type) ?? []]) listener({ type } as Event);
+    }
+    setAttribute(name: string, value: string): void {
+        this.attributes[name] = value;
+    }
+    append(...nodes: FakeElement[]): void {
+        for (const node of nodes) this.appendChild(node);
+    }
+    appendChild(node: FakeElement): FakeElement {
+        // a fragment hands over its children, as a real DocumentFragment does
+        this.children.push(...(node.tagName === '#fragment' ? node.children : [node]));
+        return node;
+    }
+    replaceChildren(...nodes: FakeElement[]): void {
+        this.children = [];
+        this.append(...nodes);
+    }
+}
+
+/** A cover image: setting `src` loads it one cover step later, like a decoded image firing `load` */
+export class FakeImage extends FakeElement {
+    public alt = '';
+    public sizes = '';
+    public loading = '';
+    public complete = false;
+    public naturalWidth = 0;
+    public naturalHeight = 0;
+    private source = '';
+
+    constructor() { super('img'); }
+
+    get src(): string { return this.source; }
+    set src(value: string) {
+        this.source = value;
+        void coverStep().then(() => {
+            this.complete = true;
+            this.naturalWidth = 250;
+            this.naturalHeight = 350;
+            this.dispatch('load');
+        });
+    }
+}
+
+/** Stands in for IntersectionObserver: nothing is on screen until `scrollTo` says which observed elements are */
+export class FakeIntersectionObserver {
+    public static readonly all: FakeIntersectionObserver[] = [];
+    public readonly observed: FakeElement[] = [];
+    private readonly callback: (entries: { target: FakeElement; isIntersecting: boolean }[]) => void;
+
+    constructor(callback: (entries: { target: FakeElement; isIntersecting: boolean }[]) => void) {
+        this.callback = callback;
+        FakeIntersectionObserver.all.push(this);
+    }
+
+    observe(target: FakeElement): void {
+        if (!this.observed.includes(target)) this.observed.push(target);
+    }
+    unobserve(target: FakeElement): void {
+        const index = this.observed.indexOf(target);
+        if (index !== -1) this.observed.splice(index, 1);
+    }
+    disconnect(): void {
+        this.observed.length = 0;
+    }
+    /** Reports the given observed elements as on screen */
+    scrollTo(targets: FakeElement[]): void {
+        this.callback(targets.filter(target => this.observed.includes(target)).map(target => ({ target, isIntersecting: true })));
+    }
+}
+
+/** The library page the entry builder draws into: the entries container, `document` and `IntersectionObserver` */
+export function stubLibraryPage(): FakeElement {
+    const container = new FakeElement('div');
+    FakeIntersectionObserver.all.length = 0;
+    vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
+    vi.stubGlobal('document', {
+        body: new FakeElement('body'),
+        querySelector: (selector: string) => selector === '#library-entries-container' ? container : null,
+        querySelectorAll: () => [],
+        createDocumentFragment: () => new FakeElement('#fragment'),
+        createElement: (tagName: string) => tagName === 'img' ? new FakeImage() : new FakeElement(tagName),
+        createElementNS: (_namespace: string, tagName: string) => new FakeElement(tagName),
+    });
+    return container;
+}
+
+/** Every cover image the library page drew, in page order */
+export function coversOf(container: FakeElement): FakeImage[] {
+    return container.children.map(entry => entry.children.find(child => child instanceof FakeImage)).filter(img => img instanceof FakeImage);
+}

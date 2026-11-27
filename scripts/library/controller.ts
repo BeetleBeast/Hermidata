@@ -37,7 +37,7 @@ export class Controller {
 
     public async init() {
         // build
-        await this.feed.build();
+        this.feed.build();
 
 
         this.filter.build();
@@ -55,7 +55,7 @@ export class Controller {
 
         for (const builder of [this.feed, this.filter, this.filterLogic, this.merger]) builder.setData(allHermidata);
 
-        await this.feed.reload();
+        this.feed.reload();
         this.merger.reload();
         await this.filterLogic.reload();
     }

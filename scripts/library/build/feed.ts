@@ -8,19 +8,24 @@ export class feed extends LibraryBuilder {
     private readonly AllHermidataContainer: HTMLDivElement | null = document.querySelector('#library-entries-container');
 
     public viewMode: 'grid' | 'list' = 'list';
+
+    /** Loads a cover once its entry comes near the screen: the page shows its entries without waiting on every image */
+    private readonly coverObserver = new IntersectionObserver(entries => this.loadCoversInView(entries), { rootMargin: '600px 0px' });
+
+    /** The entry each cover still waiting for the observer belongs to */
+    private readonly pendingCovers = new Map<HTMLImageElement, HermidataModel>();
     
     constructor(allHermidata: Record<string, Hermidata>, settings: Settings) {
         super(allHermidata, settings);
     }
 
 
-    public async build(): Promise<void> {
-        await this.buildFeedAll();
-        return Promise.resolve();
+    public build(): void {
+        this.buildFeedAll();
     }
     /** Rebuild every entry from the current data */
-    public async reload(): Promise<void> {
-        await this.buildFeedAll();
+    public reload(): void {
+        this.buildFeedAll();
     }
 
     public setGridViewMode(newViewMode: 'grid' | 'list'): void {
@@ -44,21 +49,21 @@ export class feed extends LibraryBuilder {
         document.body.dataset.listMode = this.viewMode === 'list' ? 'true' : 'false';
     }
 
-    private async buildFeedAll() {
-        // get all entries that are filtered
-        const allEntries = this.AllHermidata;
+    private buildFeedAll() {
+        // the old entries are gone: stop waiting on their covers
+        this.coverObserver.disconnect();
+        this.pendingCovers.clear();
 
         const docFragment = document.createDocumentFragment();
 
-        for (const entry of Object.values(allEntries)) {
-            const build = await this.buildEntry(new HermidataModel(entry))
-            docFragment.appendChild(build);
+        for (const entry of Object.values(this.AllHermidata)) {
+            docFragment.appendChild(this.buildEntry(new HermidataModel(entry)));
         }
 
         this.AllHermidataContainer?.replaceChildren(docFragment);
 
     }
-    private async buildEntry(entry: HermidataModel): Promise<HTMLDivElement> {
+    private buildEntry(entry: HermidataModel): HTMLDivElement {
         // item container
         const container = this.buildEntryContainer(entry);
         
@@ -66,7 +71,7 @@ export class feed extends LibraryBuilder {
         const site = this.buildSite(entry);
 
         // image
-        const img = await this.buildImage(entry);
+        const img = this.buildImage(entry);
         
         // novel Type
         const novelType = this.buildNovelType(entry);
@@ -101,56 +106,37 @@ export class feed extends LibraryBuilder {
 
         return container;
     }
-    private async buildImage(entry: HermidataModel): Promise<HTMLImageElement> {
+    private buildImage(entry: HermidataModel): HTMLImageElement {
         const img = document.createElement('img');
 
         img.className = "hermidata-item-image"
         img.sizes = "150x190";
         img.alt = `${entry.title} Image`;
-        
-        const url = await entry.getDisplayImageUrl();
-        
-        await this.loadImage(img, url);
-        
-        img.loading = "lazy";
 
-        this.calculateImageRatio(img);
+        // the cover itself loads once the entry is near the screen ( filtered out entries are not shown, so they wait )
+        this.pendingCovers.set(img, entry);
+        this.coverObserver.observe(img);
 
         return img;
     }
-    private loadImage(img: HTMLImageElement, src: string, timeoutMs = 500): Promise<void> {
-        return new Promise((resolve) => {
-            let settled = false;
+    private loadCoversInView(entries: IntersectionObserverEntry[]): void {
+        for (const { target, isIntersecting } of entries) {
+            if (!isIntersecting) continue;
+            const img = target as HTMLImageElement;
+            const entry = this.pendingCovers.get(img);
+            this.coverObserver.unobserve(img);
+            this.pendingCovers.delete(img);
+            if (entry) void this.loadCover(img, entry);
+        }
+    }
+    private async loadCover(img: HTMLImageElement, entry: HermidataModel): Promise<void> {
+        img.addEventListener('load', () => this.calculateImageRatio(img), { once: true });
+        img.addEventListener('error', () => {
+            console.warn('Image failed to load:', img.src);
+            this.calculateImageRatio(img);
+        }, { once: true });
 
-            const settle = () => {
-                if (settled) return;
-                settled = true;
-                clearTimeout(timer);
-                img.removeEventListener('load', onLoad);
-                img.removeEventListener('error', onError);
-                resolve();
-            };
-
-            const onLoad = () => settle();
-            const onError = () => {
-                console.warn('Image failed to load:', src);
-                settle();
-            };
-
-            // attach listeners BEFORE setting src, so a fast/cached load can't slip past them
-            img.addEventListener('load', onLoad);
-            img.addEventListener('error', onError);
-
-            const timer = setTimeout(() => {
-                console.warn('Image load timed out:', src);
-                settle();
-            }, timeoutMs);
-
-            img.src = src;
-
-            // some browsers mark `complete` synchronously for cached images right after assignment
-            if (img.complete) settle();
-        });
+        img.src = await entry.getDisplayImageUrl();
     }
     private buildTitle(entry: Hermidata): HTMLAnchorElement {
         // a real link: focusable, announced as a link and opened with Enter. The entry click handler does the navigation.
