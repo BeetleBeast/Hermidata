@@ -335,6 +335,9 @@ export function simpleHash(str: string) {
  * @param {string} path - the url
  * @param {string} location - where to open the url: inside a newTab, newWindow or the sameTab
  * @param {number} scrollPositionY - the y position to scroll to
+ * 
+ * An extension page opened in the sameTab ( e.g. Library -> Overview ) is navigated by the page itself instead of `tabs.update`:
+ * browsers only animate a cross-document view transition ( `general/transitions.css` ) for navigations the page started.
  * */
 export async function openLink(path: string, location: 'newTab' | 'newWindow' | 'sameTab', scrollPositionY: number = 0): Promise<void> {
     const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
@@ -343,6 +346,9 @@ export async function openLink(path: string, location: 'newTab' | 'newWindow' | 
     const url = isExternal ? path : ext.runtime.getURL(`dist/pages/${path}`);
 
     if (isFirefox && location === 'newTab') return openInSameContainer(url, scrollPositionY);
+
+    // an external page ( or a scroll position to restore ) is the browser's active tab to handle, this page can't navigate it
+    if (location === 'sameTab' && !isExternal && scrollPositionY === 0) return window.location.assign(url);
 
     const tab = await createTabForLocation(url, location);
     if (tab) openInSpecificYPosition(tab, scrollPositionY);
