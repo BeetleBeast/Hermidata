@@ -74,9 +74,10 @@
     background: var(--surface-input);
 }
 
-/* --- toolbar button: stands out once exactly two entries are ticked --- */
+/* --- toolbar buttons: stand out once their selection is ready ( merge: exactly two ticked, open: at least one ) --- */
 
-#mergeTwoHermidatas[data-ready="true"] {
+#mergeTwoHermidatas[data-ready="true"],
+#bulkOpen[data-ready="true"] {
     color: var(--accent-soft);
     background: var(--lib-hover);
     border-color: color-mix(in srgb, var(--accent-soft) 40%, transparent);

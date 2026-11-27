@@ -16,12 +16,29 @@
     gap: 30px;
 }
 
+/* the card the prompt text and buttons sit on, so they stay readable over the page behind */
+.genericPromptParent {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: min(100% - 32px, 420px);
+    padding: 24px 20px;
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 24px 64px -16px var(--overlay);
+}
+
 .genericInput {
     display: none;
     align-items: center;
     justify-content: center;
-    width: 80%;
-    background-color: var(--surface-raised);
+    box-sizing: border-box;
+    width: 100%;
+    background-color: var(--surface-input);
     color: var(--text);
     outline-color: var(--surface-input);
     text-emphasis-color: var(--surface-input);
@@ -37,7 +54,7 @@
     display: none;
     align-items: center;
     justify-content: center;
-	width: 80%;
+	width: 100%;
     color: var(--text);
     text-align: center;
 	word-wrap: unset;
