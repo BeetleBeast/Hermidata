@@ -2,6 +2,7 @@ import type { Hermidata, Settings } from "../../shared/types";
 import { markAsCombobox, markAsOption, setActiveOption } from "../../shared/utils/Accessibility";
 import type { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { findByTitleOrAlt, openLink } from "../../shared/utils/StringOutput";
+import { navigateToPage } from "../../shared/utils/PageTransition";
 import { LibraryBuilder } from "../build";
 
 /** The parts of the detail page that are only shown, not edited: cover, latest release and the title search */
@@ -114,7 +115,7 @@ export class Detail extends LibraryBuilder {
         input.focus();
         const entry = findByTitleOrAlt(value, this.AllHermidata);
         if (!entry) return;
-        openLink('./Overview.html#/id/' + entry.id, 'sameTab');
+        navigateToPage('./Overview.html#/id/' + entry.id);
     }
 
     private handleSearchInput(e: Event, suggestionBox: HTMLDivElement) {

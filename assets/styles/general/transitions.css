@@ -1,0 +1,37 @@
+/* Page transitions ( View Transition API ). Unsupported browsers and reduced motion skip all of it. */
+
+@media (prefers-reduced-motion: no-preference) {
+
+    /* Between pages ( Library <-> Reading list ): both pages load this file to opt in */
+    @view-transition {
+        navigation: auto;
+    }
+
+    ::view-transition-old(root) {
+        animation: page-out 140ms ease-in both;
+    }
+    ::view-transition-new(root) {
+        animation: page-in 220ms ease-out both;
+    }
+
+    /* Between settings sections: only the content moves, the sidebar stays put */
+    .section-content[data-active="true"] {
+        view-transition-name: settings-section;
+    }
+    ::view-transition-group(settings-section) {
+        animation: none;
+    }
+    ::view-transition-old(settings-section) {
+        animation: page-out 100ms ease-in both;
+    }
+    ::view-transition-new(settings-section) {
+        animation: page-in 200ms ease-out both;
+    }
+}
+
+@keyframes page-out {
+    to { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes page-in {
+    from { opacity: 0; transform: translateY(6px); }
+}

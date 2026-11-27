@@ -10,6 +10,7 @@ import { TagManagement } from "./build/TagManagement";
 import { FolderMapping } from "./build/FolderMapping";
 import { getElement } from "../shared/utils/Selection";
 import { customConfirm } from "../popup/frontend/confirm";
+import { withViewTransition } from "../shared/utils/PageTransition";
 
 export class BuildController {
     private currentSection: string = 'extension-behavior';
@@ -90,21 +91,25 @@ export class BuildController {
         // Update current section
         this.currentSection = sectionId;
         
-        // Update button active states
-        document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach(btn => {
-            btn.dataset.active = "false";
-            btn.removeAttribute('aria-current');
-        });
-        
-        // Hide all content sections
-        document.querySelectorAll<HTMLElement>('.section-content').forEach(section => section.dataset.active = "false" );
-        
-        // Show and initialize selected section
         const activeElementClassName = this.navigations.get(sectionId);
         const container = getElement<HTMLElement>(`.${activeElementClassName}`);
-        if (container) container.dataset.active = "true";
-        target.dataset.active = "true";
-        target.setAttribute('aria-current', 'page');
+        const showSection = () => {
+            // Update button active states
+            document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach(btn => {
+                btn.dataset.active = "false";
+                btn.removeAttribute('aria-current');
+            });
+
+            // Hide all content sections, show the selected one
+            document.querySelectorAll<HTMLElement>('.section-content').forEach(section => section.dataset.active = "false" );
+            if (container) container.dataset.active = "true";
+            target.dataset.active = "true";
+            target.setAttribute('aria-current', 'page');
+        };
+        // The very first section has nothing to animate away from
+        const hasVisibleSection = document.querySelector('.section-content[data-active="true"]') !== null;
+        if (hasVisibleSection) await withViewTransition(showSection);
+        else showSection();
         
         // Initialize section on first visit
         if (!this.initializedSections.has(sectionId)) {

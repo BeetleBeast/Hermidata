@@ -1,7 +1,7 @@
 import { dbAccess } from "../shared/db/Storage";
 import type { Hermidata, Settings } from "../shared/types";
 import { getElement } from "../shared/utils/Selection";
-import { openLink } from "../shared/utils/StringOutput";
+import { navigateToPage } from "../shared/utils/PageTransition";
 import { feed } from "./build/feed";
 import { filter } from "./build/setFilter";
 import { FilterLogic } from "./build/filterLogic";
@@ -70,7 +70,7 @@ export class Controller {
     private setEventListener() {
         this.removeEventListener();
         this.reloadData!.addEventListener('click', () => this.reload());
-        this.openReadingList?.addEventListener('click', () => void openLink('ReadingList.html', 'sameTab'));
+        this.openReadingList?.addEventListener('click', () => navigateToPage('ReadingList.html'));
 
         // viewMode toggle
         this.gridViewMode?.addEventListener('click', () => this.feed.setGridViewMode('grid'));

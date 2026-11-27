@@ -106,6 +106,16 @@ footer {
     flex-direction: column;
 }
 
+/* Classic <-> RSS: the mode switch already sets opacity / display inline, so the views only need to ease between them.
+   The View Transition API is not used here: it snapshots the whole popup, which also resizes when the mode changes. */
+@media (prefers-reduced-motion: no-preference) {
+    .HDClassic,
+    .HDRss {
+        /* display is discrete: allow-discrete keeps the view on screen until its fade-out has played */
+        transition: opacity 180ms ease, display 180ms allow-discrete;
+    }
+}
+
 /* ---- top-main ---- */
 .topMain {
 	height: 50px;
