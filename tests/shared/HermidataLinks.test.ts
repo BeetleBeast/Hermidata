@@ -77,16 +77,16 @@ describe('linkHermidata', () => {
         seed('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }] });
         seed('c');
 
-        await linkHermidata('b', 'c', 'adaptation');
+        await linkHermidata('b', 'c', 'sideStory');
 
-        expect(links('a')).toEqual({ relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'adaptation', id: 'c' }] });
-        expect(links('b')).toEqual({ relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'adaptation', id: 'c' }] });
+        expect(links('a')).toEqual({ relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'sideStory', id: 'c' }] });
+        expect(links('b')).toEqual({ relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sideStory', id: 'c' }] });
         expect(links('c')).toEqual({ relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'mainStory', id: 'a' }] });
     });
 
     it('changes the type of any title of the group, the one of the page itself too, everywhere it is listed', async () => {
-        seed('a', { relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'adaptation', id: 'c' }] });
-        seed('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'adaptation', id: 'c' }] });
+        seed('a', { relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'sideStory', id: 'c' }] });
+        seed('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sideStory', id: 'c' }] });
         seed('c', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sequel', id: 'b' }] });
 
         const changed = await linkHermidata('c', 'b', 'sideStory');
@@ -100,14 +100,14 @@ describe('linkHermidata', () => {
     it('joins two groups when a title that has related titles of its own is added', async () => {
         seed('a', { relatedWorks: [{ type: 'sequel', id: 'b' }] });
         seed('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }] });
-        seed('x', { relatedWorks: [{ type: 'adaptation', id: 'y' }] });
+        seed('x', { relatedWorks: [{ type: 'sideStory', id: 'y' }] });
         seed('y', { relatedWorks: [{ type: 'mainStory', id: 'x' }] });
 
         await linkHermidata('a', 'x', 'spinOff');
 
         for (const id of ['a', 'b', 'x', 'y']) expect(getRelatedWorks(links(id)).map(work => work.id).sort()).toEqual(['a', 'b', 'x', 'y'].filter(other => other !== id));
         expect(getRelatedWorks(links('b')).find(work => work.id === 'x')?.type).toBe('spinOff');
-        expect(getRelatedWorks(links('b')).find(work => work.id === 'y')?.type).toBe('adaptation');
+        expect(getRelatedWorks(links('b')).find(work => work.id === 'y')?.type).toBe('sideStory');
     });
 
     it('refuses a title that does not exist, and a type for a title that has no related titles yet', async () => {
@@ -122,23 +122,23 @@ describe('linkHermidata', () => {
         seed('a');
         seed('b');
 
-        const response = await runStorageCall('linkHermidata', ['a', 'b', 'adaptation']);
+        const response = await runStorageCall('linkHermidata', ['a', 'b', 'sideStory']);
 
         expect(response.success).toBe(true);
-        expect(links('a')).toEqual({ relatedWorks: [{ type: 'adaptation', id: 'b' }] });
+        expect(links('a')).toEqual({ relatedWorks: [{ type: 'sideStory', id: 'b' }] });
     });
 });
 
 describe('unlinkHermidata', () => {
     it('takes a title out of the group on every title, and the title forgets the group', async () => {
-        seed('a', { relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'adaptation', id: 'c' }] });
-        seed('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'adaptation', id: 'c' }] });
+        seed('a', { relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'sideStory', id: 'c' }] });
+        seed('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sideStory', id: 'c' }] });
         seed('c', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sequel', id: 'b' }] });
 
         const changed = await unlinkHermidata('c', 'b');
 
         expect(changed.map(entry => entry.id).sort()).toEqual(['a', 'b', 'c']);
-        expect(links('a')).toEqual({ relatedWorks: [{ type: 'adaptation', id: 'c' }] });
+        expect(links('a')).toEqual({ relatedWorks: [{ type: 'sideStory', id: 'c' }] });
         expect(links('c')).toEqual({ relatedWorks: [{ type: 'mainStory', id: 'a' }] });
         expect(links('b')).toBe('None');
     });
@@ -154,12 +154,12 @@ describe('unlinkHermidata', () => {
     });
 
     it('drops a link to a title that is gone', async () => {
-        seed('a', { relatedWorks: [{ type: 'sequel', id: 'gone' }, { type: 'adaptation', id: 'b' }] });
+        seed('a', { relatedWorks: [{ type: 'sequel', id: 'gone' }, { type: 'sideStory', id: 'b' }] });
         seed('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }] });
 
         await unlinkHermidata('a', 'gone');
 
-        expect(links('a')).toEqual({ relatedWorks: [{ type: 'adaptation', id: 'b' }] });
+        expect(links('a')).toEqual({ relatedWorks: [{ type: 'sideStory', id: 'b' }] });
         expect(store.items.b.meta.updated).toBe(OLD); // its links did not change
     });
 });
@@ -167,25 +167,26 @@ describe('unlinkHermidata', () => {
 describe('links follow an entry that is deleted, moved or merged', () => {
     it('drops the links to a deleted entry from every other entry', async () => {
         seed('gone', { relatedWorks: [{ type: 'sequel', id: 'b' }] });
-        seed('b', { relatedWorks: [{ type: 'prequel', id: 'gone' }, { type: 'adaptation', id: 'c' }] });
-        seed('c', { relatedWorks: [{ type: 'adaptation', id: 'b' }] });
+        seed('b', { relatedWorks: [{ type: 'prequel', id: 'gone' }, { type: 'sideStory', id: 'c' }] });
+        seed('c', { relatedWorks: [{ type: 'sideStory', id: 'b' }] });
 
         await removeHermidata('gone');
 
         expect(store.items.gone).toBeUndefined();
-        expect(links('b')).toEqual({ relatedWorks: [{ type: 'adaptation', id: 'c' }] });
+        expect(links('b')).toEqual({ relatedWorks: [{ type: 'sideStory', id: 'c' }] });
         expect(store.items.b.meta.updated).not.toBe(OLD); // so sync carries the cleanup
         expect(store.items.c.meta.updated).toBe(OLD);     // not linked to the deleted entry: untouched
     });
 
-    it('points the links at the entry a removed one was merged into, without duplicates or self-links', async () => {
-        seed('merged', { relatedWorks: [{ type: 'adaptation', id: 'b' }] });
-        seed('b', { relatedWorks: [{ type: 'adaptation', id: 'merged' }, { type: 'adaptation', id: 'kept' }] });
-        seed('kept', { relatedWorks: [{ type: 'adaptation', id: 'b' }] });
+    it('points the links at the entry a merged one moved into, without a second link to it', async () => {
+        seed('merged', { relatedWorks: [{ type: 'sequel', id: 'b' }] });
+        seed('b', { relatedWorks: [{ type: 'mainStory', id: 'merged' }, { type: 'mainStory', id: 'kept' }] });
+        seed('kept', { relatedWorks: [{ type: 'sequel', id: 'b' }] });
 
-        await removeHermidata('kept', 'merged');
+        await moveHermidata('kept', 'merged', structuredClone(store.items.merged));
 
-        expect(links('b')).toEqual({ relatedWorks: [{ type: 'adaptation', id: 'merged' }] });
+        expect(store.items.kept).toBeUndefined();
+        expect(links('b')).toEqual({ relatedWorks: [{ type: 'mainStory', id: 'merged' }] });
         expect(await resolveIdRedirect('kept')).toBe('merged');
     });
 

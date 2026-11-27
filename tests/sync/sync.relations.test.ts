@@ -18,7 +18,7 @@ afterEach(() => vi.useRealTimers());
 function linkedPair(): Hermidata[] {
     const first = makeNovel(1);
     const second = makeNovel(2);
-    first.meta.relations = { relatedWorks: [{ type: 'sequel', id: second.id }, { type: 'adaptation', id: 'not-on-this-device' }] };
+    first.meta.relations = { relatedWorks: [{ type: 'sequel', id: second.id }, { type: 'sideStory', id: 'not-on-this-device' }] };
     second.meta.relations = { series: { seriesId: 'saga', position: 2 }, relatedWorks: [{ type: 'mainStory', id: first.id }] };
     return [first, second];
 }
@@ -64,11 +64,11 @@ describe('links in library sync', () => {
 
         const [first, second] = pair.map(entry => entry.id);
         a.remove(second);
-        a.edit(first, h => { h.meta.relations = { relatedWorks: [{ type: 'adaptation', id: 'not-on-this-device' }] }; });
+        a.edit(first, h => { h.meta.relations = { relatedWorks: [{ type: 'sideStory', id: 'not-on-this-device' }] }; });
         await settle();
 
         expect(b.db.has(second)).toBe(false);
-        expect(b.db.get(first)!.meta.relations).toEqual({ relatedWorks: [{ type: 'adaptation', id: 'not-on-this-device' }] });
+        expect(b.db.get(first)!.meta.relations).toEqual({ relatedWorks: [{ type: 'sideStory', id: 'not-on-this-device' }] });
     });
 
     it('still show the whole group when a concurrent edit on another device kept a copy without its links', async () => {

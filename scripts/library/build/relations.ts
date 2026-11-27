@@ -12,7 +12,7 @@ const MAX_SUGGESTIONS = 7;
 
 /**
  * The related titles card: the whole group of related titles, this one included, each with its type ( main story,
- * sequel, adaptation, … ) and each opening its own detail page. A type describes the title itself, so the card
+ * sequel, side story, … ) and each opening its own detail page. A type describes the title itself, so the card
  * reads the same on every title of the group, and any title's type, or the group itself, can be changed from here.
  */
 export class RelatedWorks extends LibraryBuilder {
@@ -57,7 +57,7 @@ export class RelatedWorks extends LibraryBuilder {
         if (group.length === 0) {
             const empty = document.createElement('li');
             empty.className = 'ov-empty';
-            empty.textContent = 'No related titles yet. Link the sequels, side stories and adaptations in your library: they share one list, the same on each of their pages.';
+            empty.textContent = 'No related titles yet. Link the sequels, side stories and other versions of this story in your library: they share one list, the same on each of their pages.';
             this.list.replaceChildren(empty);
             return;
         }

@@ -107,7 +107,7 @@ export const T0 = '2026-11-01T10:00:00.000Z';
 export function makeNovel(i: number, over: { title?: string; updated?: string; added?: string } = {}): Hermidata {
     const bm = `bm${i}`;
     return {
-        version: 12, id: `${1000000 + i}`, title: over.title ?? `Novel ${i}`,
+        version: 13, id: `${1000000 + i}`, title: over.title ?? `Novel ${i}`,
         novelType: 'Manhwa', source: 'manhwaSite.com',
         chapter: {
             latest: 10 + i, lastChecked: T0,

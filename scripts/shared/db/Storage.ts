@@ -138,16 +138,11 @@ export async function moveHermidata(oldKey: string, newKey: string, entry: OnlyP
     }
 }
 
-/**
- * Deletes an entry and the links other entries hold to it. When the entry was merged into another one, pass that
- * one as `replacedBy`: the links then point at it instead, and pages still holding the old id can follow it.
- */
-export async function removeHermidata(id: string, replacedBy?: string): Promise<void> {
+export async function removeHermidata(id: string): Promise<void> {
     try {
         await deleteHermidata(id, false)  // remove from IndexedDB
         removeFromSync(id)          // remove from sync
-        if (replacedBy) void recordIdRedirect(id, replacedBy);
-        await retargetLinks(id, replacedBy ?? null);
+        await retargetLinks(id, null); // other entries forget it
 
         PastHermidata.invalidateCache();
         console.log(`[HermidataV3] Removed ${id}`);

@@ -1,7 +1,7 @@
 import { generateBookmarkId } from "../utils/StringOutput";
 import type { AllSortsType, AnyNovelStatus, AnyNovelType, AnyReadStatus, Bookmark, FilterClassName, FilterName, Hermidata, NormalSortsType, NovelStatus, NovelType, ReadStatus, RelatedWorkType } from "../types";
 
-export const HERMIDATA_VERSION = 12;
+export const HERMIDATA_VERSION = 13;
 
 
 // Default arrays — used to seed settings on first install
@@ -37,7 +37,6 @@ export const RELATED_WORK_LABELS: Record<RelatedWorkType, string> = {
     sideStory: 'Side story',
     spinOff: 'Spin-off',
     summary: 'Summary',
-    adaptation: 'Adaptation',
 };
 
 export const DEMOGRAPHIC_TAGS: string[] = [
@@ -111,7 +110,7 @@ export const filterName: FilterName = {
 
 
 export const makeDefaultHermidata = (type: AnyNovelType, status: AnyReadStatus, novelStatus: AnyNovelStatus): Hermidata => ({
-    version: 12,
+    version: HERMIDATA_VERSION,
     id: '',
     title: '',
     novelType: type,

@@ -1,5 +1,6 @@
 import { findNestedFolder, getBookmarkChildren } from "../../background/bookmarks";
 import type { AnyNovelType, Bookmark, Hermidata, ReleaseSchedule } from "../types";
+import { HERMIDATA_VERSION } from "../constants";
 import { findByTitleOrAlt, getChapterFromTitle, generateBookmarkId, generateHermidataHash, TrimTitle } from "./StringOutput";
 
 
@@ -166,7 +167,7 @@ export class AutoSetAllHermidata {
         }
 
         const hermidataGuess: Hermidata = {
-            version: 12,
+            version: HERMIDATA_VERSION,
             id: HermidataID,
             title: trimmedTitle,
             novelType: novelType,

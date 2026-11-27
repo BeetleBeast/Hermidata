@@ -1,10 +1,10 @@
-import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Feed, Hermidata, NovelType, ReadStatus } from "./popup";
+import type { AnyNovelStatus, AnyNovelType, AnyReadStatus, Feed, Hermidata, NovelType, ReadStatus, Relation } from "./popup";
 
 
 
-export type allOlderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10 | HermidataV11;
+export type allOlderHermidata = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10 | HermidataV11 | HermidataV12;
 
-export type AnyHermidataVersion = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10 | HermidataV11 | Hermidata;
+export type AnyHermidataVersion = HermidataV1 | HermidataV2 | HermidataV3 | HermidataV4 | HermidataV5 | HermidataV6 | HermidataV7 | HermidataV8 | HermidataV9 | HermidataV10 | HermidataV11 | HermidataV12 | Hermidata;
 
 /* old Feed & RawFeed */
 
@@ -168,13 +168,23 @@ export interface HermidataV9 extends Omit<HermidataV8, "chapter"> {
 export interface HermidataV10 extends Omit<HermidataV9, "url" | "chapter"> {
     chapter: ChapterV7Plus<BookmarkV4>; // top-level `url` removed
 }
+/** Up to V12 related titles had no main story: a novel and its manga were linked as `adaptation` of each other */
+export type RelatedWorkTypeV12 = 'sequel' | 'prequel' | 'sideStory' | 'spinOff' | 'summary' | 'adaptation';
+export type RelationV12 = Omit<Relation, "relatedWorks"> & { relatedWorks: { type: RelatedWorkTypeV12; id: string; }[] };
+
 export interface HermidataV11 extends Omit<Hermidata, "version" | "rss" | "chapter" | "titleTrimming" | "meta"> {
     version: 11;
     rss: Feed | null;
     chapter: Omit<Hermidata["chapter"], "bookmarks"> & {
         bookmarks: Record<string, BookmarkV5>;
     };
-    meta: Omit<Hermidata["meta"], "image"> & {
+    meta: Omit<Hermidata["meta"], "image" | "relations"> & {
         image: string;
+        relations: RelationV12 | 'None';
+    };
+}
+export interface HermidataV12 extends Omit<Hermidata, "meta"> {
+    meta: Omit<Hermidata["meta"], "relations"> & {
+        relations: RelationV12 | 'None';
     };
 }

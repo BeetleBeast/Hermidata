@@ -52,10 +52,11 @@ export type ContentWarning = 'Nudity' | 'Violence' | 'Sex' | 'Language' | 'Mild 
 export type ReleaseSchedule = 'Once' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly' | 'Irregular' | 'Unknown';
 
 /**
- * What a title is within its related titles ( a link `{ type: 'sequel', id: B }`: B is a sequel ).
- * It describes the title itself, so every related title lists B with the same type.
+ * Where a title sits in the story of its related titles ( a link `{ type: 'sequel', id: B }`: B is a sequel ).
+ * It describes the title itself, so every related title lists B with the same type. The medium is not part of it:
+ * a novel and its manga are both the main story, told apart by their `novelType`.
  */
-export type RelatedWorkType = 'mainStory' | 'prequel' | 'sequel' | 'sideStory' | 'spinOff' | 'summary' | 'adaptation';
+export type RelatedWorkType = 'mainStory' | 'prequel' | 'sequel' | 'sideStory' | 'spinOff' | 'summary';
 
 export type RelatedWork = {
     type: RelatedWorkType;

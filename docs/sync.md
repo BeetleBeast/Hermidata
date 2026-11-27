@@ -32,8 +32,9 @@ sync and a phone on your WebDAV server do not see each other's changes.
 
 - **Your whole library** (entries, markers, tags, notes, metadata), as one compressed file.
 - **Deletions.** A deleted entry stays deleted on other devices, as long as they sync within 30 days.
-- **Related titles** (main story, sequel, side story, adaptation, …). Every title of a group lists the others, so
-  the group travels with its titles. Deleting, renaming or merging an entry also updates the entries related to it,
+- **Related titles** (main story, sequel, side story, …). Every title of a group lists the others, so
+  the group travels with its titles. An entry from a device that is not updated yet arrives with titles linked
+  as `adaptation` turned into the main story, like every entry of an older version is brought up to date. Deleting, renaming or merging an entry also updates the entries related to it,
   and those updates sync like any other edit.
 - **Not part of library sync:** your settings, which sync through your browser account whether you pick browser
   sync or your own server (on a device set to **This device only** they stay on the device); the RSS cache (each device fetches its own feeds); and the sync choice and password themselves, which

@@ -133,6 +133,7 @@ export type {
     HermidataV9,
     HermidataV10,
     HermidataV11,
+    HermidataV12,
 
     AnyHermidataVersion,
     allOlderHermidata,

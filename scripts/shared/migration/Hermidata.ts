@@ -3,9 +3,9 @@ import { CalcDiff, PastHermidata } from "../../popup/core/Past";
 import { makeHermidata } from "../../popup/core/save";
 import { confirmMigrationPrompt, customConfirm } from "../../popup/frontend/confirm";
 import { getAllHermidata, getAllHermidataWithRss, getDb, isHermidataV1, isHermidataV10, isHermidataV11, isHermidataV12, isHermidataV2, isHermidataV3, isHermidataV4, isHermidataV5, isHermidataV6, isHermidataV7, isHermidataV8, isHermidataV9, removeRawFeeds } from "../db/db";
-import { getAllRawFeeds, getHermidataViaKey, removeHermidata, setAllHermidata, setAllRawFeeds, moveHermidata } from "../db/Storage";
+import { getAllRawFeeds, getHermidataViaKey, setAllHermidata, setAllRawFeeds, moveHermidata } from "../db/Storage";
 import { getChapterFromTitle, normalizeDateToIso, generateBookmarkId, generateHermidataHash, generateRawFeedId, TrimTitle } from "..//utils/StringOutput";
-import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, BookmarkV4, BookmarkV5, Feed, FeedItem, FeedV1, Hermidata, HermidataImageSource, HermidataV1, HermidataV10, HermidataV11, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
+import type { AllHermidata, AnyHermidataVersion, AnyNovelStatus, AnyNovelType, Bookmark, BookmarkV1, BookmarkV2, BookmarkV3, BookmarkV4, BookmarkV5, Feed, FeedItem, FeedV1, Hermidata, HermidataImageSource, HermidataV1, HermidataV10, HermidataV11, HermidataV12, HermidataV2, HermidataV3, HermidataV4, HermidataV5, HermidataV6, HermidataV7, HermidataV8, HermidataV9, Migration, migrationReturn, PotentialSameHermidata, RawFeed, RawFeedV1, Settings, HermidataMigrationConfiguration, ScalarConflict, ContentWarning } from "../types";
 import { HermidataModel } from "../utils/HermidataSelector";
 import { AutoSetAllHermidata } from "../utils/AutoSetAllHermidata";
 import { getRelatedWorks, mergeRelations } from "../utils/Relations";
@@ -653,7 +653,7 @@ export class HermidataMigration {
                 // identity shifted — neither original key is valid for the merged record, unless it came out as the id of one of them
                 removedIds.push(...[recordToKeep.id, recordToRemove.id].filter(id => id !== merged.id));
                 await moveHermidata(recordToRemove.id, merged.id, merged);
-                await removeHermidata(recordToKeep.id, merged.id); // links to the kept record follow it to the merged one
+                await moveHermidata(recordToKeep.id, merged.id, merged); // the kept record moves too, so its links, image and open pages follow it
             } else {
                 await moveHermidata(recordToRemove.id, merged.id, merged);
                 removedIds.push(recordToRemove.id);
@@ -889,6 +889,7 @@ export class HermidataMigration {
         9: (data) => this.migrateHermidataV9ToV10(data),
         10: (data) => this.migrateHermidataV10ToV11(data),
         11: (data) => this.migrateHermidataV11ToV12(data),
+        12: (data) => this.migrateHermidataV12ToV13(data),
     };
     public static migrateAllHermidataToLatest(older: AnyHermidataVersion): migrationReturn {
         
@@ -1273,7 +1274,7 @@ export class HermidataMigration {
 
         return hermidata
     }
-    private static migrateHermidataV11ToV12(data: HermidataV11): Hermidata {
+    private static migrateHermidataV11ToV12(data: HermidataV11): HermidataV12 {
         const bookmarks = Object.fromEntries(
             Object.entries(data.chapter.bookmarks).map(([id, bookmark]) => [id, {
                 ...bookmark,
@@ -1297,6 +1298,21 @@ export class HermidataMigration {
             meta: {
                 ...data.meta,
                 image,
+            },
+        };
+    }
+    /** A title linked as `adaptation` is the same story in another medium, which its `novelType` already tells: the main story */
+    private static migrateHermidataV12ToV13(data: HermidataV12): Hermidata {
+        const relations = data.meta.relations;
+        return {
+            ...data,
+            version: 13,
+            meta: {
+                ...data.meta,
+                relations: relations === 'None' ? 'None' : {
+                    ...relations,
+                    relatedWorks: relations.relatedWorks.map(work => ({ ...work, type: work.type === 'adaptation' ? 'mainStory' : work.type })),
+                },
             },
         };
     }

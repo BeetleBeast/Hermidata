@@ -17,11 +17,11 @@ function library(...entries: Hermidata[]): Record<string, Hermidata> {
 
 const series = { seriesId: 'saga', position: 2 };
 
-/** a is the main story, b its sequel, c an adaptation: every title lists the other two */
+/** a is the main story, b its sequel, c a side story: every title lists the other two */
 function saga(): Record<string, Hermidata> {
     return library(
-        createHermidata('a', { relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'adaptation', id: 'c' }] }),
-        createHermidata('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'adaptation', id: 'c' }] }),
+        createHermidata('a', { relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'sideStory', id: 'c' }] }),
+        createHermidata('b', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sideStory', id: 'c' }] }),
         createHermidata('c', { relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sequel', id: 'b' }] }),
     );
 }
@@ -59,7 +59,7 @@ describe('findRelatedGroup', () => {
 
 describe('groupRoles', () => {
     it('gives every title the type the other titles list it with', () => {
-        expect(groupRoles('c', saga())).toEqual({ c: 'adaptation', a: 'mainStory', b: 'sequel' });
+        expect(groupRoles('c', saga())).toEqual({ c: 'sideStory', a: 'mainStory', b: 'sequel' });
     });
 
     it('makes a title no other title has a type for the main story', () => {
@@ -74,16 +74,16 @@ describe('applyGroupRoles', () => {
     it('lets every title of the group list all the others with their type', () => {
         const all = library(createHermidata('a'), createHermidata('b'), createHermidata('c'));
 
-        const changed = library(...applyGroupRoles(all, { a: 'mainStory', b: 'sequel', c: 'adaptation' }, []));
+        const changed = library(...applyGroupRoles(all, { a: 'mainStory', b: 'sequel', c: 'sideStory' }, []));
 
-        expect(changed.a.meta.relations).toEqual({ relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'adaptation', id: 'c' }] });
-        expect(changed.b.meta.relations).toEqual({ relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'adaptation', id: 'c' }] });
+        expect(changed.a.meta.relations).toEqual({ relatedWorks: [{ type: 'sequel', id: 'b' }, { type: 'sideStory', id: 'c' }] });
+        expect(changed.b.meta.relations).toEqual({ relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sideStory', id: 'c' }] });
         expect(changed.c.meta.relations).toEqual({ relatedWorks: [{ type: 'mainStory', id: 'a' }, { type: 'sequel', id: 'b' }] });
         expect(all.a.meta.relations).toBe('None'); // what it was given is not changed
     });
 
     it('changes a type on every title that lists it, and returns only the titles that changed', () => {
-        const changed = applyGroupRoles(saga(), { a: 'mainStory', b: 'spinOff', c: 'adaptation' }, []);
+        const changed = applyGroupRoles(saga(), { a: 'mainStory', b: 'spinOff', c: 'sideStory' }, []);
 
         expect(changed.map(entry => entry.id)).toEqual(['a', 'c']);
         expect(changed.every(entry => hasRelatedWork(entry.meta.relations, 'b'))).toBe(true);
@@ -109,7 +109,7 @@ describe('resolveRelatedGroup', () => {
         const fromA = resolveRelatedGroup(all.a, all).map(member => `${member.entry.id}: ${member.type}`);
         const fromC = resolveRelatedGroup(all.c, all).map(member => `${member.entry.id}: ${member.type}`);
 
-        expect(fromA).toEqual(['a: mainStory', 'b: sequel', 'c: adaptation']);
+        expect(fromA).toEqual(['a: mainStory', 'b: sequel', 'c: sideStory']);
         expect(fromC.sort()).toEqual(fromA);
     });
 
@@ -128,11 +128,11 @@ describe('resolveRelatedGroup', () => {
 
 describe('retargetRelations', () => {
     it('points a link at the id a title moved to', () => {
-        const relations: Relation = { series, relatedWorks: [{ type: 'sequel', id: 'old' }, { type: 'adaptation', id: 'c' }] };
+        const relations: Relation = { series, relatedWorks: [{ type: 'sequel', id: 'old' }, { type: 'sideStory', id: 'c' }] };
 
         expect(retargetRelations(relations, 'a', 'old', 'new')).toEqual({
             series,
-            relatedWorks: [{ type: 'sequel', id: 'new' }, { type: 'adaptation', id: 'c' }],
+            relatedWorks: [{ type: 'sequel', id: 'new' }, { type: 'sideStory', id: 'c' }],
         });
     });
 
@@ -141,23 +141,23 @@ describe('retargetRelations', () => {
     });
 
     it('drops a link that would point at the title itself, and a second link to the same title', () => {
-        const relations: Relation = { relatedWorks: [{ type: 'prequel', id: 'c' }, { type: 'sequel', id: 'b' }, { type: 'adaptation', id: 'd' }] };
+        const relations: Relation = { relatedWorks: [{ type: 'prequel', id: 'c' }, { type: 'sequel', id: 'b' }, { type: 'sideStory', id: 'd' }] };
 
-        expect(retargetRelations(relations, 'a', 'b', 'a')).toEqual({ relatedWorks: [{ type: 'prequel', id: 'c' }, { type: 'adaptation', id: 'd' }] });
-        expect(retargetRelations(relations, 'x', 'b', 'c')).toEqual({ relatedWorks: [{ type: 'prequel', id: 'c' }, { type: 'adaptation', id: 'd' }] });
+        expect(retargetRelations(relations, 'a', 'b', 'a')).toEqual({ relatedWorks: [{ type: 'prequel', id: 'c' }, { type: 'sideStory', id: 'd' }] });
+        expect(retargetRelations(relations, 'x', 'b', 'c')).toEqual({ relatedWorks: [{ type: 'prequel', id: 'c' }, { type: 'sideStory', id: 'd' }] });
     });
 });
 
 describe('mergeRelations', () => {
     it('joins the links of both titles, the kept title first and winning a duplicate', () => {
         const keep: Relation = { relatedWorks: [{ type: 'sequel', id: 'c' }] };
-        const discard: Relation = { relatedWorks: [{ type: 'adaptation', id: 'c' }, { type: 'prequel', id: 'd' }] };
+        const discard: Relation = { relatedWorks: [{ type: 'sideStory', id: 'c' }, { type: 'prequel', id: 'd' }] };
 
         expect(mergeRelations(keep, discard, ['a', 'b'])).toEqual({ relatedWorks: [{ type: 'sequel', id: 'c' }, { type: 'prequel', id: 'd' }] });
     });
 
     it('drops the links between the two merged titles', () => {
-        const keep: Relation = { relatedWorks: [{ type: 'adaptation', id: 'b' }] };
+        const keep: Relation = { relatedWorks: [{ type: 'sideStory', id: 'b' }] };
         const discard: Relation = { relatedWorks: [{ type: 'mainStory', id: 'a' }] };
 
         expect(mergeRelations(keep, discard, ['a', 'b'])).toBe('None');

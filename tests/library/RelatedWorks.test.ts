@@ -70,13 +70,13 @@ describe('the related titles card', () => {
         a.meta.relations = { relatedWorks: [{ type: 'sequel', id: b.id }] };
         const all = { [a.id]: a, [b.id]: b };
         const { db, related } = openPage(a, all);
-        const storedB = { ...structuredClone(b), meta: { ...b.meta, relations: { relatedWorks: [{ type: 'adaptation' as RelatedWorkType, id: a.id }] } } };
+        const storedB = { ...structuredClone(b), meta: { ...b.meta, relations: { relatedWorks: [{ type: 'sideStory' as RelatedWorkType, id: a.id }] } } };
         db.linkHermidata.mockResolvedValue([storedB]);
 
-        await callPrivate<Promise<void>>(related, 'link', a, 'adaptation');
+        await callPrivate<Promise<void>>(related, 'link', a, 'sideStory');
 
-        expect(db.linkHermidata).toHaveBeenCalledWith(a.id, a.id, 'adaptation');
-        expect(resolveRelatedGroup(a, all).map(member => [member.entry.id, member.type])).toEqual([[a.id, 'adaptation'], [b.id, 'sequel']]);
+        expect(db.linkHermidata).toHaveBeenCalledWith(a.id, a.id, 'sideStory');
+        expect(resolveRelatedGroup(a, all).map(member => [member.entry.id, member.type])).toEqual([[a.id, 'sideStory'], [b.id, 'sequel']]);
     });
 
     it('does not show a removed title again from the other side', async () => {
@@ -99,12 +99,12 @@ describe('the related titles card', () => {
         const b = createEntry('Series Two');
         const all = { [a.id]: a, [b.id]: b };
         const { db, model, editDetail, related } = openPage(a, all);
-        const linked: Relation = { relatedWorks: [{ type: 'adaptation', id: b.id }] };
+        const linked: Relation = { relatedWorks: [{ type: 'sideStory', id: b.id }] };
         db.linkHermidata.mockResolvedValue([{ ...structuredClone(a), meta: { ...a.meta, relations: linked } }, b]);
 
         await editDetail.commit('Author updated', () => { model.meta.author = 'Someone'; });
         Reflect.set(editDetail, 'undoSnapshot', { ...structuredClone(a) }); // the toast offers to undo the author change
-        await callPrivate<Promise<void>>(related, 'link', b, 'adaptation');
+        await callPrivate<Promise<void>>(related, 'link', b, 'sideStory');
         await callPrivate<Promise<void>>(editDetail, 'undo');
 
         expect(model.meta.author).toBeUndefined();

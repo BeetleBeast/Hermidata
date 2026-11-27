@@ -4,7 +4,7 @@ import { PastHermidata } from '../../scripts/popup/core/Past';
 import { generateHermidataHash } from '../../scripts/shared/utils/StringOutput';
 import * as Storage from '../../scripts/shared/db/Storage';
 import { HermidataMigration } from '../../scripts/shared/migration/Hermidata';
-import type { HermidataV11 } from '../../scripts/shared/types';
+import type { HermidataV11, HermidataV12 } from '../../scripts/shared/types';
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -185,7 +185,7 @@ describe('HermidataModel image source', () => {
                     return [id, { ...legacyBookmark, version: 5 }];
                 })),
             },
-            meta: { ...saved.meta, image: 'inside-indexedDB' }
+            meta: { ...saved.meta, image: 'inside-indexedDB', relations: 'None' }
         };
 
         const result = HermidataMigration.migrateAllHermidataToLatest(legacy);
@@ -196,7 +196,7 @@ describe('HermidataModel image source', () => {
         expect(model.meta.image).toEqual({ kind: 'stored', id: saved.id });
         expect(model.rss).toEqual([]);
         expect(model.titleTrimming).toEqual({ type: 'default' });
-        expect(model.version).toBe(12);
+        expect(model.version).toBe(13);
         expect(Object.values(model.chapter.bookmarks)[0].lastUsedAt).toBe(Object.values(saved.chapter.bookmarks)[0].updatedAt);
     });
 
@@ -215,13 +215,31 @@ describe('HermidataModel image source', () => {
                     return [id, { ...legacyBookmark, version: 5 }];
                 })),
             },
-            meta: { ...saved.meta, image: 'inside-indexedDB' },
+            meta: { ...saved.meta, image: 'inside-indexedDB', relations: 'None' },
         };
 
         const result = HermidataMigration.migrateAllHermidataToLatest(legacy);
         expect(result.isMigratedSuccessfully).toBe(true);
         if (!result.isMigratedSuccessfully) throw result.result;
         expect(result.result.rss).toEqual([saved.rss[0]]);
+    });
+
+    it('makes titles linked as adaptations the main story, the same story in another medium, and keeps the other links', () => {
+        const saved = createHermidata(5).toJSON();
+        const series = { seriesId: 'saga', position: 1 };
+        const legacy: HermidataV12 = {
+            ...saved,
+            version: 12,
+            meta: { ...saved.meta, relations: { series, relatedWorks: [{ type: 'adaptation', id: 'manga' }, { type: 'sequel', id: 'next' }] } },
+        };
+
+        const result = HermidataMigration.migrateAllHermidataToLatest(legacy);
+        expect(result.isMigratedSuccessfully).toBe(true);
+        if (!result.isMigratedSuccessfully) throw result.result;
+
+        expect(result.result.version).toBe(13);
+        expect(result.result.meta.relations).toEqual({ series, relatedWorks: [{ type: 'mainStory', id: 'manga' }, { type: 'sequel', id: 'next' }] });
+        expect({ ...result.result, version: 12, meta: { ...result.result.meta, relations: legacy.meta.relations } }).toEqual(legacy);
     });
 
     it('selects the most recently published feed from the RSS list', () => {
