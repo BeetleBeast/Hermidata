@@ -64,8 +64,9 @@ export class HermidataModel implements Hermidata {
         }, undefined);
     }
     // -- private methods --
+    /** Takes over a deep copy: the source is often the shared cache, which the popup's edits must not reach */
     private Replace(hermidata: Hermidata) {
-        Object.assign(this, new HermidataModel(hermidata));
+        Object.assign(this, new HermidataModel(structuredClone(hermidata)));
     }
     private CalculateHermidataVersion(): number {
         const Hermidata = this.toJSON();

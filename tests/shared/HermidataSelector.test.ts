@@ -65,6 +65,21 @@ describe('HermidataModel.SetPast', () => {
         ]);
     });
 
+    it('leaves the saved item untouched, as the RSS view shares it', async () => {
+        const saved = createHermidata(5);
+        const savedUrl = saved.GetUrl();
+
+        const current = createHermidata(12);
+        current.SetUrl('https://example.com/series');
+        const past = new PastHermidata(current);
+        vi.spyOn(past, 'init').mockResolvedValue(saved.toJSON());
+        await current.SetPast(past);
+
+        expect(current.GetUrl()).toBe('https://example.com/series');
+        expect(saved.GetUrl()).toBe(savedUrl);
+        expect(saved.GetChapter()).toBe(5);
+    });
+
     it('does not replace existing read history with the active tab chapter', async () => {
         const saved = createHermidata(5, [
             { chapter: 4, at: '2025-01-01T00:00:00Z' },
