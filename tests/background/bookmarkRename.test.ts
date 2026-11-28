@@ -13,6 +13,7 @@ vi.mock("../../scripts/shared/db/Storage", () => ({
     getAllHermidata: vi.fn(async () => Object.fromEntries(store.items.map((item: any) => [item.id, item]))),
 }));
 vi.mock("../../scripts/shared/utils/BrowserCompat", () => ({
+    browserApi: undefined,
     ext: {
         bookmarks: {
             getTree: (cb: (nodes: unknown[]) => void) => cb([{ id: "0", title: "", children: [] }]),
@@ -32,8 +33,6 @@ vi.mock("../../scripts/background/tabs", () => ({ updateIcon: vi.fn() }));
 vi.mock("../../scripts/settings/build/FolderMapping", () => ({ FolderMapping: {} }));
 
 import { countBookmarkRenames, renameBookmarks } from "../../scripts/background/bookmarks";
-
-vi.stubGlobal("browser", undefined);
 
 const FORMATS = [
     "{title} (ch. {chapter})",
