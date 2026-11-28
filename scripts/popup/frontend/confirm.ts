@@ -96,7 +96,11 @@ export function customPrompt(msg: string, options: Partial<Omit<DialogOptionsInp
     });
 }
 
-export function customConfirm(msg: string, options: Partial<Omit<DialogOptionsInput<boolean>, 'onResolve' | 'message'>> = {}): Promise<boolean> {
+/**
+ * Asks yes or no. A string message is shown as plain text ( line breaks kept ), never parsed as HTML, so titles
+ * from pages and feeds are safe to put in it. For more structure, build the nodes and pass them instead.
+ */
+export function customConfirm(msg: string | Node, options: Partial<Omit<DialogOptionsInput<boolean>, 'onResolve' | 'message'>> = {}): Promise<boolean> {
     const defaultEl = getDefaultElements();
     const elOptions = {
         container: options.elements?.container ?? defaultEl.container,
@@ -129,7 +133,8 @@ interface DialogOptions<T> {
     elements: DialogElements;
     accept: string;
     reject: string;
-    message: string;
+    /** shown as text ( a string ) or as is ( nodes built by the caller ): never parsed as HTML */
+    message: string | Node;
     defaultValue?: string;
     contentDirection?: 'vertical' | 'horizontal';
     onResolve: (accepted: DialogResult) => T;
@@ -209,12 +214,13 @@ export function createDialog<T>(opts: DialogOptionsInput<T>): Promise<T> {
             resolve(onResolve({ accepted: false}));
         };
 
-        btn1.innerHTML = opts.accept ?? "Save";
-        btn2.innerHTML = opts.reject ?? "Cancel";
+        btn1.textContent = opts.accept ?? "Save";
+        btn2.textContent = opts.reject ?? "Cancel";
 
         activateSetup(null, elements);
 
-        label.innerHTML = opts.message ?? '';
+        const message = opts.message ?? '';
+        label.replaceChildren(typeof message === 'string' ? message.trim() : message); // a string becomes one text node
         if (input) input.value = opts.defaultValue ?? '';
 
         btn1.addEventListener('click', onYes);

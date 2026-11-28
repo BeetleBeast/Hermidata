@@ -2,7 +2,7 @@ import { logConsoleError } from "../utils/ErrorMessage";
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { type Hermidata, type HermidataV11, type HermidataV12, type RawFeed, type Settings, type AnyNovelType, type AnyReadStatus, type HermidataV5 } from '../types';
 import { ext } from '../utils/BrowserCompat';
-import { pushToSync, removeFromSync } from '../sync/sync.engine';
+import { pushToSync, removeFromSync } from '../sync/syncClient';
 import { HermidataMigration } from '../migration/Hermidata';
 import { defaultSettings, HERMIDATA_VERSION } from '../constants';
 import type { AnyHermidataVersion, HermidataV1, HermidataV2, HermidataV3, HermidataV4, HermidataV6, HermidataV7, HermidataV8, HermidataV9 } from '../types/oldVersions';
@@ -124,12 +124,20 @@ export async function getHermidataByKey(key: string): Promise<Hermidata | null> 
     }
 }
 
-/** Get all entries as a Record keyed by id — matches your existing usage pattern */
+/**
+ * Get all entries as a Record keyed by id. Throws when the read fails, so a failed read is never mistaken
+ * for an empty library. Use this wherever the result decides what to write, delete or publish.
+ */
+export async function readAllHermidata(): Promise<Record<string, Hermidata>> {
+    const db = await getDb();
+    const all = await db.getAll('hermidata');
+    return Object.fromEntries(all.map(h => [h.id, h]));
+}
+
+/** Get all entries as a Record keyed by id. A failed read is logged and gives {}: fine for display, see readAllHermidata */
 export async function getAllHermidata(): Promise<Record<string, Hermidata>> {
     try {
-        const db = await getDb();
-        const all = await db.getAll('hermidata');
-        return Object.fromEntries(all.map(h => [h.id, h]));
+        return await readAllHermidata();
     } catch (err) {
         logConsoleError('[DB] getAllHermidata:', err);
         return {};
@@ -464,7 +472,7 @@ export async function migrateHermidataToLatest(_allHermidata?: Record<string, He
     console.log(`[DB] Starting migration of Hermidata to latest (V${HERMIDATA_VERSION})...`);
 
     
-    const allHermidata = _allHermidata ?? await getAllHermidata();
+    const allHermidata = _allHermidata ?? await readAllHermidata(); // a failed read must not mark the migration as done
     const entries: Hermidata[] = [];
     let failCount: number = 0;
 

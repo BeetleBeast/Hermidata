@@ -35,7 +35,7 @@ vi.mock('../../scripts/background/auth', () => ({ getToken: vi.fn() }));
 vi.mock('../../scripts/background/bookmarks', () => ({ updateCurrentBookmarkAndIcon: vi.fn(), writeToBookmarks: vi.fn() }));
 vi.mock('../../scripts/background/sheets', () => ({ writeToSheet: vi.fn() }));
 vi.mock('../../scripts/background/altTitles', () => ({ scheduleAltTitleLookup: vi.fn(), storedKeyOf: vi.fn() }));
-vi.mock('../../scripts/shared/sync/sync.engine', () => ({ pushToSync: vi.fn(), removeFromSync: vi.fn() }));
+vi.mock('../../scripts/shared/sync/syncClient', () => ({ pushToSync: vi.fn(), removeFromSync: vi.fn() }));
 vi.mock('../../scripts/shared/sync/syncAlarms', () => ({ backgroundAlarms: vi.fn(() => undefined) }));
 vi.mock('../../scripts/shared/utils/BrowserCompat', () => ({
     ext: { storage: { local: { get: vi.fn(async (key: string) => ({ [key]: store.local[key] })), set: vi.fn(async (values: Record<string, unknown>) => { Object.assign(store.local, values); }) }, onChanged: { addListener: vi.fn() } }, runtime: { sendMessage: vi.fn(async () => {}), getURL: vi.fn((path: string) => `chrome-extension://test/${path}`) } },

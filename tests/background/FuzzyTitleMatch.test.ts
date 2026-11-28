@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 
-vi.mock('../../scripts/background/bookmarks', () => ({ findNestedFolder: vi.fn(), getBookmarkChildren: vi.fn() }));
+vi.mock('../../scripts/background/bookmarks', () => ({ findNestedFolder: vi.fn(), getBookmarkChildren: vi.fn(), getFolderRootId: vi.fn(() => '2') }));
 vi.mock('../../scripts/background/state', () => ({ setState: {}, settingsCashed: null }));
 vi.mock('../../scripts/shared/db/Storage', () => ({ getSettings: vi.fn() }));
 

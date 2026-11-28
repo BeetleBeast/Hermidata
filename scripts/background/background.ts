@@ -3,10 +3,11 @@ import { initMessaging, initInstalled } from './messaging'
 import { initContextMenus } from './contextMenus'
 import { initFeedListeners, initFeeds } from './feeds'
 import { initRssCache } from './rssCache'
-import { initSync } from '../shared/sync/sync.engine'
+import { initSync, initSyncOwner } from '../shared/sync/sync.engine'
 import { initSyncAlarmListener } from '../shared/sync/syncAlarms'
 import { migrationSteps } from '../shared/migration'
-import { getAllHermidata } from '../shared/db/Storage'
+import { readAllHermidata } from '../shared/db/db'
+import { logConsoleError } from '../shared/utils/ErrorMessage'
 import { scheduleCull } from './culling'
 import { initShortcuts } from './shortcuts'
 import { initBackfillAlarm, resumeBackfill } from './altTitleBackfill'
@@ -37,6 +38,7 @@ import { initMangaUpdatesFeedAlarm, kickMangaUpdatesFeeds } from './mangaUpdates
 */
 
 // Phase 1: synchronous, first tick. Listeners only, no awaits.
+initSyncOwner(); // first: every library write from here on reports to this engine
 initShortcuts();
 initTabs();
 initMessaging();
@@ -55,8 +57,9 @@ initFeedListeners();
         initRssCache();
         initFeeds();
         initSync();
-        const cached = await getAllHermidata();
-        scheduleCull(() => cached);
+        // the cull deletes feeds no item uses: on a failed read every feed would look unused
+        const cached = await readAllHermidata().catch(err => { logConsoleError('[Hermidata] library read failed, feed cull skipped', err); return null; });
+        if (cached) scheduleCull(() => cached);
         markReady();
         void resumeBackfill(); // an alt-title backfill that the browser interrupted
         void kickMangaUpdatesFeeds(); // MangaUpdates links the browser interrupted ( Firefox keeps no alarms over a restart )

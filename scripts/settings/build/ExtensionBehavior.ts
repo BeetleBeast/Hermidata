@@ -515,9 +515,8 @@ export class ExtensionBehavior extends Build {
 
         const items = `${count} saved item${count === 1 ? '' : 's'}`;
         const minutes = backfillMinutes(count);
-        // the dialog renders HTML: this text holds only a number and fixed words
         const confirmed = await customConfirm(
-            `Look up alt titles for ${items} now?<br>` +
+            `Look up alt titles for ${items} now?\n` +
             `Only each title is sent to AniList and MangaUpdates. It takes about ${minutes} minute${minutes === 1 ? '' : 's'} and runs in the background.`,
             { accept: 'Look up now', reject: 'Later' }
         );

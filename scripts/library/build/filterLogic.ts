@@ -124,6 +124,11 @@ export class FilterLogic extends Sort {
         markAsCombobox(this.AuthorSearchInput, document.querySelector<HTMLElement>('#Author-filter-suggestions'));
         // ChapterCompletionFilter
         this.ChapterCompletionFilter?.addEventListener('input', (e) => this.applyChapterCompletionFilter(e));
+        // Hide autocomplete when clicking elsewhere ( once: adding it from the keydown handler stacked one per key press )
+        document.addEventListener('click', (e) => {
+            const target = e.target as Node;
+            if (target !== searchInput && !autocompleteContainer.contains(target)) autocompleteContainer.innerHTML = '';
+        });
     }
     private updateSuggestions() {
         this.autocompleteContainer?.addEventListener('mouseover', (e) => {
@@ -268,7 +273,6 @@ export class FilterLogic extends Sort {
         const checkboxesWithLabels = parent_section.querySelectorAll<HTMLDivElement>(".filter-item-list");
     
         for (const cbWithLabel of checkboxesWithLabels) {
-            cbWithLabel.removeEventListener("click", () => this.eventOnClick(cbWithLabel, filters));
             cbWithLabel.addEventListener("click", () => this.eventOnClick(cbWithLabel, filters));
             const checkbox = cbWithLabel.querySelector<HTMLDivElement>('.custom-checkbox');
             if (checkbox) makeTriStateOption(cbWithLabel, checkbox, checkbox.dataset.value ?? cbWithLabel.textContent?.trim() ?? '');
@@ -679,14 +683,6 @@ export class FilterLogic extends Sort {
                 this.applySearchSelection(searchInput, suggestionBox, chosen);
             }
         }
-
-        // Hide autocomplete when clicking elsewhere
-        document.addEventListener('click', (e) => {
-            const target = e.target as HTMLInputElement;
-            if (target !== searchInput && !suggestionBox.contains(target)) {
-                suggestionBox.innerHTML = '';
-            }
-        });
     }
     private updateHighlightedSuggestion(items: NodeListOf<HTMLDivElement>, selectedIndex: number) {
         items.forEach((el, i) => {

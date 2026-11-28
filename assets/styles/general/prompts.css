@@ -58,6 +58,7 @@
     color: var(--text);
     text-align: center;
 	word-wrap: unset;
+    white-space: pre-line; /* messages are plain text: their line breaks are the layout */
     gap: 10px;
 }
 .genericPromptBtns {

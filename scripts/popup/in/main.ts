@@ -7,7 +7,7 @@ import { getElement, setElement } from '../../shared/utils/Selection';
 import { PastHermidata } from '../core/Past';
 import { RSS } from '../../rss/main';
 import { dbAccess } from '../../shared/db/Storage';
-import { checkSyncQuota } from '../../shared/sync/sync.engine';
+import { checkSyncQuota } from '../../shared/sync/syncQuota';
 import { TagsSystem } from '../core/Tags';
 import { HermidataMigration } from '../../shared/migration/Hermidata';
 import { BookmarkController } from '../core/Bookmark';
@@ -478,8 +478,7 @@ class HermidataController {
     private confirmNovelTypeChange(older: Hermidata, newType: AnyNovelType): Promise<boolean> {
         const msg = `
             The Novel Type of "${older.title}" will changed from "${older.novelType}" to "${newType}".
-            <br>
-            <br>
+
             Are you sure you want to change it?
         `;
         return customConfirm(msg, { accept: "Change", reject: "Cancel"});

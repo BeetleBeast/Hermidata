@@ -12,6 +12,18 @@ import { bookmarkTitleValues, extractTitleFromFormattedBookmark, formatBookmarkT
 
 let currentRequestId = 0;
 
+/**
+ * Where Hermidata keeps its mapped folders, by the browser's fixed id: folder titles are translated
+ * ( "Other bookmarks" is "Weitere Lesezeichen" in German ), the ids are not.
+ */
+const FOLDER_ROOT_ID = { firefox: "menu________", chromium: "2" } as const; // Bookmarks Menu, Other bookmarks
+
+/** The id of the folder that holds the folder mapping: the same one for saving, renaming and the fuzzy search */
+export function getFolderRootId(): string {
+    const isFirefox = browserApi !== undefined && navigator.userAgent.includes("Firefox");
+    return isFirefox ? FOLDER_ROOT_ID.firefox : FOLDER_ROOT_ID.chromium;
+}
+
 export async function writeToBookmarks(hermidata: HermidataModel) {
     const bookmarks = await searchValidBookmarks();
     const titleFormat = (await getSettings()).ExtensionBehaviour.BookmarkTitleFormat;
@@ -66,11 +78,8 @@ async function addBookmark(hermidata: HermidataModel) {
         console.warn("Folder mapping not found for", hermidata.novelType, hermidata.GetReadStatus());
         return;
     }
-    const BrowserRoot = browserApi !== undefined && navigator.userAgent.includes("Firefox")
-    ? "Bookmarks Menu"
-    : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
-    const finalFolderId: string = await createNestedFolders(pathSegments, BrowserRoot);
+    const finalFolderId: string = await createNestedFolders(pathSegments);
     const bookmarkTitle = formatBookmarkTitle(settings.ExtensionBehaviour.BookmarkTitleFormat, bookmarkTitleValues(hermidata));
     const bookmark = await createBookmark({
         parentId: finalFolderId,
@@ -92,12 +101,9 @@ async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplac
         return;
     }
 
-    const BrowserRoot = browserApi !== undefined && navigator.userAgent.includes("Firefox")
-    ? "Bookmarks Menu"
-    : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
 
-    const finalFolderId: string = await createNestedFolders(pathSegments, BrowserRoot);
+    const finalFolderId: string = await createNestedFolders(pathSegments);
     const freshBookmarks = await searchValidBookmarks();
     const bookmarkToUpdate = freshBookmarks.find(b => b.url === OldURL);
     const bookmarkToUpdateTest = freshBookmarks.find(b => b.id === OldID);
@@ -187,7 +193,6 @@ async function getTrashFolderId(): Promise<string | null> {
         ext.bookmarks.getTree((nodes) => {
             const trashNode = 
                 findNodeByTitle(nodes[0], "trash") ||
-                findNodeByTitle(nodes[0], "Other bookmarks") ||
                 findNodeByTitle(nodes[0], "bin") ||
                 findNodeByTitle(nodes[0], "Bin") ||
                 findNodeByTitle(nodes[0], "deleted") ||
@@ -209,19 +214,12 @@ function findNodeByTitle(node: chrome.bookmarks.BookmarkTreeNode, title: string)
     }
     return null;
 }
-async function getRootByTitle(title: string) {
+/** The top-level folder with this title, or the tree root. For paths the user typed, which start at a folder's title */
+export async function getRootByTitle(title: string): Promise<string> {
     const trees: chrome.bookmarks.BookmarkTreeNode[] = await new Promise((resolve) => chrome.bookmarks.getTree(resolve));
-    let rootIdList = [];
     const rootNode = trees[0];
-    rootIdList.push(rootNode.id);
-
-    for (const child of rootNode.children || []) {
-        if (child.title === title && !child.url) {
-            rootIdList.push(child.id)
-            return rootIdList.at(-1);
-        }
-    }
-    return rootNode.id;
+    const folder = rootNode.children?.find(child => child.title === title && !child.url);
+    return folder?.id ?? rootNode.id;
 }
 async function searchBookmarks(query: object | string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
     if (browserApi?.bookmarks?.search) {
@@ -361,20 +359,15 @@ async function getHermidataColour(url?: string): Promise<string | null> {
 }
 
 // Main entry point
-export async function createNestedFolders(pathSegments: string[], rootTitle: string): Promise<string> {
-    const rootId = await getRootByTitle(rootTitle);
-    if (!rootId) throw new Error(`Root folder "${rootTitle}" not found`);
+export async function createNestedFolders(pathSegments: string[]): Promise<string> {
+    const rootId = getFolderRootId();
     const existingFolder = await findFolderPath(rootId, pathSegments);
     if (existingFolder) return existingFolder.id;
-    debugger;
     return createMissingFolders(rootId, pathSegments);
 
 }
 
-export async function findNestedFolder(pathSegments: string[], rootTitle: string): Promise<string | null> {
-    const rootId = await getRootByTitle(rootTitle);
-    if (!rootId) return null;
-    
+export async function findNestedFolder(pathSegments: string[], rootId: string): Promise<string | null> {
     const existingFolder = await findFolderPath(rootId, pathSegments);
     return existingFolder?.id ?? null;
 }
