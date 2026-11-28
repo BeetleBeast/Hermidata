@@ -18,14 +18,20 @@
     border: 1px solid var(--border);
 }
 .context-menu-item-container {
+    position: relative;
     width: 100%;
 }
 .menu-item {
+    position: relative;
     padding: 8px 12px;
     padding-left: 25px;
     cursor: pointer;
     -webkit-user-select: none;
     user-select: none;
+}
+
+.menu-item[aria-haspopup] {
+    padding-right: 30px;
 }
 
 .menu-item[data-danger= "true"]:hover {
@@ -44,4 +50,10 @@
     width: 100%;
 }
 
-
+/* the > / < at the end of an item that opens a submenu */
+.sub-menu-direction {
+    position: absolute;
+    right: 0;
+    padding: 0 10px;
+    pointer-events: none;
+}

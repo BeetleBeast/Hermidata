@@ -18,12 +18,15 @@ const store = vi.hoisted(() => ({ items: {} as Record<string, Hermidata>, rawFee
 
 vi.mock('../../scripts/shared/db/Storage', () => ({
     getAllHermidata: vi.fn(async () => store.items),
-    getAllRawFeeds: vi.fn(async () => store.rawFeeds),
+    // the RSS build classes reach storage through dbAccess ( messages to the background ): answered from the store
+    dbAccess: class {
+        getAllRawFeeds = vi.fn(async () => store.rawFeeds);
+        removeRawFeedByUrl = vi.fn();
+        getSettings = vi.fn(async () => ({ ExtensionBehaviour: { AutoSubscribe: { EnableAutoSubscribe: true, HermidataNotLinkedToRSS: {} } } }));
+    },
     getHermidataViaKey: vi.fn(async (key: string) => store.items[key] ?? null),
     saveHermidata: vi.fn(),
-    removeRawFeedByUrl: vi.fn(),
-    setSettings: vi.fn(),
-    getSettings: vi.fn(async () => ({ ExtensionBehaviour: { AutoSubscribe: { EnableAutoSubscribe: true, HermidataNotLinkedToRSS: {} } } })),
+    getSettings: vi.fn(async () => ({})),
 }));
 
 vi.mock('../../scripts/popup/frontend/confirm', () => ({

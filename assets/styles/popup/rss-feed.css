@@ -922,15 +922,25 @@
 
 
 
+/* a submenu sits beside its item ( inside it, so hovering it keeps the item hovered ); script flips it to the left when the right has no room */
 .sub-menu-container {
     display: none;
     position: absolute;
-    top: 10%;
+    top: 0;
+    left: 100%;
+    z-index: 1; /* above the items that follow its own item, which are positioned too and would paint over it */
+    width: max-content;
+    min-width: 140px;
+    padding: 4px 0;
     background-color: var(--surface);
-    width: 50%;
-    height: fit-content;
+    color: var(--text);
     border: 1px solid var(--border);
     border-radius: 8px;
+    box-shadow: 0 2px 8px var(--shadow-soft);
+}
+.sub-menu-container.opens-left {
+    left: auto;
+    right: 100%;
 }
 
 /* Notification section: count in the header and the empty state */
