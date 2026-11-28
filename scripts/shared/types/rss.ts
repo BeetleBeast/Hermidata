@@ -14,7 +14,8 @@ export type MenuOption = {
 }
 export type subMenu = {
     label: string;
-    options: MenuOption[];
+    /** Entries of the submenu, which can hold submenus of its own */
+    options: MenuOptions[];
 }
 
 export type MenuOptions = MenuOption | separator | subMenu;

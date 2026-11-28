@@ -335,11 +335,12 @@ export function simpleHash(str: string) {
  * @param {string} path - the url
  * @param {string} location - where to open the url: inside a newTab, newWindow or the sameTab
  * @param {number} scrollPositionY - the y position to scroll to
+ * @param {boolean} inBrowserTab - the sameTab is the browser's active tab, not this page: for a popup, which can't navigate itself
  * 
  * An extension page opened in the sameTab ( e.g. Library -> Overview ) is navigated by the page itself instead of `tabs.update`:
  * browsers only animate a cross-document view transition ( `general/transitions.css` ) for navigations the page started.
  * */
-export async function openLink(path: string, location: 'newTab' | 'newWindow' | 'sameTab', scrollPositionY: number = 0): Promise<void> {
+export async function openLink(path: string, location: 'newTab' | 'newWindow' | 'sameTab', scrollPositionY: number = 0, inBrowserTab: boolean = false): Promise<void> {
     const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
     const isExternal = /^[a-z][a-z0-9+.-]*:\/\//i.test(path); // has a scheme, e.g. https://, http://
 
@@ -348,7 +349,7 @@ export async function openLink(path: string, location: 'newTab' | 'newWindow' | 
     if (isFirefox && location === 'newTab') return openInSameContainer(url, scrollPositionY);
 
     // an external page ( or a scroll position to restore ) is the browser's active tab to handle, this page can't navigate it
-    if (location === 'sameTab' && !isExternal && scrollPositionY === 0) return window.location.assign(url);
+    if (location === 'sameTab' && !isExternal && scrollPositionY === 0 && !inBrowserTab) return window.location.assign(url);
 
     const tab = await createTabForLocation(url, location);
     if (tab) openInSpecificYPosition(tab, scrollPositionY);
