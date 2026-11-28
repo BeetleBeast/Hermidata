@@ -109,75 +109,6 @@ export async function getDb(): Promise<IDBPDatabase<HermidataSchema>> {
     return _db;
 }
 
-async function isDbEmpty(): Promise<boolean> {
-    const db = await getDb();
-    const count = await db.count('hermidata');
-    return count === 0;
-}
-
-async function loadBackup(localPath: string): Promise<any> {
-    const url = chrome.runtime.getURL(localPath);
-    const res = await fetch(url);
-    return res.json();
-}
-
-async function restoreBackup(): Promise<void> {
-    const db = await getDb();
-    const backup: Record<string, Hermidata> = await loadBackup('../../../output/Hermidata_cleaned(12).json');
-
-    console.log('[DB] Restoring backup...');
-
-    const entries: Hermidata[] = Object.entries(backup).map(
-        ([id, value]) => ({
-            ...value,
-            id: value.id ?? id,
-        })
-    );
-    console.info('[DB] code has been out-commented for security reasons');
-    // 
-    // clear hermidata
-    // await db.clear('hermidata');
-
-    // set hermidata backup
-    // await putAllHermidata(entries);
-
-    
-    // set RSS feed backup
-    // const backup: Record<string, RawFeed> = await loadBackup('../../../output/RSS_Feeds_cleaned.json');
-    //const entries: RawFeed[] = Object.entries(backup).map( ([url, value]) => ({ ...value, url: value.url ?? url, }) )
-    //await putAllRawFeeds(entries)
-
-
-    // set default settings
-    // await putSettings( defaultSettings );
-
-    // mark bootstrap done
-    await db.put('settings', true as any, 'bootstrapped_v2');
-
-    console.log(`[DB] Restored ${entries.length} entries`);
-}
-
-
-export async function initializeDatabase(): Promise<void> {
-    const db = await getDb();
-    
-    const bootstrapped = await db.get('settings', 'bootstrapped_v2');
-
-    if (bootstrapped) {
-        console.log('[DB] Already initialized');
-        return;
-    }
-
-    const empty = await isDbEmpty();
-
-    if (empty) {
-        console.log('[DB] Empty DB → restoring backup');
-        await restoreBackup();
-    } else {
-        console.log('[DB] DB has data → skipping restore');
-    }
-}
-
 // ============================================================
 // Hermidata — CRUD
 // ============================================================
@@ -392,7 +323,7 @@ export async function dbSaveAllImages(blobs: Record<string, Blob>): Promise<void
         const db = await getDb();
         const tx = db.transaction('images', 'readwrite');
         await Promise.all([
-            ...ids.map((id, i) => tx.store.put(blobs[i], id)),
+            ...ids.map(id => tx.store.put(blobs[id], id)),
             tx.done,
         ]);
     } catch (err) {
@@ -501,7 +432,6 @@ export async function migrateFromChromeStorage(): Promise<void> {
     await new Promise<void>((resolve) => {
         ext.storage.sync.get(null, async (syncData) => {
             const entries: Hermidata[] = [];
-            const settings = defaultSettings ?? syncData['Settings'] as Settings;
 
             for (const [key, value] of Object.entries(syncData)) {
                 if (key === 'Settings' || key === 'spreadsheetUrl') continue;
@@ -512,7 +442,8 @@ export async function migrateFromChromeStorage(): Promise<void> {
             }
 
             if (entries.length) await putAllHermidata(entries);
-            if (settings) await putSettings(settings);
+            // migrateSettings runs first and may already have stored the user's migrated settings: only fill an empty slot
+            if (!(await getSettings())) await putSettings((syncData['Settings'] as Settings | undefined) ?? defaultSettings);
 
             // Mark as done
             await db.put('settings', true as unknown as Settings, 'migrated_v1');

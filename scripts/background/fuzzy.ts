@@ -6,11 +6,10 @@ import type { Settings } from "../shared/types";
 import { findNestedFolder, getBookmarkChildren } from "./bookmarks";
 import { setState, settingsCashed } from "./state";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
+import { browserApi } from "../shared/utils/BrowserCompat";
 import type { FuzzyBookmarkMatches, FuzzyHermidataMatches, FuzzyMatchResult } from "../shared/types/rss";
 
 const fuzzyCache = new Map();
-
-declare const browser: typeof chrome | undefined;
 
 /**
  * Return the bookmark after a fuzzy search instead of a direct search
@@ -18,7 +17,7 @@ declare const browser: typeof chrome | undefined;
  * @returns 
  */
 async function hasRelatedBookmark(currentTab: chrome.tabs.Tab): Promise<FuzzyMatchResult>  {
-    const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox")
+    const BrowserRoot = browserApi !== undefined && navigator.userAgent.includes("Firefox")
         ? "Bookmarks Menu"
         : "Bookmarks";
     const settings = settingsCashed ?? await getSettings();
@@ -89,25 +88,29 @@ async function detectFuzzyHermidata(currentTab: chrome.tabs.Tab, threshold = 0.8
         const index = element;
 
         const hermidata = new HermidataModel(allHermidata[index]);
-        let score = null
-            for (let index = 0; index < hermidata?.meta?.altTitles.length; index++) {
-                score = CalcDiff( hermidata?.meta?.altTitles?.[index] || hermidata.title, trimmedTitle);
-                if (score >= threshold) {
-                    fuzzyMatches.push({
-                        bookmarkTitle: hermidata.title,
-                        fuzzySearchUrl: hermidata.GetUrl(),
-                        currentUrl: currentTab.url,
-                        chapter: hermidata.GetChapter() || Number.NaN,
-                        similarity: score
-                    });
-                    console.warn(`[Fuzzy Match ${score.toFixed(2)}] "${hermidata.title}" ↔ "${trimmedTitle}"`);
-                }
-            }
+        const score = bestTitleSimilarity(hermidata, trimmedTitle);
+        if (score >= threshold) {
+            fuzzyMatches.push({
+                bookmarkTitle: hermidata.title,
+                fuzzySearchUrl: hermidata.GetUrl(),
+                currentUrl: currentTab.url,
+                chapter: hermidata.GetChapter() || Number.NaN,
+                similarity: score
+            });
+            console.warn(`[Fuzzy Match ${score.toFixed(2)}] "${hermidata.title}" ↔ "${trimmedTitle}"`);
+        }
     }
 
     console.groupEnd();
     const hasValidFuzzyHermidata = fuzzyMatches.length > 0;
     return {hasValidFuzzyHermidata, fuzzyMatches};
+}
+/** The highest similarity between the tab title and the item's title or any of its alt titles */
+export function bestTitleSimilarity(hermidata: HermidataModel, trimmedTitle: string): number {
+    const titles = new Set([hermidata.title, ...(hermidata.meta?.altTitles ?? [])].filter(Boolean));
+    let best = 0;
+    for (const title of titles) best = Math.max(best, CalcDiff(title, trimmedTitle));
+    return best;
 }
 async function detectFuzzyBookmark(currentTab: chrome.tabs.Tab, folderPaths: string[], BrowserRoot: string, threshold = 0.8): 
     Promise<{hasValidFuzzyBookmark: boolean, fuzzyMatches: FuzzyBookmarkMatches[]}> {

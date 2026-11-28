@@ -1,4 +1,4 @@
-import { ext } from "../../shared/utils/BrowserCompat";
+import { browserApi, ext } from "../../shared/utils/BrowserCompat";
 import type { AnyNovelType, AnyReadStatus, Hermidata, RawFeed } from "../../shared/types";
 import type { quickBackup, Settings } from "../../shared/types/settings"
 import { getElement } from "../../shared/utils/Selection";
@@ -9,8 +9,6 @@ import { levenshteinDistance } from "../../popup/core/Past";
 import { generateHermidataHash, normalizeTag, TrimTitle } from "../../shared/utils/StringOutput";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
 import { ErrorMessage } from "../../shared/utils/ErrorMessage";
-
-declare const browser: typeof chrome | undefined;
 
 export class ImportsAndExports extends Build {
 
@@ -884,7 +882,7 @@ export class ImportsAndExports extends Build {
         return this.saveAllHermidatas(hermidatas);
     }
     private getBrowserRoot() {
-        const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox") ? "Bookmarks Menu" : "Bookmarks";
+        const BrowserRoot = browserApi !== undefined && navigator.userAgent.includes("Firefox") ? "Bookmarks Menu" : "Bookmarks";
         return BrowserRoot;
     }
 

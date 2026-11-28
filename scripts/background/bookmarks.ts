@@ -1,4 +1,4 @@
-import { ext } from "../shared/utils/BrowserCompat";
+import { browserApi, ext } from "../shared/utils/BrowserCompat";
 import type { FuzzyMatchResult, InputArraySheetType, ShouldReplaceOrBlockReturn, ShouldReplaceReturn } from "../shared/types/index";
 import { getAllHermidata, getSettings } from "../shared/db/Storage";
 import { hasRelatedBookmarkCached } from "./fuzzy";
@@ -9,8 +9,6 @@ import { FolderMapping } from "../settings/build/FolderMapping";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
 import { SHEET_FIRST_DATA_ROW } from "../shared/sheets/sheetConfig";
 import { bookmarkTitleValues, extractTitleFromFormattedBookmark, formatBookmarkTitle } from "../shared/utils/BookmarkTitle";
-
-declare const browser: typeof chrome | undefined;
 
 let currentRequestId = 0;
 
@@ -68,7 +66,7 @@ async function addBookmark(hermidata: HermidataModel) {
         console.warn("Folder mapping not found for", hermidata.novelType, hermidata.GetReadStatus());
         return;
     }
-    const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox")
+    const BrowserRoot = browserApi !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
@@ -94,7 +92,7 @@ async function replaceBookmark(hermidata: HermidataModel, decision: ShouldReplac
         return;
     }
 
-    const BrowserRoot = browser !== undefined && navigator.userAgent.includes("Firefox")
+    const BrowserRoot = browserApi !== undefined && navigator.userAgent.includes("Firefox")
     ? "Bookmarks Menu"
     : "Other bookmarks";
     const pathSegments = folderMapPath.split('/').filter(Boolean);
@@ -226,8 +224,8 @@ async function getRootByTitle(title: string) {
     return rootNode.id;
 }
 async function searchBookmarks(query: object | string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
-    if (browser?.bookmarks?.search) {
-        const Results = await browser.bookmarks?.search(query);
+    if (browserApi?.bookmarks?.search) {
+        const Results = await browserApi.bookmarks?.search(query);
         if (Results) return Results;
     }
     return await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve, reject) => {
@@ -238,8 +236,8 @@ async function searchBookmarks(query: object | string): Promise<chrome.bookmarks
     });
 }
 function updateBookmark(id: string, changes: Partial<chrome.bookmarks.BookmarkTreeNode>): Promise<chrome.bookmarks.BookmarkTreeNode> {
-    if (browser?.bookmarks?.update) {
-        return browser.bookmarks.update(id, changes);
+    if (browserApi?.bookmarks?.update) {
+        return browserApi.bookmarks.update(id, changes);
     }
     return new Promise((resolve, reject) => {
         ext.bookmarks.update(id, changes, (result) => {
@@ -249,8 +247,8 @@ function updateBookmark(id: string, changes: Partial<chrome.bookmarks.BookmarkTr
     });
 }
 function moveBookmark(id: string, parentId: string) {
-    if (browser?.bookmarks?.move) {
-        return browser.bookmarks.move(id, { parentId });
+    if (browserApi?.bookmarks?.move) {
+        return browserApi.bookmarks.move(id, { parentId });
     }
     return new Promise((resolve, reject) => {
         ext.bookmarks.move(id, { parentId }, (result) => {
@@ -260,8 +258,8 @@ function moveBookmark(id: string, parentId: string) {
     });
 }
 function createBookmark(bookmarkObj: Partial<chrome.bookmarks.BookmarkTreeNode>): Promise<chrome.bookmarks.BookmarkTreeNode> {
-    if (browser?.bookmarks?.create) {
-        return browser.bookmarks.create(bookmarkObj);
+    if (browserApi?.bookmarks?.create) {
+        return browserApi.bookmarks.create(bookmarkObj);
     }
     return new Promise((resolve, reject) => {
         ext.bookmarks.create(bookmarkObj, (result) => {
@@ -271,8 +269,8 @@ function createBookmark(bookmarkObj: Partial<chrome.bookmarks.BookmarkTreeNode>)
     });
 }
 export function getBookmarkChildren(parentId = "2"): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
-    if (browser?.bookmarks?.getChildren) {
-        return browser.bookmarks.getChildren(parentId);
+    if (browserApi?.bookmarks?.getChildren) {
+        return browserApi.bookmarks.getChildren(parentId);
     }
     return new Promise((resolve, reject) => {
         ext.bookmarks.getChildren(parentId, (children) => {

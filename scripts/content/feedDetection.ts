@@ -1,4 +1,5 @@
 import { logConsoleError } from "../shared/utils/ErrorMessage";
+import { ext } from "../shared/utils/BrowserCompat";
 type RawScrappedFeed = {
     title: string;
     url: string;
@@ -16,13 +17,6 @@ type RawScrapedItem  = {
     pubDate: Date;
     guid: string;
 };
-
-/// <reference types="firefox-webext-browser" />
-declare const browser: typeof chrome | typeof globalThis.browser
-
-
-export const ext: typeof chrome = (browser as typeof chrome) ?? chrome;
-
 
 export class FeedDetection {
 

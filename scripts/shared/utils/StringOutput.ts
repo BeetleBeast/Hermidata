@@ -1,7 +1,8 @@
+/// <reference types="firefox-webext-browser" />
 import type { PickedElementData } from '../types/rss';
 import type { AnyNovelType, Hermidata, RegexConfig, TrimmedTitle } from '../types';
 import { HermidataModel } from './HermidataSelector';
-import { ext } from './BrowserCompat';
+import { browserApi, ext } from './BrowserCompat';
 
 const CHAPTER_KEYWORDS = ['episode', 'chapter', 'chap', 'ch'] as const;
 const LOCALIZED_TITLE_KEYWORDS = ['chapitre', 'capitulo', 'kapitel', 'capitolo'] as const;
@@ -404,13 +405,15 @@ function openInSpecificYPosition(tab: browser.tabs.Tab | undefined, scrollPositi
 }
 /** Get the current tab's `cookieStoreId` and pass it straight to `tabs.create`:*/
 async function openInSameContainer(url: string, scrollPositionY: number): Promise<void> {
-    if (!browser) return; // shouldn't happen since caller already checked isFirefox, but keeps TS happy
+    // Containers (cookieStoreId) only exist in Firefox's own tab types
+    const firefoxTabs = browserApi?.tabs as unknown as typeof browser.tabs | undefined;
+    if (!firefoxTabs) return; // shouldn't happen since caller already checked isFirefox
 
-    const [currentTab] = await browser.tabs.query({ active: true, currentWindow: true });
+    const [currentTab] = await firefoxTabs.query({ active: true, currentWindow: true });
     
     const cookieStoreId = currentTab.cookieStoreId; // inherits the container
 
-    const tab = await browser.tabs.create({ url, cookieStoreId });
+    const tab = await firefoxTabs.create({ url, cookieStoreId });
     openInSpecificYPosition(tab, scrollPositionY);
 }
 
