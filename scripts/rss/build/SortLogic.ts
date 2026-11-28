@@ -3,6 +3,7 @@ import { getLastFilter, setLastFilter } from "../../shared/db/Storage";
 import { DEFAULT_SORT, REVERSED_SUFFIX, filterName } from "../../shared/constants";
 import { makeSortOption, makeTriStateOption } from "../../shared/utils/Accessibility";
 import { Sort } from "./Sort";
+import { renewListeners } from "../../shared/utils/Listeners";
 
 type RSSFilterOptionList = HTMLDivElement & { filterItems?: string[] };
 
@@ -20,11 +21,15 @@ export class SortLogic extends Sort {
         // One sort is always active; filters saved before that rule may hold none
         filters.sort ||= DEFAULT_SORT;
     
+        // The section outlives a reload, which runs this again: replace the last run's listeners, never add to them
+        const signal = renewListeners(parent_section, "rss-filters");
+
         // Keep setup steps separate: large menus render after opening; small menus are ready immediately.
-        this.attachPopoverListeners(parent_section, filters);
-        this.populateSmallFilterPopovers(parent_section, filters);
-        this.attachFilterOptionListener(parent_section, filters);
-        this.attachDialogControlListeners(parent_section, filters);
+        this.attachPopoverListeners(parent_section, filters, signal);
+        this.rebindPopulatedPopovers(parent_section, filters, signal);
+        this.populateSmallFilterPopovers(parent_section, filters, signal);
+        this.attachFilterOptionListener(parent_section, filters, signal);
+        this.attachDialogControlListeners(parent_section, filters, signal);
 
         // Restore the compact button labels independently of when each menu's options are rendered.
         for (const section of parent_section.querySelectorAll<HTMLElement>(".filter-section")) {
@@ -34,24 +39,33 @@ export class SortLogic extends Sort {
         this.applySavedFilters(filters);
     }
 
-    private attachPopoverListeners(parentSection: HTMLElement, filters: Filters): void {
+    private attachPopoverListeners(parentSection: HTMLElement, filters: Filters, signal: AbortSignal): void {
         const popovers = parentSection.querySelectorAll<HTMLElement>(".rss-filter-dialog");
         for (const popover of popovers) {
-            popover.addEventListener("toggle", event => this.handlePopoverToggle(popover, event, filters));
+            popover.addEventListener("toggle", event => this.handlePopoverToggle(popover, event, filters, signal), { signal });
         }
     }
 
-    private populateSmallFilterPopovers(parentSection: HTMLElement, filters: Filters): void {
+    /** A menu an earlier run already filled keeps its options; only its scroll listener is renewed */
+    private rebindPopulatedPopovers(parentSection: HTMLElement, filters: Filters, signal: AbortSignal): void {
+        for (const popover of parentSection.querySelectorAll<HTMLElement>(".rss-filter-dialog[data-populated]")) {
+            const list = popover.querySelector<HTMLDivElement>(".rss-filter-list");
+            const title = this.getSectionTitle(popover);
+            if (list && title) this.listenToListScroll(list, title, filters, signal);
+        }
+    }
+
+    private populateSmallFilterPopovers(parentSection: HTMLElement, filters: Filters, signal: AbortSignal): void {
         const popovers = parentSection.querySelectorAll<HTMLElement>(".rss-filter-dialog");
         for (const popover of popovers) {
             const list = popover.querySelector<RSSFilterOptionList>(".rss-filter-list");
-            if (list?.filterItems && list.filterItems.length <= 36) {
-                this.populateFilterPopover(popover, filters);
+            if (!popover.dataset.populated && list?.filterItems && list.filterItems.length <= 36) {
+                this.populateFilterPopover(popover, filters, signal);
             }
         }
     }
 
-    private attachFilterOptionListener(parentSection: HTMLElement, filters: Filters): void {
+    private attachFilterOptionListener(parentSection: HTMLElement, filters: Filters, signal: AbortSignal): void {
         // A single delegated listener also handles options appended later while scrolling.
         parentSection.addEventListener("click", event => {
             const target = event.target;
@@ -59,33 +73,33 @@ export class SortLogic extends Sort {
             const item = target.closest<HTMLElement>(".filter-item-list");
             const checkbox = item?.querySelector<HTMLDivElement>(".custom-checkbox");
             if (checkbox) this.eventOnClick(checkbox, filters);
-        });
+        }, { signal });
     }
 
-    private handlePopoverToggle(popover: HTMLElement, event: Event, filters: Filters): void {
+    private handlePopoverToggle(popover: HTMLElement, event: Event, filters: Filters, signal: AbortSignal): void {
         if ((event as ToggleEvent).newState !== "open" || popover.dataset.populated) return;
 
         // Yield one task so Chrome can paint the native popover before a large menu is built.
         window.setTimeout(() => {
             if (popover.matches(":popover-open") && !popover.dataset.populated) {
-                this.populateFilterPopover(popover, filters);
+                this.populateFilterPopover(popover, filters, signal);
             }
         }, 0);
     }
 
     /** Search inside a long list and clear a section's selection; both live in the popover */
-    private attachDialogControlListeners(parentSection: HTMLElement, filters: Filters): void {
+    private attachDialogControlListeners(parentSection: HTMLElement, filters: Filters, signal: AbortSignal): void {
         parentSection.addEventListener("input", event => {
             const input = event.target;
             if (!(input instanceof HTMLInputElement) || !input.matches(".rss-filter-search")) return;
             this.searchFilterList(input, filters);
-        });
+        }, { signal });
         parentSection.addEventListener("click", event => {
             const target = event.target;
             if (!(target instanceof Element)) return;
             const clear = target.closest<HTMLButtonElement>(".rss-filter-clear");
             if (clear) this.clearSection(clear, filters);
-        });
+        }, { signal });
     }
 
     private applySavedFilters(filters: Filters): void {
@@ -94,15 +108,18 @@ export class SortLogic extends Sort {
         this.applySortToNotification();
     }
 
-    private populateFilterPopover(popover: HTMLElement, filters: Filters): void {
+    private populateFilterPopover(popover: HTMLElement, filters: Filters, signal: AbortSignal): void {
         const list = popover.querySelector<HTMLDivElement>(".rss-filter-list");
-        const section = popover.closest<HTMLElement>(".filter-section");
-        const title = section?.querySelector(".filter-header-text")?.textContent?.trim();
+        const title = this.getSectionTitle(popover);
         if (!list || !title) return;
 
         this.appendFilterOptions(list, this.getListItems(list), title, filters);
-        list.addEventListener("scroll", () => this.handleFilterListScroll(list, title, filters));
+        this.listenToListScroll(list, title, filters, signal);
         popover.dataset.populated = "true";
+    }
+
+    private listenToListScroll(list: HTMLDivElement, title: string, filters: Filters, signal: AbortSignal): void {
+        list.addEventListener("scroll", () => this.handleFilterListScroll(list, title, filters), { signal });
     }
 
     /** The options the list currently offers: all of them, or those matching the popover's search */

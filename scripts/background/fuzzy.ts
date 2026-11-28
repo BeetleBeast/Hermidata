@@ -3,10 +3,9 @@ import { FolderMapping } from "../settings/build/FolderMapping";
 import { getChapterFromTitle, TrimTitle } from "../shared/utils/StringOutput";
 import { getSettings } from "../shared/db/Storage";
 import type { Settings } from "../shared/types";
-import { findNestedFolder, getBookmarkChildren } from "./bookmarks";
+import { findNestedFolder, getBookmarkChildren, getFolderRootId } from "./bookmarks";
 import { setState, settingsCashed } from "./state";
 import { HermidataModel } from "../shared/utils/HermidataSelector";
-import { browserApi } from "../shared/utils/BrowserCompat";
 import type { FuzzyBookmarkMatches, FuzzyHermidataMatches, FuzzyMatchResult } from "../shared/types/rss";
 
 const fuzzyCache = new Map();
@@ -17,9 +16,7 @@ const fuzzyCache = new Map();
  * @returns 
  */
 async function hasRelatedBookmark(currentTab: chrome.tabs.Tab): Promise<FuzzyMatchResult>  {
-    const BrowserRoot = browserApi !== undefined && navigator.userAgent.includes("Firefox")
-        ? "Bookmarks Menu"
-        : "Bookmarks";
+    const BrowserRoot = getFolderRootId(); // the folder addBookmark files into
     const settings = settingsCashed ?? await getSettings();
 
     if (settingsCashed === null) setState.settingsCashed(settings);

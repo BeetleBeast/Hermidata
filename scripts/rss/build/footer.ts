@@ -4,23 +4,31 @@ import { openLink } from "../../shared/utils/StringOutput";
 import { RssBuild } from "../build";
 import { clearNotifications, getHermidataNotification } from "../load";
 import { refreshNotificationSection } from "./feed";
+import { renewListeners } from "../../shared/utils/Listeners";
+
+/** One handler for the life of the page, so building the footer again never registers a second one */
+function showJustSynced(msg: { type?: string }): void {
+    if (msg?.type === "SYNC_COMPLETED") setElement("#lastSync", el => el.textContent = "Just synced");
+}
 
     
     
 export class Footer extends RssBuild {
 
     public makeFooterSection(): void {
-        
+        // every reload builds the footer again over the same buttons: replace their listeners, never add to them
+        const signal = renewListeners(Footer, "footer");
+
         // clear notification
-        this.ClearNotification();
+        this.ClearNotification(signal);
         // open RSS full page
-        this.openRSSPage();
+        this.openRSSPage(signal);
         // sync text & button
-        this.SyncTextAndButtonOfRSS();
+        this.SyncTextAndButtonOfRSS(signal);
         // manifest version
         this.setVersion();
     }
-    private ClearNotification(): void {
+    private ClearNotification(signal: AbortSignal): void {
         const clearNotification = getElement("#clear-notifications");
         if (!clearNotification) throw new Error('Element not found');
 
@@ -32,12 +40,12 @@ export class Footer extends RssBuild {
             rssNotificationContainer.querySelectorAll('.hermidata-item[data-is-notification-item="true"]').forEach(row => row.remove());
             refreshNotificationSection();
             await this.removeNotificationFromBackEnd(); // back-end
-        });
+        }, { signal });
     }
-    private openRSSPage(): void {
+    private openRSSPage(signal: AbortSignal): void {
         const LibraryButton = getElement(".library-btn");
         if (!LibraryButton) throw new Error('Element not found');
-        LibraryButton.addEventListener('click', () => openLink('./Library.html', 'newTab'))
+        LibraryButton.addEventListener('click', () => openLink('./Library.html', 'newTab'), { signal })
     }
     private setVersion(): void {
         setElement("#version", el => el.innerHTML = chrome.runtime.getManifest().version);
@@ -47,7 +55,7 @@ export class Footer extends RssBuild {
         const unread = await getHermidataNotification();
         await clearNotifications(Object.values(unread));
     }
-    private SyncTextAndButtonOfRSS(): void {
+    private SyncTextAndButtonOfRSS(signal: AbortSignal): void {
         const latestRSSSync = getElement("#RSS-latest-sync-div");
         const latestSyncSpan = getElement("#lastSync");
 
@@ -64,9 +72,7 @@ export class Footer extends RssBuild {
         if (!ManualSyncBtn) throw new Error('Element not found');
         ManualSyncBtn.addEventListener("click", () => {
             ext.runtime.sendMessage({ type: "RELOAD_RSS_SYNC" });
-        });
-        chrome.runtime.onMessage.addListener((msg) => {
-            if ( msg.type === "SYNC_COMPLETED") latestSyncSpan.textContent = "Just synced";
-        });
+        }, { signal });
+        if (!ext.runtime.onMessage.hasListener(showJustSynced)) ext.runtime.onMessage.addListener(showJustSynced);
     }
 }

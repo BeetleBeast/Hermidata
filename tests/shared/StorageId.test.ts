@@ -3,7 +3,7 @@ import { dbAccess, moveHermidata, removeHermidata, runStorageCall, saveHermidata
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 import { generateHermidataHash } from '../../scripts/shared/utils/StringOutput';
 import { dbUpdateImageKey, deleteHermidata, putHermidata, putSettings } from '../../scripts/shared/db/db';
-import { pushToSync, removeFromSync } from '../../scripts/shared/sync/sync.engine';
+import { pushToSync, removeFromSync } from '../../scripts/shared/sync/syncClient';
 import { loadSyncConfig } from '../../scripts/shared/sync/syncConfig';
 import type { OnlyPlainHermidata, Settings } from '../../scripts/shared/types';
 
@@ -27,7 +27,7 @@ vi.mock('../../scripts/shared/db/db', () => ({
     updateImageKey: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../scripts/shared/sync/sync.engine', () => ({
+vi.mock('../../scripts/shared/sync/syncClient', () => ({
     pushToSync: vi.fn().mockResolvedValue(undefined),
     removeFromSync: vi.fn().mockResolvedValue(undefined),
 }));

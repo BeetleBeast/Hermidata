@@ -1,5 +1,5 @@
 import type { SyncBackendConfig, SyncSwitchMode } from "../shared/types"
-import { refreshSync, replaceUnreadableSync, setSyncEncryption, switchSyncBackend } from "../shared/sync/sync.engine"
+import { pushLocalChange, recordLocalDelete, refreshSync, replaceUnreadableSync, setSyncEncryption, switchSyncBackend } from "../shared/sync/sync.engine"
 import { assertHeader } from "../shared/sync/libraryCrypto"
 
 type Respond = (response?: unknown) => void;
@@ -13,6 +13,17 @@ export async function handleSetSyncBackend(config: SyncBackendConfig, mode: Sync
     } catch (err) {
         respond({ success: false, error: err instanceof Error ? err.message : String(err) });
     }
+}
+
+/** From a page that saved an entry itself: the background's engine publishes it. */
+export function handleSyncLocalChange(): void {
+    pushLocalChange();
+}
+
+/** From a page that deleted an entry itself: the background's engine keeps the tombstone, so deletes never race. */
+export function handleSyncRecordDelete(id: unknown): void {
+    if (typeof id !== 'string' || !id) throw new Error('SYNC_RECORD_DELETE needs an entry id');
+    recordLocalDelete(id);
 }
 
 /** From the popup: look for changes from other devices now instead of waiting for the next poll. */

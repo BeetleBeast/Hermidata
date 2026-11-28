@@ -26,7 +26,7 @@ const fake = vi.hoisted(() => {
 });
 
 vi.mock('idb', () => ({ openDB: vi.fn(async () => fake.db) }));
-vi.mock('../../scripts/shared/sync/sync.engine', () => ({ pushToSync: vi.fn(), removeFromSync: vi.fn() }));
+vi.mock('../../scripts/shared/sync/syncClient', () => ({ pushToSync: vi.fn(), removeFromSync: vi.fn() }));
 vi.mock('../../scripts/shared/utils/BrowserCompat', () => ({
     ext: { storage: { sync: { get: (_keys: null, cb: (data: Record<string, unknown>) => void) => cb(fake.syncData) } } },
 }));

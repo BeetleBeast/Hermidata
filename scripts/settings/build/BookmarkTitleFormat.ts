@@ -292,9 +292,8 @@ export class BookmarkTitleFormat extends Build {
             if (typeof count !== 'number' || count === 0) return;
 
             const items = `${count} saved bookmark${count === 1 ? '' : 's'}`;
-            // the dialog renders HTML: this text holds only a number and fixed words
             const confirmed = await customConfirm(
-                `Rename ${items} to the new format?<br>` +
+                `Rename ${items} to the new format?\n` +
                 `Only bookmarks saved by Hermidata are renamed. Their titles are replaced and cannot be restored automatically.`,
                 { accept: 'Rename', reject: 'Keep' }
             );

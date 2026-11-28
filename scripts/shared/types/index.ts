@@ -223,5 +223,6 @@ export type {
     PassphraseSlot,
     RecoverySlot,
     KeyStore,
-
+    SyncOwner,
+    SyncClientMessage,
 } from './sync';

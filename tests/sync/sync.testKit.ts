@@ -175,10 +175,14 @@ export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = 
     const notices = { tooBig: [] as number[], nearlyFull: [] as number[], errors: [] as string[], locked: 0 };
     const keyStore = opts.keyStore ?? new MemoryKeyStore();
     let fetchCount = 0;
+    let readsFail = false;
     const api = cloud.apiForDevice();
 
     const sync = new HermidataSync({
-        getAll: async () => [...db.values()].map(clone),
+        getAll: async () => {
+            if (readsFail) throw new Error('simulated IndexedDB read failure');
+            return [...db.values()].map(clone);
+        },
         put: async h => { db.set(h.id, clone(h)); },
         remove: async key => { db.delete(key); },
         prepareRemote: h => h,
@@ -196,6 +200,8 @@ export function makeDevice(cloud: FakeCloud, id: string, initial: Hermidata[] = 
         /** this device's own storage.local (tombstones, flags, sync config) */
         local: api.storage.local as FakeLocalArea,
         list: () => sorted([...db.values()]),
+        /** while on, reading the library fails ( like a broken IndexedDB ); writes still work */
+        failReads(on: boolean) { readsFail = on; },
         start: async () => {
             // newer builds have a pull-only first run; this is a no-op on builds without enablePush
             if (opts.push !== false) void (sync as any).enablePush?.();

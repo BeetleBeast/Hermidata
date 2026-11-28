@@ -4,7 +4,7 @@ import { ext } from "../utils/BrowserCompat";
 import { logConsoleError, WarningMessage } from "../utils/ErrorMessage";
 import { isNewerItem } from "../utils/Unread";
 
-import { getAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion, getSettings } from '../db/db';
+import { readAllHermidata, putHermidata, deleteHermidata, isHermidataLatestVersion, getSettings } from '../db/db';
 import { resolveTombstoneTtlDays } from '../utils/SettingsValues';
 import { BrowserSyncBackend } from './BrowserSyncBackend';
 import { LocalBackend } from './LocalBackend';
@@ -17,6 +17,8 @@ import {
 } from './syncConfig';
 import { backgroundAlarms } from './syncAlarms';
 import { POLL_ALARM } from './WebDavBackend';
+import { registerSyncOwner } from './syncClient';
+import { kbCounter } from './syncQuota';
 
 
 // ---------------------------------------------------------------- constants
@@ -47,6 +49,7 @@ type Tombstones = Record<string, number>;
 type LocalState = { all: Hermidata[]; tombs: Tombstones };
 
 export interface SyncDeps {
+    /** Must reject when the library cannot be read: an empty array means the library IS empty, and is merged as such. */
     getAll(): Promise<Hermidata[]>;
     /** Must NOT trigger a re-sync (your putHermidata(h, false)). */
     put(h: Hermidata): Promise<void>;
@@ -721,44 +724,6 @@ async function getDeviceId(): Promise<string> {
     return _deviceId
 }
 
-export async function checkSyncQuota(): Promise<void> {
-    // 1. Get current usage
-    const used_Items = (await ext.storage.sync.getKeys()).length;
-    const used_bytes = await ext.storage.sync.getBytesInUse();
-    const used_bytes_per_item = 1070 // average
-    // 2. get max usage
-    const max_items = getMaxItemsCount();
-    const max_bytes = getMaxByteCount();
-    const max_bytes_per_item = getMaxByteCountPerItem();
-    // 3. log current usage
-    console.group('[Sync] Current usage');
-    
-    console.log(`[Sync] Used ${used_Items} of ${max_items} items (${Math.round(used_Items / max_items * 100)}%)`);
-    console.log(`[Sync] Used ${used_bytes} of ${max_bytes} bytes (${Math.round( used_bytes / max_bytes * 100)}%)`);
-    console.log(`[Sync] Used ${used_bytes_per_item} of ${max_bytes_per_item} bytes per item (${Math.round( used_bytes_per_item / max_bytes_per_item * 100)}%)`);
-    // 4. warn if close to limit
-
-    if (
-        used_Items >( max_items * 0.9) ||
-        used_bytes > (max_bytes * 0.9) ||
-        used_bytes_per_item > (max_bytes_per_item * 0.9)
-    ) console.warn('[Sync] Approaching sync storage limit')
-
-    console.groupEnd();
-}
-function getMaxItemsCount(): number {
-    const MAX = ext.storage.sync.MAX_ITEMS ?? 512;
-    return MAX;
-}
-function getMaxByteCount(): number {
-    const MAX = ext.storage.sync.QUOTA_BYTES ?? 102400;
-    return MAX;
-}
-function getMaxByteCountPerItem(): number {
-    const MAX = ext.storage.sync.QUOTA_BYTES_PER_ITEM ?? 8192;
-    return MAX;
-}
-const kbCounter = (kb: number) => `${kb}KB --> ${Math.round(kb / getMaxByteCount() * 100)}% of max ${getMaxByteCount()}`;
 
 function notifySyncTooBig(kbCounter: string): void {
     const message = `[Sync] Too big: ${kbCounter}`;
@@ -784,7 +749,7 @@ function notifySyncLocked(): void {
 
 
 const sync = new HermidataSync({
-    getAll: async () => Object.values(await getAllHermidata()),
+    getAll: async () => Object.values(await readAllHermidata()),
     put: h => putHermidata(h, false),          // false = don't re-sync
     remove: id => deleteHermidata(id, false),  // false = don't re-sync
     prepareRemote: h => {
@@ -802,17 +767,22 @@ const sync = new HermidataSync({
     onLocked: () => notifySyncLocked(),
 });
 
-/** Call after every putHermidata() — pushes just that one entry to sync */
-export const pushToSync = (_entry?: Hermidata) => sync.schedulePush();
-/** Call after every deleteHermidata() — removes entry from sync too */
-export const removeFromSync = (id: string) => sync.recordDelete(id);
+/**
+ * Background only, synchronously at startup ( before any migration writes ): makes this context's engine the one
+ * every library write reports to. Pages reach it through the SYNC_LOCAL_CHANGE / SYNC_RECORD_DELETE messages.
+ */
+export const initSyncOwner = () => registerSyncOwner(sync);
+/** From a page: it changed the library, so publish the change */
+export const pushLocalChange = () => sync.schedulePush();
+/** From a page: it deleted this entry, so remember the tombstone */
+export const recordLocalDelete = (id: string) => sync.recordDelete(id);
 const backendEnv = () => ({ api: ext, getDeviceId, alarms: backgroundAlarms() });
 
 /** Register in background.ts — starts syncing through the backend this device is configured for */
 export const initSync = () => { void startConfiguredSync(); };
 
 async function startConfiguredSync(): Promise<void> {
-    const config = await resolveSyncConfig(ext.storage.local, async () => Object.keys(await getAllHermidata()).length > 0);
+    const config = await resolveSyncConfig(ext.storage.local, async () => Object.keys(await readAllHermidata()).length > 0);
     if (config.kind === 'browser') {
         void backgroundAlarms()?.clear(POLL_ALARM);                 // a poll alarm left over from WebDAV
         sync.start();

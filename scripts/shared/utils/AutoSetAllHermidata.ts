@@ -1,4 +1,4 @@
-import { findNestedFolder, getBookmarkChildren } from "../../background/bookmarks";
+import { findNestedFolder, getBookmarkChildren, getRootByTitle } from "../../background/bookmarks";
 import type { AnyNovelType, Bookmark, Hermidata, ReleaseSchedule } from "../types";
 import { HERMIDATA_VERSION } from "../constants";
 import { findByTitleOrAlt, getChapterFromTitle, generateBookmarkId, generateHermidataHash, TrimTitle } from "./StringOutput";
@@ -19,7 +19,7 @@ export class AutoSetAllHermidata {
         // check if there are any bookmarks in the folder
         const folderPaths: string[] = folderPath.split('/').filter(Boolean);
         folderPaths.shift()?.split('/').filter(Boolean);
-        const folderId = await findNestedFolder(folderPaths, rootTitle);
+        const folderId = await findNestedFolder(folderPaths, await getRootByTitle(rootTitle));
         if (!folderId) return null;
         const bookmarks = await this.getBookmarkChildren(folderId);
         if (!bookmarks.length) return null;

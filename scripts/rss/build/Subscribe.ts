@@ -6,6 +6,7 @@ import { getElement } from "../../shared/utils/Selection";
 import { RssBuild } from "../build";
 import { linkRSSFeed } from "../load";
 import { customConfirm } from "../../popup/frontend/confirm";
+import { buildSubscribePreview } from "./SubscribePreview";
 import { HermidataMigration } from "../../shared/migration/Hermidata";
 import { ext } from "../../shared/utils/BrowserCompat";
 import { HermidataModel } from "../../shared/utils/HermidataSelector";
@@ -145,19 +146,7 @@ export class Subscribe extends RssBuild {
         for (const { RawFeed, Hermidata: value } of matchingFeeds) {
             const Hermidata = new HermidataModel(value);
             // 4. confirm with user
-            const confirmationMsg = `
-                <p>Subscribe to "${Hermidata.title}"?</p>
-                <br>
-                ${RawFeed.image ? `<img class="rss-subscribe-confirmation-image" src="${RawFeed.image}" alt="${RawFeed.latestItem.title}">` : ''}\n
-                <br>
-                <p>title: ${RawFeed.latestItem.title}</p>\n
-                <br>
-                <a href="${RawFeed.latestItem.link}" target="_blank">${RawFeed.latestItem.title}</a>
-                <br>
-                <br>
-                <small><p>Tip: you can always unsubscribe at any time by clicking the "Unsubscribe" button by right clicking on the RSS feed item</p></small>
-                `;
-            const shouldSubscribe = await customConfirm(confirmationMsg, { accept: 'Subscribe', reject: 'Cancel', contentDirection: "vertical" });
+            const shouldSubscribe = await customConfirm(buildSubscribePreview(Hermidata.title, RawFeed),{ accept: 'Subscribe', reject: 'Cancel', contentDirection: "vertical" });
             if (!shouldSubscribe) {
                 const RawFeedID = generateRawFeedId(RawFeed.latestItem.title, RawFeed.url);
                 const newRecord: Record<string, string> = { [Hermidata.id]: RawFeedID };

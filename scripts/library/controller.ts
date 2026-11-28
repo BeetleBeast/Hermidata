@@ -68,15 +68,11 @@ export class Controller {
     }
 
     private setEventListener() {
-        this.removeEventListener();
         this.reloadData!.addEventListener('click', () => this.reload());
         this.openReadingList?.addEventListener('click', () => void openLink('ReadingList.html', 'sameTab'));
 
         // viewMode toggle
         this.gridViewMode?.addEventListener('click', () => this.feed.setGridViewMode('grid'));
         this.listViewMode?.addEventListener('click', () => this.feed.setGridViewMode('list'));
-    }
-    private removeEventListener() {
-        this.reloadData!.removeEventListener('click', () => this.reload());
     }
 }

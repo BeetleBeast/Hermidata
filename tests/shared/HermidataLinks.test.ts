@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { linkHermidata, moveHermidata, removeHermidata, resolveIdRedirect, runStorageCall, unlinkHermidata } from '../../scripts/shared/db/Storage';
-import { pushToSync } from '../../scripts/shared/sync/sync.engine';
+import { pushToSync } from '../../scripts/shared/sync/syncClient';
 import { HermidataModel } from '../../scripts/shared/utils/HermidataSelector';
 import { getRelatedWorks } from '../../scripts/shared/utils/Relations';
 import type { Hermidata, Relation } from '../../scripts/shared/types';
@@ -26,7 +26,7 @@ vi.mock('../../scripts/shared/db/db', () => ({
     dbUpdateImageKey: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../scripts/shared/sync/sync.engine', () => ({
+vi.mock('../../scripts/shared/sync/syncClient', () => ({
     pushToSync: vi.fn(),
     removeFromSync: vi.fn(),
 }));

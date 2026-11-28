@@ -144,3 +144,14 @@ export interface KeyStore {
 export type ConnectionTest =
     | { ok: true; conditionalWrite: boolean; note?: string }
     | { ok: false; problem: WebDavProblem; message: string };
+
+/** The one sync engine, owned by the background: every local change and delete reaches it. */
+export interface SyncOwner {
+    schedulePush(): void;
+    recordDelete(id: string): void;
+}
+
+/** What an extension page sends the background after it changed the library itself. */
+export type SyncClientMessage =
+    | { type: 'SYNC_LOCAL_CHANGE' }
+    | { type: 'SYNC_RECORD_DELETE'; id: string };
