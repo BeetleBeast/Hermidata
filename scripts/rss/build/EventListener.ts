@@ -49,7 +49,7 @@ export class EventListener extends RssBuild {
         if (!value) return 'Saved item';
         const hermidata = new HermidataModel(value);
         const linked = hermidata.hasRSS() ? 'linked to an RSS feed' : 'not linked to an RSS feed';
-        return `${hermidata.title}, ${linked}. Open the latest chapter, or press the context menu key for more actions`;
+        return `${hermidata.title}, ${linked}. Open the latest saved chapter, or press the context menu key for more actions`;
     }
     private async clickOnItem(value: Hermidata, isNotificationItem: boolean, element: HTMLDivElement | null = null) {
         if (getElement('.feed-header-symbol')?.dataset.feedState === 'up' && isNotificationItem) return;
@@ -57,7 +57,7 @@ export class EventListener extends RssBuild {
         const hermidata = new HermidataModel(value);
 
         await this.clearIfNotification(element);
-        await openLink(hermidata.GetLatestRssFeed()?.latestItem?.link ?? hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
+        await openLink(hermidata.GetUrl(), 'newTab', hermidata.GetScrollPosition());
     }
     private async rightMouseClickOnItem(e: MouseEvent, isNotificationItem: boolean, isRSSItem: boolean) {
         e.preventDefault(); // stop the browser’s default context menu
